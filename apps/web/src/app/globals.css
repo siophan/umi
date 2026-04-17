@@ -325,11 +325,16 @@ button {
 
 .mall-home {
   background: #f5f5f8;
+  padding-top: 92px;
 }
 
 .m-nav {
-  position: sticky;
-  top: 57px;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--max-width);
   z-index: 100;
   display: flex;
   align-items: center;
@@ -411,8 +416,12 @@ button {
 }
 
 .m-tabs {
-  position: sticky;
-  top: 105px;
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--max-width);
   z-index: 99;
   display: flex;
   align-items: center;
@@ -474,6 +483,138 @@ button {
 
 .badge-special {
   background: #ff6d00;
+}
+
+.m-cat-dropdown {
+  display: none;
+}
+
+.m-cat-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.m-cat-panel {
+  position: absolute;
+  top: 92px;
+  left: 0;
+  right: 0;
+  padding: 14px 16px 16px;
+  border-radius: 0 0 16px 16px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.m-cat-title {
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.m-cat-hot {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  overflow-x: auto;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.m-cat-hot-item {
+  display: flex;
+  min-width: 56px;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.mchi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f5f5f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.m-cat-hot-item.on .mchi-icon {
+  background: rgba(232, 81, 26, 0.1);
+  box-shadow: 0 2px 8px rgba(232, 81, 26, 0.15);
+}
+
+.mchi-name {
+  color: #666;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.m-cat-hot-item.on .mchi-name {
+  color: #e8511a;
+  font-weight: 700;
+}
+
+.m-cat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.m-cat-item {
+  padding: 6px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 18px;
+  background: #f5f5f8;
+  color: #666;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.m-cat-item.on {
+  border-color: rgba(232, 81, 26, 0.2);
+  background: rgba(232, 81, 26, 0.08);
+  color: #e8511a;
+  font-weight: 700;
+}
+
+.mci-count {
+  margin-left: 2px;
+  color: #bbb;
+  font-size: 10px;
+}
+
+.m-cat-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+}
+
+.m-cat-sort-label {
+  color: #999;
+  font-size: 12px;
+}
+
+.m-cat-sort-btn {
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: #f5f5f8;
+  color: #888;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.m-cat-sort-btn.on {
+  background: #e8511a;
+  color: #fff;
+  font-weight: 700;
 }
 
 .m-feed-area {

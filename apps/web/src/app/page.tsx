@@ -1,4 +1,3 @@
-import { HomeHeader } from '../components/home-header';
 import { MobileShell } from '../components/mobile-shell';
 import { demoGuesses, demoProduct, demoProduct2 } from '../lib/demo';
 
@@ -68,8 +67,6 @@ export default function HomePage() {
 
   return (
     <MobileShell tab="home">
-      <HomeHeader />
-
       <main className="mall-home">
         <div className="m-nav">
           <div className="m-logo">
@@ -91,7 +88,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="m-tabs">
+        <div className="m-tabs" id="mTabs">
           <button className="m-tab on" type="button">
             推荐
           </button>
@@ -109,7 +106,50 @@ export default function HomePage() {
           </button>
         </div>
 
-        <div className="m-feed-area">
+        <div className="m-cat-dropdown" id="mCatDropdown">
+          <div className="m-cat-mask" />
+          <div className="m-cat-panel">
+            <div className="m-cat-title">🔥 热门分类</div>
+            <div className="m-cat-hot" id="mCatHot">
+              <div className="m-cat-hot-item on">
+                <div className="mchi-icon">💄</div>
+                <div className="mchi-name">美妆护肤</div>
+              </div>
+              <div className="m-cat-hot-item">
+                <div className="mchi-icon">🎲</div>
+                <div className="mchi-name">潮玩盲盒</div>
+              </div>
+              <div className="m-cat-hot-item">
+                <div className="mchi-icon">🍜</div>
+                <div className="mchi-name">食品饮料</div>
+              </div>
+              <div className="m-cat-hot-item">
+                <div className="mchi-icon">📱</div>
+                <div className="mchi-name">数码配件</div>
+              </div>
+            </div>
+            <div className="m-cat-title">全部分类</div>
+            <div className="m-cat-grid" id="mCatGrid">
+              <div className="m-cat-item on">🔖 全部 <span className="mci-count">32</span></div>
+              <div className="m-cat-item">💄 美妆护肤 <span className="mci-count">8</span></div>
+              <div className="m-cat-item">🎲 潮玩盲盒 <span className="mci-count">5</span></div>
+              <div className="m-cat-item">🍜 食品饮料 <span className="mci-count">7</span></div>
+              <div className="m-cat-item">📱 数码配件 <span className="mci-count">4</span></div>
+              <div className="m-cat-item">👟 服饰鞋包 <span className="mci-count">5</span></div>
+              <div className="m-cat-item">🏠 生活好物 <span className="mci-count">3</span></div>
+            </div>
+            <div className="m-cat-sort">
+              <span className="m-cat-sort-label">排序：</span>
+              <span className="m-cat-sort-btn on">综合</span>
+              <span className="m-cat-sort-btn">销量↓</span>
+              <span className="m-cat-sort-btn">价格↑</span>
+              <span className="m-cat-sort-btn">价格↓</span>
+              <span className="m-cat-sort-btn">折扣↓</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="m-feed-area" id="mFeedArea">
           <section className="m-hero">
             <div className="m-hero-header">
               <div className="m-hero-collab">
