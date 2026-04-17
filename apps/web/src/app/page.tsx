@@ -66,7 +66,7 @@ export default function HomePage() {
   ];
 
   return (
-    <MobileShell tab="home">
+    <MobileShell tab="home" tone="mall">
       <main className="mall-home">
         <div className="m-nav">
           <div className="m-logo">

@@ -9,7 +9,7 @@ export function MobileShell({
 }: {
   children: ReactNode;
   tab?: 'home' | 'orders' | 'warehouse' | 'me';
-  tone?: 'light' | 'dark';
+  tone?: 'light' | 'dark' | 'mall';
 }) {
   return (
     <div className={`mobile-shell tone-${tone}`}>
