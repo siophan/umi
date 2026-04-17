@@ -1,0 +1,15 @@
+{
+  "name": "@joy/shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "echo \"shared build pending\"",
+    "lint": "echo \"shared lint pending\"",
+    "test": "echo \"shared test pending\"",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

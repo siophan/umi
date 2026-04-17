@@ -1,0 +1,16 @@
+{
+  "name": "@joy/config",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tsconfig.base": "./tsconfig.base.json"
+  },
+  "scripts": {
+    "build": "echo \"config package build pending\"",
+    "lint": "echo \"config package lint pending\"",
+    "test": "echo \"config package test pending\"",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
