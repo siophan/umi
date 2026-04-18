@@ -1,8 +1,8 @@
 export function MallHome() {
   const heroAvatars = [
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=joy-a',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=joy-b',
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=joy-c',
+    '/legacy/images/mascot/mouse-main.png',
+    '/legacy/images/mascot/mouse-happy.png',
+    '/legacy/images/mascot/mouse-casual.png',
   ];
 
   const mallItems = [
@@ -197,7 +197,7 @@ export function MallHome() {
               <img
                 alt="MAC"
                 className="m-hero-brand-av"
-                src="https://api.dicebear.com/7.x/initials/svg?seed=MAC&backgroundColor=e53935"
+                src="/legacy/images/products/p007-dove.jpg"
               />
               <div className="m-hero-brand-text">
                 <div className="m-hero-brand-name">MAC 魅可</div>

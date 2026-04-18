@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import styles from './page.module.css';
@@ -55,6 +56,7 @@ const tabs: FriendsTab[] = [
 ];
 
 export default function FriendsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<(typeof tabs)[number]['key']>('friends');
   const [query, setQuery] = useState('');
   const [pkOpen, setPkOpen] = useState(false);
@@ -71,11 +73,11 @@ export default function FriendsPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} type="button" onClick={() => window.history.back()}>
+        <button className={styles.backBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.headerTitle}>好友</div>
-        <button className={styles.actionBtn} type="button">
+        <button className={styles.actionBtn} type="button" onClick={() => setTab('requests')}>
           <i className="fa-solid fa-plus" />
         </button>
       </header>
@@ -103,7 +105,15 @@ export default function FriendsPage() {
 
       <section className={styles.quickBar}>
         {quickActions.map((item) => (
-          <button className={styles.quickItem} type="button" key={item.label}>
+          <button
+            className={styles.quickItem}
+            type="button"
+            key={item.label}
+            onClick={() => {
+              if (item.label === '社区') router.push('/community');
+              if (item.label === '排行榜') router.push('/ranking');
+            }}
+          >
             <div className={styles.quickIcon}><i className={item.icon} /></div>
             <div className={styles.quickLabel}>{item.label}</div>
           </button>

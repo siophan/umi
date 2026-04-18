@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 
 import styles from './page.module.css';
@@ -13,6 +14,7 @@ const fallbackMessages = [
 ];
 
 export default function ChatDetailPage() {
+  const router = useRouter();
   const params = useSearchParams();
   const friendName = decodeURIComponent(params.get('name') || '好友');
   const avatar = decodeURIComponent(
@@ -25,7 +27,7 @@ export default function ChatDetailPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} type="button" onClick={() => history.back()}>
+        <button className={styles.backBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-arrow-left" />
         </button>
         <img className={styles.avatar} src={avatar} alt={friendName} />

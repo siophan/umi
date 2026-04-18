@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 type OrderStatus = 'pending' | 'shipped' | 'done' | 'refund';
@@ -64,6 +65,7 @@ const timeline = [
 ];
 
 export default function OrderDetailPage() {
+  const router = useRouter();
   const [toast, setToast] = useState('');
 
   const total = useMemo(() => '¥0.00', []);
@@ -79,7 +81,7 @@ export default function OrderDetailPage() {
         <button
           className={styles.back}
           type="button"
-          onClick={() => window.history.back()}
+          onClick={() => router.back()}
         >
           <i className="fa-solid fa-chevron-left" />
         </button>
@@ -88,16 +90,16 @@ export default function OrderDetailPage() {
           <button
             className={styles.headerBtn}
             type="button"
-            onClick={() => showToast('分享订单')}
+            onClick={() => showToast('客服')}
           >
-            <i className="fa-solid fa-arrow-up-right-from-square" />
+            <i className="fa-solid fa-headset" />
           </button>
           <button
             className={styles.headerBtn}
             type="button"
-            onClick={() => showToast('联系客服')}
+            onClick={() => showToast('更多选项')}
           >
-            <i className="fa-solid fa-headset" />
+            <i className="fa-solid fa-ellipsis" />
           </button>
         </div>
       </header>
@@ -274,19 +276,37 @@ export default function OrderDetailPage() {
       </section>
 
       <footer className={styles.bottom}>
+        <div className={styles.bottomLeft}>
+          <button
+            className={styles.bottomIcon}
+            type="button"
+            onClick={() => showToast('联系客服')}
+          >
+            <i className="fa-solid fa-headset" />
+            <span>客服</span>
+          </button>
+          <button
+            className={styles.bottomIcon}
+            type="button"
+            onClick={() => showToast('进入店铺')}
+          >
+            <i className="fa-solid fa-store" />
+            <span>店铺</span>
+          </button>
+        </div>
         <button
           className={styles.btnOutline}
           type="button"
-          onClick={() => showToast('联系卖家')}
+          onClick={() => showToast(order.status === 'shipped' ? '查看物流' : '取消订单申请已提交')}
         >
-          联系卖家
+          {order.status === 'shipped' ? '查看物流' : '取消订单'}
         </button>
         <button
           className={styles.btnPrimary}
           type="button"
-          onClick={() => showToast('确认收货')}
+          onClick={() => showToast(order.status === 'shipped' ? '✅ 已确认收货' : '✅ 已提醒卖家尽快发货')}
         >
-          确认收货
+          {order.status === 'shipped' ? '确认收货' : '催发货'}
         </button>
       </footer>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import styles from './page.module.css';
 
@@ -17,6 +18,7 @@ const products = [
 ];
 
 export default function AddProductPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [selectedBrand, setSelectedBrand] = useState(0);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([0]);
@@ -24,7 +26,11 @@ export default function AddProductPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.back} type="button" onClick={() => (step === 1 ? history.back() : setStep(step - 1))}>
+        <button
+          className={styles.back}
+          type="button"
+          onClick={() => (step === 1 ? router.back() : setStep(step - 1))}
+        >
           <i className="fa-solid fa-chevron-left" />
         </button>
         <span className={styles.title}>上架商品</span>

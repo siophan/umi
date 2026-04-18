@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import styles from './page.module.css';
 
@@ -35,10 +36,11 @@ const chats = [
 ];
 
 export default function ChatListPage() {
+  const router = useRouter();
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} type="button" onClick={() => history.back()}>
+        <button className={styles.backBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-arrow-left" />
         </button>
         <h1>消息</h1>

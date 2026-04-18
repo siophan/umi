@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 const filters = ['全部', '🔴 正在直播', '⏰ 即将开始', '🎬 精彩回放', '零食开箱', '品牌PK'];
@@ -22,10 +23,11 @@ const lives = [
 ];
 
 export default function LivesPage() {
+  const router = useRouter();
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.back} type="button" onClick={() => history.back()}>
+        <button className={styles.back} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-arrow-left" />
         </button>
         <span className={styles.title}>竞猜直播</span>

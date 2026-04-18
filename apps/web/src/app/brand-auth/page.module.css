@@ -1,6 +1,6 @@
 .page { min-height: 100vh; background: #f5f5f8; padding-bottom: 24px; }
 .header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; background: rgba(255,255,255,.97); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(0,0,0,.06); }
-.back { width: 32px; height: 32px; border: 0; border-radius: 999px; background: transparent; color: #333; }
+.back { width: 32px; height: 32px; border: 0; border-radius: 999px; background: transparent; color: #333; font-size: 15px; }
 .title { flex: 1; font-size: 16px; font-weight: 700; color: #1a1a1a; }
 .infoCard { margin: 12px; border-radius: 14px; padding: 16px; background: linear-gradient(135deg,#fff5f2,#ffebe5); }
 .infoCard h4 { margin: 0 0 12px; font-size: 15px; font-weight: 800; color: #333; }
@@ -23,3 +23,186 @@
 .right { text-align: right; flex: none; }
 .deposit { font-size: 13px; font-weight: 800; color: #ff5722; }
 .apply { margin-top: 4px; border: 0; border-radius: 12px; padding: 4px 14px; background: linear-gradient(135deg,#ff5722,#ff9800); color: #fff; font-size: 11px; font-weight: 700; }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 380px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.modalHeader {
+  padding: 20px 20px 0;
+  text-align: center;
+}
+
+.modalBrand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.modalBrand img {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.modalBrandName {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.modalSubtitle {
+  font-size: 13px;
+  color: #999;
+}
+
+.modalBody {
+  padding: 16px 20px;
+}
+
+.modalSection {
+  margin-bottom: 14px;
+}
+
+.modalLabel {
+  margin-bottom: 6px;
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.modalInfoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+
+.modalInfoKey {
+  color: #888;
+  font-size: 13px;
+}
+
+.modalInfoVal {
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.priceVal {
+  color: #ff5722;
+}
+
+.modalInput,
+.modalTextarea {
+  width: 100%;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 10px;
+  outline: none;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.modalInput {
+  height: 38px;
+  padding: 0 12px;
+}
+
+.modalTextarea {
+  height: 70px;
+  padding: 10px 12px;
+  resize: none;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.checkboxRow input {
+  margin-top: 2px;
+  accent-color: #ff5722;
+}
+
+.checkboxRow label {
+  color: #888;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.modalFooter {
+  padding: 0 20px 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.modalBtn {
+  flex: 1;
+  height: 42px;
+  border: 0;
+  border-radius: 21px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cancelBtn {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.confirmBtn {
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.25);
+}
+
+.confirmBtn:disabled {
+  opacity: 0.4;
+}
+
+.successState {
+  padding: 30px 20px 20px;
+  text-align: center;
+}
+
+.successIcon {
+  margin-bottom: 12px;
+  font-size: 48px;
+}
+
+.successTitle {
+  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.successDesc {
+  margin-top: 6px;
+  color: #999;
+  font-size: 13px;
+  line-height: 1.5;
+}

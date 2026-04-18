@@ -28,16 +28,15 @@
 
 .backBtn {
   border-radius: 50%;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   background: transparent;
 }
 
-.backBtn svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
+.backBtn i {
+  font-size: 16px;
 }
 
 .title {
@@ -70,6 +69,9 @@
 
 .heroIcon {
   margin-bottom: 12px;
+}
+
+.heroIcon i {
   font-size: 56px;
 }
 
@@ -122,6 +124,10 @@
   border-radius: 12px;
   font-size: 13px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .primaryBtn {
@@ -163,7 +169,15 @@
 }
 
 .rewardIcon {
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rewardIcon span {
   font-size: 28px;
+  line-height: 1;
 }
 
 .rewardInfo {
@@ -209,12 +223,7 @@
   height: 36px;
   border-radius: 50%;
   border: 1px solid #f0f0f2;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 800;
+  object-fit: cover;
 }
 
 .recordInfo {

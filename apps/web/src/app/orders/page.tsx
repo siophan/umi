@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 
@@ -170,6 +171,7 @@ function getOrderStatusClass(status: Order['status']) {
 }
 
 export default function OrdersPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<OrderTab>('all');
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
@@ -221,14 +223,12 @@ export default function OrdersPage() {
           <button
             className={styles.back}
             type="button"
-            onClick={() => window.history.back()}
+            onClick={() => router.back()}
           >
             <i className="fa-solid fa-chevron-left" />
           </button>
           <h1 className={styles.title}>我的订单</h1>
-          <button className={styles.action} type="button" aria-label="更多">
-            <i className="fa-solid fa-ellipsis" />
-          </button>
+          <div className={styles.headerSpacer} />
         </header>
 
         <section className={styles.stats}>

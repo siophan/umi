@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
@@ -21,14 +21,6 @@ const tasks = [
   { icon: "📺", name: "观看1场直播", reward: "已完成 ✓", done: true },
 ];
 
-function ArrowIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m14.5 5.5-1.06-1.06L6.88 11H20v1.5H6.88l6.56 6.56 1.06-1.06L8.75 12l5.75-6.5Z" />
-    </svg>
-  );
-}
-
 export default function CheckinPage() {
   const router = useRouter();
   const [streak, setStreak] = useState(7);
@@ -44,6 +36,12 @@ export default function CheckinPage() {
     [streak],
   );
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const doCheckin = () => {
     if (done) return;
     setDone(true);
@@ -55,7 +53,7 @@ export default function CheckinPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} type="button" onClick={() => router.back()}>
-          <ArrowIcon />
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>签到打卡</div>
         <div className={styles.spacer} />
@@ -109,7 +107,7 @@ export default function CheckinPage() {
             {task.done ? (
               <span className={styles.doneText}>已完成 ✓</span>
             ) : (
-              <button className={styles.taskBtn} type="button">
+              <button className={styles.taskBtn} type="button" onClick={() => setToast("去完成")}>
                 去完成
               </button>
             )}

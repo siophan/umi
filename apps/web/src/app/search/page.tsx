@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 type ResultTab = 'all' | 'product' | 'guess';
@@ -77,6 +78,7 @@ const guesses = [
 ];
 
 export default function SearchPage() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<ResultTab>('all');
   const [filter, setFilter] = useState<
@@ -112,7 +114,7 @@ export default function SearchPage() {
         <button
           className={styles.back}
           type="button"
-          onClick={() => window.history.back()}
+          onClick={() => router.back()}
         >
           <i className="fa-solid fa-chevron-left" />
         </button>
@@ -271,9 +273,11 @@ export default function SearchPage() {
       ) : (
         <div className={styles.before}>
           <div className={styles.sectionHeader}>
-            <span>🕐 搜索历史</span>
-            <button type="button" className={styles.iconBtn}>
-              ×
+            <span>
+              <i className="fa-regular fa-clock" /> 搜索历史
+            </span>
+            <button type="button" className={styles.iconBtn} aria-label="清空历史">
+              <i className="fa-solid fa-trash-can" />
             </button>
           </div>
           <div className={styles.tags}>
@@ -290,7 +294,9 @@ export default function SearchPage() {
           </div>
 
           <div className={styles.sectionHeader}>
-            <span>🔥 热门搜索</span>
+            <span>
+              <i className="fa-solid fa-fire" /> 热门搜索
+            </span>
           </div>
           <div className={styles.hotList}>
             {hotSearches.map((item) => (

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+
+import { clearAuthToken, fetchMe, updateMe } from "../../lib/api";
 import styles from "./page.module.css";
 
 const level = {
@@ -12,59 +14,129 @@ const level = {
 };
 
 const coverColors = ["linear-gradient(135deg,#667eea,#764ba2)", "linear-gradient(135deg,#ff6b35,#ff2442)", "linear-gradient(135deg,#0f2027,#203a43,#2c5364)"];
-const avatars = ["A", "J", "M", "L", "N", "Z"];
-
-function ArrowIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m14.5 5.5-1.06-1.06L6.88 11H20v1.5H6.88l6.56 6.56 1.06-1.06L8.75 12l5.75-6.5Z" />
-    </svg>
-  );
-}
-
-function CameraIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M9 4.5h6l1.2 2h2.8A2.5 2.5 0 0 1 21.5 9v8A2.5 2.5 0 0 1 19 19.5H5A2.5 2.5 0 0 1 2.5 17V9A2.5 2.5 0 0 1 5 6.5h2.8L9 4.5Zm3 4a4.25 4.25 0 1 0 0 8.5 4.25 4.25 0 0 0 0-8.5Z" />
-    </svg>
-  );
-}
+const avatars = [
+  { id: "main", src: "/legacy/images/mascot/mouse-main.png" },
+  { id: "happy", src: "/legacy/images/mascot/mouse-happy.png" },
+  { id: "casual", src: "/legacy/images/mascot/mouse-casual.png" },
+  { id: "dove", src: "/legacy/images/products/p007-dove.jpg" },
+  { id: "cola", src: "/legacy/images/products/p004-cola.jpg" },
+  { id: "lays", src: "/legacy/images/products/p006-lays.jpg" },
+];
 
 export default function EditProfilePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [coverIndex, setCoverIndex] = useState(0);
   const [avatarIndex, setAvatarIndex] = useState(0);
-  const [name, setName] = useState("SnackHunter_001");
-  const [bio, setBio] = useState("今天也要认真猜对。");
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
   const [gender, setGender] = useState<"female" | "male" | "other">("other");
-  const [location, setLocation] = useState("上海 · 浦东新区");
+  const [location, setLocation] = useState("");
   const [toast, setToast] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadProfile() {
+      try {
+        const user = await fetchMe();
+        if (ignore) {
+          return;
+        }
+
+        setName(user.name || "");
+        setBio(user.signature || "");
+        setGender((user.gender as "female" | "male" | "other" | null) || "other");
+        setLocation(user.region || "");
+
+        const matchedAvatarIndex = avatars.findIndex((item) => user.avatar === item.src);
+        if (matchedAvatarIndex >= 0) {
+          setAvatarIndex(matchedAvatarIndex);
+        }
+      } catch {
+        if (ignore) {
+          return;
+        }
+        clearAuthToken();
+        router.replace(`/login?redirect=${encodeURIComponent(pathname || "/edit-profile")}`);
+        return;
+      }
+
+      if (!ignore) {
+        setLoading(false);
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      ignore = true;
+    };
+  }, [pathname, router]);
+
+  async function handleSave() {
+    if (saving) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await updateMe({
+        name,
+        avatar: avatars[avatarIndex]?.src || avatars[0].src,
+        signature: bio,
+        gender,
+        region: location,
+      });
+      setToast("保存成功");
+      window.setTimeout(() => {
+        router.back();
+      }, 800);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "保存失败");
+    } finally {
+      setSaving(false);
+      window.setTimeout(() => {
+        setToast("");
+      }, 1800);
+    }
+  }
+
+  const currentAvatar = avatars[avatarIndex]?.src || avatars[0].src;
+
+  if (loading) {
+    return <main className={styles.page} />;
+  }
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.headerBack} type="button" onClick={() => router.back()}>
-          <ArrowIcon />
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.headerTitle}>编辑主页</div>
-        <button className={styles.headerSave} type="button" onClick={() => setToast("保存成功")}>
-          保存
+        <button className={styles.headerSave} type="button" onClick={() => void handleSave()} disabled={saving}>
+          {saving ? "保存中" : "保存"}
         </button>
       </header>
 
       <section className={styles.cover} role="button" tabIndex={0} onClick={() => setCoverIndex((n) => (n + 1) % coverColors.length)}>
         <div className={styles.coverPreview} style={{ background: coverColors[coverIndex] }} />
         <div className={styles.coverOverlay}>
-          <CameraIcon />
+          <i className="fa-solid fa-camera" />
           更换封面
         </div>
       </section>
 
       <section className={styles.avatarSection}>
         <button className={styles.avatarWrap} type="button" onClick={() => setAvatarIndex((n) => (n + 1) % avatars.length)}>
-          <div className={styles.avatarPreview}>{avatars[avatarIndex]}</div>
+          <div className={styles.avatarPreview}>
+            <img src={currentAvatar} alt={name || "头像"} />
+          </div>
           <div className={styles.avatarBadge}>
-            <CameraIcon />
+            <i className="fa-solid fa-camera" />
           </div>
         </button>
         <div className={styles.avatarLabel}>点击更换头像</div>
@@ -81,7 +153,7 @@ export default function EditProfilePage() {
             </div>
           </div>
           <div className={styles.levelRight}>
-            查看详情 <ArrowIcon />
+            查看详情 <i className="fa-solid fa-chevron-right" />
           </div>
         </div>
         <div className={styles.levelBar}>
@@ -100,7 +172,9 @@ export default function EditProfilePage() {
         <div className={styles.row}>
           <span className={styles.label}>优米号</span>
           <span className={styles.value}>SnackHunter_001</span>
-          <span className={styles.lock}>🔒</span>
+          <span className={styles.lock}>
+            <i className="fa-solid fa-lock" />
+          </span>
         </div>
         <div className={styles.row}>
           <span className={styles.label}>性别</span>
@@ -133,12 +207,12 @@ export default function EditProfilePage() {
         <div className={styles.avatarPicker}>
           {avatars.map((item, index) => (
             <button
-              key={item}
+              key={item.id}
               type="button"
               className={`${styles.avatarPick} ${avatarIndex === index ? styles.avatarPickActive : ""}`}
               onClick={() => setAvatarIndex(index)}
             >
-              {item}
+              <img src={item.src} alt={item.id} />
             </button>
           ))}
         </div>

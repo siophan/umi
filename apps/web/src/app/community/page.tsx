@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
@@ -115,11 +116,13 @@ const myProfile = {
 };
 
 export default function CommunityPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<'recommend' | 'follow'>('recommend');
   const [publishOpen, setPublishOpen] = useState(false);
   const [scope, setScope] = useState<'public' | 'friends' | 'fans'>('public');
+  const [feed, setFeed] = useState(feedData);
 
-  const visibleFeed = useMemo(() => (tab === 'recommend' ? feedData : feedData.slice(0, 2)), [tab]);
+  const visibleFeed = useMemo(() => (tab === 'recommend' ? feed : feed.slice(0, 2)), [tab, feed]);
 
   return (
     <MobileShell tab="community" tone="light">
@@ -129,10 +132,10 @@ export default function CommunityPage() {
             猜友<span>圈</span>
           </div>
           <div className={styles.spacer} />
-          <button className={styles.iconBtn} type="button" onClick={() => window.location.assign('/community-search')}>
+          <button className={styles.iconBtn} type="button" onClick={() => router.push('/community-search')}>
             <i className="fa-solid fa-magnifying-glass" />
           </button>
-          <button className={styles.iconBtn} type="button" onClick={() => window.location.assign('/notifications')}>
+          <button className={styles.iconBtn} type="button" onClick={() => router.push('/notifications')}>
             <i className="fa-regular fa-bell" />
           </button>
         </header>
@@ -189,7 +192,7 @@ export default function CommunityPage() {
                 <button
                   className={styles.authorAvatarBtn}
                   type="button"
-                  onClick={() => window.location.assign(`/user/${encodeURIComponent(item.author.name)}`)}
+                  onClick={() => router.push(`/user/${encodeURIComponent(item.author.name)}`)}
                 >
                   <img src={item.author.avatar} alt={item.author.name} />
                 </button>
@@ -231,7 +234,7 @@ export default function CommunityPage() {
                 <button
                   className={styles.guessBar}
                   type="button"
-                  onClick={() => window.location.assign(`/guess/${item.guessInfo?.id}`)}
+                  onClick={() => router.push(`/guess/${item.guessInfo?.id}`)}
                 >
                   <div className={styles.guessIcon}><i className="fa-solid fa-bullseye" /></div>
                   <div className={styles.guessInfo}>
@@ -254,7 +257,23 @@ export default function CommunityPage() {
               ) : null}
 
               <footer className={styles.actions}>
-                <button className={styles.actionItem} type="button">
+                <button
+                  className={styles.actionItem}
+                  type="button"
+                  onClick={() =>
+                    setFeed((current) =>
+                      current.map((post) =>
+                        post.id === item.id
+                          ? {
+                              ...post,
+                              liked: !post.liked,
+                              likes: post.likes + (post.liked ? -1 : 1),
+                            }
+                          : post,
+                      ),
+                    )
+                  }
+                >
                   <i className={`fa-${item.liked ? 'solid' : 'regular'} fa-heart ${item.liked ? styles.actionLiked : ''}`} /> {item.likes}
                 </button>
                 <button className={styles.actionItem} type="button">
@@ -263,7 +282,22 @@ export default function CommunityPage() {
                 <button className={styles.actionItem} type="button">
                   <i className="fa-solid fa-share-nodes" /> {item.shares}
                 </button>
-                <button className={`${styles.actionItem} ${item.bookmarked ? styles.favorited : ''}`} type="button">
+                <button
+                  className={`${styles.actionItem} ${item.bookmarked ? styles.favorited : ''}`}
+                  type="button"
+                  onClick={() =>
+                    setFeed((current) =>
+                      current.map((post) =>
+                        post.id === item.id
+                          ? {
+                              ...post,
+                              bookmarked: !post.bookmarked,
+                            }
+                          : post,
+                      ),
+                    )
+                  }
+                >
                   <i className={`fa-${item.bookmarked ? 'solid' : 'regular'} fa-bookmark`} />
                 </button>
               </footer>

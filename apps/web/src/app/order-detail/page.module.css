@@ -547,6 +547,7 @@
   left: 50%;
   z-index: 200;
   display: flex;
+  align-items: center;
   width: 100%;
   max-width: 480px;
   gap: 10px;
@@ -557,9 +558,31 @@
   border-top: 0.5px solid rgba(0, 0, 0, 0.06);
 }
 
+.bottomLeft {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+}
+
+.bottomIcon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: #666;
+  font-size: 18px;
+}
+
+.bottomIcon span {
+  color: #999;
+  font-size: 10px;
+}
+
 .btnOutline,
 .btnPrimary {
-  flex: 1;
+  min-width: 104px;
   height: 42px;
   border: 0;
   border-radius: 21px;

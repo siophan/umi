@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 
@@ -23,7 +24,7 @@ const warehouseItems: WarehouseItem[] = [
   {
     id: 'wh-001',
     product: '奥利奥原味夹心饼干',
-    img: 'https://picsum.photos/seed/wh-oreo/300/300',
+    img: '/legacy/images/products/p002-oreo.jpg',
     quantity: 2,
     price: 28,
     source: '竞猜奖励',
@@ -33,7 +34,7 @@ const warehouseItems: WarehouseItem[] = [
   {
     id: 'wh-002',
     product: '三只松鼠坚果礼盒',
-    img: 'https://picsum.photos/seed/wh-nuts/300/300',
+    img: '/legacy/images/products/p003-squirrels.jpg',
     quantity: 1,
     price: 128,
     source: '直接购买',
@@ -43,7 +44,7 @@ const warehouseItems: WarehouseItem[] = [
   {
     id: 'wh-003',
     product: '百草味肉脯组合装',
-    img: 'https://picsum.photos/seed/wh-meat/300/300',
+    img: '/legacy/images/products/p004-baicaowei.jpg',
     quantity: 1,
     price: 86,
     source: '商家发货',
@@ -53,7 +54,7 @@ const warehouseItems: WarehouseItem[] = [
   {
     id: 'wh-004',
     product: '可口可乐零糖组合装',
-    img: 'https://picsum.photos/seed/wh-cola/300/300',
+    img: '/legacy/images/products/p009-genki.jpg',
     quantity: 3,
     price: 72,
     source: '竞猜奖励',
@@ -63,7 +64,7 @@ const warehouseItems: WarehouseItem[] = [
   {
     id: 'wh-005',
     product: '脆脆鲨巧克力威化',
-    img: 'https://picsum.photos/seed/wh-wafer/300/300',
+    img: '/legacy/images/products/p007-dove.jpg',
     quantity: 1,
     price: 49,
     source: '寄售中',
@@ -75,7 +76,7 @@ const warehouseItems: WarehouseItem[] = [
   {
     id: 'wh-006',
     product: '良品铺子海苔脆片礼盒',
-    img: 'https://picsum.photos/seed/wh-snack/300/300',
+    img: '/legacy/images/products/p005-liangpin.jpg',
     quantity: 1,
     price: 58,
     source: '仓库调入',
@@ -135,6 +136,7 @@ function getWarehouseStatusClass(status: Exclude<WarehouseTab, 'all'>) {
 }
 
 export default function WarehousePage() {
+  const router = useRouter();
   const [tab, setTab] = useState<WarehouseTab>('all');
   const [toast, setToast] = useState<string | null>(null);
   const [sellItem, setSellItem] = useState<WarehouseItem | null>(null);
@@ -229,9 +231,9 @@ export default function WarehousePage() {
           <button
             className={styles.back}
             type="button"
-            onClick={() => window.history.back()}
+            onClick={() => router.back()}
           >
-            ‹
+            <i className="fa-solid fa-chevron-left" />
           </button>
           <h1 className={styles.title}>我的仓库</h1>
           <button

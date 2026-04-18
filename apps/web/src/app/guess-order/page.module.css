@@ -12,20 +12,19 @@
   z-index: 100;
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 52px;
-  padding: 0 16px;
+  height: 48px;
+  padding: 0 14px;
   background: rgba(15, 15, 25, 0.95);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 215, 0, 0.08);
 }
 
 .back {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
   color: rgba(255, 255, 255, 0.75);
   font-size: 14px;
 }
@@ -35,23 +34,15 @@
 }
 
 .title {
+  flex: 1;
+  text-align: center;
   font-size: 16px;
   font-weight: 800;
   color: #ffd700;
 }
 
-.secure {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #4caf50;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.secure i {
-  font-size: 10px;
+.headerSpacer {
+  width: 32px;
 }
 
 .countdownBar {
@@ -262,6 +253,10 @@
   font-size: 11px;
 }
 
+.optionPct i {
+  font-size: 8px;
+}
+
 .optionPctNum {
   color: #fff;
   font-size: 16px;
@@ -272,6 +267,12 @@
   color: #ffd700;
   font-size: 18px;
   font-weight: 900;
+}
+
+.optionRight {
+  position: relative;
+  z-index: 1;
+  text-align: right;
 }
 
 .trend {
@@ -286,6 +287,24 @@
 
 .down {
   color: #00e676;
+}
+
+.qtyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 215, 0, 0.12);
+  color: #ffd700;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.qtyBadge i {
+  font-size: 8px;
 }
 
 .pkSection {

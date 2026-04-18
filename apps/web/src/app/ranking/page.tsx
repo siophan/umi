@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from "next/navigation";
 import styles from './page.module.css';
 
 type RankTab = 'winRate' | 'earnings' | 'active';
@@ -12,35 +13,35 @@ const rankData = {
       name: '预言大师',
       rate: '82.3%',
       level: 'Lv.98',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=alpha',
+      avatar: '/legacy/images/mascot/mouse-main.png',
     },
     {
       rank: 2,
       name: '零食侦探',
       rate: '79.6%',
       level: 'Lv.92',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=beta',
+      avatar: '/legacy/images/mascot/mouse-happy.png',
     },
     {
       rank: 3,
       name: '热点猎手',
       rate: '76.1%',
       level: 'Lv.88',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=gamma',
+      avatar: '/legacy/images/mascot/mouse-casual.png',
     },
     {
       rank: 4,
       name: '零食猎人',
       rate: '68.5%',
       level: 'Lv.74',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=delta',
+      avatar: '/legacy/images/mascot/mouse-main.png',
     },
     {
       rank: 5,
       name: '阿根廷卫冕',
       rate: '66.2%',
       level: 'Lv.70',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=epsilon',
+      avatar: '/legacy/images/mascot/mouse-happy.png',
     },
   ],
   earnings: [
@@ -49,28 +50,28 @@ const rankData = {
       name: '赚币王',
       rate: '¥12,680',
       level: 'Lv.99',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=zeta',
+      avatar: '/legacy/images/mascot/mouse-main.png',
     },
     {
       rank: 2,
       name: '稳健派',
       rate: '¥10,230',
       level: 'Lv.94',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=eta',
+      avatar: '/legacy/images/mascot/mouse-happy.png',
     },
     {
       rank: 3,
       name: '套利专家',
       rate: '¥8,860',
       level: 'Lv.90',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=theta',
+      avatar: '/legacy/images/mascot/mouse-casual.png',
     },
     {
       rank: 4,
       name: '零食猎人',
       rate: '¥6,400',
       level: 'Lv.74',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=iota',
+      avatar: '/legacy/images/mascot/mouse-main.png',
     },
   ],
   active: [
@@ -79,28 +80,28 @@ const rankData = {
       name: '冲浪玩家',
       rate: '88 次',
       level: 'Lv.96',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=kappa',
+      avatar: '/legacy/images/mascot/mouse-main.png',
     },
     {
       rank: 2,
       name: '夜猫子',
       rate: '76 次',
       level: 'Lv.90',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=lambda',
+      avatar: '/legacy/images/mascot/mouse-happy.png',
     },
     {
       rank: 3,
       name: '连胜机器',
       rate: '64 次',
       level: 'Lv.87',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=mu',
+      avatar: '/legacy/images/mascot/mouse-casual.png',
     },
     {
       rank: 4,
       name: '零食猎人',
       rate: '52 次',
       level: 'Lv.74',
-      avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=delta',
+      avatar: '/legacy/images/mascot/mouse-main.png',
     },
   ],
 } satisfies Record<
@@ -109,6 +110,7 @@ const rankData = {
 >;
 
 export default function RankingPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<RankTab>('winRate');
 
   const data = useMemo(() => rankData[tab], [tab]);
@@ -121,9 +123,9 @@ export default function RankingPage() {
         <button
           className={styles.back}
           type="button"
-          onClick={() => window.history.back()}
+          onClick={() => router.back()}
         >
-          ‹
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>排行榜</div>
         <div className={styles.headerAction} />
@@ -202,7 +204,7 @@ export default function RankingPage() {
         <img
           className={styles.myAvatar}
           alt="me"
-          src="https://api.dicebear.com/7.x/adventurer/svg?seed=Hunter"
+          src="/legacy/images/mascot/mouse-main.png"
         />
         <div className={styles.myInfo}>
           <div className={styles.myName}>零食猎人 (我)</div>

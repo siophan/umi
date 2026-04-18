@@ -50,6 +50,12 @@
   background: transparent;
 }
 
+.headerSpacer {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
 .empty {
   padding: 80px 20px 40px;
   text-align: center;
@@ -57,14 +63,18 @@
 
 .emptyIcon {
   margin-bottom: 16px;
-  font-size: 56px;
   opacity: 0.2;
+}
+
+.emptyIcon i {
+  font-size: 56px;
 }
 
 .emptyText {
   margin-bottom: 20px;
   color: #bbb;
   font-size: 14px;
+  line-height: 1.6;
 }
 
 .emptyBtn,
@@ -460,6 +470,10 @@
 
 .confirmIcon {
   margin-bottom: 12px;
+  font-size: 40px;
+}
+
+.confirmIcon i {
   font-size: 40px;
 }
 

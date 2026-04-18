@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import styles from './page.module.css';
 
@@ -12,8 +13,7 @@ const product = {
 };
 
 const predictionOptions = [
-  { name: '阿根廷卫冕', pct: 56, odds: '×1.8', trend: 'up', fill: '56%' },
-  { name: '法国夺冠', pct: 44, odds: '×2.1', trend: 'down', fill: '44%' },
+  { name: '阿根廷卫冕', pct: 56, odds: '×1.8', trend: 'up', fill: '56%', votes: '5,632人' },
 ];
 
 const coupons = [
@@ -25,23 +25,23 @@ const coupons = [
 const friends = [
   {
     name: '球迷小张',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=pk-a',
+    avatar: '/legacy/images/mascot/mouse-main.png',
     online: true,
   },
   {
     name: '零食猎人',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=pk-b',
+    avatar: '/legacy/images/mascot/mouse-happy.png',
     online: true,
   },
   {
     name: '预测家',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=pk-c',
+    avatar: '/legacy/images/mascot/mouse-casual.png',
     online: false,
   },
 ];
 
 export default function GuessOrderPage() {
-  const [selected, setSelected] = useState(0);
+  const router = useRouter();
   const [selectedCoupon, setSelectedCoupon] = useState(1);
   const [selectedFriend, setSelectedFriend] = useState(0);
   const [showPk, setShowPk] = useState(false);
@@ -58,14 +58,12 @@ export default function GuessOrderPage() {
         <button
           className={styles.back}
           type="button"
-          onClick={() => window.history.back()}
+          onClick={() => router.back()}
         >
-          <i className="fa-solid fa-chevron-left" />
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>竞猜下单</div>
-        <div className={styles.secure}>
-          <i className="fa-solid fa-shield-halved" /> 安全支付
-        </div>
+        <div className={styles.headerSpacer} />
       </header>
 
       <div className={styles.countdownBar}>
@@ -94,12 +92,11 @@ export default function GuessOrderPage() {
         </h3>
         <p>赢方瓜分输方下注的商品 · 回报率实时变化</p>
         <div className={styles.options}>
-          {predictionOptions.map((item, index) => (
+          {predictionOptions.map((item) => (
             <button
               key={item.name}
               type="button"
-              className={`${styles.option} ${selected === index ? styles.optionSelected : ''} ${styles[`color${index}` as 'color0' | 'color1' | 'color2' | 'color3' | 'color4'] || ''}`}
-              onClick={() => setSelected(index)}
+              className={`${styles.option} ${styles.optionSelected} ${styles.color0}`}
             >
               <div className={styles.optionFill} style={{ width: item.fill }} />
               <div className={styles.optionRadio} />
@@ -107,12 +104,20 @@ export default function GuessOrderPage() {
                 <div className={styles.optionName}>{item.name}</div>
                 <div className={styles.optionPct}>
                   <span className={styles.optionPctNum}>{item.pct}%</span>
-                  <span className={styles.optionOdds}>{item.odds}</span>
+                  <span>
+                    <i className="fa-solid fa-users" /> {item.votes}
+                  </span>
                 </div>
+                <div className={styles.qtyBadge}>
+                  <i className="fa-solid fa-box" /> 竞猜1件
+                </div>
+              </div>
+              <div className={styles.optionRight}>
+                <div className={styles.optionOdds}>{item.odds}</div>
                 <div
                   className={`${styles.trend} ${styles[item.trend === 'up' ? 'up' : 'down']}`}
                 >
-                  {item.trend === 'up' ? '上涨趋势' : '下降趋势'}
+                  {item.trend === 'up' ? '↑上升' : '↓下降'}
                 </div>
               </div>
             </button>
@@ -239,7 +244,7 @@ export default function GuessOrderPage() {
           <button
             type="button"
             className={styles.outline}
-            onClick={() => window.history.back()}
+            onClick={() => router.back()}
           >
             返回
           </button>

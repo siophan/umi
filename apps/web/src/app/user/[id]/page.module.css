@@ -20,6 +20,13 @@
   transition: background 0.25s ease, box-shadow 0.25s ease;
 }
 
+.topbarScrolled {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+
 .backBtn,
 .topRight button {
   width: 32px;
@@ -32,6 +39,12 @@
   backdrop-filter: blur(4px);
 }
 
+.topbarScrolled .backBtn,
+.topbarScrolled .topRight button {
+  background: #f0f0f0;
+  color: #333;
+}
+
 .topName {
   position: absolute;
   left: 50%;
@@ -41,6 +54,11 @@
   opacity: 0;
   transform: translateX(-50%);
   transition: opacity 0.25s ease, color 0.25s ease;
+}
+
+.topbarScrolled .topName {
+  opacity: 1;
+  color: #1a1a1a;
 }
 
 .topRight {
@@ -166,14 +184,26 @@
 
 .followBtn {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   border: 0;
   color: #fff;
   background: linear-gradient(135deg, #ff5722, #ff9800);
   box-shadow: 0 3px 12px rgba(255, 87, 34, 0.3);
 }
 
+.following {
+  background: #f0f0f0;
+  color: #999;
+  box-shadow: none;
+}
+
 .chatBtn {
   margin-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   border: 1.5px solid #ddd;
   background: #fff;
   color: #555;
@@ -547,4 +577,9 @@
   background: linear-gradient(135deg, #ff5722, #ff9800);
   color: #fff;
   font-size: 15px;
+  opacity: 0.5;
+}
+
+.chatSendActive {
+  opacity: 1;
 }

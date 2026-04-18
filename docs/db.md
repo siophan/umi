@@ -44,6 +44,8 @@
 | 表名 | 表注释 |
 | --- | --- |
 | `user` | 用户主表 |
+| `auth_session` | 登录会话表 |
+| `sms_verification_code` | 短信验证码记录表 |
 | `user_follow` | 用户关注关系表 |
 | `friendship` | 好友关系及申请表 |
 | `address` | 用户收货地址表 |
@@ -150,6 +152,64 @@
 
 - 当前 `user` 仍然保留余额快照字段 `coins`
 - 余额流水已拆到 `coin_ledger`
+
+### `sms_verification_code`
+
+用途：
+
+- 存储短信验证码发送与校验记录
+- 支撑注册、验证码登录、找回密码等手机号验证场景
+- 支撑验证码过期、使用状态、频控和审计
+
+建议字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 主键 |
+| `phone` | 手机号 |
+| `biz_type` | 业务类型，如 `register` / `login` / `reset_password` |
+| `code` | 验证码 |
+| `status` | 状态，如 `pending` / `used` / `expired` / `invalidated` |
+| `expires_at` | 过期时间 |
+| `used_at` | 使用时间 |
+| `request_ip` | 请求 IP |
+| `created_at` | 创建时间 |
+| `updated_at` | 更新时间 |
+
+说明：
+
+- 当前阶段为了尽快联调，可以直接存验证码明文
+- 后续进入正式环境时，建议改成只存验证码哈希，避免明文落库
+- 应至少保证同手机号同业务类型下，查询“最近一条未使用且未过期验证码”足够快
+- 校验成功后应更新 `status` 为 `used` 并记录 `used_at`
+
+### `auth_session`
+
+用途：
+
+- 存储用户登录态
+- 支撑 `Bearer token` 鉴权
+- 保证服务重启后会话不丢失
+
+建议字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 主键 |
+| `token` | 登录态 token |
+| `user_id` | 用户 ID |
+| `expires_at` | 过期时间 |
+| `created_at` | 创建时间 |
+| `updated_at` | 更新时间 |
+
+说明：
+
+- 当前阶段 token 可以先直接明文存储，后续如有安全要求可改为哈希存储
+- `token` 应保证唯一
+- `user_id` 应保证唯一，表示同一用户同一时间只保留一个有效登录态
+- 每次鉴权都应校验 `expires_at`
+- 过期 session 可以在读请求时清理，也可以后续补定时清理任务
+- 用户重新登录时，应使旧 token 立即失效
 
 ### `user_follow`
 

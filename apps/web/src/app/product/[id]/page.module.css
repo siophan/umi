@@ -96,7 +96,7 @@
 .heroSlide img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .heroDots {
@@ -243,8 +243,11 @@
 .promoStrip {
   display: flex;
   gap: 6px;
-  padding: 8px 0 0;
+  padding: 8px 12px;
+  margin: 0 -12px;
   overflow-x: auto;
+  background: #fff;
+  border-top: 0.5px solid #f0f0f0;
   scrollbar-width: none;
 }
 
@@ -1153,6 +1156,10 @@
   font-size: 9px;
 }
 
+.detailToggle span i {
+  font-size: 9px;
+}
+
 .reviewItem {
   display: flex;
   gap: 8px;
@@ -1276,6 +1283,7 @@
   border: 0;
   background: transparent;
   color: #999;
+  text-decoration: none;
 }
 
 .barIcon span {
@@ -1286,6 +1294,11 @@
 .barIcon em {
   font-style: normal;
   font-size: 9px;
+}
+
+.barIconFavActive span,
+.barIconFavActive em {
+  color: #ff3b5c;
 }
 
 .barBtns {
@@ -1304,6 +1317,10 @@
   color: #fff;
   font-size: 13px;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .barPrimary {
@@ -1312,16 +1329,21 @@
   border: 0;
   border-radius: 0 22px 22px 0;
   color: #fff;
-  background: linear-gradient(135deg, #ff2442, #ff9800);
   font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
-.barPrimary span {
-  display: block;
-  font-size: 10px;
-  font-weight: 600;
-  opacity: 0.7;
+.barPrimaryDirect {
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+}
+
+.barPrimaryGuess {
+  background: linear-gradient(135deg, #ff8534, #ff5500);
+}
+
+.barPrimaryInv {
+  background: linear-gradient(135deg, #2dc88a, #00875a);
 }
 
 .exchangeOverlay {

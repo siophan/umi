@@ -1,43 +1,39 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 
+import { fetchUserProfile } from '../../../lib/api';
 import styles from './page.module.css';
 
-const profileDB: Record<
-  string,
-  {
-    name: string;
-    verified: boolean;
-    level: string;
-    bio: string;
-    tags: string[];
-    cover: string;
-    avatar: string;
-    works: Array<{
-      id: string;
-      tag: string;
-      title: string;
-      desc: string;
-      images: string[];
-      likes: number;
-      comments: number;
-      time: string;
-    }>;
-    liked: Array<{
-      id: string;
-      tag: string;
-      title: string;
-      desc: string;
-      images: string[];
-      likes: number;
-      comments: number;
-      time: string;
-    }>;
-  }
-> = {
+type ProfilePost = {
+  id: string;
+  tag: string;
+  title: string;
+  desc: string;
+  images: string[];
+  likes: number;
+  comments: number;
+  time: string;
+};
+
+type ProfileViewModel = {
+  name: string;
+  verified: boolean;
+  level: string;
+  bio: string;
+  tags: string[];
+  cover: string;
+  avatar: string;
+  followers: number;
+  following: number;
+  wins: number;
+  works: ProfilePost[];
+  liked: ProfilePost[];
+};
+
+const profileDB: Record<string, ProfileViewModel> = {
   '乐事官方旗舰店': {
     name: '乐事官方旗舰店',
     verified: true,
@@ -46,6 +42,9 @@ const profileDB: Record<
     tags: ['品牌认证', '零食', '美食'],
     cover: 'https://picsum.photos/seed/user1/1200/720',
     avatar: '/legacy/images/products/p001-lays.jpg',
+    followers: 125600,
+    following: 38,
+    wins: 892,
     works: [
       { id: 'w1', tag: '品牌竞猜', title: '乐事2026马年限定口味投票开启！番茄味 vs 黄瓜味', desc: '参与竞猜赢正品零食大礼包，猜中直接发货到家。当前3890人参与！', images: ['/legacy/images/products/p001-lays.jpg'], likes: 2341, comments: 456, time: '15分钟前' },
       { id: 'w2', tag: '新品预告', title: '乐事春季限定新口味即将揭晓！黄瓜味 vs 烧烤味', desc: '下一轮竞猜即将开启，敬请期待！参与即有机会获得新品试吃装。', images: ['/legacy/images/products/p006-wangwang.jpg', '/legacy/images/products/p002-oreo.jpg'], likes: 1890, comments: 320, time: '3小时前' },
@@ -62,6 +61,9 @@ const profileDB: Record<
     tags: ['测评达人', '美食博主'],
     cover: 'https://picsum.photos/seed/user2/1200/720',
     avatar: '/legacy/images/mascot/mouse-casual.png',
+    followers: 45600,
+    following: 12,
+    wins: 128,
     works: [
       { id: 'w1', tag: '零食测评', title: '2026年度十大零食品牌排行榜出炉！', desc: '根据全平台销售数据与用户口碑综合评选...', images: ['/legacy/images/products/p003-squirrels.jpg'], likes: 8723, comments: 1204, time: '1小时前' },
     ],
@@ -72,35 +74,92 @@ const profileDB: Record<
 };
 
 export default function UserProfilePage() {
-  const params = useSearchParams();
-  const name = decodeURIComponent(params.get('name') || '乐事官方旗舰店');
-  const profile = profileDB[name] || profileDB.default;
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const [profile, setProfile] = useState<ProfileViewModel>(profileDB.default);
   const [tab, setTab] = useState<'works' | 'liked'>('works');
   const [following, setFollowing] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [message, setMessage] = useState('');
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
 
   const statItems = useMemo(
     () => [
-      { value: 125600, label: '粉丝' },
-      { value: 38, label: '关注' },
-      { value: 892000, label: '喜欢' },
+      { value: profile.followers ?? 0, label: '粉丝' },
+      { value: profile.following ?? 0, label: '关注' },
+      { value: profile.wins ?? 0, label: '获胜' },
     ],
-    [],
+    [profile.followers, profile.following, profile.wins],
   );
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 90);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadProfile() {
+      try {
+        const user = await fetchUserProfile(String(params.id));
+        if (ignore) {
+          return;
+        }
+
+        const baseProfile = user.shopVerified ? profileDB['乐事官方旗舰店'] : profileDB.default;
+        setProfile({
+          ...baseProfile,
+          name: user.name || baseProfile.name,
+          verified: Boolean(user.shopVerified),
+          level: `Lv.${user.level || 1}${user.title ? ` ${user.title}` : ''}`,
+          bio: user.signature || baseProfile.bio,
+          avatar: user.avatar || baseProfile.avatar,
+          followers: user.followers || 0,
+          following: user.following || 0,
+          wins: user.wins || 0,
+        });
+      } catch {
+        if (ignore) {
+          return;
+        }
+        setProfile(profileDB.default);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (params.id) {
+      void loadProfile();
+    }
+
+    return () => {
+      ignore = true;
+    };
+  }, [params.id]);
+
+  if (loading) {
+    return <main className={styles.page} />;
+  }
 
   return (
     <main className={styles.page}>
-      <header className={styles.topbar}>
-        <button className={styles.backBtn} type="button" onClick={() => history.back()}>
+      <header className={`${styles.topbar} ${scrolled ? styles.topbarScrolled : ''}`}>
+        <button className={styles.backBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.topName}>{profile.name}</div>
         <div className={styles.topRight}>
-          <button type="button" onClick={() => setChatOpen(true)}>
-            <i className="fa-regular fa-envelope" />
+          <button type="button" aria-label="分享主页">
+            <i className="fa-solid fa-share-nodes" />
           </button>
-          <button type="button">
+          <button type="button" aria-label="更多选项">
             <i className="fa-solid fa-ellipsis" />
           </button>
         </div>
@@ -128,10 +187,20 @@ export default function UserProfilePage() {
               <span>{item.label}</span>
             </div>
           ))}
-          <button className={styles.followBtn} type="button" onClick={() => setFollowing((v) => !v)}>
-            {following ? '已关注' : '+ 关注'}
+          <button
+            className={`${styles.followBtn} ${following ? styles.following : ''}`}
+            type="button"
+            onClick={() => setFollowing((v) => !v)}
+          >
+            {following ? '已关注' : (
+              <>
+                <i className="fa-solid fa-plus" />
+                关注
+              </>
+            )}
           </button>
           <button className={styles.chatBtn} type="button" onClick={() => setChatOpen(true)}>
+            <i className="fa-regular fa-envelope" />
             私信
           </button>
         </div>
@@ -241,12 +310,12 @@ export default function UserProfilePage() {
           <section className={styles.chatPanel}>
             <header className={styles.chatHeader}>
               <button className={styles.chatBack} type="button" onClick={() => setChatOpen(false)}>
-                ←
+                <i className="fa-solid fa-arrow-left" />
               </button>
               <img className={styles.chatAvatar} src={profile.avatar} alt={profile.name} />
               <div className={styles.chatName}>{profile.name}</div>
               <button className={styles.chatMore} type="button">
-                ⋯
+                <i className="fa-solid fa-ellipsis" />
               </button>
             </header>
               <div className={styles.chatMessages}>
@@ -269,8 +338,17 @@ export default function UserProfilePage() {
                 <button type="button"><i className="fa-regular fa-image" /></button>
                 <button type="button"><i className="fa-regular fa-face-smile" /></button>
               </div>
-              <textarea className={styles.chatInput} placeholder="发送消息…" rows={1} />
-              <button className={styles.chatSend} type="button">
+              <textarea
+                className={styles.chatInput}
+                placeholder="发送消息…"
+                rows={1}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+              />
+              <button
+                className={`${styles.chatSend} ${message.trim() ? styles.chatSendActive : ''}`}
+                type="button"
+              >
                 <i className="fa-solid fa-paper-plane" />
               </button>
             </footer>

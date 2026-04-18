@@ -23,18 +23,21 @@
 }
 
 .back,
-.action {
+.headerSpacer {
   width: 32px;
   height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.back {
   border: 0;
   border-radius: 50%;
   background: transparent;
   color: #333;
   font-size: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .title {

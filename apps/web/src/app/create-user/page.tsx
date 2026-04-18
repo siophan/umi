@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import styles from "./page.module.css";
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import styles from './page.module.css';
 
 type Friend = {
   id: string;
@@ -32,7 +32,7 @@ const topics = [
   { emoji: "📱", name: "数码之争", title: "该买哪个？", a: "苹果", b: "安卓" },
 ];
 
-const stakeChips = ["🧋 请一杯奶茶", "🍕 请吃一顿", "🧧 发个红包", "💪 做20个俯卧撑", "📢 发条朋友圈", "🎤 唱首歌"];
+const stakeChips = ['🧋 请一杯奶茶', '🍕 请吃一顿', '🧧 发个红包', '💪 做20个俯卧撑', '📢 发条朋友圈', '🎤 唱首歌'];
 
 const friends: Friend[] = [
   {
@@ -117,46 +117,22 @@ const groups: Group[] = [
   },
 ];
 
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m14.5 5.5-1.06-1.06L6.88 11H20v1.5H6.88l6.56 6.56 1.06-1.06L8.75 12l5.75-6.5Z" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m6.8 5.4 5.2 5.2 5.2-5.2 1.4 1.4-5.2 5.2 5.2 5.2-1.4 1.4-5.2-5.2-5.2 5.2-1.4-1.4 5.2-5.2-5.2-5.2 1.4-1.4Z" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" />
-    </svg>
-  );
-}
-
 export default function CreateUserPage() {
   const router = useRouter();
   const [topicIndex, setTopicIndex] = useState<number | null>(null);
-  const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
-  const [optA, setOptA] = useState("");
-  const [optB, setOptB] = useState("");
-  const [deadline, setDeadline] = useState("2026-04-18T20:00");
-  const [search, setSearch] = useState("");
-  const [selectedFriends, setSelectedFriends] = useState<string[]>(["f1", "f3"]);
-  const [selectedGroup, setSelectedGroup] = useState<string>("g1");
+  const [title, setTitle] = useState('');
+  const [desc, setDesc] = useState('');
+  const [optA, setOptA] = useState('');
+  const [optB, setOptB] = useState('');
+  const [deadline, setDeadline] = useState('2026-04-18T20:00');
+  const [search, setSearch] = useState('');
+  const [selectedFriends, setSelectedFriends] = useState<string[]>(['f1', 'f3']);
+  const [selectedGroup, setSelectedGroup] = useState<string>('g1');
   const [anonVote, setAnonVote] = useState(true);
   const [allowComment, setAllowComment] = useState(true);
   const [stakeEnabled, setStakeEnabled] = useState(true);
   const [selectedStake, setSelectedStake] = useState<string>(stakeChips[0]);
-  const [stakeCustom, setStakeCustom] = useState("");
+  const [stakeCustom, setStakeCustom] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
@@ -207,7 +183,7 @@ export default function CreateUserPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} type="button" onClick={() => router.back()}>
-          <BackIcon />
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.titleWrap}>
           <div className={styles.title}>发起好友竞猜</div>
@@ -219,7 +195,7 @@ export default function CreateUserPage() {
       </header>
 
       <section className={styles.roleBar}>
-        <span className={styles.roleIcon}>👤</span>
+        <span className={styles.roleIcon}><i className="fa-regular fa-user" /></span>
         <span className={styles.roleText}>用户端 · 好友PK模式</span>
         <span className={styles.roleDesc}>仅限社群和好友竞猜</span>
         <button className={styles.roleSwitch} type="button">
@@ -363,7 +339,7 @@ export default function CreateUserPage() {
             })}
             <button className={styles.inviteMore} type="button" onClick={() => setPreviewOpen(true)}>
               <span className={styles.inviteMoreIcon}>
-                <PlusIcon />
+                    <i className="fa-solid fa-plus" />
               </span>
               <span className={styles.inviteMoreText}>邀请</span>
             </button>
@@ -498,7 +474,7 @@ export default function CreateUserPage() {
             <div className={styles.modalHeader}>
               <div className={styles.modalTitle}>竞猜预览</div>
               <button className={styles.modalClose} type="button" onClick={() => setPreviewOpen(false)}>
-                <CloseIcon />
+                <i className="fa-solid fa-xmark" />
               </button>
             </div>
             <div className={styles.modalBody}>

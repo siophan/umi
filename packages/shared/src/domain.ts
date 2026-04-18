@@ -14,6 +14,39 @@ export interface UserSummary {
   name: string;
   role: UserRole;
   coins: number;
+  avatar?: string | null;
+  level?: number;
+  title?: string | null;
+  signature?: string | null;
+  gender?: string | null;
+  birthday?: string | null;
+  region?: string | null;
+  shopName?: string | null;
+  followers?: number;
+  following?: number;
+  winRate?: number;
+  totalGuess?: number;
+  wins?: number;
+  joinDate?: string | null;
+  shopVerified?: boolean;
+}
+
+export interface UserPublicProfile {
+  id: string;
+  name: string;
+  avatar?: string | null;
+  level?: number;
+  title?: string | null;
+  signature?: string | null;
+  gender?: string | null;
+  region?: string | null;
+  followers?: number;
+  following?: number;
+  winRate?: number;
+  totalGuess?: number;
+  wins?: number;
+  joinDate?: string | null;
+  shopVerified?: boolean;
 }
 
 export interface ProductSummary {

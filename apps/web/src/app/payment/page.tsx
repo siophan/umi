@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import styles from './page.module.css';
 
@@ -19,8 +20,8 @@ const addresses = [
 ];
 
 const products = [
-  { name: '奥利奥原味夹心饼干 67g*3', price: 26.8, qty: 1, orig: 26.8 },
-  { name: '三只松鼠坚果礼盒 520g', price: 128, qty: 1, orig: 168 },
+  { name: '奥利奥原味夹心饼干 67g*3', price: 26.8, qty: 1, orig: 26.8, img: '/legacy/images/products/p002-oreo.jpg' },
+  { name: '三只松鼠坚果礼盒 520g', price: 128, qty: 1, orig: 168, img: '/legacy/images/products/p003-squirrels.jpg' },
 ];
 
 const coupons = [
@@ -53,6 +54,7 @@ const coupons = [
 const services = ['假一赔十', '破损包赔', '极速退款', '7 天无理由'];
 
 export default function PaymentPage() {
+  const router = useRouter();
   const [addressIndex, setAddressIndex] = useState(0);
   const [couponIndex, setCouponIndex] = useState(0);
   const [method, setMethod] = useState<'wechat' | 'alipay'>('wechat');
@@ -79,9 +81,9 @@ export default function PaymentPage() {
         <button
           className={styles.back}
           type="button"
-          onClick={() => window.history.back()}
+          onClick={() => router.back()}
         >
-          <i className="fa-solid fa-chevron-left" />
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>确认订单</div>
         <div className={styles.secure}>
@@ -131,7 +133,7 @@ export default function PaymentPage() {
             <img
               alt={item.name}
               className={styles.productImg}
-              src={`/legacy/images/product/p00${index + 1}.jpg`}
+              src={item.img}
             />
             <div className={styles.productInfo}>
               <div className={styles.productName}>{item.name}</div>

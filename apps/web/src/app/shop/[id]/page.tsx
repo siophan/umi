@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 type TabKey = 'all' | 'hot' | 'guess' | 'new';
@@ -145,9 +146,17 @@ const coupons = [
 ];
 
 export default function ShopDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [tab, setTab] = useState<TabKey>('all');
   const [filter, setFilter] = useState<FilterKey>('default');
   const [followed, setFollowed] = useState(false);
+  const [navSolid, setNavSolid] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 1800);
+  };
 
   const brand = decodeURIComponent(params.id || '乐事');
   const meta = shopMeta[brand] || {
@@ -199,14 +208,17 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
     .slice(0, 8);
   const newProducts = [...sortedProducts].reverse().slice(0, 6);
 
+  useEffect(() => {
+    const onScroll = () => setNavSolid(window.scrollY > 36);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <div className={styles.page}>
-      <header className={styles.nav}>
-        <button
-          className={styles.back}
-          type="button"
-          onClick={() => window.history.back()}
-        >
+      <header className={`${styles.nav} ${navSolid ? styles.navSolid : styles.navTransparent}`}>
+        <button className={styles.back} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.navTitle}>{meta.full}</div>
@@ -214,16 +226,16 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
           <button
             type="button"
             className={styles.navBtn}
-            onClick={() => alert('分享店铺 📤')}
+            onClick={() => showToast('分享店铺')}
           >
             <i className="fa-solid fa-share-nodes" />
           </button>
           <button
             type="button"
             className={styles.navBtn}
-            onClick={() => alert('返回首页')}
+            onClick={() => router.push('/')}
           >
-            <i className="fa-solid fa-house" />
+            <i className="fa-solid fa-home" />
           </button>
         </div>
       </header>
@@ -378,7 +390,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
         <button
           type="button"
           className={`${styles.activityCard} ${styles.activityPurple}`}
-          onClick={() => alert('活动即将开启')}
+          onClick={() => showToast('活动即将开启')}
         >
           <div className={styles.activityIcon}><i className="fa-solid fa-gift" /></div>
           <div className={styles.activityBody}>
@@ -449,7 +461,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
                   className={styles.productCard}
                   key={item.id}
                   type="button"
-                  onClick={() => alert(item.name)}
+                  onClick={() => router.push(`/product/${item.id}`)}
                 >
                   <div className={styles.productImg}>
                     <img alt={item.name} src={item.img} />
@@ -485,7 +497,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
                 className={styles.guessCard}
                 key={guess.id}
                 type="button"
-                onClick={() => alert(guess.title)}
+                onClick={() => router.push(`/guess/${guess.id}`)}
               >
                 <div className={styles.guessTop}>
                   <img
@@ -541,7 +553,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
                   className={styles.productCard}
                   key={item.id}
                   type="button"
-                  onClick={() => alert(item.name)}
+                  onClick={() => router.push(`/product/${item.id}`)}
                 >
                   <div className={styles.productImg}>
                     <img alt={item.name} src={item.img} />
@@ -572,7 +584,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
 
       <footer className={styles.bottomBar}>
         <button
-          className={styles.bottomIcon}
+          className={`${styles.bottomIcon} ${followed ? styles.bottomIconFavOn : ''}`}
           type="button"
           onClick={() => setFollowed((value) => !value)}
         >
@@ -582,16 +594,16 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
         <button
           className={styles.bottomIcon}
           type="button"
-          onClick={() => alert('正在接入客服...')}
+          onClick={() => showToast('正在接入客服...')}
         >
-          <span><i className="fa-regular fa-comments" /></span>
+          <span><i className="fa-regular fa-comment-dots" /></span>
           客服
         </button>
         <div className={styles.bottomButtons}>
           <button
             className={styles.chatBtn}
             type="button"
-            onClick={() => alert('正在接入店铺客服...')}
+            onClick={() => showToast('正在接入店铺客服...')}
           >
             聊一聊
           </button>
@@ -604,6 +616,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
           </button>
         </div>
       </footer>
+      {toast ? <div className={styles.toast}>{toast}</div> : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import styles from './page.module.css';
@@ -60,6 +61,7 @@ const filters = [
 ] as const;
 
 export default function CommunitySearchPage() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<(typeof filters)[number]['key']>('all');
   const [searchHistory, setSearchHistory] = useState(['乐事新口味投票', '三只松鼠年货']);
@@ -84,7 +86,7 @@ export default function CommunitySearchPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} type="button" onClick={() => window.history.back()}>
+        <button className={styles.backBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={`${styles.inputWrap} ${query ? styles.inputFocus : ''}`}>
@@ -100,7 +102,7 @@ export default function CommunitySearchPage() {
             </button>
           ) : null}
         </div>
-        <button className={styles.cancelBtn} type="button" onClick={() => window.history.back()}>
+        <button className={styles.cancelBtn} type="button" onClick={() => router.back()}>
           取消
         </button>
       </header>
@@ -122,9 +124,9 @@ export default function CommunitySearchPage() {
         <div className={styles.defaultView}>
           <section className={styles.section}>
             <div className={styles.sectionTitle}>
-              <span>⌖</span> 搜索历史
+              <span><i className="fa-solid fa-clock-rotate-left" /></span> 搜索历史
               <button type="button" onClick={() => setSearchHistory([])}>
-                清除
+                <i className="fa-solid fa-trash-can" /> 清除
               </button>
             </div>
             <div className={styles.historyList}>
@@ -159,7 +161,7 @@ export default function CommunitySearchPage() {
 
           <section className={styles.section}>
             <div className={styles.sectionTitle}>
-              <span><i className="fa-solid fa-bolt" /></span> 推荐关注
+              <span><i className="fa-solid fa-user-plus" /></span> 推荐关注
             </div>
             <div className={styles.userScroll}>
               {recUsers.map((user) => (

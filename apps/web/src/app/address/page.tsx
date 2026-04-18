@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import styles from "./page.module.css";
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import styles from './page.module.css';
 
 type AddressItem = {
   id: string;
@@ -15,58 +15,31 @@ type AddressItem = {
 };
 
 const initialAddresses: AddressItem[] = [
-  { id: "1", name: "张先生", phone: "138****8822", region: "上海市 浦东新区", detail: "张江高科 12 号楼 908", tag: "home", default: true },
-  { id: "2", name: "李女士", phone: "139****6618", region: "上海市 黄浦区", detail: "南京东路 188 号 22 楼", tag: "work", default: false },
+  { id: '1', name: '张先生', phone: '138****8822', region: '上海市 浦东新区', detail: '张江高科 12 号楼 908', tag: 'home', default: true },
+  { id: '2', name: '李女士', phone: '139****6618', region: '上海市 黄浦区', detail: '南京东路 188 号 22 楼', tag: 'work', default: false },
 ];
-
-function ArrowIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m14.5 5.5-1.06-1.06L6.88 11H20v1.5H6.88l6.56 6.56 1.06-1.06L8.75 12l5.75-6.5Z" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m6.8 5.4 5.2 5.2 5.2-5.2 1.4 1.4-5.2 5.2 5.2 5.2-1.4 1.4-5.2-5.2-5.2 5.2-1.4-1.4 5.2-5.2-5.2-5.2 1.4-1.4Z" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" />
-    </svg>
-  );
-}
 
 export default function AddressPage() {
   const router = useRouter();
   const [addresses, setAddresses] = useState(initialAddresses);
   const [manageMode, setManageMode] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const [formTitle, setFormTitle] = useState("新增地址");
+  const [formTitle, setFormTitle] = useState('新增地址');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState('');
   const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    province: "",
-    city: "",
-    district: "",
-    detail: "",
-    tag: "home" as AddressItem["tag"],
+    name: '',
+    phone: '',
+    province: '',
+    city: '',
+    district: '',
+    detail: '',
+    tag: 'home' as AddressItem['tag'],
     default: false,
   });
 
   const empty = addresses.length === 0;
-  const regionList = useMemo(
-    () => ["北京市", "上海市", "浙江省", "广东省", "江苏省", "四川省"],
-    [],
-  );
+  const regionList = useMemo(() => ['北京市', '上海市', '浙江省', '广东省', '江苏省', '四川省'], []);
 
   const openToast = (message: string) => setToast(message);
 
@@ -79,21 +52,25 @@ export default function AddressPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} type="button" onClick={() => router.back()}>
-          <ArrowIcon />
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>收货地址</div>
-        <button className={styles.manageBtn} type="button" onClick={() => setManageMode((v) => !v)}>
-          {manageMode ? "完成" : "管理"}
-        </button>
+        {empty ? (
+          <div className={styles.headerSpacer} />
+        ) : (
+          <button className={styles.manageBtn} type="button" onClick={() => setManageMode((v) => !v)}>
+            {manageMode ? "完成" : "管理"}
+          </button>
+        )}
       </header>
 
       {empty ? (
         <section className={styles.empty}>
-          <div className={styles.emptyIcon}>📭</div>
-          <div className={styles.emptyText}>还没有收货地址</div>
+          <div className={styles.emptyIcon}><i className="fa-solid fa-location-dot" /></div>
+          <div className={styles.emptyText}>还没有收货地址<br />添加一个地址，购物更方便</div>
           <button className={styles.emptyBtn} type="button" onClick={() => openForm()}>
-            <PlusIcon />
-            新增收货地址
+            <i className="fa-solid fa-plus" />
+            新增地址
           </button>
         </section>
       ) : (
@@ -135,7 +112,7 @@ export default function AddressPage() {
 
       <div className={styles.bottomBar}>
         <button className={styles.addBtn} type="button" onClick={() => openForm()}>
-          <PlusIcon />
+          <i className="fa-solid fa-plus" />
           新增收货地址
         </button>
       </div>
@@ -146,7 +123,7 @@ export default function AddressPage() {
             <div className={styles.sheetHd}>
               <div className={styles.sheetTitle}>{formTitle}</div>
               <button className={styles.closeBtn} type="button" onClick={() => setFormOpen(false)}>
-                <CloseIcon />
+                <i className="fa-solid fa-xmark" />
               </button>
             </div>
             <div className={styles.sheetBody}>
@@ -185,9 +162,9 @@ export default function AddressPage() {
                 <span className={styles.formLabel}>标签</span>
                 <div className={styles.tagRow}>
                   {[
-                    { key: "home", label: "家", icon: "🏠" },
-                    { key: "work", label: "公司", icon: "💼" },
-                    { key: "school", label: "学校", icon: "🎓" },
+                    { key: "home", label: "家" },
+                    { key: "work", label: "公司" },
+                    { key: "school", label: "学校" },
                   ].map((tag) => (
                     <button
                       key={tag.key}
@@ -195,7 +172,7 @@ export default function AddressPage() {
                       className={`${styles.tagChip} ${form.tag === tag.key ? styles.tagActive : ""}`}
                       onClick={() => setForm({ ...form, tag: tag.key as AddressItem["tag"] })}
                     >
-                      {tag.icon} {tag.label}
+                      <i className={tag.key === "home" ? "fa-solid fa-house" : tag.key === "work" ? "fa-solid fa-briefcase" : "fa-solid fa-graduation-cap"} /> {tag.label}
                     </button>
                   ))}
                 </div>
@@ -219,12 +196,12 @@ export default function AddressPage() {
 
       {deleteId && (
         <div className={styles.confirmOverlay}>
-          <div className={styles.confirmCard}>
-            <div className={styles.confirmBody}>
-              <div className={styles.confirmIcon}>🗑️</div>
-              <div className={styles.confirmTitle}>确认删除此地址？</div>
-              <div className={styles.confirmDesc}>删除后无法恢复</div>
-            </div>
+        <div className={styles.confirmCard}>
+          <div className={styles.confirmBody}>
+            <div className={styles.confirmIcon}><i className="fa-solid fa-trash-can" /></div>
+            <div className={styles.confirmTitle}>确认删除此地址？</div>
+            <div className={styles.confirmDesc}>删除后无法恢复</div>
+          </div>
             <div className={styles.confirmBtns}>
               <button className={styles.confirmBtn} type="button" onClick={() => setDeleteId(null)}>
                 取消

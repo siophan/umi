@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { GuessOption } from '@joy/shared';
 
 import { demoGuess } from '../../../lib/demo';
@@ -27,6 +28,7 @@ const shareChannels = [
 ] as const;
 
 export default function GuessDetailPage() {
+  const router = useRouter();
   const [shareOpen, setShareOpen] = useState(false);
   const [betOpen, setBetOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(0);
@@ -52,7 +54,7 @@ export default function GuessDetailPage() {
   return (
     <main className={styles.page}>
       <header className={styles.nav}>
-        <button className={styles.navBtn} type="button" onClick={() => history.back()}>
+        <button className={styles.navBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.navTitle}>竞猜详情</div>

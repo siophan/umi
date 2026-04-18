@@ -1,23 +1,292 @@
-import { LegacyPage } from '../../components/legacy-page';
+"use client";
+
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import styles from "./page.module.css";
+
+type CartItem = {
+  id: string;
+  shop: string;
+  shopLogo: string;
+  productId: string;
+  name: string;
+  specs: string;
+  img: string;
+  price: number;
+  originalPrice: number;
+  quantity: number;
+  checked: boolean;
+};
+
+const initialItems: CartItem[] = [
+  {
+    id: "cart-1",
+    shop: "乐事官方旗舰店",
+    shopLogo: "/legacy/images/products/p001-lays.jpg",
+    productId: "p001-lays",
+    name: "乐事薯片春日限定大礼包 组合装",
+    specs: "混合口味 / 6 包",
+    img: "/legacy/images/products/p001-lays.jpg",
+    price: 39.9,
+    originalPrice: 49.9,
+    quantity: 2,
+    checked: true,
+  },
+  {
+    id: "cart-2",
+    shop: "奥利奥旗舰店",
+    shopLogo: "/legacy/images/products/p002-oreo.jpg",
+    productId: "p002-oreo",
+    name: "奥利奥缤纷夹心家庭分享装",
+    specs: "草莓香草双拼",
+    img: "/legacy/images/products/p002-oreo.jpg",
+    price: 29.9,
+    originalPrice: 35.9,
+    quantity: 1,
+    checked: true,
+  },
+  {
+    id: "cart-3",
+    shop: "百草味旗舰店",
+    shopLogo: "/legacy/images/products/p004-baicaowei.jpg",
+    productId: "p004-baicaowei",
+    name: "百草味每日坚果礼袋",
+    specs: "25g x 10 袋",
+    img: "/legacy/images/products/p004-baicaowei.jpg",
+    price: 45.8,
+    originalPrice: 59.9,
+    quantity: 1,
+    checked: false,
+  },
+];
+
+const recommendItems = [
+  { id: "rec-1", img: "/legacy/images/products/p007-dove.jpg", name: "德芙巧克力心形礼盒", price: 59.9 },
+  { id: "rec-2", img: "/legacy/images/products/p009-genki.jpg", name: "元气森林气泡水组合", price: 26.9 },
+  { id: "rec-3", img: "/legacy/images/products/p005-liangpin.jpg", name: "良品铺子果干大礼包", price: 42.5 },
+];
 
 export default function CartPage() {
+  const router = useRouter();
+  const [items, setItems] = useState(initialItems);
+  const [editMode, setEditMode] = useState(false);
+  const [toast, setToast] = useState("");
+
+  const groups = useMemo(() => {
+    const grouped = new Map<string, CartItem[]>();
+    items.forEach((item) => {
+      const current = grouped.get(item.shop) ?? [];
+      current.push(item);
+      grouped.set(item.shop, current);
+    });
+    return Array.from(grouped.entries());
+  }, [items]);
+
+  const selectedItems = items.filter((item) => item.checked);
+  const total = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const originalTotal = selectedItems.reduce((sum, item) => sum + item.originalPrice * item.quantity, 0);
+  const saved = Math.max(0, originalTotal - total);
+  const allChecked = items.length > 0 && items.every((item) => item.checked);
+  const promoGap = Math.max(0, 99 - total);
+
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 1800);
+  };
+
+  const toggleItem = (id: string) => {
+    setItems((current) => current.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)));
+  };
+
+  const toggleShop = (shop: string) => {
+    const shopItems = items.filter((item) => item.shop === shop);
+    const nextChecked = !shopItems.every((item) => item.checked);
+    setItems((current) => current.map((item) => (item.shop === shop ? { ...item, checked: nextChecked } : item)));
+  };
+
+  const toggleAll = () => {
+    const nextChecked = !allChecked;
+    setItems((current) => current.map((item) => ({ ...item, checked: nextChecked })));
+  };
+
+  const changeQty = (id: string, delta: number) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item,
+      ),
+    );
+  };
+
+  const removeItem = (id: string) => {
+    setItems((current) => current.filter((item) => item.id !== id));
+    showToast("已删除商品");
+  };
+
+  const handlePrimary = () => {
+    if (!selectedItems.length) {
+      showToast(editMode ? "请选择要删除的商品" : "请选择商品");
+      return;
+    }
+    if (editMode) {
+      setItems((current) => current.filter((item) => !item.checked));
+      showToast("已批量删除");
+      return;
+    }
+    router.push("/payment");
+  };
+
   return (
-    <LegacyPage
-      title="购物车"
-      eyebrow="CART"
-      heroDesc="保留老系统浅色购物流程风格，当前先用静态车内数据承载视觉结构。"
-      heroTitle="待结算商品清单"
-      stats={[
-        { value: '5', label: '已加购商品' },
-        { value: '¥213', label: '当前小计' },
-        { value: '2', label: '优惠可用' },
-      ]}
-      listItems={[
-        { icon: 'fa-solid fa-bag-shopping', title: '联名零食礼盒', desc: '支持直接购买 / 竞猜转订单', gradient: 'linear-gradient(135deg,#FF7043,#E64A19)' },
-        { icon: 'fa-solid fa-truck-fast', title: '运费与配送', desc: '展示包邮门槛、配送时效和收货地址', gradient: 'linear-gradient(135deg,#42A5F5,#1E88E5)' },
-        { icon: 'fa-solid fa-percent', title: '优惠与凑单', desc: '优惠券、活动折扣、满减提示', gradient: 'linear-gradient(135deg,#66BB6A,#43A047)' },
-      ]}
-      listTitle="页面内容"
-    />
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <button className={styles.headerBack} type="button" onClick={() => router.back()}>
+          <i className="fa-solid fa-chevron-left" />
+        </button>
+        <div className={styles.headerTitle}>
+          购物车
+          <small>{items.length ? `(${items.length})` : ""}</small>
+        </div>
+        <button className={styles.headerAction} type="button" onClick={() => setEditMode((value) => !value)}>
+          {editMode ? "完成" : "管理"}
+        </button>
+      </header>
+
+      <section className={styles.promo}>
+        <div className={styles.promoIcon}>🎁</div>
+        <div className={styles.promoText}>
+          再凑 <span>¥{promoGap.toFixed(1)}</span> 即可享受 <span>满减优惠</span>
+        </div>
+        <button className={styles.promoBtn} type="button" onClick={() => router.push("/mall")}>
+          去凑单
+        </button>
+      </section>
+
+      {items.length ? (
+        <>
+          <section className={styles.list}>
+            {groups.map(([shop, shopItems]) => {
+              const shopChecked = shopItems.every((item) => item.checked);
+              return (
+                <article key={shop} className={styles.shopGroup}>
+                  <div className={styles.shopHead}>
+                    <button className={`${styles.check} ${shopChecked ? styles.checkOn : ""}`} type="button" onClick={() => toggleShop(shop)}>
+                      <i className="fa-solid fa-check" />
+                    </button>
+                    <img className={styles.shopLogo} src={shopItems[0]?.shopLogo} alt={shop} />
+                    <div className={styles.shopName}>
+                      {shop}
+                      <span className={styles.shopTag}>官方</span>
+                    </div>
+                    <i className={`fa-solid fa-chevron-right ${styles.shopArrow}`} />
+                  </div>
+
+                  {shopItems.map((item) => (
+                    <div key={item.id} className={styles.itemWrap}>
+                      <div className={styles.item}>
+                        <button className={`${styles.check} ${item.checked ? styles.checkOn : ""}`} type="button" onClick={() => toggleItem(item.id)}>
+                          <i className="fa-solid fa-check" />
+                        </button>
+                        <img className={styles.itemImg} src={item.img} alt={item.name} onClick={() => router.push(`/product/${item.productId}`)} />
+                        <div className={styles.itemBody}>
+                          <div className={styles.itemName}>{item.name}</div>
+                          <div className={styles.itemSpecs}>{item.specs}</div>
+                          <div className={styles.itemBottom}>
+                            <div>
+                              <span className={styles.itemPrice}>
+                                <small>¥</small>
+                                {item.price}
+                              </span>
+                              <span className={styles.itemOrig}>¥{item.originalPrice}</span>
+                            </div>
+                            <div className={styles.qty}>
+                              <button
+                                className={`${styles.qtyBtn} ${item.quantity <= 1 ? styles.qtyBtnDisabled : ""}`}
+                                type="button"
+                                onClick={() => changeQty(item.id, -1)}
+                              >
+                                <i className="fa-solid fa-minus" />
+                              </button>
+                              <div className={styles.qtyVal}>{item.quantity}</div>
+                              <button className={styles.qtyBtn} type="button" onClick={() => changeQty(item.id, 1)}>
+                                <i className="fa-solid fa-plus" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {editMode ? (
+                        <button className={styles.deleteBtn} type="button" onClick={() => removeItem(item.id)}>
+                          <i className="fa-solid fa-trash-can" /> 删除
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </article>
+              );
+            })}
+          </section>
+
+          <section className={styles.recommend}>
+            <div className={styles.recommendTitle}>
+              <i className="fa-solid fa-sparkles" />
+              猜你喜欢
+            </div>
+            <div className={styles.recommendScroll}>
+              {recommendItems.map((item) => (
+                <article key={item.id} className={styles.recommendCard} onClick={() => router.push(`/product/${item.id}`)}>
+                  <img className={styles.recommendImg} src={item.img} alt={item.name} />
+                  <div className={styles.recommendInfo}>
+                    <div className={styles.recommendName}>{item.name}</div>
+                    <div className={styles.recommendPrice}>
+                      <small>¥</small>
+                      {item.price}
+                    </div>
+                    <button className={styles.recommendAdd} type="button" onClick={(event) => {
+                      event.stopPropagation();
+                      showToast("已加入购物车");
+                    }}>
+                      <i className="fa-solid fa-plus" />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className={styles.empty}>
+          <i className="fa-solid fa-cart-shopping" />
+          <div className={styles.emptyText}>购物车是空的</div>
+          <div className={styles.emptyDesc}>快去商城挑选心仪的商品吧</div>
+          <button className={styles.emptyBtn} type="button" onClick={() => router.push("/mall")}>
+            <i className="fa-solid fa-store" /> 逛商城
+          </button>
+        </section>
+      )}
+
+      <footer className={styles.bar}>
+        <div className={styles.barLeft}>
+          <button className={styles.barAll} type="button" onClick={toggleAll}>
+            <span className={`${styles.check} ${allChecked ? styles.checkOn : ""}`}>
+              <i className="fa-solid fa-check" />
+            </span>
+            <span>全选</span>
+          </button>
+        </div>
+        <div className={styles.barSpacer} />
+        <div className={styles.barTotal}>
+          <div className={styles.barTotalLabel}>合计</div>
+          <div className={styles.barTotalPrice}>
+            <small>¥</small>
+            {total.toFixed(1)}
+          </div>
+          <div className={styles.barSaved}>{saved > 0 ? `已优惠 ¥${saved.toFixed(1)}` : ""}</div>
+        </div>
+        <button className={styles.barBtn} type="button" onClick={handlePrimary}>
+          {editMode ? "删除" : "结算"}({selectedItems.length})
+        </button>
+      </footer>
+
+      <div className={`${styles.toast} ${toast ? styles.toastShow : ""}`}>{toast}</div>
+    </main>
   );
 }

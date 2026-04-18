@@ -25,16 +25,15 @@
 
 .backBtn {
   border-radius: 50%;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #555;
   background: transparent;
 }
 
-.backBtn svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
+.backBtn i {
+  font-size: 16px;
 }
 
 .title {

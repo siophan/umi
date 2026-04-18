@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import styles from './page.module.css';
 
@@ -57,6 +57,7 @@ const related = [
 ];
 
 export default function PostDetailPage() {
+  const router = useRouter();
   const params = useSearchParams();
   const id = params.get('id') || 'post-1';
   const post = authors[id as keyof typeof authors] || authors.default;
@@ -74,7 +75,7 @@ export default function PostDetailPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} type="button" onClick={() => history.back()}>
+        <button className={styles.backBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.headerAuthor}>
@@ -167,7 +168,7 @@ export default function PostDetailPage() {
             <span className={styles.commentsCount}>{comments.length} 条</span>
           </div>
           <button className={styles.sortBtn} type="button">
-            ▾ 热门
+            <i className="fa-solid fa-chevron-down" /> 热门
           </button>
         </div>
         {comments.map((item) => (

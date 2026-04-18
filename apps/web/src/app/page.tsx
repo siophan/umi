@@ -1,6 +1,7 @@
- 'use client';
+'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { MobileShell } from '../components/mobile-shell';
 import styles from './page.module.css';
@@ -122,25 +123,26 @@ const recentResults = [
 const rankings = [
   {
     rank: '🥇',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=alpha',
+    avatar: '/legacy/images/mascot/mouse-main.png',
     name: '预言大师',
     rate: '82.3%',
   },
   {
     rank: '🥈',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=beta',
+    avatar: '/legacy/images/mascot/mouse-happy.png',
     name: '零食侦探',
     rate: '79.6%',
   },
   {
     rank: '🥉',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=gamma',
+    avatar: '/legacy/images/mascot/mouse-casual.png',
     name: '热点猎手',
     rate: '76.1%',
   },
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [mode, setMode] = useState<'guess' | 'live'>('guess');
   const [category, setCategory] = useState<'hot' | 'entertainment' | 'media' | 'sports'>('hot');
 
@@ -172,10 +174,10 @@ export default function HomePage() {
           </div>
           <div className="hv3-spacer" />
           <div className="hv3-actions">
-            <button className="hv3-action" type="button" title="搜索" onClick={() => window.location.assign('/search')}>
+            <button className="hv3-action" type="button" title="搜索" onClick={() => router.push('/search')}>
               <i className="fa-solid fa-magnifying-glass" />
             </button>
-            <button className="hv3-action" type="button" onClick={() => window.location.assign('/notifications')}>
+            <button className="hv3-action" type="button" onClick={() => router.push('/notifications')}>
               <i className="fa-regular fa-bell" />
               <div className="notif-dot" />
             </button>
@@ -241,9 +243,9 @@ export default function HomePage() {
         <div className={styles.pkBanner}>
           <div className={styles.pkLive}>LIVE</div>
           <div className={styles.pkPlayers}>
-            <img alt="pk-a" src="https://api.dicebear.com/7.x/adventurer/svg?seed=pk-a" />
+            <img alt="pk-a" src="/legacy/images/mascot/mouse-main.png" />
             <div className={styles.pkVs}>VS</div>
-            <img alt="pk-b" src="https://api.dicebear.com/7.x/adventurer/svg?seed=pk-b" />
+            <img alt="pk-b" src="/legacy/images/mascot/mouse-happy.png" />
           </div>
           <div className={styles.pkInfo}>
             <div className={styles.pkTitle}>好友PK对战中</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
@@ -22,26 +22,25 @@ const couponsData: Coupon[] = [
   { id: "4", status: "expired", type: "amount", amount: 15, name: "签到奖励券", condition: "满 79 元可用", expire: "2026-03-18", source: "签到打卡" },
 ];
 
-function ArrowIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m14.5 5.5-1.06-1.06L6.88 11H20v1.5H6.88l6.56 6.56 1.06-1.06L8.75 12l5.75-6.5Z" />
-    </svg>
-  );
-}
-
 export default function CouponsPage() {
   const router = useRouter();
   const [tab, setTab] = useState<Coupon["status"]>("unused");
+  const [toast, setToast] = useState("");
 
   const coupons = useMemo(() => couponsData.filter((item) => item.status === tab), [tab]);
   const availableCount = couponsData.filter((item) => item.status === "unused").length;
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} type="button" onClick={() => router.back()}>
-          <ArrowIcon />
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>我的优惠券</div>
         <div className={styles.spacer} />
@@ -79,7 +78,7 @@ export default function CouponsPage() {
               </div>
               <div className={styles.action}>
                 {coupon.status === "unused" ? (
-                  <button className={styles.useBtn} type="button">
+                  <button className={styles.useBtn} type="button" onClick={() => setToast("去使用")}>
                     使用
                   </button>
                 ) : null}
@@ -88,11 +87,15 @@ export default function CouponsPage() {
           ))
         ) : (
           <div className={styles.empty}>
-            <div className={styles.emptyIcon}>🎫</div>
+            <div className={styles.emptyIcon}>
+              <i className="fa-solid fa-ticket" />
+            </div>
             <div className={styles.emptyText}>暂无优惠券</div>
           </div>
         )}
       </section>
+
+      <div className={`${styles.toast} ${toast ? styles.toastShow : ""}`}>{toast}</div>
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { GuessOption, WarehouseItem } from '@joy/shared';
 
 import { demoGuess, demoProduct, demoProduct2, demoWarehouse } from '../../../lib/demo';
@@ -59,11 +60,13 @@ const colorOptions = ['曜黑', '雾白', '奶咖', '樱桃红'];
 const sizeOptions = ['39', '40', '41', '42'];
 
 export default function ProductDetailPage() {
+  const router = useRouter();
   const [currentTab, setCurrentTab] = useState<'direct' | 'guess' | 'inv'>('direct');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [detailExpanded, setDetailExpanded] = useState(false);
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [favActive, setFavActive] = useState(false);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedSize, setSelectedSize] = useState(1);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string[]>(['vw-1']);
@@ -83,15 +86,10 @@ export default function ProductDetailPage() {
 
   const activePrice = currentTab === 'guess' ? guessPrice : currentTab === 'inv' ? invPrice : directPrice;
 
-  const bottomPrimary =
-    currentTab === 'guess' ? '参与竞猜' : currentTab === 'inv' ? '立即换购' : '立即购买';
-  const bottomSecondary =
-    currentTab === 'guess' ? '猜中即发货' : currentTab === 'inv' ? '库存抵扣' : '直购发货';
-
   return (
     <main className={styles.page}>
       <header className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
-        <button className={styles.navBtn} type="button" onClick={() => history.back()}>
+        <button className={styles.navBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.navTitle}>商品详情</div>
@@ -448,7 +446,7 @@ export default function ProductDetailPage() {
               这是一个接近旧版商城的商品详情页，顶部展示商品图轮播和价格信息，中部提供竞猜、直购、换购三种方式，并在底部继续保留商品详情、评价和推荐区块。
             </div>
             <button className={styles.detailToggle} type="button" onClick={() => setDetailExpanded((value) => !value)}>
-              {detailExpanded ? '收起' : '展开全部'} <span>{detailExpanded ? '↑' : '↓'}</span>
+              {detailExpanded ? '收起' : '展开全部'} <span><i className={`fa-solid ${detailExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`} /></span>
             </button>
           </div>
         </div>
@@ -496,32 +494,43 @@ export default function ProductDetailPage() {
 
       <div className={styles.bottomBar}>
         <div className={styles.barLeft}>
-          <button className={styles.barIcon} type="button">
+          <Link className={styles.barIcon} href="/shop/shop-1">
             <span><i className="fa-solid fa-store" /></span>
             <em>店铺</em>
-          </button>
-          <button className={styles.barIcon} type="button">
-            <span><i className="fa-regular fa-heart" /></span>
+          </Link>
+          <button className={`${styles.barIcon} ${favActive ? styles.barIconFavActive : ''}`} type="button" onClick={() => setFavActive((value) => !value)}>
+            <span><i className={`fa-${favActive ? 'solid' : 'regular'} fa-heart`} /></span>
             <em>收藏</em>
           </button>
           <button className={styles.barIcon} type="button">
-            <span><i className="fa-regular fa-comments" /></span>
+            <span><i className="fa-regular fa-comment-dots" /></span>
             <em>客服</em>
           </button>
         </div>
         <div className={styles.barBtns}>
           <button className={styles.barSub} type="button">
-            {currentTab === 'guess' ? '规则' : currentTab === 'inv' ? '库存' : '仓库'}
+            {currentTab === 'guess' ? (
+              '我的竞猜'
+            ) : currentTab === 'inv' ? (
+              <>
+                <i className="fa-solid fa-warehouse" />
+                我的仓库
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-cart-plus" />
+                加入购物车
+              </>
+            )}
           </button>
           <button
-            className={styles.barPrimary}
+            className={`${styles.barPrimary} ${currentTab === 'guess' ? styles.barPrimaryGuess : currentTab === 'inv' ? styles.barPrimaryInv : styles.barPrimaryDirect}`}
             type="button"
             onClick={() => {
               if (currentTab === 'inv') setExchangeOpen(true);
             }}
           >
-            {bottomPrimary}
-            <span>{bottomSecondary}</span>
+            {currentTab === 'guess' ? `参与竞猜 ¥${guessPrice}` : currentTab === 'inv' ? `换购 ¥${invPrice}` : `立即购买 ¥${directPrice}`}
           </button>
         </div>
       </div>

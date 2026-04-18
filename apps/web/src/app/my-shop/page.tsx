@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 const actions = [
@@ -20,10 +21,11 @@ const products = [
 ];
 
 export default function MyShopPage() {
+  const router = useRouter();
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.back} type="button" onClick={() => history.back()}>
+        <button className={styles.back} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.headerTitle}>我的店铺</div>

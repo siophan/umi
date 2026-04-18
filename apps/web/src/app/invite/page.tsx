@@ -12,22 +12,14 @@ const rewards = [
 ];
 
 const records = [
-  { name: "小米", time: "2026-04-12 18:20", reward: 50 },
-  { name: "阿星", time: "2026-04-10 09:18", reward: 50 },
-  { name: "雨桐", time: "2026-04-09 20:01", reward: 50 },
+  { name: "小米", time: "2026-04-12 18:20", reward: 50, avatar: "/legacy/images/mascot/mouse-main.png" },
+  { name: "阿星", time: "2026-04-10 09:18", reward: 50, avatar: "/legacy/images/mascot/mouse-happy.png" },
+  { name: "雨桐", time: "2026-04-09 20:01", reward: 50, avatar: "/legacy/images/mascot/mouse-casual.png" },
 ];
-
-function ArrowIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m14.5 5.5-1.06-1.06L6.88 11H20v1.5H6.88l6.56 6.56 1.06-1.06L8.75 12l5.75-6.5Z" />
-    </svg>
-  );
-}
 
 export default function InvitePage() {
   const router = useRouter();
-  const [inviteCode, setInviteCode] = useState("JY202604");
+  const [inviteCode] = useState("JY202604");
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -44,14 +36,16 @@ export default function InvitePage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} type="button" onClick={() => router.back()}>
-          <ArrowIcon />
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>邀请有礼</div>
         <div className={styles.spacer} />
       </header>
 
       <section className={styles.hero}>
-        <div className={styles.heroIcon}>🎁</div>
+        <div className={styles.heroIcon}>
+          <i className="fa-solid fa-gift" />
+        </div>
         <div className={styles.heroTitle}>邀请好友，一起赢零食！</div>
         <div className={styles.heroDesc}>
           每邀请1位好友注册并参与竞猜
@@ -65,10 +59,10 @@ export default function InvitePage() {
         <div className={styles.code}>{inviteCode}</div>
         <div className={styles.actions}>
           <button className={styles.primaryBtn} type="button" onClick={copyLink}>
-            复制链接
+            <i className="fa-solid fa-copy" /> 复制链接
           </button>
           <button className={styles.secondaryBtn} type="button" onClick={() => setToast("分享")}>
-            分享
+            <i className="fa-solid fa-share-nodes" /> 分享
           </button>
         </div>
       </section>
@@ -79,7 +73,9 @@ export default function InvitePage() {
       <section className={styles.rewardList}>
         {rewards.map((item) => (
           <article key={item.title} className={styles.rewardItem}>
-            <div className={styles.rewardIcon}>{item.icon}</div>
+            <div className={styles.rewardIcon}>
+              <span>{item.icon}</span>
+            </div>
             <div className={styles.rewardInfo}>
               <div className={styles.rewardTitle}>{item.title}</div>
               <div className={styles.rewardDesc}>{item.desc}</div>
@@ -97,7 +93,7 @@ export default function InvitePage() {
       <section className={styles.recordList}>
         {records.map((item) => (
           <article key={item.name} className={styles.recordItem}>
-            <div className={styles.avatar}>{item.name.slice(0, 1)}</div>
+            <img className={styles.avatar} src={item.avatar} alt={item.name} />
             <div className={styles.recordInfo}>
               <div className={styles.recordName}>{item.name}</div>
               <div className={styles.recordTime}>{item.time}</div>

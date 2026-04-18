@@ -101,23 +101,37 @@
   z-index: 2;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
   border: 0;
-  display: grid;
-  place-items: center;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
   cursor: pointer;
+  display: grid;
+  place-items: center;
   backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.backBtn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .backBtn svg,
-.fieldIcon svg,
-.submitBtn svg,
-.secondaryBtn svg {
+.fieldIcon svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
+}
+
+.backBtn i,
+.fieldIcon i,
+.submitBtn i {
+  font-size: 14px;
+}
+
+.pwdToggle i {
+  font-size: 14px;
 }
 
 .brandInner {
@@ -133,10 +147,6 @@
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
 }
 
-.brandLogo span {
-  color: #ffd54f;
-}
-
 .brandDesc {
   margin-top: 8px;
   font-size: 13px;
@@ -144,13 +154,18 @@
 }
 
 .steps {
-  padding: 20px 24px 4px;
+  padding: 20px 32px 4px;
 }
 
-.stepDots {
+.stepBar {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.step {
+  display: flex;
+  align-items: center;
 }
 
 .stepDot {
@@ -163,6 +178,11 @@
   color: #ccc;
   font-size: 11px;
   font-weight: 800;
+  flex-shrink: 0;
+}
+
+.stepDot i {
+  font-size: 11px;
 }
 
 .stepActive {
@@ -176,28 +196,22 @@
   color: #fff;
 }
 
-.stepLines {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin: 0 0 6px;
-}
-
-.stepLines span {
+.stepLine {
   width: 40px;
   height: 2px;
+  margin: 0 6px;
   border-radius: 2px;
   background: #ececee;
 }
 
 .lineDone {
-  background: #4caf50 !important;
+  background: #4caf50;
 }
 
 .stepLabels {
   display: flex;
   justify-content: space-between;
-  padding-top: 6px;
+  padding: 6px 20px 0;
   color: #bbb;
   font-size: 10px;
   font-weight: 500;
@@ -209,7 +223,7 @@
 }
 
 .labelActive {
-  color: #ff2442 !important;
+  color: #ff2442;
   font-weight: 700;
 }
 
@@ -222,11 +236,11 @@
 }
 
 @keyframes fadeSlide {
-  from {
+  0% {
     opacity: 0;
     transform: translateX(12px);
   }
-  to {
+  100% {
     opacity: 1;
     transform: translateX(0);
   }
@@ -253,10 +267,10 @@
 
 .fieldIcon {
   width: 20px;
-  flex: 0 0 auto;
   color: #cacaca;
   display: grid;
   place-items: center;
+  flex-shrink: 0;
 }
 
 .prefix {
@@ -265,6 +279,7 @@
   color: #1a1a1a;
   font-size: 13px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .field input {
@@ -284,31 +299,100 @@
 }
 
 .rowHidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-4px);
+  display: none;
 }
 
 .rowVisible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
+  display: flex;
+  animation: fadeCodeRow 0.2s ease forwards;
+}
+
+@keyframes fadeCodeRow {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .sendBtn {
-  border: 0;
-  border-radius: 10px;
+  flex-shrink: 0;
   padding: 8px 14px;
+  border-radius: 10px;
+  border: 0;
   background: linear-gradient(135deg, #ff6b35, #ff2442);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
+  cursor: pointer;
   white-space: nowrap;
 }
 
 .sendBtn:disabled {
   background: #e0e0e2;
   color: #aaa;
+  cursor: default;
+}
+
+.pwdToggle {
+  width: 24px;
+  border: 0;
+  background: transparent;
+  color: #cacaca;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pwdToggle i {
+  font-size: 14px;
+}
+
+.pwdStrength {
+  display: flex;
+  gap: 4px;
+  margin: -8px 0 14px;
+  padding: 0 2px;
+}
+
+.pwdBar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: #ececee;
+}
+
+.s1 {
+  background: #f44336;
+}
+
+.s2 {
+  background: #ff9800;
+}
+
+.s3 {
+  background: #4caf50;
+}
+
+.pwdHint {
+  margin: -8px 0 14px;
+  padding: 0 2px;
+  font-size: 10px;
+  color: #bbb;
+}
+
+.hint1 {
+  color: #f44336;
+}
+
+.hint2 {
+  color: #ff9800;
+}
+
+.hint3 {
+  color: #4caf50;
 }
 
 .submitBtn {
@@ -335,70 +419,28 @@
   cursor: default;
 }
 
-.buttonRow {
-  display: flex;
-  gap: 10px;
+.submitBtn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
-.secondaryBtn {
-  flex: 1;
-  height: 52px;
-  border-radius: 14px;
-  border: 1.5px solid #ececee;
-  background: #fff;
-  color: #666;
-  font-size: 14px;
-  font-weight: 700;
+.submitBtn i {
+  font-size: 13px;
 }
 
-.strengthBar {
-  display: flex;
-  gap: 4px;
-  margin: -6px 0 14px;
-}
-
-.strengthBar span {
-  flex: 1;
-  height: 3px;
-  border-radius: 2px;
-  background: #ececee;
-}
-
-.barActive {
-  background: linear-gradient(135deg, #ff6b35, #ff2442) !important;
-}
-
-.strengthHint {
-  margin: -8px 0 14px;
-  padding-left: 2px;
-  font-size: 10px;
-  color: #bbb;
-}
-
-.warn {
-  color: #f44336;
-}
-
-.warn2 {
-  color: #ff9800;
-}
-
-.good {
-  color: #4caf50;
-}
-
-.avatarBlock {
-  text-align: center;
+.avatarSection {
   margin: 8px 0 20px;
+  text-align: center;
 }
 
-.avatarLabel {
+.avatarTitle {
   margin-bottom: 10px;
   font-size: 11px;
   color: #999;
 }
 
-.avatarGrid {
+.avatarPicker {
   display: flex;
   justify-content: center;
   gap: 10px;
@@ -408,17 +450,24 @@
 .avatarItem {
   width: 52px;
   height: 52px;
-  border-radius: 50%;
+  padding: 0;
   border: 2.5px solid #ececee;
-  color: #fff;
-  font-weight: 800;
-  font-size: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.avatarItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatarActive {
   border-color: #ff2442;
-  transform: scale(1.08);
+  transform: scale(1.1);
 }
 
 .agree {
@@ -429,28 +478,34 @@
 }
 
 .agree label {
-  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.agree input {
+.agree input[type="checkbox"] {
   margin-right: 4px;
   accent-color: #ff2442;
+  vertical-align: middle;
 }
 
 .inlineLink {
-  padding: 0;
   border: 0;
   background: transparent;
   color: #ff2442;
-  font: inherit;
+  font-size: 11px;
   font-weight: 500;
+  cursor: pointer;
+  padding: 0;
 }
 
 .switchRow {
-  padding: 0 24px 24px;
   text-align: center;
-  color: #999;
+  padding: 0 24px 24px;
   font-size: 13px;
+  color: #999;
 }
 
 .switchLink {
@@ -458,7 +513,10 @@
   border: 0;
   background: transparent;
   color: #ff2442;
+  font-size: 13px;
   font-weight: 700;
+  cursor: pointer;
+  padding: 0;
 }
 
 .toast {
@@ -466,42 +524,19 @@
   top: 50%;
   left: 50%;
   z-index: 9999;
-  transform: translate(-50%, -50%) scale(0.9);
-  padding: 12px 24px;
+  pointer-events: none;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.78);
   color: #fff;
+  padding: 12px 24px;
   font-size: 13px;
   font-weight: 600;
   opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s ease;
+  transform: translate(-50%, -50%) scale(0.9);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .toastShow {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
-}
-
-@media (max-width: 480px) {
-  .page {
-    padding: 14px;
-  }
-
-  .card {
-    max-width: 100%;
-    border-radius: 22px;
-  }
-
-  .brand {
-    padding: 42px 20px 30px;
-  }
-
-  .steps,
-  .formArea,
-  .agree,
-  .switchRow {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
 }

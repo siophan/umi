@@ -1,12 +1,24 @@
-.page { min-height: 100vh; padding: 24px; background: #0b0d1a; color: #e5e7eb; font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
-.container { max-width: 640px; margin: 0 auto; }
-.header { font-size: 26px; font-weight: 800; color: #fff; }
-.sub { margin-top: 8px; font-size: 13px; color: rgba(255,255,255,.35); }
-.panel { margin-top: 24px; border: 1px solid rgba(99,102,241,.16); border-radius: 20px; padding: 20px; background: linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); }
-.panelTitle { font-size: 15px; font-weight: 700; color: #c7d2fe; }
-.logList { display: grid; gap: 12px; margin-top: 16px; }
-.logItem { border: 1px solid rgba(255,255,255,.05); border-radius: 14px; padding: 14px; background: rgba(255,255,255,.02); }
-.logTop { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
-.logTop strong { color: #fff; }
-.logTop span { color: #86efac; font-weight: 700; }
-.logDetail { margin-top: 6px; font-size: 12px; line-height: 1.6; color: rgba(255,255,255,.45); }
+.page {
+  min-height: 100vh;
+  padding: 20px;
+  background: #fff;
+  color: #111;
+  font-family: monospace;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.header {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.results {
+  margin-top: 16px;
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 14px;
+}

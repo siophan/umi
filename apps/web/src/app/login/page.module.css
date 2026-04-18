@@ -131,6 +131,12 @@
   fill: currentColor;
 }
 
+.backBtn i,
+.fieldIcon i,
+.submitBtn i {
+  font-size: 14px;
+}
+
 .brandInner {
   position: relative;
   z-index: 1;
@@ -191,6 +197,7 @@
   place-items: center;
   width: 14px;
   height: 14px;
+  font-size: 11px;
 }
 
 .formArea {
@@ -275,16 +282,12 @@
 }
 
 .codeRow {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-4px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: none;
 }
 
 .codeRowVisible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
+  display: flex;
+  animation: fadeSlide 0.2s ease forwards;
 }
 
 .sendBtn {
@@ -327,6 +330,10 @@
 
 .pwdToggle:hover {
   color: #999;
+}
+
+.pwdToggle i {
+  font-size: 14px;
 }
 
 .submitBtn {
@@ -427,9 +434,8 @@
   transform: scale(0.92);
 }
 
-.appleMark {
+.socialBtn i {
   font-size: 22px;
-  line-height: 1;
 }
 
 .agree {

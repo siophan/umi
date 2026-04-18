@@ -1,78 +1,113 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
-import { demoProduct, demoProduct2, demoUser } from '../../lib/demo';
+import { clearAuthToken, fetchMe, logout } from '../../lib/api';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 
-const posts = [
-  {
-    id: 'post-1',
-    user: '优米鼠鼠',
-    time: '2 小时前',
-    tag: '猜友动态',
-    tagCls: '',
-    title: '今天这波抢购节奏很快，竞猜和直购都能试一试。',
-    desc: '我把自己的预测逻辑整理了一下，偏热的商品更值得先看竞猜。',
-    images: ['/legacy/images/guess/g001.jpg', '/legacy/images/products/p001-lays.jpg'],
-    likes: 18,
-    comments: 3,
-  },
-  {
-    id: 'post-2',
-    user: '优米鼠鼠',
-    time: '昨天',
-    tag: '零食开箱',
-    tagCls: 'hot',
-    title: '换购到账的商品比我想象得更稳，仓库流程也顺了。',
-    desc: '从竞猜到仓库，整个链路比之前更像一个完整产品。',
-    images: ['/legacy/images/products/p007-dove.jpg'],
-    likes: 9,
-    comments: 1,
-  },
-];
-
-const favorites = [
-  { id: demoProduct.id, name: demoProduct.name, price: demoProduct.price, original: 999, img: '/legacy/images/products/p001-lays.jpg' },
-  { id: demoProduct2.id, name: demoProduct2.name, price: demoProduct2.price, original: 79, img: '/legacy/images/products/p003-squirrels.jpg' },
-  {
-    id: 'prod-3',
-    name: '蓝莓冻干酸奶块',
-    price: 39,
-    original: 49,
-    img: '/legacy/images/products/p005-liangpin.jpg',
-  },
-  {
-    id: 'prod-4',
-    name: '手冲咖啡礼盒',
-    price: 129,
-    original: 168,
-    img: '/legacy/images/products/p009-genki.jpg',
-  },
-];
-
 const shortcuts = [
   { label: '我的店铺', href: '/my-shop', icon: 'fa-solid fa-store' },
-  { label: '我的仓库', href: '/warehouse', icon: 'fa-solid fa-box-archive', badge: 8 },
+  { label: '我的仓库', href: '/warehouse', icon: 'fa-solid fa-box-archive' },
   { label: '我的订单', href: '/my-orders', icon: 'fa-solid fa-bag-shopping' },
   { label: '我的竞猜', href: '/guess-history', icon: 'fa-solid fa-clock-rotate-left' },
   { label: '全部功能', href: '/all-features', icon: 'fa-solid fa-ellipsis' },
 ] as const;
 
 export default function MePage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [tab, setTab] = useState<'works' | 'favs' | 'likes'>('works');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const isMerchant = false;
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [currentUser, setCurrentUser] = useState({
+    id: '',
+    name: '',
+    phone: '',
+    avatar: '/legacy/images/mascot/mouse-main.png',
+    signature: '',
+    level: 1,
+    following: 0,
+    followers: 0,
+    totalGuess: 0,
+    wins: 0,
+    shopVerified: false,
+  });
+  const [authReady, setAuthReady] = useState(false);
   const stats = useMemo(
     () => [
-      { value: demoUser.following, label: '关注' },
-      { value: demoUser.followers, label: '粉丝' },
-      { value: '2,034', label: '获赞' },
+      { value: currentUser.following, label: '关注' },
+      { value: currentUser.followers, label: '粉丝' },
+      { value: currentUser.totalGuess, label: '竞猜' },
     ],
-    [],
+    [currentUser.followers, currentUser.following, currentUser.totalGuess],
   );
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCurrentUser() {
+      try {
+        const user = await fetchMe();
+        if (ignore) {
+          return;
+        }
+        setCurrentUser({
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          avatar: user.avatar || '/legacy/images/mascot/mouse-main.png',
+          signature: user.signature || '',
+          level: user.level || 1,
+          following: user.following || 0,
+          followers: user.followers || 0,
+          totalGuess: user.totalGuess || 0,
+          wins: user.wins || 0,
+          shopVerified: user.shopVerified || false,
+        });
+        setAuthReady(true);
+      } catch {
+        if (ignore) {
+          return;
+        }
+        clearAuthToken();
+        router.replace(`/login?redirect=${encodeURIComponent(pathname || '/me')}`);
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      ignore = true;
+    };
+  }, [pathname, router]);
+
+  async function handleLogout() {
+    if (loggingOut) {
+      return;
+    }
+
+    setLoggingOut(true);
+
+    try {
+      await logout();
+    } catch {
+      // Ignore logout API errors and clear local auth state anyway.
+    } finally {
+      clearAuthToken();
+      router.replace('/login');
+    }
+  }
+
+  if (!authReady) {
+    return (
+      <MobileShell tab="me" tone="light">
+        <main className={styles.page} />
+      </MobileShell>
+    );
+  }
 
   return (
     <MobileShell tab="me" tone="light">
@@ -83,14 +118,13 @@ export default function MePage() {
               优米
             </div>
             <div className={styles.actions}>
-              <button type="button" aria-label="消息" onClick={() => window.location.assign('/chat')}>
+              <button type="button" aria-label="消息" onClick={() => router.push('/chat')}>
                 <i className="fa-regular fa-comment-dots" />
-                <span className={styles.topBadge}>3</span>
               </button>
-              <button type="button" aria-label="好友" onClick={() => window.location.assign('/friends')}>
+              <button type="button" aria-label="好友" onClick={() => router.push('/friends')}>
                 <i className="fa-solid fa-user-group" />
               </button>
-              <button type="button" aria-label="搜索" onClick={() => window.location.assign('/community-search')}>
+              <button type="button" aria-label="搜索" onClick={() => router.push('/community-search')}>
                 <i className="fa-solid fa-magnifying-glass" />
               </button>
               <button type="button" aria-label="设置" onClick={() => setSettingsOpen(true)}>
@@ -102,18 +136,18 @@ export default function MePage() {
 
         <section className={styles.main}>
           <div className={styles.avatarBox}>
-            <img className={styles.avatar} src="/legacy/images/mascot/mouse-main.png" alt={demoUser.name} />
+            <img className={styles.avatar} src={currentUser.avatar} alt={currentUser.name} />
             <div className={styles.avatarPlus}>+</div>
           </div>
 
         <div className={styles.nameRow}>
-          <h1>{demoUser.name}</h1>
+          <h1>{currentUser.name}</h1>
           <span className={styles.nameBadge}>🌟</span>
-          <span className={styles.levelTag}>Lv.7</span>
+          <span className={styles.levelTag}>Lv.{currentUser.level}</span>
         </div>
 
         <div className={styles.uidRow}>
-          <span>优米号：SnackHunter_001</span>
+          <span>优米号：{currentUser.id}</span>
           <button type="button" aria-label="复制优米号">
             <i className="fa-regular fa-copy" />
           </button>
@@ -126,28 +160,25 @@ export default function MePage() {
               <span>{item.label}</span>
             </button>
           ))}
-          <button className={styles.editBtn} type="button">
+          <button className={styles.editBtn} type="button" onClick={() => router.push('/edit-profile')}>
             编辑主页
           </button>
         </div>
 
-        <p className={styles.bio}>零食是生活的甜味剂，竞猜是人生的小确幸。🍬✨</p>
+        <p className={styles.bio}>{currentUser.signature || '暂未填写个人简介'}</p>
 
         <div className={styles.funcRow}>
           {shortcuts.map((item) => (
             <Link className={styles.funcEntry} href={item.href} key={item.label}>
               <div className={styles.funcCircle}>
                 <i className={item.icon} />
-                {'badge' in item && item.badge ? (
-                  <span className={styles.funcBadge}>{item.badge}</span>
-                ) : null}
               </div>
               <span className={styles.funcText}>{item.label}</span>
             </Link>
           ))}
         </div>
 
-          {!isMerchant ? (
+          {!currentUser.shopVerified ? (
             <button className={styles.openShop} type="button">
               <div className={styles.openShopIcon}>
                 🏪
@@ -186,93 +217,36 @@ export default function MePage() {
         <section className={tab === 'works' ? styles.panelActive : styles.panel}>
           <div className={styles.sectionTitle}><i className="fa-solid fa-pen-to-square" /> 我发布的猜友圈</div>
           <div className={styles.postList}>
-            {posts.map((post) => (
-              <article className={styles.postCard} key={post.id}>
-                <div className={styles.postAuthor}>
-                  <img src="/legacy/images/mascot/mouse-main.png" alt={post.user} />
-                  <div className={styles.postAuthorInfo}>
-                    <div className={styles.postAuthorName}>{post.user}</div>
-                    <div className={styles.postAuthorMeta}>{post.time}</div>
-                  </div>
-                  <span className={`${styles.postTag} ${post.tagCls === 'hot' ? styles.tagHot : ''}`}>{post.tag}</span>
-                </div>
-                <div className={styles.postBody}>
-                  <div className={styles.postTitle}>{post.title}</div>
-                  <div className={styles.postDesc}>{post.desc}</div>
-                </div>
-                <div className={`${styles.postImages} ${post.images.length === 1 ? styles.cols1 : styles.cols2}`}>
-                  {post.images.map((img) => (
-                    <img src={img} alt={post.title} key={img} />
-                  ))}
-                </div>
-                <div className={styles.postActions}>
-                  <span>
-                    <i className="fa-regular fa-heart" /> {post.likes}
-                  </span>
-                  <span>
-                    <i className="fa-regular fa-comment-dots" /> {post.comments}
-                  </span>
-                  <span>
-                    <i className="fa-solid fa-share-nodes" />
-                  </span>
-                </div>
-              </article>
-            ))}
+            <article className={styles.postCard}>
+              <div className={styles.postBody}>
+                <div className={styles.postTitle}>暂无作品数据</div>
+                <div className={styles.postDesc}>真实“作品”接口尚未接入，当前页面不再展示本地 mock 内容。</div>
+              </div>
+            </article>
           </div>
         </section>
 
         <section className={tab === 'favs' ? styles.panelActive : styles.panel}>
           <div className={styles.sectionTitle}><i className="fa-solid fa-bookmark" /> 我收藏的猜友圈</div>
-          <div className={styles.favGrid}>
-            {favorites.map((item) => (
-              <Link className={styles.favItem} href={`/product/${item.id}`} key={item.id}>
-                <img src={item.img} alt={item.name} />
-                <div className={styles.favBody}>
-                  <div className={styles.favName}>{item.name}</div>
-                  <div className={styles.favPrice}>
-                    <small>¥</small>
-                    {item.price}
-                    <span>¥{item.original}</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
+          <div className={styles.postList}>
+            <article className={styles.postCard}>
+              <div className={styles.postBody}>
+                <div className={styles.postTitle}>暂无收藏数据</div>
+                <div className={styles.postDesc}>真实“收藏”接口尚未接入，当前页面不再展示本地 mock 内容。</div>
+              </div>
+            </article>
           </div>
         </section>
 
         <section className={tab === 'likes' ? styles.panelActive : styles.panel}>
           <div className={styles.sectionTitle}><i className="fa-solid fa-heart" /> 我点赞的猜友圈</div>
           <div className={styles.postList}>
-            {posts.slice(0, 1).map((post) => (
-              <article className={styles.postCard} key={post.id}>
-                <div className={styles.postAuthor}>
-                  <img src="/legacy/images/products/p007-dove.jpg" alt={post.user} />
-                  <div className={styles.postAuthorInfo}>
-                    <div className={styles.postAuthorName}>{post.user}</div>
-                    <div className={styles.postAuthorMeta}>{post.time}</div>
-                  </div>
-                  <span className={`${styles.postTag} ${styles.tagHot}`}>零食测评</span>
-                </div>
-                <div className={styles.postBody}>
-                  <div className={styles.postTitle}>{post.title}</div>
-                  <div className={styles.postDesc}>{post.desc}</div>
-                </div>
-                <div className={styles.postImages}>
-                  <img src={demoProduct2.img} alt={post.title} />
-                </div>
-                <div className={styles.postActions}>
-                  <span className={styles.liked}>
-                    <i className="fa-solid fa-heart" /> {post.likes}
-                  </span>
-                  <span>
-                    <i className="fa-regular fa-comment-dots" /> {post.comments}
-                  </span>
-                  <span>
-                    <i className="fa-solid fa-share-nodes" />
-                  </span>
-                </div>
-              </article>
-            ))}
+            <article className={styles.postCard}>
+              <div className={styles.postBody}>
+                <div className={styles.postTitle}>暂无点赞数据</div>
+                <div className={styles.postDesc}>真实“点赞”接口尚未接入，当前页面不再展示本地 mock 内容。</div>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -287,10 +261,10 @@ export default function MePage() {
               </div>
 
               <div className={styles.settingsUser}>
-                <img className={styles.settingsAvatar} src="/legacy/images/mascot/mouse-main.png" alt={demoUser.name} />
+                <img className={styles.settingsAvatar} src={currentUser.avatar} alt={currentUser.name} />
                 <div className={styles.settingsUserInfo}>
-                  <div className={styles.settingsUserName}>{demoUser.name}</div>
-                  <div className={styles.settingsUserMeta}>{demoUser.phone}</div>
+                  <div className={styles.settingsUserName}>{currentUser.name}</div>
+                  <div className={styles.settingsUserMeta}>{currentUser.phone}</div>
                 </div>
                 <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
               </div>
@@ -298,22 +272,22 @@ export default function MePage() {
               <div className={styles.settingsBody}>
                 <div className={styles.settingsGroup}>
                   <div className={styles.settingsGroupTitle}>账户</div>
-                  <button className={styles.settingsItem} type="button" onClick={() => window.location.assign('/edit-profile')}>
+                  <button className={styles.settingsItem} type="button" onClick={() => router.push('/edit-profile')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconGreen}`}><i className="fa-solid fa-user-pen" /></span>
                     <span className={styles.settingsItemText}>编辑资料</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
-                  <button className={styles.settingsItem} type="button" onClick={() => window.location.assign('/my-orders')}>
+                  <button className={styles.settingsItem} type="button" onClick={() => router.push('/my-orders')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconOrange}`}><i className="fa-solid fa-receipt" /></span>
                     <span className={styles.settingsItemText}>我的订单</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
-                  <button className={styles.settingsItem} type="button" onClick={() => window.location.assign('/address')}>
+                  <button className={styles.settingsItem} type="button" onClick={() => router.push('/address')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconBlue}`}><i className="fa-solid fa-location-dot" /></span>
                     <span className={styles.settingsItemText}>收货地址</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
-                  <button className={styles.settingsItem} type="button" onClick={() => window.location.assign('/coupons')}>
+                  <button className={styles.settingsItem} type="button" onClick={() => router.push('/coupons')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconRed}`}><i className="fa-solid fa-ticket" /></span>
                     <span className={styles.settingsItemText}>优惠券</span>
                     <span className={styles.settingsItemVal}>3 张</span>
@@ -351,6 +325,16 @@ export default function MePage() {
                     <span className={`${styles.settingsItemIcon} ${styles.iconSlate}`}><i className="fa-solid fa-circle-info" /></span>
                     <span className={styles.settingsItemText}>关于优米</span>
                     <span className={styles.settingsItemVal}>v2.6.0</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                  <button
+                    className={styles.settingsItem}
+                    type="button"
+                    onClick={() => void handleLogout()}
+                    disabled={loggingOut}
+                  >
+                    <span className={`${styles.settingsItemIcon} ${styles.iconRed}`}><i className="fa-solid fa-right-from-bracket" /></span>
+                    <span className={styles.settingsItemText}>{loggingOut ? '退出中...' : '退出登录'}</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
                 </div>

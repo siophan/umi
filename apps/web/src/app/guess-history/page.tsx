@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 type TabKey = 'all' | 'active' | 'won' | 'lost' | 'pk';
@@ -79,7 +80,14 @@ const pkCards = [
 ];
 
 export default function GuessHistoryPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<TabKey>('all');
+  const [toast, setToast] = useState('');
+
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 1800);
+  };
 
   const filteredHistory = useMemo(
     () => historyCards.filter((card) => tab === 'all' || card.type === tab),
@@ -92,7 +100,7 @@ export default function GuessHistoryPage() {
         <button
           className={styles.back}
           type="button"
-          onClick={() => window.history.back()}
+          onClick={() => router.back()}
         >
           <i className="fa-solid fa-chevron-left" />
         </button>
@@ -100,7 +108,7 @@ export default function GuessHistoryPage() {
         <button
           className={styles.action}
           type="button"
-          onClick={() => alert('分享竞猜数据')}
+          onClick={() => showToast('分享功能开发中')}
         >
           <i className="fa-solid fa-arrow-up-right-from-square" />
         </button>
@@ -267,7 +275,7 @@ export default function GuessHistoryPage() {
                 <div className={styles.pkPlayer}>
                   <img
                     alt="player-a"
-                    src="https://api.dicebear.com/7.x/adventurer/svg?seed=player-a"
+                    src="/legacy/images/mascot/mouse-main.png"
                   />
                   <div className={styles.pkName}>
                     {item.left.split('\n')[0]}
@@ -280,7 +288,7 @@ export default function GuessHistoryPage() {
                 <div className={styles.pkPlayer}>
                   <img
                     alt="player-b"
-                    src="https://api.dicebear.com/7.x/adventurer/svg?seed=player-b"
+                    src="/legacy/images/mascot/mouse-happy.png"
                   />
                   <div className={styles.pkName}>
                     {item.right.split('\n')[0]}
@@ -309,6 +317,7 @@ export default function GuessHistoryPage() {
           </div>
         ) : null}
       </main>
+      {toast ? <div className={styles.toast}>{toast}</div> : null}
     </div>
   );
 }
