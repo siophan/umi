@@ -63,6 +63,7 @@ export default function CommunitySearchPage() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<(typeof filters)[number]['key']>('all');
   const [searchHistory, setSearchHistory] = useState(['乐事新口味投票', '三只松鼠年货']);
+  const [followMap, setFollowMap] = useState<Record<string, boolean>>({});
 
   const filteredResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -129,8 +130,7 @@ export default function CommunitySearchPage() {
             <div className={styles.historyList}>
               {searchHistory.map((item) => (
                 <button className={styles.historyItem} key={item} type="button" onClick={() => onSearch(item)}>
-                  <span>⟳</span>
-                  
+                  <span><i className="fa-solid fa-clock-rotate-left" /></span>
                   {item}
                 </button>
               ))}
@@ -174,7 +174,20 @@ export default function CommunitySearchPage() {
                     {user.verified ? <i className="fa-solid fa-circle-check" /> : null}
                   </div>
                   <div className={styles.userDesc}>{user.desc}</div>
-                  <span className={styles.followBtn}>+ 关注</span>
+                  <button
+                    className={styles.followBtn}
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setFollowMap((current) => ({
+                        ...current,
+                        [user.name]: !current[user.name],
+                      }));
+                    }}
+                  >
+                    {followMap[user.name] ? '已关注' : '+ 关注'}
+                  </button>
                 </Link>
               ))}
             </div>
@@ -209,15 +222,15 @@ export default function CommunitySearchPage() {
                   ))}
                 </div>
                 <div className={styles.resultActions}>
-                  <span>♡ {item.likes}</span>
-                  <span>◎ {item.comments}</span>
-                  <span>↗ {item.shares}</span>
+                  <span><i className="fa-regular fa-heart" /> {item.likes}</span>
+                  <span><i className="fa-regular fa-comment" /> {item.comments}</span>
+                  <span><i className="fa-solid fa-share-nodes" /> {item.shares}</span>
                 </div>
               </Link>
             ))
           ) : (
             <div className={styles.empty}>
-              <div className={styles.emptyIcon}>⌕</div>
+              <div className={styles.emptyIcon}><i className="fa-solid fa-magnifying-glass" /></div>
               <div className={styles.emptyTitle}>未找到相关内容</div>
               <div className={styles.emptyDesc}>换个关键词试试吧~</div>
             </div>

@@ -243,11 +243,6 @@
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
 }
 
-.funcCircle span {
-  color: #555;
-  font-size: 17px;
-}
-
 .funcCircle i {
   color: #555;
   font-size: 17px;
@@ -261,12 +256,14 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: #ff5722;
+  background: #FF5722;
   color: #fff;
   font-size: 9px;
   font-weight: 800;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .funcText {
@@ -425,6 +422,208 @@
 
 .sectionTitle i {
   font-size: 13px;
+}
+
+.settingsOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.settingsDrawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 80vw;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
+}
+
+.settingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 14px;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+
+.settingsTitle {
+  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.settingsClose {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f0f2;
+  color: #999;
+}
+
+.settingsUser {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+
+.settingsAvatar {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #f0f0f2;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f0f0f0;
+}
+
+.settingsUserInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.settingsUserName {
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settingsUserMeta {
+  margin-top: 2px;
+  color: #999;
+  font-size: 11px;
+}
+
+.settingsBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.settingsGroup {
+  padding: 4px 0;
+}
+
+.settingsGroupTitle {
+  padding: 6px 16px;
+  color: #bbb;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.settingsItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.settingsItemIcon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.iconGreen {
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.08);
+}
+
+.iconOrange {
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.08);
+}
+
+.iconBlue {
+  color: #2196f3;
+  background: rgba(33, 150, 243, 0.08);
+}
+
+.iconRed {
+  color: #ff2442;
+  background: rgba(255, 36, 66, 0.08);
+}
+
+.iconPurple {
+  color: #673ab7;
+  background: rgba(103, 58, 183, 0.08);
+}
+
+.iconCyan {
+  color: #00bcd4;
+  background: rgba(0, 188, 212, 0.08);
+}
+
+.iconLime {
+  color: #8bc34a;
+  background: rgba(139, 195, 74, 0.08);
+}
+
+.iconSlate {
+  color: #607d8b;
+  background: rgba(96, 125, 139, 0.08);
+}
+
+.settingsItemText {
+  flex: 1;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settingsItemVal {
+  margin-right: 4px;
+  color: #999;
+  font-size: 12px;
+}
+
+.settingsArrow {
+  color: #ccc;
+  font-size: 11px;
+}
+
+.settingsSwitch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 24px;
+  background: #e0e0e2;
+}
+
+.settingsSwitchThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.settingsSwitchOn {
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+}
+
+.settingsSwitchOn .settingsSwitchThumb {
+  left: 22px;
 }
 
 .postList {

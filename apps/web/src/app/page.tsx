@@ -1,3 +1,7 @@
+ 'use client';
+
+import { useMemo, useState } from 'react';
+
 import { MobileShell } from '../components/mobile-shell';
 import styles from './page.module.css';
 
@@ -57,6 +61,43 @@ const guessCards = [
   },
 ];
 
+const liveCards = [
+  {
+    id: 'l001',
+    title: '德芙新品直播现场竞猜：今晚销量能否破 5 万单？',
+    image: '/legacy/images/guess/g201.jpg',
+    status: '直播中',
+    statusClass: 'hot',
+    countdown: ['00', '时', '48', '分'],
+    odds: [
+      { label: '能破5万… ×1.6', trend: 'up' },
+      { label: '无法突破… ×2.4', trend: 'down' },
+    ],
+    leftLabel: '突破 63%',
+    rightLabel: '37% 不破',
+    leftWidth: '63%',
+    rightWidth: '37%',
+    meta: '直播间 8,632人 · 48分钟后封盘',
+  },
+  {
+    id: 'l002',
+    title: '三只松鼠周年场直播：坚果礼盒会不会 10 分钟内售罄？',
+    image: '/legacy/images/guess/g202.jpg',
+    status: '连麦中',
+    statusClass: 'ending',
+    countdown: ['01', '时', '12', '分'],
+    odds: [
+      { label: '会售罄… ×1.8', trend: 'up' },
+      { label: '不会售罄… ×2.1', trend: 'down' },
+    ],
+    leftLabel: '会售罄 54%',
+    rightLabel: '46% 不会',
+    leftWidth: '54%',
+    rightWidth: '46%',
+    meta: '直播间 5,912人 · 72分钟后截止',
+  },
+];
+
 const recentResults = [
   {
     title: '德芙情人节礼盒销量竞猜',
@@ -100,28 +141,44 @@ const rankings = [
 ];
 
 export default function HomePage() {
+  const [mode, setMode] = useState<'guess' | 'live'>('guess');
+  const [category, setCategory] = useState<'hot' | 'entertainment' | 'media' | 'sports'>('hot');
+
+  const visibleCards = useMemo(() => (mode === 'guess' ? guessCards : liveCards), [mode]);
+  const sectionSubtitle = mode === 'guess' ? '8场竞猜进行中' : '2场直播竞猜进行中';
+
   return (
     <MobileShell tab="home" tone="dark">
       <main className={styles.page}>
         <header className="home-header-v3">
           <div className="mini-tabs" id="miniTabs">
             <div className="mini-tab-slider" id="miniTabSlider" />
-            <div className="mini-tab active" data-idx="0">
+            <button
+              className={`mini-tab ${mode === 'guess' ? 'active' : ''}`}
+              data-idx="0"
+              type="button"
+              onClick={() => setMode('guess')}
+            >
               <span className="tab-emoji">🎰</span>竞猜
-            </div>
-            <div className="mini-tab" data-idx="1">
+            </button>
+            <button
+              className={`mini-tab ${mode === 'live' ? 'active' : ''}`}
+              data-idx="1"
+              type="button"
+              onClick={() => setMode('live')}
+            >
               <span className="tab-emoji">📺</span>直播竞猜
-            </div>
+            </button>
           </div>
           <div className="hv3-spacer" />
           <div className="hv3-actions">
-            <a className="hv3-action" href="javascript:void(0)" title="搜索">
+            <button className="hv3-action" type="button" title="搜索" onClick={() => window.location.assign('/search')}>
               <i className="fa-solid fa-magnifying-glass" />
-            </a>
-            <a className="hv3-action" href="javascript:void(0)">
+            </button>
+            <button className="hv3-action" type="button" onClick={() => window.location.assign('/notifications')}>
               <i className="fa-regular fa-bell" />
               <div className="notif-dot" />
-            </a>
+            </button>
           </div>
         </header>
 
@@ -144,27 +201,31 @@ export default function HomePage() {
         <section className={styles.heroSwiper}>
           <div className={styles.heroTrack}>
             <article className={styles.heroSlide}>
-              <img alt="hero" src="/legacy/images/guess/g201.jpg" />
+              <img alt="hero" src={mode === 'guess' ? '/legacy/images/guess/g201.jpg' : '/legacy/images/guess/g202.jpg'} />
               <div className={styles.heroRank}>🏆 TOP 1</div>
               <div className={styles.heroOverlay}>
-                <div className={styles.heroBadge}>👑 FIFA官方合作</div>
-                <div className={styles.heroTitle}>2026世界杯冠军会是阿根廷还是法国？</div>
+                <div className={styles.heroBadge}>{mode === 'guess' ? '👑 FIFA官方合作' : '🎥 直播连麦专场'}</div>
+                <div className={styles.heroTitle}>
+                  {mode === 'guess'
+                    ? '2026世界杯冠军会是阿根廷还是法国？'
+                    : '德芙新品直播现场竞猜：今晚销量能否破 5 万单？'}
+                </div>
                 <div className={styles.heroMeta}>
-                  <span>👥 1.28万人</span>
-                  <span>6天后截止</span>
+                  <span>{mode === 'guess' ? '👥 1.28万人' : '👥 8,632人围观'}</span>
+                  <span>{mode === 'guess' ? '6天后截止' : '48分钟后封盘'}</span>
                 </div>
                 <div className={styles.heroPk}>
                   <div className={styles.heroPkLabels}>
-                    <span>阿根廷卫冕</span>
-                    <span>法国夺冠</span>
+                    <span>{mode === 'guess' ? '阿根廷卫冕' : '销量破5万'}</span>
+                    <span>{mode === 'guess' ? '法国夺冠' : '销量不破5万'}</span>
                   </div>
                   <div className={styles.heroPkBar}>
-                    <div className={styles.heroPkLeft} style={{ width: '56%' }} />
-                    <div className={styles.heroPkRight} style={{ width: '44%' }} />
+                    <div className={styles.heroPkLeft} style={{ width: mode === 'guess' ? '56%' : '63%' }} />
+                    <div className={styles.heroPkRight} style={{ width: mode === 'guess' ? '44%' : '37%' }} />
                   </div>
                   <div className={styles.heroPkLabels}>
-                    <span>56%</span>
-                    <span>44%</span>
+                    <span>{mode === 'guess' ? '56%' : '63%'}</span>
+                    <span>{mode === 'guess' ? '44%' : '37%'}</span>
                   </div>
                 </div>
               </div>
@@ -186,28 +247,28 @@ export default function HomePage() {
           </div>
           <div className={styles.pkInfo}>
             <div className={styles.pkTitle}>好友PK对战中</div>
-            <div className={styles.pkSub}>球迷小张 vs 零食猎人 · 1.28万人围观</div>
+            <div className={styles.pkSub}>{mode === 'guess' ? '球迷小张 vs 零食猎人 · 1.28万人围观' : '直播抢答中 · 主播团 vs 猜友团'}</div>
           </div>
           <button className={styles.pkBtn} type="button">
-            加入PK
+            {mode === 'guess' ? '加入PK' : '进入直播'}
           </button>
         </div>
 
         <div className={styles.catBar}>
           <div className={styles.catScroll}>
-            <button className={`${styles.catChip} ${styles.catActive}`} type="button">
+            <button className={`${styles.catChip} ${category === 'hot' ? styles.catActive : ''}`} type="button" onClick={() => setCategory('hot')}>
               <i className="fa-solid fa-fire" />
               <span>今日热点</span>
             </button>
-            <button className={styles.catChip} type="button">
+            <button className={`${styles.catChip} ${category === 'entertainment' ? styles.catActive : ''}`} type="button" onClick={() => setCategory('entertainment')}>
               <i className="fa-solid fa-star" />
               <span>娱乐明星</span>
             </button>
-            <button className={styles.catChip} type="button">
+            <button className={`${styles.catChip} ${category === 'media' ? styles.catActive : ''}`} type="button" onClick={() => setCategory('media')}>
               <i className="fa-solid fa-clapperboard" />
               <span>影视综艺</span>
             </button>
-            <button className={styles.catChip} type="button">
+            <button className={`${styles.catChip} ${category === 'sports' ? styles.catActive : ''}`} type="button" onClick={() => setCategory('sports')}>
               <i className="fa-solid fa-futbol" />
               <span>体育赛事</span>
             </button>
@@ -217,7 +278,7 @@ export default function HomePage() {
         <div className={styles.sectionHeader}>
           <div>
             <div className={styles.sectionTitle}>正在进行</div>
-            <div className={styles.sectionSubtitle}>8场竞猜进行中</div>
+            <div className={styles.sectionSubtitle}>{sectionSubtitle}</div>
           </div>
           <div className={styles.modeRoller}>
             <div className={`${styles.modeItem} ${styles.modeChampion}`}>
@@ -236,7 +297,7 @@ export default function HomePage() {
         </div>
 
         <section className={styles.listArea}>
-          {guessCards.map((card) => (
+          {visibleCards.map((card) => (
             <article className={styles.guessCard} key={card.id}>
               <div className={styles.cardImageWrap}>
                 <img alt={card.title} src={card.image} />
@@ -272,7 +333,7 @@ export default function HomePage() {
                     ⚡
                   </button>
                   <button className={styles.joinBtn} type="button">
-                    参与
+                    {mode === 'guess' ? '参与' : '围观'}
                   </button>
                 </div>
                 <div className={styles.cardMeta}>{card.meta}</div>

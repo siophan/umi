@@ -117,6 +117,7 @@ const myProfile = {
 export default function CommunityPage() {
   const [tab, setTab] = useState<'recommend' | 'follow'>('recommend');
   const [publishOpen, setPublishOpen] = useState(false);
+  const [scope, setScope] = useState<'public' | 'friends' | 'fans'>('public');
 
   const visibleFeed = useMemo(() => (tab === 'recommend' ? feedData : feedData.slice(0, 2)), [tab]);
 
@@ -131,7 +132,7 @@ export default function CommunityPage() {
           <button className={styles.iconBtn} type="button" onClick={() => window.location.assign('/community-search')}>
             <i className="fa-solid fa-magnifying-glass" />
           </button>
-          <button className={styles.iconBtn} type="button">
+          <button className={styles.iconBtn} type="button" onClick={() => window.location.assign('/notifications')}>
             <i className="fa-regular fa-bell" />
           </button>
         </header>
@@ -291,8 +292,8 @@ export default function CommunityPage() {
               <div className={styles.publishUser}>
                 <img src={myProfile.avatar} alt={myProfile.name} />
                 <div className={styles.publishUserName}>{myProfile.name}</div>
-                <button className={styles.publishScope} type="button">
-                  <i className="fa-solid fa-earth-americas" /> 所有人 <i className="fa-solid fa-chevron-down" />
+                <button className={styles.publishScope} type="button" onClick={() => setScope((value) => (value === 'public' ? 'friends' : value === 'friends' ? 'fans' : 'public'))}>
+                  <i className={`fa-solid ${scope === 'public' ? 'fa-earth-americas' : scope === 'friends' ? 'fa-user-group' : 'fa-heart'}`} /> {scope === 'public' ? '所有人' : scope === 'friends' ? '好友可见' : '粉丝可见'} <i className="fa-solid fa-chevron-down" />
                 </button>
               </div>
               <textarea className={styles.textarea} placeholder="分享你的竞猜心得、零食测评、PK战报..." />

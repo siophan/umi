@@ -78,6 +78,7 @@ export default function UserProfilePage() {
   const [tab, setTab] = useState<'works' | 'liked'>('works');
   const [following, setFollowing] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
 
   const statItems = useMemo(
     () => [
@@ -113,11 +114,11 @@ export default function UserProfilePage() {
         <img className={styles.avatar} src={profile.avatar} alt={profile.name} />
         <div className={styles.nameRow}>
           <span className={styles.name}>{profile.name}</span>
-          {profile.verified ? <span className={styles.verified}>✓</span> : null}
+          {profile.verified ? <span className={styles.verified}><i className="fa-solid fa-circle-check" /></span> : null}
           <span className={styles.level}>{profile.level}</span>
         </div>
         <div className={styles.uid}>
-          优米号 1008611 <span>⌁</span>
+          优米号 1008611 <span><i className="fa-regular fa-copy" /></span>
         </div>
 
         <div className={styles.stats}>
@@ -154,9 +155,9 @@ export default function UserProfilePage() {
         </button>
       </section>
 
-      <section className={tab === 'works' ? styles.panelActive : styles.panel}>
+        <section className={tab === 'works' ? styles.panelActive : styles.panel}>
         <div className={styles.sectionTitle}>
-          <span>✎</span> TA发布的猜友圈
+          <span><i className="fa-solid fa-pen-to-square" /></span> TA发布的猜友圈
         </div>
         <div className={styles.postList}>
           {profile.works.map((post) => (
@@ -179,9 +180,21 @@ export default function UserProfilePage() {
                 ))}
               </div>
               <div className={styles.postActions}>
-                <span>♡ {post.likes}</span>
-                <span>◎ {post.comments}</span>
-                <span>↗</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLikedPosts((current) => ({
+                      ...current,
+                      [post.id]: !current[post.id],
+                    }))
+                  }
+                >
+                  <i className={`${likedPosts[post.id] ? 'fa-solid' : 'fa-regular'} fa-heart`} /> {post.likes}
+                </button>
+                <span><i className="fa-regular fa-comment" /> {post.comments}</span>
+                <button type="button">
+                  <i className="fa-solid fa-share-nodes" />
+                </button>
               </div>
             </article>
           ))}
@@ -190,7 +203,7 @@ export default function UserProfilePage() {
 
       <section className={tab === 'liked' ? styles.panelActive : styles.panel}>
         <div className={styles.sectionTitle}>
-          <span>♥</span> TA点赞的猜友圈
+          <span><i className="fa-solid fa-heart" /></span> TA点赞的猜友圈
         </div>
         <div className={styles.postList}>
           {profile.liked.map((post) => (
@@ -211,9 +224,11 @@ export default function UserProfilePage() {
                 <img src={post.images[0]} alt={post.title} />
               </div>
               <div className={styles.postActions}>
-                <span className={styles.liked}>♡ {post.likes}</span>
-                <span>◎ {post.comments}</span>
-                <span>↗</span>
+                <span className={styles.liked}><i className="fa-solid fa-heart" /> {post.likes}</span>
+                <span><i className="fa-regular fa-comment" /> {post.comments}</span>
+                <button type="button">
+                  <i className="fa-solid fa-share-nodes" />
+                </button>
               </div>
             </article>
           ))}
@@ -234,14 +249,14 @@ export default function UserProfilePage() {
                 ⋯
               </button>
             </header>
-            <div className={styles.chatMessages}>
+              <div className={styles.chatMessages}>
               <div className={styles.timeLabel}>09:12</div>
               <div className={`${styles.msgRow} ${styles.other}`}>
                 <img src={profile.avatar} alt="" />
                 <div className={styles.bubble}>在吗？一起来猜一局！</div>
               </div>
               <div className={`${styles.msgRow} ${styles.me}`}>
-                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Me" alt="" />
+                <img src="/legacy/images/mascot/mouse-main.png" alt="" />
                 <div className={styles.bubble}>好啊，猜什么？</div>
               </div>
               <div className={`${styles.msgRow} ${styles.other}`}>
@@ -251,12 +266,12 @@ export default function UserProfilePage() {
             </div>
             <footer className={styles.chatInputBar}>
               <div className={styles.chatTools}>
-                <button type="button">🖼</button>
-                <button type="button">☺</button>
+                <button type="button"><i className="fa-regular fa-image" /></button>
+                <button type="button"><i className="fa-regular fa-face-smile" /></button>
               </div>
               <textarea className={styles.chatInput} placeholder="发送消息…" rows={1} />
               <button className={styles.chatSend} type="button">
-                ➤
+                <i className="fa-solid fa-paper-plane" />
               </button>
             </footer>
           </section>

@@ -13,6 +13,7 @@ const posts = [
     user: '优米鼠鼠',
     time: '2 小时前',
     tag: '猜友动态',
+    tagCls: '',
     title: '今天这波抢购节奏很快，竞猜和直购都能试一试。',
     desc: '我把自己的预测逻辑整理了一下，偏热的商品更值得先看竞猜。',
     images: ['/legacy/images/guess/g001.jpg', '/legacy/images/products/p001-lays.jpg'],
@@ -24,6 +25,7 @@ const posts = [
     user: '优米鼠鼠',
     time: '昨天',
     tag: '零食开箱',
+    tagCls: 'hot',
     title: '换购到账的商品比我想象得更稳，仓库流程也顺了。',
     desc: '从竞猜到仓库，整个链路比之前更像一个完整产品。',
     images: ['/legacy/images/products/p007-dove.jpg'],
@@ -61,6 +63,7 @@ const shortcuts = [
 
 export default function MePage() {
   const [tab, setTab] = useState<'works' | 'favs' | 'likes'>('works');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const isMerchant = false;
   const stats = useMemo(
     () => [
@@ -80,7 +83,7 @@ export default function MePage() {
               优米
             </div>
             <div className={styles.actions}>
-              <button type="button" aria-label="消息">
+              <button type="button" aria-label="消息" onClick={() => window.location.assign('/chat')}>
                 <i className="fa-regular fa-comment-dots" />
                 <span className={styles.topBadge}>3</span>
               </button>
@@ -90,7 +93,7 @@ export default function MePage() {
               <button type="button" aria-label="搜索" onClick={() => window.location.assign('/community-search')}>
                 <i className="fa-solid fa-magnifying-glass" />
               </button>
-              <button type="button" aria-label="设置">
+              <button type="button" aria-label="设置" onClick={() => setSettingsOpen(true)}>
                 <i className="fa-solid fa-bars" />
               </button>
             </div>
@@ -191,7 +194,7 @@ export default function MePage() {
                     <div className={styles.postAuthorName}>{post.user}</div>
                     <div className={styles.postAuthorMeta}>{post.time}</div>
                   </div>
-                  <span className={styles.postTag}>{post.tag}</span>
+                  <span className={`${styles.postTag} ${post.tagCls === 'hot' ? styles.tagHot : ''}`}>{post.tag}</span>
                 </div>
                 <div className={styles.postBody}>
                   <div className={styles.postTitle}>{post.title}</div>
@@ -272,6 +275,89 @@ export default function MePage() {
             ))}
           </div>
         </section>
+
+        {settingsOpen ? (
+          <div className={styles.settingsOverlay} onClick={() => setSettingsOpen(false)} role="presentation">
+            <aside className={styles.settingsDrawer} onClick={(event) => event.stopPropagation()} role="presentation">
+              <div className={styles.settingsHeader}>
+                <div className={styles.settingsTitle}>设置</div>
+                <button className={styles.settingsClose} type="button" onClick={() => setSettingsOpen(false)}>
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              </div>
+
+              <div className={styles.settingsUser}>
+                <img className={styles.settingsAvatar} src="/legacy/images/mascot/mouse-main.png" alt={demoUser.name} />
+                <div className={styles.settingsUserInfo}>
+                  <div className={styles.settingsUserName}>{demoUser.name}</div>
+                  <div className={styles.settingsUserMeta}>{demoUser.phone}</div>
+                </div>
+                <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+              </div>
+
+              <div className={styles.settingsBody}>
+                <div className={styles.settingsGroup}>
+                  <div className={styles.settingsGroupTitle}>账户</div>
+                  <button className={styles.settingsItem} type="button" onClick={() => window.location.assign('/edit-profile')}>
+                    <span className={`${styles.settingsItemIcon} ${styles.iconGreen}`}><i className="fa-solid fa-user-pen" /></span>
+                    <span className={styles.settingsItemText}>编辑资料</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                  <button className={styles.settingsItem} type="button" onClick={() => window.location.assign('/my-orders')}>
+                    <span className={`${styles.settingsItemIcon} ${styles.iconOrange}`}><i className="fa-solid fa-receipt" /></span>
+                    <span className={styles.settingsItemText}>我的订单</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                  <button className={styles.settingsItem} type="button" onClick={() => window.location.assign('/address')}>
+                    <span className={`${styles.settingsItemIcon} ${styles.iconBlue}`}><i className="fa-solid fa-location-dot" /></span>
+                    <span className={styles.settingsItemText}>收货地址</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                  <button className={styles.settingsItem} type="button" onClick={() => window.location.assign('/coupons')}>
+                    <span className={`${styles.settingsItemIcon} ${styles.iconRed}`}><i className="fa-solid fa-ticket" /></span>
+                    <span className={styles.settingsItemText}>优惠券</span>
+                    <span className={styles.settingsItemVal}>3 张</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                </div>
+
+                <div className={styles.settingsGroup}>
+                  <div className={styles.settingsGroupTitle}>偏好设置</div>
+                  <div className={styles.settingsItem}>
+                    <span className={`${styles.settingsItemIcon} ${styles.iconPurple}`}><i className="fa-solid fa-moon" /></span>
+                    <span className={styles.settingsItemText}>深色模式</span>
+                    <span className={styles.settingsSwitch}><span className={styles.settingsSwitchThumb} /></span>
+                  </div>
+                  <div className={styles.settingsItem}>
+                    <span className={`${styles.settingsItemIcon} ${styles.iconCyan}`}><i className="fa-solid fa-bell" /></span>
+                    <span className={styles.settingsItemText}>消息通知</span>
+                    <span className={`${styles.settingsSwitch} ${styles.settingsSwitchOn}`}><span className={styles.settingsSwitchThumb} /></span>
+                  </div>
+                </div>
+
+                <div className={styles.settingsGroup}>
+                  <div className={styles.settingsGroupTitle}>支持与帮助</div>
+                  <button className={styles.settingsItem} type="button">
+                    <span className={`${styles.settingsItemIcon} ${styles.iconLime}`}><i className="fa-solid fa-circle-question" /></span>
+                    <span className={styles.settingsItemText}>帮助中心</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                  <button className={styles.settingsItem} type="button">
+                    <span className={`${styles.settingsItemIcon} ${styles.iconOrange}`}><i className="fa-solid fa-comment-medical" /></span>
+                    <span className={styles.settingsItemText}>意见反馈</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                  <button className={styles.settingsItem} type="button">
+                    <span className={`${styles.settingsItemIcon} ${styles.iconSlate}`}><i className="fa-solid fa-circle-info" /></span>
+                    <span className={styles.settingsItemText}>关于优米</span>
+                    <span className={styles.settingsItemVal}>v2.6.0</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        ) : null}
       </main>
     </MobileShell>
   );
