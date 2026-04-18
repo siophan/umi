@@ -16,7 +16,7 @@ export default function ChatDetailPage() {
   const params = useSearchParams();
   const friendName = decodeURIComponent(params.get('name') || '好友');
   const avatar = decodeURIComponent(
-    params.get('avatar') || 'https://api.dicebear.com/7.x/adventurer/svg?seed=Default',
+    params.get('avatar') || '/legacy/images/mascot/mouse-happy.png',
   );
   const [value, setValue] = useState('');
 
@@ -26,12 +26,12 @@ export default function ChatDetailPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} type="button" onClick={() => history.back()}>
-          ←
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <img className={styles.avatar} src={avatar} alt={friendName} />
         <div className={styles.name}>{friendName}</div>
         <button className={styles.moreBtn} type="button">
-          ⋯
+          <i className="fa-solid fa-ellipsis" />
         </button>
       </header>
 
@@ -47,7 +47,8 @@ export default function ChatDetailPage() {
       <footer className={styles.inputBar}>
         <div className={styles.tools}>
           <button type="button">🖼</button>
-          <button type="button">☺</button>
+          <button type="button"><i className="fa-regular fa-image" /></button>
+          <button type="button"><i className="fa-regular fa-face-smile" /></button>
         </div>
         <textarea
           className={styles.input}
@@ -57,7 +58,7 @@ export default function ChatDetailPage() {
           rows={1}
         />
         <button className={`${styles.sendBtn} ${value.trim() ? styles.sendActive : ''}`} type="button">
-          ➤
+          <i className="fa-solid fa-paper-plane" />
         </button>
       </footer>
     </main>

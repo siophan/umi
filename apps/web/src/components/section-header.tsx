@@ -12,7 +12,7 @@ export function SectionHeader({
       <h2>{title}</h2>
       {moreHref ? (
         <Link href={moreHref}>
-          全部 <span>›</span>
+          全部 <span><i className="fa-solid fa-chevron-right" /></span>
         </Link>
       ) : null}
     </div>

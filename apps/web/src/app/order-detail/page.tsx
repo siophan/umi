@@ -81,7 +81,7 @@ export default function OrderDetailPage() {
           type="button"
           onClick={() => window.history.back()}
         >
-          ‹
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.title}>订单详情</div>
         <div className={styles.headerRight}>
@@ -90,32 +90,36 @@ export default function OrderDetailPage() {
             type="button"
             onClick={() => showToast('分享订单')}
           >
-            ↗
+            <i className="fa-solid fa-arrow-up-right-from-square" />
           </button>
           <button
             className={styles.headerBtn}
             type="button"
             onClick={() => showToast('联系客服')}
           >
-            ☎
+            <i className="fa-solid fa-headset" />
           </button>
         </div>
       </header>
 
       <section className={`${styles.banner} ${styles[order.bannerClass]}`}>
         <div className={styles.bannerMain}>
-          <div className={styles.bannerIcon}>{order.icon}</div>
+          <div className={styles.bannerIcon}>
+            <i className="fa-solid fa-truck-fast" />
+          </div>
           <div>
             <div className={styles.bannerTitle}>{order.statusText}</div>
             <div className={styles.bannerDesc}>{order.statusDesc}</div>
           </div>
         </div>
-        <div className={styles.bannerBg}>{order.icon}</div>
+        <div className={styles.bannerBg}>
+          <i className="fa-solid fa-truck-fast" />
+        </div>
       </section>
 
       <section className={styles.timelineCard}>
         <div className={styles.cardTitle}>
-          <span>◉</span>
+          <i className="fa-solid fa-route" />
           物流进度
         </div>
         <div className={styles.timeline}>
@@ -139,7 +143,7 @@ export default function OrderDetailPage() {
 
       <section className={styles.card}>
         <div className={styles.cardTitle}>
-          <span>◉</span>
+          <i className="fa-solid fa-store" />
           商家信息
         </div>
         <button
@@ -147,9 +151,13 @@ export default function OrderDetailPage() {
           type="button"
           onClick={() => showToast('进入店铺')}
         >
-          <div className={styles.shopIcon}>店</div>
+          <div className={styles.shopIcon}>
+            <i className="fa-solid fa-store" />
+          </div>
           <div className={styles.shopName}>{order.shopName}</div>
-          <div className={styles.arrow}>›</div>
+          <div className={styles.arrow}>
+            <i className="fa-solid fa-chevron-right" />
+          </div>
         </button>
 
         <div className={styles.product}>
@@ -163,7 +171,7 @@ export default function OrderDetailPage() {
                 className={`${styles.productPrice} ${order.product.price === 0 ? styles.free : ''}`}
               >
                 {order.product.price === 0
-                  ? '🎁 免费'
+                  ? '免费'
                   : `¥${order.product.price.toFixed(2)}`}
               </span>
             </div>
@@ -175,22 +183,28 @@ export default function OrderDetailPage() {
           type="button"
           onClick={() => showToast(order.guessTitle)}
         >
-          <div className={styles.guessIcon}>🎯</div>
+          <div className={styles.guessIcon}>
+            <i className="fa-solid fa-bullseye" />
+          </div>
           <div className={styles.guessText}>
             <div className={styles.guessLabel}>关联竞猜</div>
             <div className={styles.guessTitle}>{order.guessTitle}</div>
           </div>
-          <div className={styles.guessArrow}>›</div>
+          <div className={styles.guessArrow}>
+            <i className="fa-solid fa-chevron-right" />
+          </div>
         </button>
       </section>
 
       <section className={styles.card}>
         <div className={styles.cardTitle}>
-          <span>◉</span>
+          <i className="fa-solid fa-location-dot" />
           收货信息
         </div>
         <div className={styles.address}>
-          <div className={styles.addressIcon}>⌂</div>
+          <div className={styles.addressIcon}>
+            <i className="fa-solid fa-location-dot" />
+          </div>
           <div className={styles.addressInfo}>
             <div className={styles.addressName}>
               {order.address.name}
@@ -206,19 +220,23 @@ export default function OrderDetailPage() {
           type="button"
           onClick={() => showToast('查看物流详情')}
         >
-          <div className={styles.expressIcon}>⇢</div>
+          <div className={styles.expressIcon}>
+            <i className="fa-solid fa-truck-fast" />
+          </div>
           <div className={styles.expressInfo}>
             <div className={styles.expressCompany}>{order.express.company}</div>
             <div className={styles.expressNo}>{order.express.no}</div>
             <div className={styles.expressStatus}>{order.express.status}</div>
           </div>
-          <div className={styles.expressArrow}>›</div>
+          <div className={styles.expressArrow}>
+            <i className="fa-solid fa-chevron-right" />
+          </div>
         </button>
       </section>
 
       <section className={styles.card}>
         <div className={styles.cardTitle}>
-          <span>◉</span>
+          <i className="fa-solid fa-receipt" />
           订单金额
         </div>
         {order.priceRows.map((row) => (
@@ -239,7 +257,7 @@ export default function OrderDetailPage() {
 
       <section className={styles.card}>
         <div className={styles.cardTitle}>
-          <span>◉</span>
+          <i className="fa-solid fa-file-lines" />
           订单信息
         </div>
         {order.infoRows.map((row) => (

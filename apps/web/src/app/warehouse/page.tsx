@@ -88,10 +88,10 @@ const statusMeta: Record<
   Exclude<WarehouseTab, 'all'>,
   [string, string, string]
 > = {
-  pending: ['待提货', 's-pending', '◷'],
-  shipped: ['运输中', 's-shipped', '➜'],
-  delivered: ['已签收', 's-delivered', '✓'],
-  consigning: ['寄售中', 's-consigning', '✦'],
+  pending: ['待提货', 's-pending', 'fa-clock'],
+  shipped: ['运输中', 's-shipped', 'fa-truck-fast'],
+  delivered: ['已签收', 's-delivered', 'fa-circle-check'],
+  consigning: ['寄售中', 's-consigning', 'fa-tag'],
 };
 
 const emptyMap: Record<
@@ -239,7 +239,7 @@ export default function WarehousePage() {
             type="button"
             onClick={() => triggerToast('批量操作')}
           >
-            ☰
+            <i className="fa-solid fa-list-check" />
           </button>
         </header>
 
@@ -280,7 +280,9 @@ export default function WarehousePage() {
           </div>
           <div className={styles.totalBar}>
             <div className={styles.totalLabel}>
-              <span className={styles.totalIcon}>◌</span>
+              <span className={styles.totalIcon}>
+                <i className="fa-solid fa-sack-dollar" />
+              </span>
               物资总值
             </div>
             <div className={styles.totalValue}>
@@ -364,7 +366,7 @@ export default function WarehousePage() {
                     <div
                       className={`${styles.status} ${getWarehouseStatusClass(item.status)}`}
                     >
-                      <span>{meta[2]}</span>
+                      <i className={`fa-solid ${meta[2]}`} />
                       {meta[0]}
                       {item.status === 'consigning' && item.estimateDays ? (
                         <span> · 预计 {item.estimateDays} 日内售出</span>
@@ -469,7 +471,9 @@ export default function WarehousePage() {
 
               {estimate ? (
                 <div className={styles.estimate}>
-                  <div className={styles.estimateIcon}>⚡</div>
+                  <div className={styles.estimateIcon}>
+                    <i className="fa-solid fa-bolt" />
+                  </div>
                   <div className={styles.estimateInfo}>
                     <div className={styles.estimateTitle}>{estimate.title}</div>
                     <div className={styles.estimateDesc}>{estimate.desc}</div>

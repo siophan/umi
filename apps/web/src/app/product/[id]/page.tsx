@@ -9,10 +9,10 @@ import styles from './page.module.css';
 
 const heroImages = [
   demoProduct.img,
-  'https://images.unsplash.com/photo-1523393230790-96c0c7aeebf9?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1525955656353-0c621456f06e?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1511556820780-d912e42b4980?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1543508282-6319a3e2621f?auto=format&fit=crop&w=1200&q=80',
+  '/legacy/images/products/p002-oreo.jpg',
+  '/legacy/images/products/p003-squirrels.jpg',
+  '/legacy/images/products/p005-liangpin.jpg',
+  '/legacy/images/products/p007-dove.jpg',
 ];
 
 const reviews = [
@@ -51,7 +51,7 @@ const recommend = [
     id: 'prod-3',
     name: '蓝莓冻干酸奶块',
     price: 39,
-    img: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80',
+    img: '/legacy/images/products/p006-wangwang.jpg',
   },
 ];
 
@@ -92,15 +92,15 @@ export default function ProductDetailPage() {
     <main className={styles.page}>
       <header className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
         <button className={styles.navBtn} type="button" onClick={() => history.back()}>
-          ←
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.navTitle}>商品详情</div>
         <div className={styles.navActions}>
           <button className={styles.navBtn} type="button">
-            ↗
+            <i className="fa-solid fa-share-nodes" />
           </button>
           <button className={styles.navBtn} type="button">
-            ⋯
+            <i className="fa-solid fa-ellipsis" />
           </button>
         </div>
       </header>
@@ -180,21 +180,21 @@ export default function ProductDetailPage() {
             type="button"
             onClick={() => setCurrentTab('direct')}
           >
-            <span className={styles.modeIcon}>🛒</span> 直购 <span className={styles.modePrice}>¥{directPrice}</span>
+            <span className={styles.modeIcon}><i className="fa-solid fa-cart-shopping" /></span> 直购 <span className={styles.modePrice}>¥{directPrice}</span>
           </button>
           <button
             className={`${styles.modeTab} ${currentTab === 'guess' ? styles.modeGuessOn : ''}`}
             type="button"
             onClick={() => setCurrentTab('guess')}
           >
-            <span className={styles.modeIcon}>🎲</span> 竞猜 <span className={styles.modePrice}>¥{guessPrice}</span>
+            <span className={styles.modeIcon}><i className="fa-solid fa-dice" /></span> 竞猜 <span className={styles.modePrice}>¥{guessPrice}</span>
           </button>
           <button
             className={`${styles.modeTab} ${currentTab === 'inv' ? styles.modeInvOn : ''}`}
             type="button"
             onClick={() => setCurrentTab('inv')}
           >
-            <span className={styles.modeIcon}>💰</span> 换购 <span className={styles.modePrice}>¥{invPrice}</span>
+            <span className={styles.modeIcon}><i className="fa-solid fa-coins" /></span> 换购 <span className={styles.modePrice}>¥{invPrice}</span>
           </button>
         </div>
       </section>
@@ -364,7 +364,7 @@ export default function ProductDetailPage() {
                 <div className={styles.serviceGrid}>
                   {['正品保证', '24h发货', '顺丰包邮', '7天退换', '运费险', '极速退款'].map((item) => (
                     <div className={styles.serviceItem} key={item}>
-                      <span>✓</span>
+                      <span><i className="fa-solid fa-check" /></span>
                       <em>{item}</em>
                     </div>
                   ))}
@@ -373,12 +373,12 @@ export default function ProductDetailPage() {
                   <button className={styles.compareCard} type="button" onClick={() => setCurrentTab('guess')}>
                     <span>竞猜价</span>
                     <strong>¥{guessPrice}</strong>
-                    <em>去竞猜 →</em>
+                    <em>去竞猜 <i className="fa-solid fa-arrow-right" /></em>
                   </button>
                   <button className={styles.compareCardGreen} type="button" onClick={() => setCurrentTab('inv')}>
                     <span>换购价</span>
                     <strong>¥{invPrice}</strong>
-                    <em>去换购 →</em>
+                    <em>去换购 <i className="fa-solid fa-arrow-right" /></em>
                   </button>
                 </div>
               </>
@@ -472,7 +472,7 @@ export default function ProductDetailPage() {
                   <div className={styles.reviewText}>{review.text}</div>
                   <div className={styles.reviewFoot}>
                     <span>{review.time}</span>
-                    <span>♡ {review.likes}</span>
+                    <span><i className="fa-regular fa-heart" /> {review.likes}</span>
                   </div>
                 </div>
               </article>
@@ -497,15 +497,15 @@ export default function ProductDetailPage() {
       <div className={styles.bottomBar}>
         <div className={styles.barLeft}>
           <button className={styles.barIcon} type="button">
-            <span>◫</span>
+            <span><i className="fa-solid fa-store" /></span>
             <em>店铺</em>
           </button>
           <button className={styles.barIcon} type="button">
-            <span>♡</span>
+            <span><i className="fa-regular fa-heart" /></span>
             <em>收藏</em>
           </button>
           <button className={styles.barIcon} type="button">
-            <span>◎</span>
+            <span><i className="fa-regular fa-comments" /></span>
             <em>客服</em>
           </button>
         </div>
@@ -533,7 +533,7 @@ export default function ProductDetailPage() {
             <div className={styles.exchangeHeader}>
               <div className={styles.exchangeTitle}>库存换购</div>
               <button type="button" onClick={() => setExchangeOpen(false)}>
-                ×
+                <i className="fa-solid fa-xmark" />
               </button>
             </div>
             <div className={styles.exchangeTarget}>

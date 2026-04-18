@@ -1,29 +1,82 @@
-import { LegacyPage } from '../../components/legacy-page';
+'use client';
+
+import styles from './page.module.css';
+
+const filters = ['全部', '🔴 正在直播', '⏰ 即将开始', '🎬 精彩回放', '零食开箱', '品牌PK'];
+
+const featured = {
+  title: '乐事春季限定开箱夜',
+  host: '乐事官方旗舰店',
+  viewers: '2.8万',
+  guesses: 3,
+  status: '直播中',
+  img: '/legacy/images/guess/g203.jpg',
+  avatar: '/legacy/images/products/p001-lays.jpg',
+};
+
+const lives = [
+  { title: '德芙新品试吃会', meta: '🔴 1.2万人 · 2场竞猜', img: '/legacy/images/products/p007-dove.jpg' },
+  { title: '三只松鼠年货局', meta: '⏰ 8千人预约 · 1场竞猜', img: '/legacy/images/products/p003-squirrels.jpg' },
+  { title: '旺旺零食回放', meta: '🎬 6.4千人观看 · 精彩回放', img: '/legacy/images/products/p016-wangzai.jpg' },
+  { title: '良品铺子直播专场', meta: '🔴 9.3千人 · 4场竞猜', img: '/legacy/images/products/p005-liangpin.jpg' },
+];
 
 export default function LivesPage() {
   return (
-    <LegacyPage
-      title="直播竞猜"
-      eyebrow="LIVE FEED"
-      heroDesc="这里承接老系统 lives / live 的直播流入口，先保留暗色娱乐内容氛围和功能分组。"
-      heroTitle="实时观看与直播竞猜"
-      stats={[
-        { value: '18', label: '在线直播间' },
-        { value: '6.2万', label: '总观看量' },
-        { value: '9', label: '进行中竞猜' },
-      ]}
-      gridItems={[
-        { icon: 'fa-solid fa-video', label: '直播间', gradient: 'linear-gradient(135deg,#FF7043,#E64A19)' },
-        { icon: 'fa-solid fa-bolt', label: 'PK竞猜', gradient: 'linear-gradient(135deg,#7E57C2,#5E35B1)' },
-        { icon: 'fa-solid fa-fire', label: '热门场次', gradient: 'linear-gradient(135deg,#EF5350,#E53935)' },
-        { icon: 'fa-solid fa-message', label: '实时弹幕', gradient: 'linear-gradient(135deg,#26C6DA,#00ACC1)' },
-      ]}
-      gridTitle="直播能力"
-      listItems={[
-        { icon: 'fa-solid fa-circle-play', title: '直播详情页', desc: '主播信息、商品挂车、竞猜入口', gradient: 'linear-gradient(135deg,#42A5F5,#1E88E5)' },
-        { icon: 'fa-solid fa-clock-rotate-left', title: '回放与精彩片段', desc: '保留老系统直播内容沉淀能力', gradient: 'linear-gradient(135deg,#AB47BC,#8E24AA)' },
-      ]}
-      listTitle="后续细化"
-    />
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <button className={styles.back} type="button" onClick={() => history.back()}>
+          <i className="fa-solid fa-arrow-left" />
+        </button>
+        <span className={styles.title}>竞猜直播</span>
+        <button className={styles.action} type="button">
+          <i className="fa-solid fa-magnifying-glass" />
+        </button>
+      </header>
+
+      <div className={styles.tags}>
+        {filters.map((item, index) => (
+          <button className={index === 0 ? styles.tagActive : styles.tag} key={item} type="button">
+            {item}
+          </button>
+        ))}
+      </div>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>🔥 热门直播</div>
+        <article className={styles.featured}>
+          <img className={styles.featuredImg} src={featured.img} alt={featured.title} />
+          <div className={styles.overlay}>
+            <div className={styles.overlayTop}>
+              <span className={styles.liveTag}>● {featured.status}</span>
+              <span className={styles.viewerTag}>👁 {featured.viewers}</span>
+            </div>
+            <div className={styles.overlayBottom}>
+              <div className={styles.featuredTitle}>{featured.title}</div>
+              <div className={styles.hostRow}>
+                <img src={featured.avatar} alt={featured.host} />
+                <span>{featured.host}</span>
+                <em>🎯 {featured.guesses}场竞猜</em>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>更多直播</div>
+        <div className={styles.grid}>
+          {lives.map((item) => (
+            <article className={styles.card} key={item.title}>
+              <img src={item.img} alt={item.title} />
+              <div className={styles.cardInfo}>
+                <div className={styles.cardTitle}>{item.title}</div>
+                <div className={styles.cardMeta}>{item.meta}</div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
   );
 }

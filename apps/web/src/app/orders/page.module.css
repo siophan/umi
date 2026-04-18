@@ -196,8 +196,15 @@
 }
 
 .shopIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 11px;
   color: #ff9800;
+}
+
+.shopIcon i {
+  font-size: 12px;
 }
 
 .status {

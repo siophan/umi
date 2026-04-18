@@ -45,13 +45,13 @@ const profileDB: Record<
     bio: '乐事中国官方账号 🥔\n分享美味零食，发起趣味竞猜！\n每月新品抢先体验~',
     tags: ['品牌认证', '零食', '美食'],
     cover: 'https://picsum.photos/seed/user1/1200/720',
-    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Lays&backgroundColor=e53935',
+    avatar: '/legacy/images/products/p001-lays.jpg',
     works: [
-      { id: 'w1', tag: '品牌竞猜', title: '乐事2026马年限定口味投票开启！番茄味 vs 黄瓜味', desc: '参与竞猜赢正品零食大礼包，猜中直接发货到家。当前3890人参与！', images: ['https://picsum.photos/seed/productsp001/400/400'], likes: 2341, comments: 456, time: '15分钟前' },
-      { id: 'w2', tag: '新品预告', title: '乐事春季限定新口味即将揭晓！黄瓜味 vs 烧烤味', desc: '下一轮竞猜即将开启，敬请期待！参与即有机会获得新品试吃装。', images: ['https://picsum.photos/seed/productsp006/400/400', 'https://picsum.photos/seed/productsp002/400/400'], likes: 1890, comments: 320, time: '3小时前' },
+      { id: 'w1', tag: '品牌竞猜', title: '乐事2026马年限定口味投票开启！番茄味 vs 黄瓜味', desc: '参与竞猜赢正品零食大礼包，猜中直接发货到家。当前3890人参与！', images: ['/legacy/images/products/p001-lays.jpg'], likes: 2341, comments: 456, time: '15分钟前' },
+      { id: 'w2', tag: '新品预告', title: '乐事春季限定新口味即将揭晓！黄瓜味 vs 烧烤味', desc: '下一轮竞猜即将开启，敬请期待！参与即有机会获得新品试吃装。', images: ['/legacy/images/products/p006-wangwang.jpg', '/legacy/images/products/p002-oreo.jpg'], likes: 1890, comments: 320, time: '3小时前' },
     ],
     liked: [
-      { id: 'l1', tag: '零食测评', title: '2026年度十大零食品牌排行榜出炉！三只松鼠再登榜首', desc: '根据全平台销售数据与用户口碑综合评选...', images: ['https://picsum.photos/seed/productsp003/400/400', 'https://picsum.photos/seed/productsp007/400/400'], likes: 8723, comments: 1204, time: '1小时前' },
+      { id: 'l1', tag: '零食测评', title: '2026年度十大零食品牌排行榜出炉！三只松鼠再登榜首', desc: '根据全平台销售数据与用户口碑综合评选...', images: ['/legacy/images/products/p003-squirrels.jpg', '/legacy/images/products/p007-dove.jpg'], likes: 8723, comments: 1204, time: '1小时前' },
     ],
   },
   default: {
@@ -61,12 +61,12 @@ const profileDB: Record<
     bio: '专业零食测评 🍿\n吃遍天下零食，只为找到最好吃的那一款！\n合作请私信~',
     tags: ['测评达人', '美食博主'],
     cover: 'https://picsum.photos/seed/user2/1200/720',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Tester',
+    avatar: '/legacy/images/mascot/mouse-casual.png',
     works: [
-      { id: 'w1', tag: '零食测评', title: '2026年度十大零食品牌排行榜出炉！', desc: '根据全平台销售数据与用户口碑综合评选...', images: ['https://picsum.photos/seed/productsp003/400/400'], likes: 8723, comments: 1204, time: '1小时前' },
+      { id: 'w1', tag: '零食测评', title: '2026年度十大零食品牌排行榜出炉！', desc: '根据全平台销售数据与用户口碑综合评选...', images: ['/legacy/images/products/p003-squirrels.jpg'], likes: 8723, comments: 1204, time: '1小时前' },
     ],
     liked: [
-      { id: 'l1', tag: '品牌竞猜', title: '乐事2026马年限定口味投票开启！', desc: '参与竞猜赢正品零食大礼包', images: ['https://picsum.photos/seed/productsp001/400/400'], likes: 2341, comments: 456, time: '15分钟前' },
+      { id: 'l1', tag: '品牌竞猜', title: '乐事2026马年限定口味投票开启！', desc: '参与竞猜赢正品零食大礼包', images: ['/legacy/images/products/p001-lays.jpg'], likes: 2341, comments: 456, time: '15分钟前' },
     ],
   },
 };
@@ -92,15 +92,15 @@ export default function UserProfilePage() {
     <main className={styles.page}>
       <header className={styles.topbar}>
         <button className={styles.backBtn} type="button" onClick={() => history.back()}>
-          ←
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.topName}>{profile.name}</div>
         <div className={styles.topRight}>
           <button type="button" onClick={() => setChatOpen(true)}>
-            ✉
+            <i className="fa-regular fa-envelope" />
           </button>
           <button type="button">
-            ⋯
+            <i className="fa-solid fa-ellipsis" />
           </button>
         </div>
       </header>

@@ -1,0 +1,30 @@
+.page { min-height: 100vh; padding: 20px 16px 32px; color: #fff; background: radial-gradient(circle at top,#241445,#06060f 55%); }
+.hero { text-align: center; padding: 12px 8px 28px; }
+.badge { display: inline-block; border: 1px solid rgba(251,191,36,.18); border-radius: 20px; padding: 6px 14px; background: rgba(251,191,36,.08); color: #fbbf24; font-size: 11px; font-weight: 800; letter-spacing: 2px; }
+.hero h1 { margin: 18px 0 8px; font-size: 32px; font-weight: 900; line-height: 1.15; background: linear-gradient(135deg,#fde68a,#fbbf24,#f472b6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p { margin: 0 auto; max-width: 320px; font-size: 13px; line-height: 1.7; color: rgba(255,255,255,.56); }
+.liveRow { display: inline-flex; gap: 8px; align-items: center; margin-top: 20px; border: 1px solid rgba(52,211,153,.16); border-radius: 999px; padding: 8px 18px; background: rgba(52,211,153,.06); font-size: 12px; color: rgba(255,255,255,.65); }
+.dot { width: 7px; height: 7px; border-radius: 999px; background: #34d399; box-shadow: 0 0 8px #34d399; }
+.liveRow strong { color: #34d399; font-size: 17px; }
+.cta { width: 100%; max-width: 320px; margin-top: 28px; border: 0; border-radius: 20px; padding: 18px 0; background: linear-gradient(135deg,#fbbf24,#d97706); color: #06060f; font-size: 18px; font-weight: 900; letter-spacing: 1px; box-shadow: 0 0 40px rgba(251,191,36,.25); }
+.card { margin-top: 14px; border: 1px solid rgba(255,255,255,.08); border-radius: 20px; padding: 18px; background: rgba(255,255,255,.04); backdrop-filter: blur(12px); }
+.sectionTitle { margin-bottom: 14px; font-size: 16px; font-weight: 800; color: rgba(255,255,255,.92); }
+.rewardGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.reward { border-radius: 16px; padding: 14px 10px; background: rgba(255,255,255,.04); text-align: center; }
+.rewardIcon { font-size: 28px; }
+.rewardTitle { margin-top: 6px; font-size: 13px; font-weight: 700; }
+.rewardDesc { margin-top: 4px; font-size: 11px; line-height: 1.6; color: rgba(255,255,255,.48); }
+.productCard { display: flex; gap: 12px; align-items: center; }
+.productCard img { width: 96px; height: 96px; border-radius: 16px; object-fit: cover; }
+.productInfo { flex: 1; }
+.productName { font-size: 15px; font-weight: 800; }
+.productMeta { margin-top: 6px; font-size: 12px; color: rgba(255,255,255,.48); }
+.vs { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+.optionA,.optionB { flex: 1; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 10px 0; color: #fff; font-size: 13px; font-weight: 700; }
+.optionA { background: rgba(248,113,113,.12); }
+.optionB { background: rgba(34,211,238,.12); }
+.vsMid { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.4); }
+.ruleItem { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.ruleItem:last-child { border-bottom: 0; }
+.ruleItem span { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 999px; background: rgba(251,191,36,.12); color: #fbbf24; font-size: 12px; font-weight: 800; }
+.ruleItem p { font-size: 13px; line-height: 1.7; color: rgba(255,255,255,.62); }

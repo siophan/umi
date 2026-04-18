@@ -60,7 +60,7 @@ const allProducts = [
     sales: 12000,
     rating: 4.9,
     brand: '奥利奥',
-    img: '/legacy/images/product/p001.jpg',
+    img: '/legacy/images/products/p002-oreo.jpg',
     badge: '品牌',
   },
   {
@@ -71,7 +71,7 @@ const allProducts = [
     sales: 9832,
     rating: 4.8,
     brand: '三只松鼠',
-    img: '/legacy/images/product/p002.jpg',
+    img: '/legacy/images/products/p003-squirrels.jpg',
     badge: '热销',
   },
   {
@@ -82,7 +82,7 @@ const allProducts = [
     sales: 8443,
     rating: 4.8,
     brand: '百草味',
-    img: '/legacy/images/product/p003.jpg',
+    img: '/legacy/images/products/p009-genki.jpg',
     badge: '热销',
   },
   {
@@ -93,7 +93,7 @@ const allProducts = [
     sales: 7900,
     rating: 4.7,
     brand: '百草味',
-    img: '/legacy/images/product/p004.jpg',
+    img: '/legacy/images/products/p005-liangpin.jpg',
     badge: '新品',
   },
   {
@@ -104,7 +104,7 @@ const allProducts = [
     sales: 15600,
     rating: 4.9,
     brand: '卫龙',
-    img: '/legacy/images/product/p005.jpg',
+    img: '/legacy/images/products/p008-weilong.jpg',
     badge: '热销',
   },
   {
@@ -115,7 +115,7 @@ const allProducts = [
     sales: 12110,
     rating: 4.8,
     brand: '元气森林',
-    img: '/legacy/images/product/p006.jpg',
+    img: '/legacy/images/products/p009-genki.jpg',
     badge: '新品',
   },
 ];
@@ -207,7 +207,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
           type="button"
           onClick={() => window.history.back()}
         >
-          ‹
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.navTitle}>{meta.full}</div>
         <div className={styles.navActions}>
@@ -216,14 +216,14 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
             className={styles.navBtn}
             onClick={() => alert('分享店铺 📤')}
           >
-            ↗
+            <i className="fa-solid fa-share-nodes" />
           </button>
           <button
             type="button"
             className={styles.navBtn}
             onClick={() => alert('返回首页')}
           >
-            ⌂
+            <i className="fa-solid fa-house" />
           </button>
         </div>
       </header>
@@ -232,7 +232,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
         <div className={styles.heroBg}>
           <img
             alt={meta.full}
-            src={shopProducts[0]?.img || '/legacy/images/product/p001.jpg'}
+            src={shopProducts[0]?.img || '/legacy/images/products/p001-lays.jpg'}
           />
           <div className={styles.heroOverlay} />
         </div>
@@ -241,12 +241,12 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
             <img
               className={styles.heroAvatar}
               alt={meta.full}
-              src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(brand)}`}
+              src={shopProducts[0]?.img || '/legacy/images/products/p001-lays.jpg'}
             />
             <div className={styles.heroInfo}>
               <div className={styles.heroName}>
                 {meta.full}
-                <span className={styles.heroVerified}>🛡️ {meta.grade}</span>
+                <span className={styles.heroVerified}><i className="fa-solid fa-shield-halved" /> {meta.grade}</span>
               </div>
               <div className={styles.heroDesc}>{meta.desc}</div>
             </div>
@@ -365,14 +365,14 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
             className={styles.activityCard}
             onClick={() => setTab('guess')}
           >
-            <div className={styles.activityIcon}>🎯</div>
+            <div className={styles.activityIcon}><i className="fa-solid fa-bullseye" /></div>
             <div className={styles.activityBody}>
               <div className={styles.activityTitle}>竞猜活动进行中</div>
               <div className={styles.activityDesc}>
                 {shopGuess.length} 场竞猜 · 超低价赢商品
               </div>
             </div>
-            <div className={styles.activityArrow}>›</div>
+            <div className={styles.activityArrow}><i className="fa-solid fa-chevron-right" /></div>
           </button>
         ) : null}
         <button
@@ -380,14 +380,14 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
           className={`${styles.activityCard} ${styles.activityPurple}`}
           onClick={() => alert('活动即将开启')}
         >
-          <div className={styles.activityIcon}>🎁</div>
+          <div className={styles.activityIcon}><i className="fa-solid fa-gift" /></div>
           <div className={styles.activityBody}>
             <div className={styles.activityTitle}>会员专属福利</div>
             <div className={styles.activityDesc}>
               关注店铺享额外折扣 · 新品优先体验
             </div>
           </div>
-          <div className={styles.activityArrow}>›</div>
+          <div className={styles.activityArrow}><i className="fa-solid fa-chevron-right" /></div>
         </button>
       </section>
 
@@ -435,7 +435,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
             className={`${styles.filter} ${filter === key ? styles.filterOn : ''}`}
             onClick={() => setFilter(key as FilterKey)}
           >
-            {label} {key !== 'default' ? '↕' : ''}
+            {label} {key !== 'default' ? <i className="fa-solid fa-arrow-down-up-across-line" /> : ''}
           </button>
         ))}
       </div>
@@ -458,7 +458,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
                     >
                       {item.badge}
                     </span>
-                    <span className={styles.fav}>♡</span>
+                    <span className={styles.fav}><i className="fa-regular fa-heart" /></span>
                   </div>
                   <div className={styles.productBody}>
                     <div className={styles.productName}>{item.name}</div>
@@ -495,12 +495,12 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
                         ?.img || shopProducts[0]?.img
                     }
                   />
-                  <div className={styles.guessInfo}>
-                    <div className={styles.guessTitle}>{guess.title}</div>
-                    <div className={styles.guessMeta}>
-                      👥 1.2万参与 · 奖池 10,000 币
+                    <div className={styles.guessInfo}>
+                      <div className={styles.guessTitle}>{guess.title}</div>
+                      <div className={styles.guessMeta}>
+                        <i className="fa-solid fa-users" /> 1.2万参与 · 奖池 10,000 币
+                      </div>
                     </div>
-                  </div>
                 </div>
                 <div className={styles.guessOpts}>
                   <div className={styles.guessOpt}>
@@ -576,22 +576,22 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
           type="button"
           onClick={() => setFollowed((value) => !value)}
         >
-          <span>{followed ? '♥' : '♡'}</span>
+          <span><i className={`${followed ? 'fa-solid' : 'fa-regular'} fa-heart`} /></span>
           收藏
         </button>
         <button
           className={styles.bottomIcon}
           type="button"
-          onClick={() => alert('💬 正在接入客服...')}
+          onClick={() => alert('正在接入客服...')}
         >
-          <span>☻</span>
+          <span><i className="fa-regular fa-comments" /></span>
           客服
         </button>
         <div className={styles.bottomButtons}>
           <button
             className={styles.chatBtn}
             type="button"
-            onClick={() => alert('💬 正在接入店铺客服...')}
+            onClick={() => alert('正在接入店铺客服...')}
           >
             聊一聊
           </button>
@@ -600,7 +600,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
             type="button"
             onClick={() => setTab('guess')}
           >
-            🎯 参与竞猜
+            <i className="fa-solid fa-bullseye" /> 参与竞猜
           </button>
         </div>
       </footer>

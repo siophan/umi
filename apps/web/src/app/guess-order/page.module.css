@@ -30,6 +30,10 @@
   font-size: 14px;
 }
 
+.back i {
+  font-size: 14px;
+}
+
 .title {
   font-size: 16px;
   font-weight: 800;
@@ -46,6 +50,10 @@
   font-weight: 600;
 }
 
+.secure i {
+  font-size: 10px;
+}
+
 .countdownBar {
   display: flex;
   align-items: center;
@@ -55,6 +63,10 @@
   border-radius: 12px;
   background: rgba(255, 215, 0, 0.08);
   border: 1px solid rgba(255, 215, 0, 0.12);
+}
+
+.countdownBar i {
+  color: #ffd700;
 }
 
 .countdownText {
@@ -137,6 +149,13 @@
   color: #ffd700;
   font-size: 14px;
   font-weight: 800;
+}
+
+.section h3 i,
+.pkSection h3 i,
+.couponSection h4 i,
+.explain h4 i {
+  margin-right: 4px;
 }
 
 .section p,
@@ -446,8 +465,9 @@
   font-size: 12px;
 }
 
-.expItem span {
+.expItem i {
   font-size: 16px;
+  color: #ffd700;
 }
 
 .expItem p {
@@ -546,7 +566,7 @@
   color: #1a1a2e;
 }
 
-.primary span {
+.primary i {
   margin-right: 4px;
 }
 
@@ -598,6 +618,10 @@
 
 .resultIcon {
   margin-bottom: 14px;
+  font-size: 56px;
+}
+
+.resultIcon i {
   font-size: 56px;
 }
 

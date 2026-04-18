@@ -21,7 +21,7 @@ const products = [
     sales: '1.2万',
     rating: '4.9',
     tag: '热销',
-    img: '/legacy/images/product/p001.jpg',
+    img: '/legacy/images/products/p002-oreo.jpg',
   },
   {
     name: '三只松鼠坚果礼盒 520g',
@@ -30,7 +30,7 @@ const products = [
     sales: '9,832',
     rating: '4.8',
     tag: '品牌',
-    img: '/legacy/images/product/p002.jpg',
+    img: '/legacy/images/products/p003-squirrels.jpg',
   },
   {
     name: '可口可乐零糖组合装',
@@ -39,7 +39,7 @@ const products = [
     sales: '8,443',
     rating: '4.8',
     tag: '新品',
-    img: '/legacy/images/product/p003.jpg',
+    img: '/legacy/images/products/p009-genki.jpg',
   },
   {
     name: '良品铺子海苔脆片礼盒',
@@ -48,28 +48,28 @@ const products = [
     sales: '7,900',
     rating: '4.7',
     tag: '品牌',
-    img: '/legacy/images/product/p004.jpg',
+    img: '/legacy/images/products/p005-liangpin.jpg',
   },
 ];
 
 const guesses = [
   {
     title: '2026 世界杯冠军会是阿根廷还是法国？',
-    meta: '👥 1.28万 · 6天后截止',
+    meta: '1.28万参与 · 6天后截止',
     optA: '阿根廷卫冕 56%',
     optB: '44% 法国夺冠',
     img: '/legacy/images/guess/g001.jpg',
   },
   {
     title: '新 iPhone 会不会推出折叠屏？',
-    meta: '👥 9,340 · 2小时后截止',
+    meta: '9,340参与 · 2小时后截止',
     optA: '会发布 62%',
     optB: '38% 不会发布',
     img: '/legacy/images/guess/g002.jpg',
   },
   {
     title: '国庆自驾最火路线会是哪条？',
-    meta: '👥 5,870 · 明晚开奖',
+    meta: '5,870参与 · 明晚开奖',
     optA: '川藏线 51%',
     optB: '49% 独库公路',
     img: '/legacy/images/guess/g003.jpg',
@@ -114,10 +114,12 @@ export default function SearchPage() {
           type="button"
           onClick={() => window.history.back()}
         >
-          ‹
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={`${styles.inputWrap} ${query ? styles.focus : ''}`}>
-          <span className={styles.searchIcon}>⌕</span>
+          <span className={styles.searchIcon}>
+            <i className="fa-solid fa-magnifying-glass" />
+          </span>
           <input
             autoFocus
             value={query}
@@ -133,7 +135,7 @@ export default function SearchPage() {
               className={styles.clear}
               onClick={() => setQuery('')}
             >
-              ×
+              <i className="fa-solid fa-xmark" />
             </button>
           ) : null}
         </div>
@@ -217,7 +219,7 @@ export default function SearchPage() {
                         </div>
                         <div className={styles.productMeta}>
                           <span>{item.sales} 人付款</span>
-                          <span>⭐ {item.rating}</span>
+                          <span><i className="fa-solid fa-star" /> {item.rating}</span>
                         </div>
                       </div>
                     </button>

@@ -6,53 +6,53 @@ import { useMemo, useState } from 'react';
 import styles from './page.module.css';
 
 const hotGueses = [
-  { id: 'g1', title: '2026世界杯决赛 阿根廷vs法国', icon: '⚽', participants: 8500, options: ['阿根廷', '法国'] },
-  { id: 'g2', title: '2026NBA总冠军花落谁家', icon: '🏀', participants: 6200, options: ['凯尔特人', '雷霆'] },
-  { id: 'g3', title: '《流浪地球3》首周票房预测', icon: '🎬', participants: 5800, options: ['超30亿', '20-30亿'] },
+  { id: 'g1', title: '2026世界杯决赛 阿根廷vs法国', icon: 'fa-solid fa-futbol', participants: 8500, options: ['阿根廷', '法国'] },
+  { id: 'g2', title: '2026NBA总冠军花落谁家', icon: 'fa-solid fa-basketball', participants: 6200, options: ['凯尔特人', '雷霆'] },
+  { id: 'g3', title: '《流浪地球3》首周票房预测', icon: 'fa-solid fa-film', participants: 5800, options: ['超30亿', '20-30亿'] },
 ];
 
 const friendsData = [
-  { id: 'f1', name: '零食达人小王', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Wang', bio: '竞猜高手·专注体育', level: 'Lv.8', online: true, streak: 5, verified: false, mutual: true },
-  { id: 'f2', name: '坚果控大李', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=BigLi', bio: '坚果评测博主', level: 'Lv.6', online: false, streak: 3, verified: false, mutual: true },
-  { id: 'f3', name: '三只松鼠官方店', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=3S&backgroundColor=4caf50', bio: '品牌官方', level: 'Lv.7', online: true, streak: 0, verified: true, mutual: false },
-  { id: 'f4', name: '德芙官方旗舰店', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Dove&backgroundColor=6d4c41', bio: '品牌官方', level: 'Lv.6', online: true, streak: 0, verified: true, mutual: false },
-  { id: 'f5', name: '甜品公主', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Princess', bio: '甜品爱好者', level: 'Lv.5', online: false, streak: 2, verified: false, mutual: true },
+  { id: 'f1', name: '零食达人小王', avatar: '/legacy/images/mascot/mouse-main.png', bio: '竞猜高手·专注体育', level: 'Lv.8', online: true, streak: 5, verified: false, mutual: true },
+  { id: 'f2', name: '坚果控大李', avatar: '/legacy/images/products/p003-squirrels.jpg', bio: '坚果评测博主', level: 'Lv.6', online: false, streak: 3, verified: false, mutual: true },
+  { id: 'f3', name: '三只松鼠官方店', avatar: '/legacy/images/products/p003-squirrels.jpg', bio: '品牌官方', level: 'Lv.7', online: true, streak: 0, verified: true, mutual: false },
+  { id: 'f4', name: '德芙官方旗舰店', avatar: '/legacy/images/products/p007-dove.jpg', bio: '品牌官方', level: 'Lv.6', online: true, streak: 0, verified: true, mutual: false },
+  { id: 'f5', name: '甜品公主', avatar: '/legacy/images/products/p009-genki.jpg', bio: '甜品爱好者', level: 'Lv.5', online: false, streak: 2, verified: false, mutual: true },
 ];
 
 const followingData = [
-  { id: 'fw1', name: '乐事官方旗舰店', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Lays&backgroundColor=e53935', desc: '品牌官方', fans: 128000, mutual: false, posts: 356, tag: '品牌', verified: true },
-  { id: 'fw2', name: '零食测评官', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Tester', desc: '胜率82%', fans: 45600, mutual: true, posts: 89, tag: '猜友', verified: false },
+  { id: 'fw1', name: '乐事官方旗舰店', avatar: '/legacy/images/products/p001-lays.jpg', desc: '品牌官方', fans: 128000, mutual: false, posts: 356, tag: '品牌', verified: true },
+  { id: 'fw2', name: '零食测评官', avatar: '/legacy/images/guess/g001.jpg', desc: '胜率82%', fans: 45600, mutual: true, posts: 89, tag: '猜友', verified: false },
 ];
 
 const fansData = [
-  { id: 'fan1', name: '薯片星球人', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Chips', followedBack: false, time: '3天前', winRate: 55, bio: '薯片鉴赏家' },
-  { id: 'fan2', name: '巧克力控小A', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=ChocoA', followedBack: true, time: '1周前', winRate: 48, bio: '甜蜜生活' },
+  { id: 'fan1', name: '薯片星球人', avatar: '/legacy/images/products/p001-lays.jpg', followedBack: false, time: '3天前', winRate: 55, bio: '薯片鉴赏家' },
+  { id: 'fan2', name: '巧克力控小A', avatar: '/legacy/images/products/p007-dove.jpg', followedBack: true, time: '1周前', winRate: 48, bio: '甜蜜生活' },
 ];
 
 const requestsData = [
-  { id: 'req1', name: '饼干小魔王', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Cookie', msg: '我也喜欢猜零食，一起PK呀！', time: '1小时前', mutualFriends: 3, winRate: 52 },
-  { id: 'req2', name: '竞猜玄学大师', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Master', msg: '大佬带带我', time: '2天前', mutualFriends: 5, winRate: 78 },
+  { id: 'req1', name: '饼干小魔王', avatar: '/legacy/images/products/p002-oreo.jpg', msg: '我也喜欢猜零食，一起PK呀！', time: '1小时前', mutualFriends: 3, winRate: 52 },
+  { id: 'req2', name: '竞猜玄学大师', avatar: '/legacy/images/guess/g202.jpg', msg: '大佬带带我', time: '2天前', mutualFriends: 5, winRate: 78 },
 ];
 
 const quickActions = [
-  { label: '邀请好友', icon: '📨' },
-  { label: '排行榜', icon: '🏆' },
-  { label: 'PK记录', icon: '⚔️' },
-  { label: '社区', icon: '💬' },
+  { label: '邀请好友', icon: 'fa-regular fa-paper-plane' },
+  { label: '排行榜', icon: 'fa-solid fa-trophy' },
+  { label: 'PK记录', icon: 'fa-solid fa-shield-halved' },
+  { label: '社区', icon: 'fa-regular fa-comments' },
 ];
 
-const tabs = [
+type FriendsTab = {
+  key: 'friends' | 'following' | 'fans' | 'requests';
+  label: string;
+  badge?: number;
+};
+
+const tabs: FriendsTab[] = [
   { key: 'friends', label: '好友' },
   { key: 'following', label: '关注' },
   { key: 'fans', label: '粉丝' },
   { key: 'requests', label: '申请', badge: 5 },
-] as const;
-
-const profileDB = {
-  default: {
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Me',
-  },
-};
+];
 
 export default function FriendsPage() {
   const [tab, setTab] = useState<(typeof tabs)[number]['key']>('friends');
@@ -66,16 +66,17 @@ export default function FriendsPage() {
   );
 
   const currentPk = hotGueses.find((item) => item.id === selectedPk) || hotGueses[0];
+  const myAvatar = '/legacy/images/mascot/mouse-main.png';
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} type="button" onClick={() => history.back()}>
-          ←
+        <button className={styles.backBtn} type="button" onClick={() => window.history.back()}>
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.headerTitle}>好友</div>
         <button className={styles.actionBtn} type="button">
-          ＋
+          <i className="fa-solid fa-plus" />
         </button>
       </header>
 
@@ -103,7 +104,7 @@ export default function FriendsPage() {
       <section className={styles.quickBar}>
         {quickActions.map((item) => (
           <button className={styles.quickItem} type="button" key={item.label}>
-            <div className={styles.quickIcon}>{item.icon}</div>
+            <div className={styles.quickIcon}><i className={item.icon} /></div>
             <div className={styles.quickLabel}>{item.label}</div>
           </button>
         ))}
@@ -111,12 +112,12 @@ export default function FriendsPage() {
 
       <section className={styles.hotStrip}>
         <div className={styles.stripTitle}>
-          <span>✦</span> 好友都在猜 <em>查看更多</em>
+          <span><i className="fa-solid fa-sparkles" /></span> 好友都在猜 <em>查看更多</em>
         </div>
         <div className={styles.hotScroll}>
           {hotGueses.map((item) => (
             <button className={styles.hotCard} type="button" key={item.id} onClick={() => setPkOpen(true)}>
-              <div className={styles.hotIcon}>{item.icon}</div>
+              <div className={styles.hotIcon}><i className={item.icon} /></div>
               <div className={styles.hotTitle}>{item.title}</div>
               <div className={styles.hotMeta}>{item.participants} 人参与 · {item.options.join(' vs ')}</div>
             </button>
@@ -139,7 +140,7 @@ export default function FriendsPage() {
       </nav>
 
       <section className={styles.searchBar}>
-        <span>⌕</span>
+        <span><i className="fa-solid fa-magnifying-glass" /></span>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索用户..." />
       </section>
 
@@ -147,7 +148,7 @@ export default function FriendsPage() {
         <section>
           <div className={styles.sectionHeader}>
             <span>我的好友 (<b>{filteredFriends.length}</b>)</span>
-            <button type="button">▾ 排序</button>
+            <button type="button"><i className="fa-solid fa-arrow-down-wide-short" /> 排序</button>
           </div>
           <div>
             {filteredFriends.map((item) => (
@@ -173,7 +174,7 @@ export default function FriendsPage() {
                 </div>
                 <div className={styles.friendActions}>
                   <button className={styles.primaryBtn} type="button" onClick={() => setPkOpen(true)}>
-                    ⚔️ PK
+                    <i className="fa-solid fa-shield-halved" /> PK
                   </button>
                   <button className={styles.outlineBtn} type="button">
                     私信
@@ -267,20 +268,20 @@ export default function FriendsPage() {
           <section className={styles.pkModal} onClick={(event) => event.stopPropagation()} role="presentation">
             <header className={styles.pkHeader}>
               <button className={styles.pkClose} type="button" onClick={() => setPkOpen(false)}>
-                ×
+                <i className="fa-solid fa-xmark" />
               </button>
               <div className={styles.pkTitle}>好友 PK</div>
               <div className={styles.pkSubtitle}>选择一场竞猜，和好友一起开战</div>
             </header>
             <div className={styles.pkVs}>
               <div className={styles.pkPlayer}>
-                <img src={profileDB.default.avatar} alt="我" />
+                <img src={myAvatar} alt="我" />
                 <div className={styles.pkPlayerName}>我</div>
                 <div className={styles.pkPlayerStats}>胜率 62%</div>
               </div>
               <div className={styles.pkVsIcon}>VS</div>
               <div className={styles.pkPlayer}>
-                <img src={currentPk.id === 'g1' ? 'https://api.dicebear.com/7.x/adventurer/svg?seed=Wang' : 'https://api.dicebear.com/7.x/adventurer/svg?seed=BigLi'} alt="好友" />
+                <img src={currentPk.id === 'g1' ? '/legacy/images/guess/g001.jpg' : '/legacy/images/products/p003-squirrels.jpg'} alt="好友" />
                 <div className={styles.pkPlayerName}>好友</div>
                 <div className={styles.pkPlayerStats}>连胜 3 场</div>
               </div>
@@ -295,12 +296,12 @@ export default function FriendsPage() {
                     type="button"
                     onClick={() => setSelectedPk(item.id)}
                   >
-                    <div className={styles.pkIcon}>{item.icon}</div>
+                    <div className={styles.pkIcon}><i className={item.icon} /></div>
                     <div className={styles.pkGuessBody}>
                       <div className={styles.pkGuessTitle}>{item.title}</div>
                       <div className={styles.pkGuessMeta}>{item.participants} 人参与 · {item.options.join(' vs ')}</div>
                     </div>
-                    <div className={styles.pkCheck}>✓</div>
+                    <div className={styles.pkCheck}><i className="fa-solid fa-check" /></div>
                   </button>
                 ))}
               </div>

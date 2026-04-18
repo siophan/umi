@@ -116,10 +116,7 @@ export default function RegisterPage() {
           </button>
           <div className={styles.brandBg} />
           <div className={styles.brandInner}>
-            <div className={styles.brandLogo}>
-              优米
-              <span>·</span>
-            </div>
+            <div className={styles.brandLogo}>优米</div>
             <div className={styles.brandDesc}>创建账号，开启竞猜之旅</div>
           </div>
         </section>

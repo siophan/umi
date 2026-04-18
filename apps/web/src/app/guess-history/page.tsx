@@ -15,14 +15,14 @@ const stats = [
 const activeGuesses = [
   {
     title: '2026世界杯冠军会是阿根廷还是法国？',
-    meta: '👥 1.28万 · 6天后截止',
+    meta: '1.28万 · 6天后截止',
     choice: '我选：阿根廷卫冕',
     countdown: ['06', '时', '18', '分'],
     progress: [56, 44],
   },
   {
     title: '新 iPhone 会不会在今年 9 月发布会上推出折叠屏？',
-    meta: '👥 9,340 · 2小时后截止',
+    meta: '9,340 · 2小时后截止',
     choice: '我选：会发布',
     countdown: ['02', '时', '31', '分'],
     progress: [62, 38],
@@ -94,7 +94,7 @@ export default function GuessHistoryPage() {
           type="button"
           onClick={() => window.history.back()}
         >
-          ‹
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.title}>我的竞猜</div>
         <button
@@ -102,13 +102,13 @@ export default function GuessHistoryPage() {
           type="button"
           onClick={() => alert('分享竞猜数据')}
         >
-          ↗
+          <i className="fa-solid fa-arrow-up-right-from-square" />
         </button>
       </header>
 
       <section className={styles.hero}>
         <div className={styles.heroTitle}>
-          <span>◔</span>
+          <i className="fa-solid fa-chart-pie" />
           我的竞猜数据
         </div>
         <div className={styles.statsGrid}>
@@ -299,7 +299,9 @@ export default function GuessHistoryPage() {
         tab !== 'all' &&
         filteredHistory.length === 0 ? (
           <div className={styles.empty}>
-            <div className={styles.emptyIcon}>🎯</div>
+            <div className={styles.emptyIcon}>
+              <i className="fa-solid fa-bullseye" />
+            </div>
             <div className={styles.emptyText}>暂无记录</div>
             <div className={styles.emptyTip}>
               去参与一场竞猜，记录就会出现在这里。

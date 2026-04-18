@@ -20,10 +20,10 @@ const comments = [
 ];
 
 const shareChannels = [
-  { label: '微信', icon: '◎', color: '#07C160' },
-  { label: '朋友圈', icon: '◉', color: '#FF6F00' },
-  { label: 'QQ', icon: '◍', color: '#12B7F5' },
-  { label: '复制链接', icon: '⌁', color: 'rgba(255,255,255,0.08)' },
+  { label: '微信', icon: 'fa-brands fa-weixin', color: '#07C160' },
+  { label: '朋友圈', icon: 'fa-solid fa-comment-dots', color: '#FF6F00' },
+  { label: 'QQ', icon: 'fa-brands fa-qq', color: '#12B7F5' },
+  { label: '复制链接', icon: 'fa-solid fa-link', color: 'rgba(255,255,255,0.08)' },
 ] as const;
 
 export default function GuessDetailPage() {
@@ -53,15 +53,15 @@ export default function GuessDetailPage() {
     <main className={styles.page}>
       <header className={styles.nav}>
         <button className={styles.navBtn} type="button" onClick={() => history.back()}>
-          ←
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.navTitle}>竞猜详情</div>
         <div className={styles.navActions}>
           <button className={styles.navBtn} type="button" onClick={() => setShareOpen(true)}>
-            ↗
+            <i className="fa-solid fa-share-nodes" />
           </button>
           <button className={styles.navBtn} type="button">
-            ⋯
+            <i className="fa-solid fa-ellipsis" />
           </button>
         </div>
       </header>
@@ -97,21 +97,23 @@ export default function GuessDetailPage() {
       <section className={styles.topDashboard}>
         <div className={styles.topItem}>
           <div className={styles.topValue}>
-            <span className={styles.topIcon}>🔥</span>
+            <span className={styles.topIcon}>
+              <i className="fa-solid fa-fire" />
+            </span>
             {totalVotes}
           </div>
           <div className={styles.topLabel}>参与人数</div>
         </div>
         <div className={styles.topItem}>
           <div className={styles.topValue}>
-            <span className={styles.topIcon}>🎯</span>
+            <span className={styles.topIcon}><i className="fa-solid fa-dice" /></span>
             {demoGuess.options.length}
           </div>
           <div className={styles.topLabel}>竞猜选项</div>
         </div>
         <div className={styles.topItem}>
           <div className={styles.topValue}>
-            <span className={styles.topIcon}>📊</span>
+            <span className={styles.topIcon}><i className="fa-solid fa-chart-column" /></span>
             21
           </div>
           <div className={styles.topLabel}>总订单</div>
@@ -187,7 +189,7 @@ export default function GuessDetailPage() {
                 <div className={styles.commentText}>{comment.text}</div>
                 <div className={styles.commentActions}>
                   <span>{comment.time}</span>
-                  <span className={styles.likeBtn}>♡ {comment.likes}</span>
+                  <span className={styles.likeBtn}><i className="fa-regular fa-heart" /> {comment.likes}</span>
                 </div>
               </div>
             </article>
@@ -196,21 +198,21 @@ export default function GuessDetailPage() {
       </section>
 
       <section className={styles.rulesCard}>
-        <h3>📋 竞猜规则</h3>
+        <h3><i className="fa-solid fa-clipboard-list" /> 竞猜规则</h3>
         <div className={styles.ruleItem}>
-          <span>🎉</span>
+          <span><i className="fa-solid fa-gift" /></span>
           <p>
             <b>猜中</b>：商品直接发货
           </p>
         </div>
         <div className={styles.ruleItem}>
-          <span>🎫</span>
+          <span><i className="fa-solid fa-ticket" /></span>
           <p>
             <b>没猜中</b>：自动获得竞猜补偿券
           </p>
         </div>
         <div className={styles.ruleItem}>
-          <span>🤝</span>
+          <span><i className="fa-solid fa-handshake" /></span>
           <p>
             <b>好友PK</b>：输的请客赢的提货
           </p>
@@ -233,7 +235,7 @@ export default function GuessDetailPage() {
             <div className={styles.shareGrid}>
               {shareChannels.map((item) => (
                 <button className={styles.shareItem} type="button" key={item.label}>
-                  <span style={{ background: item.color }}>{item.icon}</span>
+                  <span style={{ background: item.color }}><i className={item.icon} /></span>
                   <em>{item.label}</em>
                 </button>
               ))}
@@ -253,7 +255,7 @@ export default function GuessDetailPage() {
             <div className={styles.betHeader}>
               <h3>参与竞猜</h3>
               <button type="button" onClick={() => setBetOpen(false)}>
-                ✕
+                <i className="fa-solid fa-xmark" />
               </button>
             </div>
             <div className={styles.betOptionCard}>

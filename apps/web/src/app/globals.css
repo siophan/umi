@@ -147,23 +147,34 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
   min-width: 56px;
-  padding: 4px 12px;
+  padding: var(--space-1) var(--space-3);
   color: var(--color-gray-500);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--text-xs);
+  line-height: 1;
+  font-weight: 400;
   position: relative;
   transition: color 0.4s ease;
 }
 
+.tab-item span {
+  display: block;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 400;
+}
+
 .tab-item.active {
   color: var(--color-gray-900);
+  font-weight: var(--font-medium);
 }
 
 .tab-item i {
-  margin-bottom: 1px;
   font-size: 20px;
+  line-height: 1;
+  margin-bottom: 1px;
 }
 
 .tone-mall .tab-item.active {
@@ -233,8 +244,11 @@ button {
 }
 
 .tab-item.tab-center span {
+  display: block;
   font-size: 9px;
   margin-top: 2px;
+  line-height: 1;
+  font-weight: 400;
 }
 
 .tab-item.tab-center i {

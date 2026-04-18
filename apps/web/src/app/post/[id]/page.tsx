@@ -9,20 +9,20 @@ import styles from './page.module.css';
 const authors = {
   'post-1': {
     name: '乐事官方旗舰店',
-    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Lays&backgroundColor=e53935',
+    avatar: '/legacy/images/products/p001-lays.jpg',
     title: '乐事2026马年限定口味投票开启！番茄味 vs 黄瓜味',
     text: '参与竞猜赢正品零食大礼包，猜中直接发货到家。当前3890人参与！',
     tag: { text: '品牌竞猜', cls: styles.tagBrand },
-    images: ['https://picsum.photos/seed/post1/900/540'],
+    images: ['/legacy/images/guess/g001.jpg'],
     guess: true,
   },
   default: {
     name: '优米数据中心',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Data',
+    avatar: '/legacy/images/mascot/mouse-main.png',
     title: '2026年度十大零食品牌排行榜出炉！三只松鼠再登榜首',
     text: '根据全平台销售数据与用户口碑综合评选...',
     tag: { text: '零食测评', cls: styles.tagHot },
-    images: ['https://picsum.photos/seed/post2/900/540', 'https://picsum.photos/seed/post3/900/540'],
+    images: ['/legacy/images/products/p003-squirrels.jpg', '/legacy/images/products/p007-dove.jpg'],
     guess: true,
   },
 };
@@ -31,7 +31,7 @@ const comments = [
   {
     id: 'c1',
     author: '零食测评官',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Tester',
+    avatar: '/legacy/images/mascot/mouse-casual.png',
     time: '1小时前',
     text: '这波我觉得会很快冲上热搜，标题就很有爆点。',
     likes: 18,
@@ -43,7 +43,7 @@ const comments = [
   {
     id: 'c2',
     author: '吃货小分队',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Foodie',
+    avatar: '/legacy/images/mascot/mouse-happy.png',
     time: '2小时前',
     text: '标题和图片都很强，评论区很容易热起来。',
     likes: 6,
@@ -75,7 +75,7 @@ export default function PostDetailPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} type="button" onClick={() => history.back()}>
-          ←
+          <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.headerAuthor}>
           <img src={post.avatar} alt={post.name} />
@@ -88,7 +88,7 @@ export default function PostDetailPage() {
           </button>
         </div>
         <button className={styles.moreBtn} type="button" onClick={() => setShareOpen(true)}>
-          ⋯
+          <i className="fa-solid fa-ellipsis" />
         </button>
       </header>
 
@@ -97,7 +97,7 @@ export default function PostDetailPage() {
           <img src={post.avatar} alt={post.name} />
           <div className={styles.cardAuthorInfo}>
             <div className={styles.cardAuthorName}>
-              {post.name} <span>✓</span>
+              {post.name} <span><i className="fa-solid fa-circle-check" /></span>
             </div>
             <div className={styles.cardAuthorMeta}>
               <span>优米号 1008611</span>
@@ -142,20 +142,20 @@ export default function PostDetailPage() {
               ))}
             </div>
             <div className={styles.guessCta}>
-              <Link href="/guess/guess-1">去参与竞猜 →</Link>
+              <Link href="/guess/guess-1">去参与竞猜 <i className="fa-solid fa-arrow-right" /></Link>
             </div>
           </section>
         ) : null}
 
         <section className={styles.interact}>
           <button className={`${styles.interactItem} ${liked ? styles.active : ''}`} type="button" onClick={() => setLiked((v) => !v)}>
-            ♡ <span>{liked ? '已赞' : '点赞'}</span>
+            <i className={`${liked ? 'fa-solid' : 'fa-regular'} fa-heart`} /> <span>{liked ? '已赞' : '点赞'}</span>
           </button>
           <button className={`${styles.interactItem} ${faved ? styles.faved : ''}`} type="button" onClick={() => setFaved((v) => !v)}>
-            ★ <span>{faved ? '已收藏' : '收藏'}</span>
+            <i className={`${faved ? 'fa-solid' : 'fa-regular'} fa-star`} /> <span>{faved ? '已收藏' : '收藏'}</span>
           </button>
           <button className={styles.interactItem} type="button" onClick={() => setShareOpen(true)}>
-            ↗ <span>分享</span>
+            <i className="fa-solid fa-share-nodes" /> <span>分享</span>
           </button>
         </section>
       </article>
@@ -199,7 +199,7 @@ export default function PostDetailPage() {
               ) : null}
             </div>
             <button className={styles.likeBtn} type="button">
-              ♡ {item.likes}
+              <i className="fa-regular fa-heart" /> {item.likes}
             </button>
           </article>
         ))}
@@ -207,7 +207,7 @@ export default function PostDetailPage() {
 
       <section className={styles.related}>
         <div className={styles.relatedTitle}>
-          <span>✦</span> 相关推荐
+          <span><i className="fa-solid fa-sparkles" /></span> 相关推荐
         </div>
         <div className={styles.relatedList}>
           {related.map((item) => (
@@ -229,7 +229,7 @@ export default function PostDetailPage() {
           placeholder="说点什么..."
         />
         <button className={styles.emojiBtn} type="button">
-          ☺
+          <i className="fa-regular fa-face-smile" />
         </button>
         <button className={styles.sendBtn} type="button" disabled={!comment.trim()}>
           发送
@@ -243,17 +243,17 @@ export default function PostDetailPage() {
             <div className={styles.shareTitle}>分享到</div>
             <div className={styles.shareGrid}>
               {[
-                { label: '微信', icon: '◎', bg: '#07C160' },
-                { label: '朋友圈', icon: '◉', bg: '#07C160' },
-                { label: 'QQ', icon: '◍', bg: '#12B7F5' },
-                { label: '微博', icon: '◌', bg: '#E6162D' },
-                { label: '复制链接', icon: '⌁', bg: '#f0f0f0' },
-                { label: '举报', icon: '⚑', bg: '#f0f0f0' },
-                { label: '收藏', icon: '★', bg: '#FFF3E0' },
-                { label: '保存图片', icon: '⬇', bg: '#f0f0f0' },
+                { label: '微信', icon: 'fa-brands fa-weixin', bg: '#07C160' },
+                { label: '朋友圈', icon: 'fa-solid fa-comment-dots', bg: '#07C160' },
+                { label: 'QQ', icon: 'fa-brands fa-qq', bg: '#12B7F5' },
+                { label: '微博', icon: 'fa-brands fa-weibo', bg: '#E6162D' },
+                { label: '复制链接', icon: 'fa-solid fa-link', bg: '#f0f0f0' },
+                { label: '举报', icon: 'fa-regular fa-flag', bg: '#f0f0f0' },
+                { label: '收藏', icon: 'fa-regular fa-star', bg: '#FFF3E0' },
+                { label: '保存图片', icon: 'fa-solid fa-download', bg: '#f0f0f0' },
               ].map((item) => (
                 <button className={styles.shareItem} key={item.label} type="button">
-                  <span style={{ background: item.bg }}>{item.icon}</span>
+                  <span style={{ background: item.bg }}><i className={item.icon} /></span>
                   <em>{item.label}</em>
                 </button>
               ))}

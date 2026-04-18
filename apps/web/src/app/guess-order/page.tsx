@@ -60,16 +60,16 @@ export default function GuessOrderPage() {
           type="button"
           onClick={() => window.history.back()}
         >
-          ‹
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.title}>竞猜下单</div>
         <div className={styles.secure}>
-          <span>🔒</span> 安全支付
+          <i className="fa-solid fa-shield-halved" /> 安全支付
         </div>
       </header>
 
       <div className={styles.countdownBar}>
-        <span>⏰</span>
+        <i className="fa-solid fa-clock" />
         <div className={styles.countdownText}>距开奖</div>
         <div className={styles.countdown}>
           06 <span>时</span> 18 <span>分</span>
@@ -89,7 +89,9 @@ export default function GuessOrderPage() {
       </section>
 
       <section className={styles.section}>
-        <h3>🎯 你的预测</h3>
+        <h3>
+          <i className="fa-solid fa-bullseye" /> 你的预测
+        </h3>
         <p>赢方瓜分输方下注的商品 · 回报率实时变化</p>
         <div className={styles.options}>
           {predictionOptions.map((item, index) => (
@@ -120,7 +122,7 @@ export default function GuessOrderPage() {
 
       <section className={styles.pkSection}>
         <h3>
-          🤝 邀请好友 PK <span>(可选)</span>
+          <i className="fa-solid fa-user-group" /> 邀请好友 PK <span>(可选)</span>
         </h3>
         <p>输的请客，赢的提货！选择对手开始 PK</p>
         <div className={styles.friends}>
@@ -144,7 +146,7 @@ export default function GuessOrderPage() {
 
       <section className={styles.couponSection}>
         <h4>
-          🎫 使用优惠券 <span>(可选)</span>
+          <i className="fa-solid fa-ticket" /> 使用优惠券 <span>(可选)</span>
         </h4>
         <div className={styles.couponList}>
           {coupons.map((coupon, index) => (
@@ -182,27 +184,29 @@ export default function GuessOrderPage() {
       </section>
 
       <section className={styles.explain}>
-        <h4>📋 竞猜下单说明</h4>
+        <h4>
+          <i className="fa-solid fa-clipboard-list" /> 竞猜下单说明
+        </h4>
         <div className={styles.expItem}>
-          <span>🎉</span>
+          <i className="fa-solid fa-gift" />
           <p>
             <b>猜中</b>：商品直接发货到您的地址
           </p>
         </div>
         <div className={styles.expItem}>
-          <span>🎫</span>
+          <i className="fa-solid fa-ticket" />
           <p>
             <b>没猜中</b>：自动获得竞猜补偿券
           </p>
         </div>
         <div className={styles.expItem}>
-          <span>🤝</span>
+          <i className="fa-solid fa-user-group" />
           <p>
             <b>好友 PK</b>：输的一方请客，赢的一方提货 + 额外奖励
           </p>
         </div>
         <div className={styles.expItem}>
-          <span>⏰</span>
+          <i className="fa-regular fa-clock" />
           <p>
             <b>开奖时间</b>：竞猜倒计时结束后自动开奖并公布结果
           </p>
@@ -244,7 +248,7 @@ export default function GuessOrderPage() {
             className={styles.primary}
             onClick={() => setShowResult(true)}
           >
-            <span>🫵</span> 立即下单
+            <i className="fa-solid fa-hand-pointer" /> 立即下单
           </button>
         </div>
       </footer>
@@ -275,7 +279,9 @@ export default function GuessOrderPage() {
             onClick={() => setShowResult(false)}
           />
           <div className={styles.resultBox}>
-            <div className={styles.resultIcon}>🎉</div>
+            <div className={styles.resultIcon}>
+              <i className="fa-solid fa-party-horn" />
+            </div>
             <div className={styles.resultTitle}>下单成功</div>
             <div className={styles.resultDesc}>
               竞猜已创建，开奖后会自动发货或发放补偿券。

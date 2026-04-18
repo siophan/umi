@@ -81,10 +81,12 @@ export default function PaymentPage() {
           type="button"
           onClick={() => window.history.back()}
         >
-          ‹
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.title}>确认订单</div>
-        <div className={styles.secure}>🔒 安全支付</div>
+        <div className={styles.secure}>
+          <i className="fa-solid fa-shield-halved" /> 安全支付
+        </div>
       </header>
 
       <section className={`${styles.card} ${styles.addressCard}`}>
@@ -94,7 +96,9 @@ export default function PaymentPage() {
           className={styles.addrRow}
           onClick={() => setAddrOpen(true)}
         >
-          <div className={styles.addrIcon}>⌂</div>
+          <div className={styles.addrIcon}>
+            <i className="fa-solid fa-location-dot" />
+          </div>
           <div className={styles.addrInfo}>
             <div className={styles.addrTop}>
               <div className={styles.addrName}>
@@ -111,12 +115,16 @@ export default function PaymentPage() {
               {addresses[addressIndex].detail}
             </div>
           </div>
-          <div className={styles.arrow}>›</div>
+          <div className={styles.arrow}>
+            <i className="fa-solid fa-chevron-right" />
+          </div>
         </button>
       </section>
 
       <section className={styles.card}>
-        <div className={styles.sectionTitle}>🛍 商品信息</div>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-bag-shopping" /> 商品信息
+        </div>
         {products.map((item, index) => (
           <div className={styles.productRow} key={item.name}>
             {index > 0 ? <div className={styles.divider} /> : null}
@@ -146,7 +154,9 @@ export default function PaymentPage() {
       </section>
 
       <section className={styles.card}>
-        <div className={styles.sectionTitle}>🚚 配送信息</div>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-truck-fast" /> 配送信息
+        </div>
         <div className={styles.row}>
           <span>配送方式</span>
           <strong>顺丰速运</strong>
@@ -172,26 +182,28 @@ export default function PaymentPage() {
           onClick={() => setCouponOpen(true)}
         >
           <div className={styles.couponLeft}>
-            <span>🎫</span>
+            <i className="fa-solid fa-ticket" />
             优惠券
             <span className={styles.couponBadge}>3张可用</span>
           </div>
           <div className={styles.couponRight}>
             <span>-¥ {couponValue.toFixed(2)}</span>
-            <span>›</span>
+            <i className="fa-solid fa-chevron-right" />
           </div>
         </button>
       </section>
 
       <section className={styles.card}>
-        <div className={styles.sectionTitle}>💳 支付方式</div>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-credit-card" /> 支付方式
+        </div>
         <button
           type="button"
           className={`${styles.pm} ${method === 'wechat' ? styles.pmActive : ''}`}
           onClick={() => setMethod('wechat')}
         >
           <div className={styles.pmIcon} style={{ background: '#07C160' }}>
-            ◎
+            <i className="fa-brands fa-weixin" />
           </div>
           <div className={styles.pmInfo}>
             <div className={styles.pmName}>微信支付</div>
@@ -205,7 +217,7 @@ export default function PaymentPage() {
           onClick={() => setMethod('alipay')}
         >
           <div className={styles.pmIcon} style={{ background: '#1677ff' }}>
-            ◎
+            <i className="fa-brands fa-alipay" />
           </div>
           <div className={styles.pmInfo}>
             <div className={styles.pmName}>支付宝</div>
@@ -216,11 +228,13 @@ export default function PaymentPage() {
       </section>
 
       <section className={styles.card}>
-        <div className={styles.sectionTitle}>🎁 服务保障</div>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-award" /> 服务保障
+        </div>
         <div className={styles.services}>
           {services.map((item) => (
             <div className={styles.serviceTag} key={item}>
-              <span>◎</span>
+              <i className="fa-solid fa-circle-check" />
               {item}
             </div>
           ))}
@@ -228,7 +242,9 @@ export default function PaymentPage() {
       </section>
 
       <section className={styles.card}>
-        <div className={styles.sectionTitle}>🧾 费用明细</div>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-receipt" /> 费用明细
+        </div>
         <div className={styles.priceRow}>
           <span>商品金额</span>
           <strong>
@@ -257,7 +273,10 @@ export default function PaymentPage() {
       <footer className={styles.bottom}>
         <div>
           <div className={styles.bottomLabel}>实付金额</div>
-          <div className={styles.bottomPrice}>¥ {total.toFixed(2)}</div>
+          <div className={styles.bottomPrice}>
+            <small>¥</small>
+            {total.toFixed(2)}
+          </div>
         </div>
         <button
           className={styles.payBtn}

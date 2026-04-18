@@ -31,6 +31,11 @@
   font-size: 15px;
 }
 
+.back i,
+.headerBtn i {
+  font-size: 14px;
+}
+
 .title {
   flex: 1;
   font-size: 16px;
@@ -76,6 +81,10 @@
   font-size: 28px;
 }
 
+.bannerIcon i {
+  font-size: 28px;
+}
+
 .bannerTitle {
   font-size: 20px;
   font-weight: 900;
@@ -116,6 +125,11 @@
 
 .cardTitle span {
   color: #ff5722;
+}
+
+.cardTitle i {
+  color: #ff5722;
+  font-size: 14px;
 }
 
 .timeline {
@@ -218,6 +232,10 @@
   font-size: 12px;
 }
 
+.shopIcon i {
+  font-size: 12px;
+}
+
 .shopName {
   flex: 1;
   font-size: 14px;
@@ -226,6 +244,12 @@
 
 .arrow {
   color: #ccc;
+  font-size: 12px;
+}
+
+.arrow i,
+.guessArrow i,
+.expressArrow i {
   font-size: 12px;
 }
 
@@ -314,6 +338,10 @@
   font-size: 22px;
 }
 
+.guessIcon i {
+  font-size: 22px;
+}
+
 .guessText {
   flex: 1;
 }
@@ -352,6 +380,10 @@
   align-items: center;
   justify-content: center;
   color: #ff5722;
+  font-size: 14px;
+}
+
+.addressIcon i {
   font-size: 14px;
 }
 
@@ -408,6 +440,10 @@
   align-items: center;
   justify-content: center;
   color: #2196f3;
+  font-size: 14px;
+}
+
+.expressIcon i {
   font-size: 14px;
 }
 

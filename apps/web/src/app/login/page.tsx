@@ -166,10 +166,7 @@ export default function LoginPage() {
           </div>
           <div className={styles.brandBg} />
           <div className={styles.brandInner}>
-            <div className={styles.brandLogo}>
-              优米
-              <span>·</span>
-            </div>
+            <div className={styles.brandLogo}>优米</div>
             <p className={styles.brandDesc}>欢迎回来，请登录您的账号</p>
           </div>
         </section>

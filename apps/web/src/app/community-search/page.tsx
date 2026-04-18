@@ -15,21 +15,21 @@ const hotSearches = [
 ];
 
 const recUsers = [
-  { name: '乐事官方', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Lays&backgroundColor=e53935', desc: '品牌认证', verified: true },
-  { name: '三只松鼠', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=3S&backgroundColor=4caf50', desc: '品牌认证', verified: true },
-  { name: '零食达人小王', avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Wang', desc: '胜率82%', verified: false },
-  { name: '德芙官方', avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Dove&backgroundColor=6d4c41', desc: '品牌认证', verified: true },
+  { name: '乐事官方', avatar: '/legacy/images/products/p001-lays.jpg', desc: '品牌认证', verified: true },
+  { name: '三只松鼠', avatar: '/legacy/images/products/p003-squirrels.jpg', desc: '品牌认证', verified: true },
+  { name: '零食达人小王', avatar: '/legacy/images/mascot/mouse-happy.png', desc: '胜率82%', verified: false },
+  { name: '德芙官方', avatar: '/legacy/images/products/p007-dove.jpg', desc: '品牌认证', verified: true },
 ];
 
 const results = [
   {
     id: 'post-1',
     author: '优米数据中心',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Data',
+    avatar: '/legacy/images/mascot/mouse-main.png',
     tag: '品牌竞猜',
     title: '乐事2026马年限定口味投票开启！番茄味 vs 黄瓜味',
     desc: '参与竞猜赢正品零食大礼包，猜中直接发货到家。当前3890人参与！',
-    images: ['https://picsum.photos/seed/search1/600/420'],
+    images: ['/legacy/images/guess/g001.jpg'],
     likes: 2341,
     comments: 456,
     shares: 89,
@@ -38,11 +38,11 @@ const results = [
   {
     id: 'post-2',
     author: '零食测评官',
-    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Tester',
+    avatar: '/legacy/images/mascot/mouse-casual.png',
     tag: '零食测评',
     title: '2026年度十大零食品牌排行榜出炉！三只松鼠再登榜首',
     desc: '根据全平台销售数据与用户口碑综合评选...',
-    images: ['https://picsum.photos/seed/search2/520/520', 'https://picsum.photos/seed/search3/520/520'],
+    images: ['/legacy/images/products/p003-squirrels.jpg', '/legacy/images/products/p005-liangpin.jpg'],
     likes: 8723,
     comments: 1204,
     shares: 188,
@@ -84,10 +84,10 @@ export default function CommunitySearchPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} type="button" onClick={() => window.history.back()}>
-          ←
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={`${styles.inputWrap} ${query ? styles.inputFocus : ''}`}>
-          <span>⌕</span>
+          <span><i className="fa-solid fa-magnifying-glass" /></span>
           <input
             value={query}
             onChange={(event) => onSearch(event.target.value)}
@@ -95,7 +95,7 @@ export default function CommunitySearchPage() {
           />
           {query ? (
             <button className={styles.clearBtn} type="button" onClick={() => setQuery('')}>
-              ×
+              <i className="fa-solid fa-xmark" />
             </button>
           ) : null}
         </div>
@@ -130,6 +130,7 @@ export default function CommunitySearchPage() {
               {searchHistory.map((item) => (
                 <button className={styles.historyItem} key={item} type="button" onClick={() => onSearch(item)}>
                   <span>⟳</span>
+                  
                   {item}
                 </button>
               ))}
@@ -138,7 +139,7 @@ export default function CommunitySearchPage() {
 
           <section className={styles.section}>
             <div className={styles.sectionTitle}>
-              <span>✦</span> 热搜榜
+              <span><i className="fa-solid fa-fire-flame-curved" /></span> 热搜榜
             </div>
             <div className={styles.hotList}>
               {hotSearches.map((item, index) => (
@@ -158,7 +159,7 @@ export default function CommunitySearchPage() {
 
           <section className={styles.section}>
             <div className={styles.sectionTitle}>
-              <span>☇</span> 推荐关注
+              <span><i className="fa-solid fa-bolt" /></span> 推荐关注
             </div>
             <div className={styles.userScroll}>
               {recUsers.map((user) => (
@@ -170,7 +171,7 @@ export default function CommunitySearchPage() {
                   <img src={user.avatar} alt={user.name} />
                   <div className={styles.userName}>
                     {user.name}
-                    {user.verified ? <i>✓</i> : null}
+                    {user.verified ? <i className="fa-solid fa-circle-check" /> : null}
                   </div>
                   <div className={styles.userDesc}>{user.desc}</div>
                   <span className={styles.followBtn}>+ 关注</span>

@@ -35,6 +35,10 @@
   font-size: 14px;
 }
 
+.back i {
+  font-size: 14px;
+}
+
 .title {
   font-size: 16px;
   font-weight: 800;
@@ -49,6 +53,10 @@
   color: #4caf50;
   font-size: 10px;
   font-weight: 600;
+}
+
+.secure i {
+  font-size: 10px;
 }
 
 .card {
@@ -104,6 +112,10 @@
   font-size: 16px;
 }
 
+.addrIcon i {
+  font-size: 16px;
+}
+
 .addrInfo {
   flex: 1;
   min-width: 0;
@@ -148,6 +160,11 @@
   font-size: 12px;
 }
 
+.arrow i,
+.couponRight i {
+  font-size: 12px;
+}
+
 .sectionTitle {
   display: flex;
   align-items: center;
@@ -156,6 +173,11 @@
   font-size: 13px;
   font-weight: 700;
   color: #333;
+}
+
+.sectionTitle i {
+  color: #ff5722;
+  font-size: 14px;
 }
 
 .productRow {
@@ -289,6 +311,11 @@
   color: #333;
 }
 
+.couponLeft i {
+  color: #ff5722;
+  font-size: 12px;
+}
+
 .couponBadge {
   padding: 2px 8px;
   border-radius: 8px;
@@ -331,6 +358,10 @@
   align-items: center;
   justify-content: center;
   color: #fff;
+  font-size: 18px;
+}
+
+.pmIcon i {
   font-size: 18px;
 }
 
@@ -386,7 +417,7 @@
   font-size: 11px;
 }
 
-.serviceTag span {
+.serviceTag i {
   color: #ff5722;
 }
 
