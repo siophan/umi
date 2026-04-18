@@ -8,7 +8,15 @@ export function MobileShell({
   tone = 'light',
 }: {
   children: ReactNode;
-  tab?: 'home' | 'orders' | 'warehouse' | 'me';
+  tab?:
+    | 'home'
+    | 'mall'
+    | 'create'
+    | 'community'
+    | 'profile'
+    | 'orders'
+    | 'warehouse'
+    | 'me';
   tone?: 'light' | 'dark' | 'mall';
 }) {
   return (

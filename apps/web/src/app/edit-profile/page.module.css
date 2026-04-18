@@ -1,0 +1,375 @@
+.page {
+  min-height: 100vh;
+  background: #f5f5f8;
+  padding-bottom: 80px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 48px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.headerBack,
+.headerSave {
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.headerBack {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #333;
+}
+
+.headerBack svg,
+.headerSave svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.headerTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.headerSave {
+  padding: 6px 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cover {
+  position: relative;
+  height: 140px;
+  overflow: hidden;
+}
+
+.coverPreview {
+  width: 100%;
+  height: 100%;
+}
+
+.coverOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.cover:hover .coverOverlay {
+  opacity: 1;
+}
+
+.avatarSection {
+  margin-top: -40px;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.avatarWrap {
+  border: 0;
+  background: transparent;
+  position: relative;
+  cursor: pointer;
+}
+
+.avatarPreview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid #f5f5f8;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 800;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.avatarBadge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ff5722;
+  border: 2px solid #f5f5f8;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+.avatarBadge svg {
+  width: 11px;
+  height: 11px;
+  fill: currentColor;
+}
+
+.avatarLabel {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 11px;
+  color: #999;
+}
+
+.sectionTitle {
+  padding: 16px 16px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaa;
+  letter-spacing: 0.5px;
+}
+
+.levelCard {
+  margin: 0 16px 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+}
+
+.levelTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.levelLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.levelIcon {
+  font-size: 20px;
+}
+
+.levelName {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.levelSub {
+  margin-top: 2px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.levelRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.levelRight svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+.levelBar {
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.levelFill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ffd700, #f7971e);
+}
+
+.levelDesc {
+  margin-top: 4px;
+  text-align: right;
+  font-size: 10px;
+  opacity: 0.5;
+}
+
+.card {
+  margin: 0 0 8px;
+  background: #fff;
+}
+
+.row,
+.rowTall {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 0.5px solid #f5f5f5;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowTall {
+  align-items: flex-start;
+}
+
+.label {
+  min-width: 72px;
+  flex: 0 0 auto;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.count {
+  margin-left: 8px;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  color: #ccc;
+  font-size: 11px;
+}
+
+.row input,
+.rowTall textarea {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: #1a1a1a;
+  text-align: right;
+}
+
+.row input::placeholder,
+.rowTall textarea::placeholder {
+  color: #ccc;
+}
+
+.rowTall textarea {
+  min-height: 60px;
+  resize: none;
+  line-height: 1.6;
+}
+
+.value {
+  flex: 1;
+  text-align: right;
+  color: #1a1a1a;
+  font-size: 14px;
+}
+
+.lock {
+  margin-left: 8px;
+  color: #ddd;
+}
+
+.genderGroup {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.genderBtn {
+  padding: 5px 16px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 14px;
+  background: transparent;
+  color: #999;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.genderActive {
+  border-color: #ff5722;
+  color: #ff5722;
+  background: rgba(255, 87, 34, 0.05);
+}
+
+.avatarSectionBottom {
+  padding: 16px 16px 0;
+}
+
+.avatarPickerTitle {
+  margin-bottom: 10px;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.avatarPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.avatarPick {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid #ececee;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.avatarPickActive {
+  border-color: #ff5722;
+  transform: scale(1.08);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toastShow {
+  opacity: 1;
+}
+
+@media (max-width: 480px) {
+  .row,
+  .rowTall {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}

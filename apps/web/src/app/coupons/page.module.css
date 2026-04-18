@@ -1,0 +1,191 @@
+.page {
+  min-height: 100vh;
+  background: #f5f5f8;
+  padding-bottom: 20px;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 48px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.backBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: #333;
+  display: grid;
+  place-items: center;
+}
+
+.backBtn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.spacer {
+  width: 32px;
+}
+
+.summary {
+  margin: 16px;
+  padding: 18px 16px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #fa5723, #e04010);
+  color: #fff;
+  text-align: center;
+}
+
+.count {
+  font-size: 38px;
+  font-weight: 800;
+}
+
+.label {
+  margin-top: 2px;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.tabs {
+  display: flex;
+  margin: 0 16px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #f0f0f2;
+}
+
+.tab {
+  flex: 1;
+  height: 38px;
+  border-radius: 12px;
+  background: transparent;
+  color: #999;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tabActive {
+  background: #fff;
+  color: #1a1a1a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.list {
+  padding: 12px 16px 0;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.used {
+  opacity: 0.55;
+}
+
+.used::after {
+  content: "已使用";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  padding: 4px 16px;
+  border: 2px solid #bdbdbd;
+  border-radius: 12px;
+  color: #bdbdbd;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.value {
+  width: 78px;
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.amount {
+  color: #fa5723;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.unit {
+  margin-top: 4px;
+  color: #999;
+  font-size: 12px;
+}
+
+.info {
+  flex: 1;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.condition {
+  margin-top: 4px;
+  color: #999;
+  font-size: 13px;
+}
+
+.expire {
+  margin-top: 8px;
+  color: #bdbdbd;
+  font-size: 11px;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+}
+
+.useBtn {
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.empty {
+  padding: 72px 20px 40px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 54px;
+  opacity: 0.25;
+}
+
+.emptyText {
+  margin-top: 12px;
+  color: #bdbdbd;
+  font-size: 14px;
+}

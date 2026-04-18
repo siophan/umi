@@ -1,0 +1,522 @@
+.page {
+  min-height: 100vh;
+  background: #f5f5f8;
+  padding-bottom: 90px;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  height: 52px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 0.5px solid #f0f0f2;
+}
+
+.backBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: #1a1a1a;
+  display: grid;
+  place-items: center;
+}
+
+.backBtn svg,
+.addBtn svg,
+.closeBtn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.manageBtn {
+  padding: 6px 0;
+  color: #ff2442;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+}
+
+.empty {
+  padding: 80px 20px 40px;
+  text-align: center;
+}
+
+.emptyIcon {
+  margin-bottom: 16px;
+  font-size: 56px;
+  opacity: 0.2;
+}
+
+.emptyText {
+  margin-bottom: 20px;
+  color: #bbb;
+  font-size: 14px;
+}
+
+.emptyBtn,
+.addBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 14px;
+  border: 0;
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(255, 36, 66, 0.25);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.emptyBtn {
+  width: auto;
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 13px;
+}
+
+.list {
+  padding: 12px 14px;
+}
+
+.card {
+  position: relative;
+  margin-bottom: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.cardDefault {
+  border: 1.5px solid #ff2442;
+  box-shadow: 0 2px 12px rgba(255, 36, 66, 0.08);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.phone {
+  color: #999;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.defaultTag {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 36, 66, 0.15);
+  background: rgba(255, 36, 66, 0.06);
+  color: #ff2442;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.detail {
+  color: #666;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 6px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.home {
+  border: 0.5px solid rgba(255, 152, 0, 0.15);
+  background: rgba(255, 152, 0, 0.08);
+  color: #ff9800;
+}
+
+.work {
+  border: 0.5px solid rgba(33, 150, 243, 0.15);
+  background: rgba(33, 150, 243, 0.08);
+  color: #2196f3;
+}
+
+.school {
+  border: 0.5px solid rgba(156, 39, 176, 0.15);
+  background: rgba(156, 39, 176, 0.08);
+  color: #9c27b0;
+}
+
+.cardBottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 0.5px solid #f0f0f2;
+}
+
+.setDefault {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: #999;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.setDefaultOn {
+  color: #ff2442;
+}
+
+.radio {
+  font-size: 14px;
+  color: currentColor;
+}
+
+.action {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: transparent;
+  color: #999;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.del {
+  color: #f44336;
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 0.5px solid #f0f0f2;
+}
+
+.addBtn {
+  height: 50px;
+}
+
+.overlay,
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.sheetHd {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 0.5px solid #f0f0f2;
+  background: #fff;
+}
+
+.sheetTitle {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f0f0f2;
+  color: #999;
+  display: grid;
+  place-items: center;
+}
+
+.sheetBody {
+  padding: 16px 20px 24px;
+}
+
+.formRow {
+  display: flex;
+  gap: 10px;
+}
+
+.formGroup {
+  flex: 1;
+  display: block;
+  margin-bottom: 18px;
+}
+
+.formLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  color: #999;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.formLabel i {
+  color: #ff2442;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.formInput {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1.5px solid #f0f0f2;
+  background: #fafafa;
+  padding: 0 14px;
+  outline: none;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.formInput:focus {
+  border-color: #ff2442;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 36, 66, 0.06);
+}
+
+.formTextarea {
+  height: 72px;
+  padding: 12px 14px;
+  resize: none;
+}
+
+.regionPicker {
+  display: flex;
+  gap: 8px;
+}
+
+.regionSelect {
+  flex: 1;
+  height: 44px;
+  border-radius: 10px;
+  border: 1.5px solid #f0f0f2;
+  background: #fafafa;
+  padding: 0 10px;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 500;
+  appearance: none;
+}
+
+.tagRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tagChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1.5px solid #f0f0f2;
+  background: #fafafa;
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tagActive {
+  border-color: #ff2442;
+  color: #ff2442;
+  background: rgba(255, 36, 66, 0.04);
+}
+
+.defaultRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  margin-top: 6px;
+  border-top: 0.5px solid #f0f0f2;
+}
+
+.defaultText {
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.defaultSub {
+  margin-top: 2px;
+  color: #999;
+  font-size: 11px;
+}
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 24px;
+  background: #e0e0e2;
+  position: relative;
+  display: block;
+}
+
+.toggle span {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.25s ease;
+}
+
+.toggleOn {
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+}
+
+.toggleOn span {
+  transform: translateX(20px);
+}
+
+.sheetSubmit {
+  width: 100%;
+  height: 50px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(255, 36, 66, 0.25);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.confirmOverlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirmCard {
+  width: 100%;
+  max-width: 300px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.confirmBody {
+  padding: 28px 24px 20px;
+  text-align: center;
+}
+
+.confirmIcon {
+  margin-bottom: 12px;
+  font-size: 40px;
+}
+
+.confirmTitle {
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.confirmDesc {
+  color: #999;
+  font-size: 12px;
+}
+
+.confirmBtns {
+  display: flex;
+  border-top: 0.5px solid #f0f0f2;
+}
+
+.confirmBtn,
+.confirmBtnDanger {
+  flex: 1;
+  padding: 14px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.confirmBtn {
+  color: #999;
+}
+
+.confirmBtnDanger {
+  color: #f44336;
+  border-left: 0.5px solid #f0f0f2;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  padding: 12px 16px;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toastShow {
+  opacity: 1;
+}
+
+@media (max-width: 480px) {
+  .formRow {
+    flex-direction: column;
+  }
+}

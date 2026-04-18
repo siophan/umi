@@ -1,0 +1,151 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f8;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.backBtn,
+.moreBtn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #333;
+  font-size: 18px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.name {
+  flex: 1;
+  color: #1a1a1a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 14px 92px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  max-width: 85%;
+}
+
+.sent {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.msgAvatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.received .bubble {
+  border-top-left-radius: 4px;
+  background: #fff;
+  color: #1a1a1a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sent .bubble {
+  border-top-right-radius: 4px;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 87, 34, 0.2);
+}
+
+.inputBar {
+  position: fixed;
+  inset: auto 0 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+
+.tools {
+  display: flex;
+  gap: 4px;
+}
+
+.tools button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+  color: #888;
+  font-size: 15px;
+}
+
+.input {
+  flex: 1;
+  min-height: 36px;
+  max-height: 100px;
+  padding: 8px 14px;
+  border: 1.5px solid #eee;
+  border-radius: 20px;
+  background: #f9f9f9;
+  color: #1a1a1a;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+
+.sendBtn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+  font-size: 15px;
+  opacity: 0.5;
+}
+
+.sendActive {
+  opacity: 1;
+}

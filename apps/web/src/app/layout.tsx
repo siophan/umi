@@ -9,6 +9,12 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN">
+      <head>
+        <link
+          href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"
+          rel="stylesheet"
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

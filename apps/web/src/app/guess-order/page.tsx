@@ -1,0 +1,295 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import styles from './page.module.css';
+
+const product = {
+  name: '奥利奥原味夹心饼干 67g*3',
+  brand: '奥利奥官方旗舰店',
+  price: 26.8,
+  stock: '库存充足 · 24小时内发货',
+  image: '/legacy/images/product/p001.jpg',
+};
+
+const predictionOptions = [
+  { name: '阿根廷卫冕', pct: 56, odds: '×1.8', trend: 'up', fill: '56%' },
+  { name: '法国夺冠', pct: 44, odds: '×2.1', trend: 'down', fill: '44%' },
+];
+
+const coupons = [
+  { name: '新人大礼包', cond: '满 29 可用', amount: 5, tone: 'red' },
+  { name: '店铺满减券', cond: '满 59 可用', amount: 10, tone: 'blue' },
+  { name: '品牌大额券', cond: '满 99 可用', amount: 20, tone: 'green' },
+];
+
+const friends = [
+  {
+    name: '球迷小张',
+    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=pk-a',
+    online: true,
+  },
+  {
+    name: '零食猎人',
+    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=pk-b',
+    online: true,
+  },
+  {
+    name: '预测家',
+    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=pk-c',
+    online: false,
+  },
+];
+
+export default function GuessOrderPage() {
+  const [selected, setSelected] = useState(0);
+  const [selectedCoupon, setSelectedCoupon] = useState(1);
+  const [selectedFriend, setSelectedFriend] = useState(0);
+  const [showPk, setShowPk] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+
+  const total = useMemo(() => {
+    const coupon = coupons[selectedCoupon]?.amount || 0;
+    return Math.max(product.price - coupon, 0).toFixed(2);
+  }, [selectedCoupon]);
+
+  return (
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <button
+          className={styles.back}
+          type="button"
+          onClick={() => window.history.back()}
+        >
+          ‹
+        </button>
+        <div className={styles.title}>竞猜下单</div>
+        <div className={styles.secure}>
+          <span>🔒</span> 安全支付
+        </div>
+      </header>
+
+      <div className={styles.countdownBar}>
+        <span>⏰</span>
+        <div className={styles.countdownText}>距开奖</div>
+        <div className={styles.countdown}>
+          06 <span>时</span> 18 <span>分</span>
+        </div>
+      </div>
+
+      <section className={styles.productCard}>
+        <img alt={product.name} src={product.image} />
+        <div className={styles.productInfo}>
+          <div className={styles.productName}>{product.name}</div>
+          <div className={styles.productBrand}>{product.brand}</div>
+          <div className={styles.productPrice}>
+            ¥ {product.price.toFixed(2)}
+          </div>
+          <div className={styles.productStock}>{product.stock}</div>
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <h3>🎯 你的预测</h3>
+        <p>赢方瓜分输方下注的商品 · 回报率实时变化</p>
+        <div className={styles.options}>
+          {predictionOptions.map((item, index) => (
+            <button
+              key={item.name}
+              type="button"
+              className={`${styles.option} ${selected === index ? styles.optionSelected : ''} ${styles[`color${index}` as 'color0' | 'color1' | 'color2' | 'color3' | 'color4'] || ''}`}
+              onClick={() => setSelected(index)}
+            >
+              <div className={styles.optionFill} style={{ width: item.fill }} />
+              <div className={styles.optionRadio} />
+              <div className={styles.optionInfo}>
+                <div className={styles.optionName}>{item.name}</div>
+                <div className={styles.optionPct}>
+                  <span className={styles.optionPctNum}>{item.pct}%</span>
+                  <span className={styles.optionOdds}>{item.odds}</span>
+                </div>
+                <div
+                  className={`${styles.trend} ${styles[item.trend === 'up' ? 'up' : 'down']}`}
+                >
+                  {item.trend === 'up' ? '上涨趋势' : '下降趋势'}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.pkSection}>
+        <h3>
+          🤝 邀请好友 PK <span>(可选)</span>
+        </h3>
+        <p>输的请客，赢的提货！选择对手开始 PK</p>
+        <div className={styles.friends}>
+          {friends.map((friend, index) => (
+            <button
+              key={friend.name}
+              type="button"
+              className={`${styles.friend} ${selectedFriend === index ? styles.friendSelected : ''}`}
+              onClick={() => {
+                setSelectedFriend(index);
+                setShowPk(true);
+              }}
+            >
+              <img alt={friend.name} src={friend.avatar} />
+              {friend.online ? <span className={styles.onlineDot} /> : null}
+              <span>{friend.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.couponSection}>
+        <h4>
+          🎫 使用优惠券 <span>(可选)</span>
+        </h4>
+        <div className={styles.couponList}>
+          {coupons.map((coupon, index) => (
+            <button
+              key={coupon.name}
+              type="button"
+              className={`${styles.couponItem} ${selectedCoupon === index ? styles.couponSelected : ''}`}
+              onClick={() => setSelectedCoupon(index)}
+            >
+              <div className={`${styles.couponLeft} ${styles[coupon.tone]}`}>
+                <div className={styles.couponValue}>
+                  <small>¥</small>
+                  {coupon.amount}
+                </div>
+                <div className={styles.couponLabel}>优惠券</div>
+              </div>
+              <div className={styles.couponInfo}>
+                <div className={styles.couponName}>{coupon.name}</div>
+                <div className={styles.couponCond}>{coupon.cond}</div>
+                <div className={styles.couponExp}>有效期至 2026-04-30</div>
+              </div>
+              <div className={styles.couponCheck}>
+                {selectedCoupon === index ? '✓' : ''}
+              </div>
+            </button>
+          ))}
+          <button
+            type="button"
+            className={styles.noCoupon}
+            onClick={() => setSelectedCoupon(-1)}
+          >
+            不使用优惠券
+          </button>
+        </div>
+      </section>
+
+      <section className={styles.explain}>
+        <h4>📋 竞猜下单说明</h4>
+        <div className={styles.expItem}>
+          <span>🎉</span>
+          <p>
+            <b>猜中</b>：商品直接发货到您的地址
+          </p>
+        </div>
+        <div className={styles.expItem}>
+          <span>🎫</span>
+          <p>
+            <b>没猜中</b>：自动获得竞猜补偿券
+          </p>
+        </div>
+        <div className={styles.expItem}>
+          <span>🤝</span>
+          <p>
+            <b>好友 PK</b>：输的一方请客，赢的一方提货 + 额外奖励
+          </p>
+        </div>
+        <div className={styles.expItem}>
+          <span>⏰</span>
+          <p>
+            <b>开奖时间</b>：竞猜倒计时结束后自动开奖并公布结果
+          </p>
+        </div>
+      </section>
+
+      <section className={styles.summary}>
+        <div className={styles.sumRow}>
+          <span>商品金额</span>
+          <strong>¥ {product.price.toFixed(2)}</strong>
+        </div>
+        <div className={styles.sumRow}>
+          <span>优惠券</span>
+          <strong>
+            - ¥ {(coupons[selectedCoupon]?.amount || 0).toFixed(2)}
+          </strong>
+        </div>
+        <div className={styles.sumRow}>
+          <span>实付金额</span>
+          <strong className={styles.total}>¥ {total}</strong>
+        </div>
+      </section>
+
+      <footer className={styles.bottom}>
+        <div className={styles.bottomTop}>
+          <span>实付金额</span>
+          <div className={styles.bottomPrice}>¥ {total}</div>
+        </div>
+        <div className={styles.bottomButtons}>
+          <button
+            type="button"
+            className={styles.outline}
+            onClick={() => window.history.back()}
+          >
+            返回
+          </button>
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={() => setShowResult(true)}
+          >
+            <span>🫵</span> 立即下单
+          </button>
+        </div>
+      </footer>
+
+      {showPk ? (
+        <div className={styles.modal}>
+          <div className={styles.modalBg} onClick={() => setShowPk(false)} />
+          <div className={styles.modalBox}>
+            <div className={styles.modalTitle}>PK 对手已选择</div>
+            <div className={styles.modalDesc}>
+              {friends[selectedFriend].name} 已加入对战，结算后你们将自动对奖。
+            </div>
+            <button
+              type="button"
+              className={styles.modalBtn}
+              onClick={() => setShowPk(false)}
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showResult ? (
+        <div className={styles.modal}>
+          <div
+            className={styles.modalBg}
+            onClick={() => setShowResult(false)}
+          />
+          <div className={styles.resultBox}>
+            <div className={styles.resultIcon}>🎉</div>
+            <div className={styles.resultTitle}>下单成功</div>
+            <div className={styles.resultDesc}>
+              竞猜已创建，开奖后会自动发货或发放补偿券。
+            </div>
+            <button
+              type="button"
+              className={styles.modalBtn}
+              onClick={() => setShowResult(false)}
+            >
+              我知道了
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
