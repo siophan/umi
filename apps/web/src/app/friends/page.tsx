@@ -3,7 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { fetchSocialOverview } from '../../lib/api';
+import type { GuessSummary } from '@joy/shared';
+
+import {
+  acceptFriendRequest,
+  fetchGuessHistory,
+  fetchGuessList,
+  fetchSocialOverview,
+  followUser,
+  rejectFriendRequest,
+  unfollowUser,
+} from '../../lib/api';
 import styles from './page.module.css';
 
 type FriendsTab = 'friends' | 'following' | 'fans' | 'requests';
@@ -11,6 +21,7 @@ type FriendSort = 'online' | 'winRate' | 'name';
 
 type FriendItem = {
   id: string;
+  uid: string;
   name: string;
   avatar: string;
   status: 'online' | 'offline';
@@ -22,6 +33,7 @@ type FriendItem = {
 
 type FollowingItem = {
   id: string;
+  uid: string;
   name: string;
   avatar: string;
   verified: boolean;
@@ -35,6 +47,7 @@ type FollowingItem = {
 
 type FanItem = {
   id: string;
+  uid: string;
   name: string;
   avatar: string;
   winRate: number;
@@ -46,6 +59,7 @@ type FanItem = {
 
 type RequestItem = {
   id: string;
+  uid: string;
   name: string;
   avatar: string;
   message: string;
@@ -72,14 +86,6 @@ const quickActions = [
   { label: '社区', icon: '💬', tone: 'green' as const },
 ];
 
-const hotGuesses: HotGuessItem[] = [
-  { id: 'g001', title: '世界杯决赛预测', hot: 8500, icon: '⚽', participants: 8500, options: ['阿根廷', '法国'] },
-  { id: 'g002', title: 'NBA总冠军竞猜', hot: 6200, icon: '🏀', participants: 6200, options: ['凯尔特人', '雷霆'] },
-  { id: 'g007', title: '比特币破20万?', hot: 7100, icon: '₿', participants: 7100, options: ['能', '不能'] },
-  { id: 'g004', title: '流浪地球3票房', hot: 5800, icon: '🎬', participants: 5800, options: ['超30亿', '20-30亿'] },
-  { id: 'g005', title: 'iPhone 18折叠屏', hot: 4900, icon: '📱', participants: 4900, options: ['会', '不会'] },
-];
-
 function formatFans(value: number) {
   if (value >= 10000) {
     return `${(value / 10000).toFixed(1)}万`;
@@ -100,6 +106,7 @@ function winRateClass(value: number) {
 function normalizeFriend(item: any, index: number): FriendItem {
   return {
     id: String(item.id || item.friendId || `friend-${index}`),
+    uid: String(item.uid || item.uidCode || item.id || item.friendId || `friend-${index}`),
     name: item.name || item.friendName || '未知用户',
     avatar: item.avatar || item.friendAvatar || myAvatar,
     status: item.status === 'online' || item.online ? 'online' : 'offline',
@@ -110,9 +117,10 @@ function normalizeFriend(item: any, index: number): FriendItem {
   };
 }
 
-function normalizeFollowing(item: any, index: number): FollowingItem {
+function normalizeFollowing(item: any, index: number, mutual = false): FollowingItem {
   return {
     id: String(item.id || `following-${index}`),
+    uid: String(item.uid || item.uidCode || item.id || `following-${index}`),
     name: item.name || '未知用户',
     avatar: item.avatar || myAvatar,
     verified: Boolean(item.shopVerified ?? item.verified),
@@ -120,20 +128,21 @@ function normalizeFollowing(item: any, index: number): FollowingItem {
     fans: Number(item.followers ?? item.fans ?? 0),
     posts: Number(item.posts ?? 0),
     tag: item.tag || (item.shopVerified ? '品牌' : '猜友'),
-    mutual: Boolean(item.mutual ?? false),
+    mutual: Boolean(item.mutual ?? mutual),
     followed: true,
   };
 }
 
-function normalizeFan(item: any, index: number): FanItem {
+function normalizeFan(item: any, index: number, followedBack = false): FanItem {
   return {
     id: String(item.id || `fan-${index}`),
+    uid: String(item.uid || item.uidCode || item.id || `fan-${index}`),
     name: item.name || '未知用户',
     avatar: item.avatar || myAvatar,
     winRate: Number(item.winRate ?? 0),
     bio: item.bio || item.signature || '这个人很懒，还没有留下签名。',
     time: item.time || item.createdAt || '',
-    followedBack: Boolean(item.followedBack ?? false),
+    followedBack: Boolean(item.followedBack ?? followedBack),
     isNew: Boolean(item.isNew ?? false),
   };
 }
@@ -141,6 +150,7 @@ function normalizeFan(item: any, index: number): FanItem {
 function normalizeRequest(item: any, index: number): RequestItem {
   return {
     id: String(item.id || `request-${index}`),
+    uid: String(item.uid || item.uidCode || item.id || `request-${index}`),
     name: item.name || '未知用户',
     avatar: item.avatar || myAvatar,
     message: item.message || item.msg || '请求添加你为好友',
@@ -148,6 +158,37 @@ function normalizeRequest(item: any, index: number): RequestItem {
     mutualFriends: Number(item.mutualFriends ?? 0),
     winRate: Number(item.winRate ?? 0),
     status: 'pending',
+  };
+}
+
+function guessIcon(category: string) {
+  if (category.includes('体育') || category.includes('足球') || category.includes('篮球')) {
+    return '⚽';
+  }
+  if (category.includes('科技') || category.includes('数码')) {
+    return '📱';
+  }
+  if (category.includes('影视') || category.includes('娱乐')) {
+    return '🎬';
+  }
+  if (category.includes('财经') || category.includes('金融')) {
+    return '₿';
+  }
+  if (category.includes('零食') || category.includes('美食')) {
+    return '🍿';
+  }
+  return '🎯';
+}
+
+function normalizeHotGuess(item: GuessSummary): HotGuessItem {
+  const participants = item.options.reduce((sum, option) => sum + Number(option.voteCount ?? 0), 0);
+  return {
+    id: item.id,
+    title: item.title,
+    hot: participants,
+    icon: guessIcon(item.category),
+    participants,
+    options: [item.options[0]?.optionText || '选项A', item.options[1]?.optionText || '选项B'],
   };
 }
 
@@ -164,8 +205,10 @@ export default function FriendsPage() {
   const [fans, setFans] = useState<FanItem[]>([]);
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [pkCount, setPkCount] = useState(0);
+  const [hotGuesses, setHotGuesses] = useState<HotGuessItem[]>([]);
+  const [followSavingId, setFollowSavingId] = useState('');
+  const [requestSavingId, setRequestSavingId] = useState('');
   const [pkOpen, setPkOpen] = useState(false);
-  const [pkSuccess, setPkSuccess] = useState(false);
   const [pkTarget, setPkTarget] = useState<FriendItem | null>(null);
   const [selectedGuessId, setSelectedGuessId] = useState('');
 
@@ -173,25 +216,38 @@ export default function FriendsPage() {
     let ignore = false;
 
     async function load() {
-      try {
-        const result = await fetchSocialOverview();
-        if (ignore) {
-          return;
-        }
+      const [socialResult, guessListResult, guessHistoryResult] = await Promise.allSettled([
+        fetchSocialOverview(),
+        fetchGuessList(),
+        fetchGuessHistory(),
+      ]);
+
+      if (ignore) {
+        return;
+      }
+
+      if (socialResult.status === 'fulfilled') {
+        const result = socialResult.value;
+        const followingIds = new Set(result.following.map((item) => String(item.id)));
+        const fanIds = new Set(result.fans.map((item) => String(item.id)));
 
         setFriends(result.friends.map(normalizeFriend));
-        setFollowing(result.following.map(normalizeFollowing));
-        setFans(result.fans.map(normalizeFan));
+        setFollowing(result.following.map((item, index) => normalizeFollowing(item, index, fanIds.has(String(item.id)))));
+        setFans(result.fans.map((item, index) => normalizeFan(item, index, followingIds.has(String(item.id)))));
         setRequests(result.requests.map(normalizeRequest));
-      } catch {
-        if (ignore) {
-          return;
-        }
+      } else {
         setFriends([]);
         setFollowing([]);
         setFans([]);
         setRequests([]);
       }
+
+      setHotGuesses(
+        guessListResult.status === 'fulfilled'
+          ? guessListResult.value.items.slice(0, 5).map(normalizeHotGuess)
+          : [],
+      );
+      setPkCount(guessHistoryResult.status === 'fulfilled' ? guessHistoryResult.value.stats.pk : 0);
 
       if (!ignore) {
         setReady(true);
@@ -244,7 +300,7 @@ export default function FriendsPage() {
     return pendingRequests.filter((item) => !keyword || item.name.toLowerCase().includes(keyword));
   }, [pendingRequests, query]);
 
-  const currentGuess = hotGuesses.find((item) => item.id === selectedGuessId) || hotGuesses[0];
+  const currentGuess = hotGuesses.find((item) => item.id === selectedGuessId) || hotGuesses[0] || null;
 
   function showToast(message: string) {
     setToast(message);
@@ -267,9 +323,94 @@ export default function FriendsPage() {
 
   function openPk(friend: FriendItem) {
     setPkTarget(friend);
-    setPkSuccess(false);
-    setSelectedGuessId('');
+    setSelectedGuessId(hotGuesses[0]?.id ?? '');
     setPkOpen(true);
+  }
+
+  function openProfile(uid: string) {
+    if (!uid) {
+      showToast('用户主页暂不可用');
+      return;
+    }
+    router.push(`/user/${encodeURIComponent(uid)}`);
+  }
+
+  async function handleToggleFollowing(item: FollowingItem) {
+    try {
+      setFollowSavingId(item.id);
+      if (item.followed) {
+        await unfollowUser(item.id);
+        setFollowing((current) => current.filter((entry) => entry.id !== item.id));
+        setFans((current) => current.map((entry) => (
+          entry.id === item.id ? { ...entry, followedBack: false } : entry
+        )));
+        showToast(`已取消关注 ${item.name}`);
+        return;
+      }
+
+      await followUser(item.id);
+      setFollowing((current) => current.map((entry) => (
+        entry.id === item.id ? { ...entry, followed: true } : entry
+      )));
+      setFans((current) => current.map((entry) => (
+        entry.id === item.id ? { ...entry, followedBack: true } : entry
+      )));
+      showToast(`已关注 ${item.name}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setFollowSavingId('');
+    }
+  }
+
+  async function handleToggleFanFollow(item: FanItem) {
+    try {
+      setFollowSavingId(item.id);
+      if (item.followedBack) {
+        await unfollowUser(item.id);
+        setFans((current) => current.map((entry) => (
+          entry.id === item.id ? { ...entry, followedBack: false } : entry
+        )));
+        setFollowing((current) => current.filter((entry) => entry.id !== item.id));
+        showToast(`已取消关注 ${item.name}`);
+        return;
+      }
+
+      await followUser(item.id);
+      setFans((current) => current.map((entry) => (
+        entry.id === item.id ? { ...entry, followedBack: true } : entry
+      )));
+      setFollowing((current) => {
+        if (current.some((entry) => entry.id === item.id)) {
+          return current.map((entry) => (
+            entry.id === item.id ? { ...entry, mutual: true, followed: true } : entry
+          ));
+        }
+        return [
+          normalizeFollowing(
+            {
+              id: item.id,
+              uid: item.uid,
+              name: item.name,
+              avatar: item.avatar,
+              signature: item.bio,
+              followers: 0,
+              posts: 0,
+              shopVerified: false,
+              mutual: true,
+            },
+            current.length,
+            true,
+          ),
+          ...current,
+        ];
+      });
+      showToast(`已回关 ${item.name}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setFollowSavingId('');
+    }
   }
 
   function confirmPk() {
@@ -277,36 +418,53 @@ export default function FriendsPage() {
       showToast('请选择一个竞猜项目');
       return;
     }
-    setPkSuccess(true);
-    showToast(`PK邀请已发送给 ${pkTarget.name}`);
+    setPkOpen(false);
+    router.push(`/guess/${encodeURIComponent(selectedGuessId)}?pkFriend=${encodeURIComponent(pkTarget.uid)}`);
   }
 
-  function acceptRequest(item: RequestItem) {
-    setRequests((current) => current.map((entry) => (entry.id === item.id ? { ...entry, status: 'accepted' } : entry)));
-    setFriends((current) => {
-      if (current.some((entry) => entry.name === item.name)) {
-        return current;
-      }
-      return [
-        ...current,
-        {
-          id: `f_${item.id}`,
-          name: item.name,
-          avatar: item.avatar,
-          status: 'online',
-          winRate: item.winRate,
-          level: 6,
-          streak: 0,
-          bio: '刚刚成为你的好友',
-        },
-      ];
-    });
-    showToast(`已添加 ${item.name} 为好友`);
+  async function acceptRequest(item: RequestItem) {
+    try {
+      setRequestSavingId(item.id);
+      await acceptFriendRequest(item.id);
+      setRequests((current) => current.map((entry) => (entry.id === item.id ? { ...entry, status: 'accepted' } : entry)));
+      setFriends((current) => {
+        if (current.some((entry) => entry.id === item.id)) {
+          return current;
+        }
+        return [
+          {
+            id: item.id,
+            uid: item.uid,
+            name: item.name,
+            avatar: item.avatar,
+            status: 'online',
+            winRate: item.winRate,
+            level: 6,
+            streak: 0,
+            bio: item.message || '刚刚成为你的好友',
+          },
+          ...current,
+        ];
+      });
+      showToast(`已添加 ${item.name} 为好友`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '接受好友申请失败');
+    } finally {
+      setRequestSavingId('');
+    }
   }
 
-  function rejectRequest(item: RequestItem) {
-    setRequests((current) => current.map((entry) => (entry.id === item.id ? { ...entry, status: 'rejected' } : entry)));
-    showToast(`已忽略 ${item.name} 的好友申请`);
+  async function rejectRequest(item: RequestItem) {
+    try {
+      setRequestSavingId(item.id);
+      await rejectFriendRequest(item.id);
+      setRequests((current) => current.map((entry) => (entry.id === item.id ? { ...entry, status: 'rejected' } : entry)));
+      showToast(`已忽略 ${item.name} 的好友申请`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '忽略好友申请失败');
+    } finally {
+      setRequestSavingId('');
+    }
   }
 
   if (!ready) {
@@ -353,15 +511,22 @@ export default function FriendsPage() {
             key={item.label}
             type="button"
             onClick={() => {
+              if (item.label === '邀请好友') {
+                router.push('/invite');
+                return;
+              }
               if (item.label === '排行榜') {
                 router.push('/ranking');
+                return;
+              }
+              if (item.label === 'PK记录') {
+                router.push('/guess-history');
                 return;
               }
               if (item.label === '社区') {
                 router.push('/community');
                 return;
               }
-              showToast(item.label === '邀请好友' ? '邀请好友' : '查看PK记录');
             }}
           >
             <div className={`${styles.quickIcon} ${styles[item.tone]}`}>{item.icon}</div>
@@ -374,11 +539,11 @@ export default function FriendsPage() {
         <div className={styles.hotTitle}>
           <i className="fa-solid fa-fire" />
           <span>好友都在猜</span>
-          <em>查看更多</em>
+          <button type="button" onClick={() => router.push('/guess-history')}>查看更多</button>
         </div>
         <div className={styles.hotScroll}>
           {hotGuesses.map((item) => (
-            <button className={styles.hotChip} key={item.id} type="button" onClick={() => friends[0] && openPk(friends[0])}>
+            <button className={styles.hotChip} key={item.id} type="button" onClick={() => router.push(`/guess/${encodeURIComponent(item.id)}`)}>
               <div className={styles.hotChipIcon}>{item.icon}</div>
               <div className={styles.hotChipTitle}>{item.title}</div>
               <div className={styles.hotChipMeta}>
@@ -387,6 +552,7 @@ export default function FriendsPage() {
               </div>
             </button>
           ))}
+          {!hotGuesses.length ? <div className={styles.hotEmpty}>暂无热门竞猜</div> : null}
         </div>
       </section>
 
@@ -426,13 +592,15 @@ export default function FriendsPage() {
           </div>
           {filteredFriends.length ? filteredFriends.map((item) => (
             <article className={styles.card} key={item.id}>
-              <div className={styles.avatarWrap}>
+              <button className={styles.avatarButton} type="button" onClick={() => openProfile(item.uid)}>
                 <img className={styles.avatar} src={item.avatar} alt={item.name} />
                 <span className={`${styles.onlineDot} ${item.status === 'online' ? styles.online : styles.offline}`} />
-              </div>
+              </button>
               <div className={styles.info}>
                 <div className={styles.nameRow}>
-                  <span className={styles.name}>{item.name}</span>
+                  <button className={styles.nameButton} type="button" onClick={() => openProfile(item.uid)}>
+                    {item.name}
+                  </button>
                   <span className={styles.level}>Lv.{item.level}</span>
                   <span className={item.status === 'online' ? styles.onlineTagOn : styles.onlineTagOff}>
                     {item.status === 'online' ? '在线' : '离线'}
@@ -473,12 +641,14 @@ export default function FriendsPage() {
           </div>
           {filteredFollowing.length ? filteredFollowing.map((item) => (
             <article className={styles.card} key={item.id}>
-              <div className={styles.avatarWrap}>
+              <button className={styles.avatarButton} type="button" onClick={() => openProfile(item.uid)}>
                 <img className={styles.avatar} src={item.avatar} alt={item.name} />
-              </div>
+              </button>
               <div className={styles.info}>
                 <div className={styles.nameRow}>
-                  <span className={styles.name}>{item.name}</span>
+                  <button className={styles.nameButton} type="button" onClick={() => openProfile(item.uid)}>
+                    {item.name}
+                  </button>
                   {item.verified ? <i className={`fa-solid fa-circle-check ${styles.verified}`} /> : null}
                   <span className={styles.badgeBrand}>{item.tag}</span>
                 </div>
@@ -492,14 +662,10 @@ export default function FriendsPage() {
                 <button
                   className={item.followed ? (item.mutual ? styles.mutualBtn : styles.followedBtn) : styles.primaryBtn}
                   type="button"
-                  onClick={() => {
-                    setFollowing((current) => current.map((entry) => (
-                      entry.id === item.id ? { ...entry, followed: !entry.followed } : entry
-                    )));
-                    showToast(item.followed ? `已取消关注 ${item.name}` : `已关注 ${item.name}`);
-                  }}
+                  disabled={followSavingId === item.id}
+                  onClick={() => void handleToggleFollowing(item)}
                 >
-                  {item.followed ? (item.mutual ? '互关' : '已关注') : '关注'}
+                  {followSavingId === item.id ? '处理中' : item.followed ? (item.mutual ? '互关' : '已关注') : '关注'}
                 </button>
               </div>
             </article>
@@ -520,12 +686,14 @@ export default function FriendsPage() {
           </div>
           {filteredFans.length ? filteredFans.map((item) => (
             <article className={styles.card} key={item.id}>
-              <div className={styles.avatarWrap}>
+              <button className={styles.avatarButton} type="button" onClick={() => openProfile(item.uid)}>
                 <img className={styles.avatar} src={item.avatar} alt={item.name} />
-              </div>
+              </button>
               <div className={styles.info}>
                 <div className={styles.nameRow}>
-                  <span className={styles.name}>{item.name}</span>
+                  <button className={styles.nameButton} type="button" onClick={() => openProfile(item.uid)}>
+                    {item.name}
+                  </button>
                 </div>
                 <div className={styles.metaRow}>
                   <span className={styles.metaChip}>
@@ -540,14 +708,10 @@ export default function FriendsPage() {
                 <button
                   className={item.followedBack ? styles.mutualBtn : styles.primaryBtn}
                   type="button"
-                  onClick={() => {
-                    setFans((current) => current.map((entry) => (
-                      entry.id === item.id ? { ...entry, followedBack: !entry.followedBack } : entry
-                    )));
-                    showToast(item.followedBack ? `已取消关注 ${item.name}` : `已回关 ${item.name}`);
-                  }}
+                  disabled={followSavingId === item.id}
+                  onClick={() => void handleToggleFanFollow(item)}
                 >
-                  {item.followedBack ? '互关' : '回关'}
+                  {followSavingId === item.id ? '处理中' : item.followedBack ? '互关' : '回关'}
                 </button>
               </div>
             </article>
@@ -568,12 +732,14 @@ export default function FriendsPage() {
           </div>
           {filteredRequests.length ? filteredRequests.map((item) => (
             <article className={styles.requestCard} key={item.id}>
-              <div className={styles.avatarWrap}>
+              <button className={styles.avatarButton} type="button" onClick={() => openProfile(item.uid)}>
                 <img className={styles.avatar} src={item.avatar} alt={item.name} />
-              </div>
+              </button>
               <div className={styles.info}>
                 <div className={styles.nameRow}>
-                  <span className={styles.name}>{item.name}</span>
+                  <button className={styles.nameButton} type="button" onClick={() => openProfile(item.uid)}>
+                    {item.name}
+                  </button>
                 </div>
                 <div className={styles.metaRow}>
                   <span className={styles.metaChip}>
@@ -588,11 +754,21 @@ export default function FriendsPage() {
                 ) : null}
                 {item.message ? <div className={styles.requestMsg}>"{item.message}"</div> : null}
                 <div className={styles.requestActions}>
-                  <button className={styles.primaryBtn} type="button" onClick={() => acceptRequest(item)}>
-                    <i className="fa-solid fa-check" /> 接受
+                  <button
+                    className={styles.primaryBtn}
+                    type="button"
+                    disabled={requestSavingId === item.id}
+                    onClick={() => void acceptRequest(item)}
+                  >
+                    <i className="fa-solid fa-check" /> {requestSavingId === item.id ? '处理中' : '接受'}
                   </button>
-                  <button className={styles.outlineBtn} type="button" onClick={() => rejectRequest(item)}>
-                    <i className="fa-solid fa-xmark" /> 忽略
+                  <button
+                    className={styles.outlineBtn}
+                    type="button"
+                    disabled={requestSavingId === item.id}
+                    onClick={() => void rejectRequest(item)}
+                  >
+                    <i className="fa-solid fa-xmark" /> {requestSavingId === item.id ? '处理中' : '忽略'}
                   </button>
                 </div>
                 <div className={styles.requestTime}>
@@ -613,85 +789,57 @@ export default function FriendsPage() {
       {pkOpen && pkTarget ? (
         <div className={styles.pkOverlay} onClick={() => setPkOpen(false)} role="presentation">
           <section className={styles.pkModal} onClick={(event) => event.stopPropagation()} role="presentation">
-            {!pkSuccess ? (
-              <>
-                <div className={styles.pkHeader}>
-                  <button className={styles.pkClose} type="button" onClick={() => setPkOpen(false)}>
-                    <i className="fa-solid fa-xmark" />
-                  </button>
-                  <div className={styles.pkTitle}>⚔️ 发起PK对战</div>
-                  <div className={styles.pkSubtitle}>选择竞猜项目，和好友一决高下</div>
-                </div>
-                <div className={styles.pkVs}>
-                  <div className={styles.pkPlayer}>
-                    <img src={myAvatar} alt="我" />
-                    <div className={styles.pkPlayerName}>我</div>
-                    <div className={styles.pkPlayerStats}>胜率 68%</div>
-                  </div>
-                  <div className={styles.pkVsIcon}>VS</div>
-                  <div className={styles.pkPlayer}>
-                    <img src={pkTarget.avatar} alt={pkTarget.name} />
-                    <div className={styles.pkPlayerName}>{pkTarget.name}</div>
-                    <div className={styles.pkPlayerStats}>胜率 {pkTarget.winRate}%</div>
-                  </div>
-                </div>
-                <div className={styles.pkSelect}>
-                  <div className={styles.pkSelectLabel}>选择PK竞猜项目：</div>
-                  <div className={styles.pkList}>
-                    {hotGuesses.map((item) => (
-                      <button
-                        className={selectedGuessId === item.id ? styles.pkItemActive : styles.pkItem}
-                        key={item.id}
-                        type="button"
-                        onClick={() => setSelectedGuessId(item.id)}
-                      >
-                        <div className={styles.pkItemIcon}>{item.icon}</div>
-                        <div className={styles.pkItemBody}>
-                          <div className={styles.pkItemTitle}>{item.title}</div>
-                          <div className={styles.pkItemMeta}>{formatFans(item.participants)}人参与 · {item.options.join(' vs ')}</div>
-                        </div>
-                        <div className={styles.pkItemCheck}>
-                          <i className="fa-solid fa-circle-check" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className={styles.pkFooter}>
-                  <button className={styles.cancelBtn} type="button" onClick={() => setPkOpen(false)}>
-                    取消
-                  </button>
-                  <button className={styles.primaryFooterBtn} type="button" onClick={confirmPk}>
-                    🔥 发起PK
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className={styles.pkSuccess}>
-                <div className={styles.pkSuccessIcon}>⚔️</div>
-                <div className={styles.pkSuccessTitle}>PK邀请已发送！</div>
-                <div className={styles.pkSuccessDesc}>
-                  已向 {pkTarget.name} 发起
-                  <br />
-                  “{currentGuess.title}” 的PK挑战
-                  <br />
-                  等待对方接受后即可开始对战
-                </div>
-                <div className={styles.pkShareRow}>
-                  <button className={styles.pkShareItem} type="button" onClick={() => showToast('已复制PK链接')}>
-                    <span className={styles.pkShareIcon}><i className="fa-solid fa-link" /></span>
-                    <span>分享链接</span>
-                  </button>
-                  <button className={styles.pkShareItem} type="button" onClick={() => showToast('分享到微信')}>
-                    <span className={`${styles.pkShareIcon} ${styles.wechat}`}><i className="fa-brands fa-weixin" /></span>
-                    <span>微信</span>
-                  </button>
-                </div>
-                <button className={styles.primaryFooterBtn} type="button" onClick={() => { setPkOpen(false); setPkCount((count) => count + 1); }}>
-                  完成
-                </button>
+            <div className={styles.pkHeader}>
+              <button className={styles.pkClose} type="button" onClick={() => setPkOpen(false)}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+              <div className={styles.pkTitle}>⚔️ 发起PK对战</div>
+              <div className={styles.pkSubtitle}>选择真实竞猜项目后直接进入竞猜详情</div>
+            </div>
+            <div className={styles.pkVs}>
+              <div className={styles.pkPlayer}>
+                <img src={myAvatar} alt="我" />
+                <div className={styles.pkPlayerName}>我</div>
+                <div className={styles.pkPlayerStats}>进入竞猜后自行选择</div>
               </div>
-            )}
+              <div className={styles.pkVsIcon}>VS</div>
+              <div className={styles.pkPlayer}>
+                <img src={pkTarget.avatar} alt={pkTarget.name} />
+                <div className={styles.pkPlayerName}>{pkTarget.name}</div>
+                <div className={styles.pkPlayerStats}>胜率 {pkTarget.winRate}%</div>
+              </div>
+            </div>
+            <div className={styles.pkSelect}>
+              <div className={styles.pkSelectLabel}>选择PK竞猜项目：</div>
+              <div className={styles.pkList}>
+                {hotGuesses.map((item) => (
+                  <button
+                    className={selectedGuessId === item.id ? styles.pkItemActive : styles.pkItem}
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedGuessId(item.id)}
+                  >
+                    <div className={styles.pkItemIcon}>{item.icon}</div>
+                    <div className={styles.pkItemBody}>
+                      <div className={styles.pkItemTitle}>{item.title}</div>
+                      <div className={styles.pkItemMeta}>{formatFans(item.participants)}人参与 · {item.options.join(' vs ')}</div>
+                    </div>
+                    <div className={styles.pkItemCheck}>
+                      <i className="fa-solid fa-circle-check" />
+                    </div>
+                  </button>
+                ))}
+                {!hotGuesses.length ? <div className={styles.pkEmpty}>暂无可用竞猜，先去首页看看</div> : null}
+              </div>
+            </div>
+            <div className={styles.pkFooter}>
+              <button className={styles.cancelBtn} type="button" onClick={() => setPkOpen(false)}>
+                取消
+              </button>
+              <button className={styles.primaryFooterBtn} type="button" onClick={confirmPk} disabled={!currentGuess}>
+                进入竞猜
+              </button>
+            </div>
           </section>
         </div>
       ) : null}

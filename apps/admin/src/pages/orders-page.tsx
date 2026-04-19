@@ -1,9 +1,10 @@
 import type { OrderSummary } from '@joy/shared';
 import type { TableColumnsType } from 'antd';
 
-import { Card, Descriptions, Drawer, Space, Statistic, Table, Tag, Typography } from 'antd';
-import { useState } from 'react';
+import { Card, Descriptions, Drawer, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
+import { useMemo, useState } from 'react';
 
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import { formatAmount, formatDateTime, orderStatusMeta } from '../lib/format';
 
 interface OrdersPageProps {
@@ -13,6 +14,46 @@ interface OrdersPageProps {
 
 export function OrdersPage({ loading, orders }: OrdersPageProps) {
   const [selected, setSelected] = useState<OrderSummary | null>(null);
+  const [filters, setFilters] = useState<{
+    orderId?: string;
+    userId?: string;
+    orderType?: string;
+  }>({});
+  const [status, setStatus] = useState<'all' | OrderSummary['status']>('all');
+  const [form] = Form.useForm<{ orderId?: string; userId?: string; orderType?: string }>();
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      if (status !== 'all' && order.status !== status) {
+        return false;
+      }
+      if (
+        filters.orderId &&
+        !String(order.id).toLowerCase().includes(filters.orderId.trim().toLowerCase())
+      ) {
+        return false;
+      }
+      if (
+        filters.userId &&
+        !String(order.userId).toLowerCase().includes(filters.userId.trim().toLowerCase())
+      ) {
+        return false;
+      }
+      if (filters.orderType && order.orderType !== filters.orderType) {
+        return false;
+      }
+      return true;
+    });
+  }, [filters, orders, status]);
+
+  const orderTypeOptions = useMemo(
+    () =>
+      Array.from(new Set(orders.map((item) => item.orderType).filter(Boolean))).map((value) => ({
+        label: value,
+        value,
+      })),
+    [orders],
+  );
 
   const columns: TableColumnsType<OrderSummary> = [
     {
@@ -54,40 +95,49 @@ export function OrdersPage({ loading, orders }: OrdersPageProps) {
 
   return (
     <div className="page-stack">
-      <Space wrap size={16}>
-        <Card className="metric-card">
-          <Statistic
-            title="已支付"
-            value={orders.filter((order) => order.status === 'paid').length}
-          />
-        </Card>
-        <Card className="metric-card">
-          <Statistic
-            title="配送中"
-            value={orders.filter((order) => order.status === 'shipping').length}
-          />
-        </Card>
-        <Card className="metric-card">
-          <Statistic
-            title="退款审核"
-            value={orders.filter((order) => order.status === 'refund_pending').length}
-          />
-        </Card>
-        <Card className="metric-card">
-          <Statistic
-            title="订单 GMV"
-            value={formatAmount(orders.reduce((sum, order) => sum + order.amount, 0))}
-          />
-        </Card>
-      </Space>
-
-      <Card title="订单与履约">
+      <AdminSearchPanel
+        form={form}
+        onSearch={() => {
+          const values = form.getFieldsValue();
+          setFilters(values);
+        }}
+        onReset={() => {
+          form.resetFields();
+          setFilters({});
+          setStatus('all');
+        }}
+      >
+        <Form.Item name="orderId">
+          <Input placeholder="订单号" allowClear />
+        </Form.Item>
+        <Form.Item name="userId">
+          <Input placeholder="用户 ID" allowClear />
+        </Form.Item>
+        <Form.Item name="orderType">
+          <Select placeholder="订单类型" allowClear options={orderTypeOptions} />
+        </Form.Item>
+      </AdminSearchPanel>
+      <AdminStatusTabs
+        activeKey={status}
+        items={[
+          { key: 'all', label: '全部', count: orders.length },
+          { key: 'pending', label: '待支付', count: orders.filter((item) => item.status === 'pending').length },
+          { key: 'paid', label: '已支付', count: orders.filter((item) => item.status === 'paid').length },
+          { key: 'shipping', label: '配送中', count: orders.filter((item) => item.status === 'shipping').length },
+          { key: 'completed', label: '已完成', count: orders.filter((item) => item.status === 'completed').length },
+          { key: 'refund_pending', label: '退款审核', count: orders.filter((item) => item.status === 'refund_pending').length },
+          { key: 'refunded', label: '已退款', count: orders.filter((item) => item.status === 'refunded').length },
+          { key: 'cancelled', label: '已取消', count: orders.filter((item) => item.status === 'cancelled').length },
+        ]}
+        onChange={(key) => setStatus(key as 'all' | OrderSummary['status'])}
+      />
+      <Card>
         <Table
           rowKey="id"
           columns={columns}
-          dataSource={orders}
+          dataSource={filteredOrders}
           loading={loading}
-          pagination={{ pageSize: 6 }}
+          pagination={{ pageSize: 10 }}
           onRow={(record) => ({
             onClick: () => setSelected(record),
           })}

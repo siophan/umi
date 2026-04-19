@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import type { UserSearchItem } from '@joy/shared';
 
-import { clearAuthToken, fetchMe, fetchMeActivity, logout } from '../../lib/api';
+import { clearAuthToken, fetchMe, fetchMeActivity, fetchMeSummary, logout, searchUsers } from '../../lib/api';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 
@@ -85,6 +86,38 @@ function formatTimeLabel(value: string) {
   return new Date(value).toLocaleDateString('zh-CN');
 }
 
+function buildSearchItemDesc(item: UserSearchItem) {
+  if (item.shopVerified && item.shopName) {
+    return `认证店铺 · ${item.shopName}`;
+  }
+  if ((item.followers || 0) > 0) {
+    return `${formatCount(item.followers || 0)}粉丝 · 胜率${item.winRate || 0}%`;
+  }
+  if ((item.totalGuess || 0) > 0) {
+    return `竞猜 ${item.totalGuess} 次 · 胜场 ${item.wins || 0}`;
+  }
+  if (item.signature?.trim()) {
+    return item.signature.trim();
+  }
+  return `Lv.${item.level || 1}`;
+}
+
+function getSearchRelationLabel(relation: UserSearchItem['relation']) {
+  if (relation === 'friend') {
+    return '好友';
+  }
+  if (relation === 'following') {
+    return '已关注';
+  }
+  if (relation === 'fan') {
+    return '粉丝';
+  }
+  if (relation === 'self') {
+    return '我';
+  }
+  return '查看';
+}
+
 export default function MePage() {
   const router = useRouter();
   const [tab, setTab] = useState<'works' | 'favs' | 'likes'>('works');
@@ -95,10 +128,8 @@ export default function MePage() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [toast, setToast] = useState('');
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-  const [merchantOpened, setMerchantOpened] = useState(false);
-  const [darkModeOn, setDarkModeOn] = useState(false);
-  const [notiOn, setNotiOn] = useState(true);
-  const [cacheSize, setCacheSize] = useState('12.3 MB');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<UserSearchItem[]>([]);
   const [activity, setActivity] = useState({
     works: [] as Array<{
       id: string;
@@ -151,6 +182,11 @@ export default function MePage() {
     wins: 0,
     shopVerified: false,
   });
+  const [summary, setSummary] = useState({
+    activeOrderCount: 0,
+    warehouseItemCount: 0,
+    availableCouponCount: 0,
+  });
   const [authReady, setAuthReady] = useState(false);
   const likeTotal = useMemo(
     () => activity.works.reduce((sum, post) => sum + post.likes, 0),
@@ -174,63 +210,8 @@ export default function MePage() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const searchableUsers = useMemo(
-    () => [
-      {
-        id: 'friend-1',
-        name: '零食侦探社',
-        avatar: '/legacy/images/mascot/mouse-main.png',
-        desc: '好友 · 竞猜 28 次',
-        isFriend: true,
-      },
-      {
-        id: 'friend-2',
-        name: '鼠鼠补给站',
-        avatar: '/legacy/images/mascot/mouse-happy.png',
-        desc: '好友 · 竞猜 17 次',
-        isFriend: true,
-      },
-      {
-        id: 'brand-1',
-        name: '乐事官方旗舰店',
-        avatar: '/legacy/images/products/p001-lays.jpg',
-        desc: '官方认证 · 1.2万粉丝',
-        isFriend: false,
-      },
-      {
-        id: 'brand-2',
-        name: '旺旺零食实验室',
-        avatar: '/legacy/images/products/p006-wangwang.jpg',
-        desc: '官方认证 · 8,900粉丝',
-        isFriend: false,
-      },
-      {
-        id: 'user-3',
-        name: '甜品公主',
-        avatar: '/legacy/images/mascot/mouse-casual.png',
-        desc: '零食达人 · Lv.12',
-        isFriend: false,
-      },
-      {
-        id: 'user-4',
-        name: '辣条控小明',
-        avatar: '/legacy/images/mascot/mouse-main.png',
-        desc: '竞猜高手 · 胜率72%',
-        isFriend: false,
-      },
-      {
-        id: 'user-5',
-        name: '巧克力女王',
-        avatar: '/legacy/images/products/p002-oreo.jpg',
-        desc: '美食博主 · 6,500粉丝',
-        isFriend: false,
-      },
-    ],
-    [],
-  );
-  const [followedUsers, setFollowedUsers] = useState<Record<string, boolean>>({});
-  const warehouseBadge = currentUser.wins > 0 ? Math.min(currentUser.wins, 99) : 8;
-  const orderBadge = unreadMessageCount > 0 ? Math.min(unreadMessageCount, 99) : 5;
+  const warehouseBadge = summary.warehouseItemCount > 0 ? Math.min(summary.warehouseItemCount, 99) : 0;
+  const orderBadge = summary.activeOrderCount > 0 ? Math.min(summary.activeOrderCount, 99) : 0;
 
   function renderPostCard(post: ActivityPost, liked = false) {
     const imageClass =
@@ -278,37 +259,50 @@ export default function MePage() {
 
   const searchSections = useMemo(() => {
     if (!searchValue.trim()) {
-      return [
-        {
-          title: '推荐关注',
-          items: searchableUsers.filter((item) => !item.isFriend).slice(0, 5),
-        },
-      ];
+      return searchResults.length > 0
+        ? [
+            {
+              title: '推荐关注',
+              items: searchResults,
+            },
+          ]
+        : [];
     }
-
-    const keyword = searchValue.trim().toLowerCase();
-    const matched = searchableUsers.filter(
-      (item) => item.name.toLowerCase().includes(keyword) || item.desc.toLowerCase().includes(keyword),
-    );
 
     return [
       {
         title: '我的好友',
-        items: matched.filter((item) => item.isFriend),
+        items: searchResults.filter((item) => item.relation === 'friend'),
       },
       {
-        title: '可能认识的人',
-        items: matched.filter((item) => !item.isFriend),
+        title: '我关注的人',
+        items: searchResults.filter((item) => item.relation === 'following'),
+      },
+      {
+        title: '关注我的人',
+        items: searchResults.filter((item) => item.relation === 'fan'),
+      },
+      {
+        title: '其他用户',
+        items: searchResults.filter((item) => item.relation === 'none'),
       },
     ].filter((section) => section.items.length > 0);
-  }, [searchValue, searchableUsers]);
+  }, [searchResults, searchValue]);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadCurrentUser() {
       try {
-        const [user, meActivity] = await Promise.all([fetchMe(), fetchMeActivity()]);
+        const [user, meActivity, meSummary] = await Promise.all([
+          fetchMe(),
+          fetchMeActivity(),
+          fetchMeSummary().catch(() => ({
+            activeOrderCount: 0,
+            warehouseItemCount: 0,
+            availableCouponCount: 0,
+          })),
+        ]);
         if (ignore) {
           return;
         }
@@ -332,6 +326,7 @@ export default function MePage() {
           bookmarks: meActivity.bookmarks,
           likes: meActivity.likes,
         });
+        setSummary(meSummary);
         setAuthReady(true);
       } catch {
         if (ignore) {
@@ -348,6 +343,36 @@ export default function MePage() {
       ignore = true;
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!searchOpen) {
+      return undefined;
+    }
+
+    let ignore = false;
+    const timer = window.setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const result = await searchUsers(searchValue);
+        if (!ignore) {
+          setSearchResults(result.items);
+        }
+      } catch {
+        if (!ignore) {
+          setSearchResults([]);
+        }
+      } finally {
+        if (!ignore) {
+          setSearchLoading(false);
+        }
+      }
+    }, searchValue.trim() ? 180 : 0);
+
+    return () => {
+      ignore = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchOpen, searchValue]);
 
   async function handleLogout() {
     if (loggingOut) {
@@ -447,7 +472,7 @@ export default function MePage() {
             <Link className={styles.funcEntry} href={item.href} key={item.label}>
               <div className={styles.funcCircle}>
                 <i className={item.icon} />
-                {item.badge ? (
+                {item.badge && (item.label === '我的仓库' ? warehouseBadge : orderBadge) > 0 ? (
                   <span className={styles.funcBadge}>
                     {item.label === '我的仓库' ? warehouseBadge : orderBadge}
                   </span>
@@ -458,7 +483,7 @@ export default function MePage() {
           ))}
         </div>
 
-          {!currentUser.shopVerified && !merchantOpened ? (
+          {!currentUser.shopVerified ? (
             <button className={styles.openShop} type="button" onClick={() => setShopModalOpen(true)}>
               <div className={styles.openShopIcon}>
                 🏪
@@ -585,45 +610,25 @@ export default function MePage() {
                   <button className={styles.settingsItem} type="button" onClick={() => router.push('/coupons')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconRed}`}><i className="fa-solid fa-ticket" /></span>
                     <span className={styles.settingsItemText}>优惠券</span>
-                    <span className={styles.settingsItemVal}>3 张</span>
+                    <span className={styles.settingsItemVal}>{summary.availableCouponCount} 张</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
                 </div>
 
-                  <div className={styles.settingsGroup}>
+                <div className={styles.settingsGroup}>
                   <div className={styles.settingsGroupTitle}>偏好设置</div>
-                  <div className={styles.settingsItem}>
+                  <button className={styles.settingsItem} type="button" onClick={() => setToast('账号偏好同步尚未接入')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconPurple}`}><i className="fa-solid fa-moon" /></span>
                     <span className={styles.settingsItemText}>深色模式</span>
-                    <span
-                      className={`${styles.settingsSwitch} ${darkModeOn ? styles.settingsSwitchOn : ''}`}
-                      onClick={() => {
-                        const next = !darkModeOn;
-                        setDarkModeOn(next);
-                        setToast(next ? '🌙 深色模式已开启' : '☀️ 已切换回浅色模式');
-                      }}
-                      role="button"
-                      tabIndex={-1}
-                    >
-                      <span className={styles.settingsSwitchThumb} />
-                    </span>
-                  </div>
-                  <div className={styles.settingsItem}>
+                    <span className={styles.settingsItemVal}>未接入</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
+                  <button className={styles.settingsItem} type="button" onClick={() => setToast('消息偏好同步尚未接入')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconCyan}`}><i className="fa-solid fa-bell" /></span>
                     <span className={styles.settingsItemText}>消息通知</span>
-                    <span
-                      className={`${styles.settingsSwitch} ${notiOn ? styles.settingsSwitchOn : ''}`}
-                      onClick={() => {
-                        const next = !notiOn;
-                        setNotiOn(next);
-                        setToast(next ? '🔔 通知已开启' : '🔕 通知已关闭');
-                      }}
-                      role="button"
-                      tabIndex={-1}
-                    >
-                      <span className={styles.settingsSwitchThumb} />
-                    </span>
-                  </div>
+                    <span className={styles.settingsItemVal}>未接入</span>
+                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
+                  </button>
                   <button className={styles.settingsItem} type="button" onClick={() => setToast('语言切换开发中')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconAmber}`}><i className="fa-solid fa-globe" /></span>
                     <span className={styles.settingsItemText}>语言</span>
@@ -668,13 +673,11 @@ export default function MePage() {
                     className={styles.settingsItem}
                     type="button"
                     onClick={() => {
-                      setCacheSize('0 MB');
-                      setToast('🧹 缓存已清除');
+                      setToast('本地缓存清理尚未接入');
                     }}
                   >
                     <span className={`${styles.settingsItemIcon} ${styles.iconDangerSoft}`}><i className="fa-solid fa-broom" /></span>
                     <span className={styles.settingsItemText}>清除缓存</span>
-                    <span className={styles.settingsItemVal}>{cacheSize}</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
                 </div>
@@ -726,13 +729,17 @@ export default function MePage() {
               </div>
             </div>
             <div className={styles.searchResults} onClick={(event) => event.stopPropagation()} role="presentation">
-              {searchSections.length > 0 ? searchSections.map((section, sectionIndex) => (
+              {searchLoading ? (
+                <div className={styles.searchEmpty}>
+                  <i className="fa-solid fa-spinner fa-spin" />
+                  正在加载用户...
+                </div>
+              ) : searchSections.length > 0 ? searchSections.map((section, sectionIndex) => (
                 <div className={styles.searchSection} key={section.title}>
                   <div className={styles.searchSectionTitle} style={sectionIndex > 0 ? { marginTop: 16 } : undefined}>
                     {section.title}
                   </div>
                   {section.items.map((item) => {
-                    const added = item.isFriend || followedUsers[item.id];
                     return (
                       <button
                         className={styles.searchItem}
@@ -741,28 +748,19 @@ export default function MePage() {
                         onClick={() => {
                           setSearchOpen(false);
                           setSearchValue('');
-                          router.push(`/user/${encodeURIComponent(item.id)}`);
+                          router.push(`/user/${encodeURIComponent(item.uid || item.id)}`);
                         }}
                       >
-                        <img src={item.avatar} alt={item.name} />
+                        <img src={item.avatar || '/legacy/images/mascot/mouse-main.png'} alt={item.name} />
                         <div className={styles.searchItemInfo}>
                           <div className={styles.searchItemName}>{item.name}</div>
-                          <div className={styles.searchItemDesc}>{item.desc}</div>
+                          <div className={styles.searchItemDesc}>{buildSearchItemDesc(item)}</div>
                         </div>
-                        {added ? (
-                          <span className={`${styles.searchAction} ${styles.searchActionAdded}`}>{item.isFriend ? '已添加' : '已关注'}</span>
+                        {item.relation === 'none' ? (
+                          <span className={styles.searchAction}>{getSearchRelationLabel(item.relation)}</span>
                         ) : (
-                          <span
-                            className={styles.searchAction}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setFollowedUsers((prev) => ({ ...prev, [item.id]: true }));
-                              setToast(`✅ 已关注 ${item.name}`);
-                            }}
-                            role="button"
-                            tabIndex={-1}
-                          >
-                            <i className="fa-solid fa-user-plus" /> 关注
+                          <span className={`${styles.searchAction} ${styles.searchActionAdded}`}>
+                            {getSearchRelationLabel(item.relation)}
                           </span>
                         )}
                       </button>
@@ -772,7 +770,7 @@ export default function MePage() {
               )) : (
                 <div className={styles.searchEmpty}>
                   <i className="fa-solid fa-search" />
-                  未找到“{searchValue}”相关用户
+                  {searchValue.trim() ? `未找到“${searchValue}”相关用户` : '暂无可推荐的用户'}
                 </div>
               )}
             </div>
@@ -784,8 +782,8 @@ export default function MePage() {
             <div className={styles.shopModal} onClick={(event) => event.stopPropagation()} role="presentation">
               <div className={styles.shopModalHero}>
                 <div className={styles.shopModalHeroIcon}>🏪</div>
-                <div className={styles.shopModalHeroTitle}>开通商家身份</div>
-                <div className={styles.shopModalHeroDesc}>解锁完整竞猜能力与商品佣金能力</div>
+                <div className={styles.shopModalHeroTitle}>申请开通店铺</div>
+                <div className={styles.shopModalHeroDesc}>提交资料后等待审核，通过后自动开通店铺经营能力</div>
               </div>
               <div className={styles.shopModalPerks}>
                 <div className={styles.shopModalPerk}>
@@ -823,11 +821,10 @@ export default function MePage() {
                   type="button"
                   onClick={() => {
                     setShopModalOpen(false);
-                    setMerchantOpened(true);
-                    setToast('🎉 商家身份已开通！现在可以发布全类型竞猜了');
+                    router.push('/myshop');
                   }}
                 >
-                  🏪 立即开通商家身份
+                  🏪 去填写开店申请
                 </button>
                 <button className={styles.shopModalCancel} type="button" onClick={() => setShopModalOpen(false)}>
                   再想想

@@ -105,6 +105,7 @@ const openApiDocument = {
     { name: 'Health', description: '健康检查' },
     { name: 'Auth', description: '登录、用户资料、消息和社交' },
     { name: 'Guess', description: '竞猜相关接口' },
+    { name: 'Product', description: '商城商品接口' },
     { name: 'Order', description: '订单相关接口' },
     { name: 'Wallet', description: '余额流水接口' },
     { name: 'Warehouse', description: '仓库接口' },
@@ -177,6 +178,109 @@ const openApiDocument = {
           },
         },
       },
+      UserSummary: {
+        type: 'object',
+        required: ['id', 'uid', 'phone', 'name', 'role', 'coins'],
+        properties: {
+          id: { type: 'string', example: '1001' },
+          uid: { type: 'string', example: 'aZkLmNqP' },
+          phone: { type: 'string', example: '13800138000' },
+          name: { type: 'string', example: '优米用户' },
+          role: {
+            type: 'string',
+            enum: ['user', 'admin', 'shop_owner'],
+            example: 'shop_owner',
+          },
+          banned: { type: 'boolean', example: false },
+          coins: { type: 'integer', example: 128800 },
+          avatar: { type: 'string', nullable: true, example: 'https://example.com/avatar.png' },
+          level: { type: 'integer', example: 6 },
+          title: { type: 'string', nullable: true, example: '潮流猜手' },
+          signature: { type: 'string', nullable: true, example: '今天也要上分' },
+          gender: { type: 'string', nullable: true, example: 'male' },
+          birthday: { type: 'string', nullable: true, format: 'date', example: '1998-06-18' },
+          region: { type: 'string', nullable: true, example: 'Shanghai' },
+          shopName: { type: 'string', nullable: true, example: 'Umi Select' },
+          worksPrivacy: {
+            type: 'string',
+            enum: ['all', 'friends', 'me'],
+            example: 'friends',
+          },
+          favPrivacy: {
+            type: 'string',
+            enum: ['all', 'me'],
+            example: 'me',
+          },
+          followers: { type: 'integer', example: 128 },
+          following: { type: 'integer', example: 42 },
+          totalOrders: { type: 'integer', example: 123 },
+          winRate: { type: 'number', example: 62.5 },
+          totalGuess: { type: 'integer', example: 48 },
+          wins: { type: 'integer', example: 30 },
+          joinDate: {
+            type: 'string',
+            nullable: true,
+            format: 'date-time',
+            example: '2026-04-19T10:30:00.000Z',
+          },
+          shopVerified: { type: 'boolean', example: true },
+        },
+      },
+      UpdateUserBanPayload: {
+        type: 'object',
+        required: ['banned'],
+        properties: {
+          banned: { type: 'boolean', example: true },
+        },
+      },
+      UserListResult: {
+        type: 'object',
+        required: ['items', 'total', 'page', 'pageSize', 'summary'],
+        properties: {
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/UserSummary' },
+          },
+          total: { type: 'integer', example: 326 },
+          page: { type: 'integer', example: 1 },
+          pageSize: { type: 'integer', example: 20 },
+          summary: {
+            type: 'object',
+            required: ['totalUsers', 'verifiedUsers', 'bannedUsers'],
+            properties: {
+              totalUsers: { type: 'integer', example: 326 },
+              verifiedUsers: { type: 'integer', example: 48 },
+              bannedUsers: { type: 'integer', example: 3 },
+            },
+          },
+        },
+      },
+      PaginatedGuessListResult: {
+        type: 'object',
+        required: ['items', 'total', 'page', 'pageSize'],
+        properties: {
+          items: {
+            type: 'array',
+            items: { type: 'object', additionalProperties: true },
+          },
+          total: { type: 'integer', example: 42 },
+          page: { type: 'integer', example: 1 },
+          pageSize: { type: 'integer', example: 10 },
+        },
+      },
+      PaginatedOrderListResult: {
+        type: 'object',
+        required: ['items', 'total', 'page', 'pageSize'],
+        properties: {
+          items: {
+            type: 'array',
+            items: { type: 'object', additionalProperties: true },
+          },
+          total: { type: 'integer', example: 18 },
+          page: { type: 'integer', example: 1 },
+          pageSize: { type: 'integer', example: 10 },
+        },
+      },
       SendCodePayload: {
         type: 'object',
         required: ['phone', 'bizType'],
@@ -233,7 +337,16 @@ const openApiDocument = {
             example: '1998-06-18',
           },
           region: { type: 'string', nullable: true, example: 'Shanghai' },
-          shopName: { type: 'string', nullable: true, example: 'Joy Select' },
+          worksPrivacy: {
+            type: 'string',
+            enum: ['all', 'friends', 'me'],
+            example: 'friends',
+          },
+          favPrivacy: {
+            type: 'string',
+            enum: ['all', 'me'],
+            example: 'me',
+          },
         },
       },
       SendChatMessagePayload: {
@@ -255,6 +368,18 @@ const openApiDocument = {
           license: {
             type: 'string',
             example: 'https://example.com/license.png',
+          },
+        },
+      },
+      SubmitShopApplicationPayload: {
+        type: 'object',
+        required: ['shopName', 'categoryId', 'reason'],
+        properties: {
+          shopName: { type: 'string', example: 'Joy Select' },
+          categoryId: { type: 'string', example: '12' },
+          reason: {
+            type: 'string',
+            example: '主营零食好物，希望开通店铺后承接竞猜和商品销售。',
           },
         },
       },
@@ -535,11 +660,59 @@ const openApiDocument = {
         },
       },
     },
+    '/api/auth/me/summary': {
+      get: {
+        tags: ['Auth'],
+        summary: '获取我的页汇总数据',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              activeOrderCount: { type: 'integer', example: 2 },
+              warehouseItemCount: { type: 'integer', example: 8 },
+              availableCouponCount: { type: 'integer', example: 3 },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/users/search': {
+      get: {
+        tags: ['Auth'],
+        summary: '搜索或推荐用户',
+        security: bearerSecurity,
+        parameters: [
+          {
+            name: 'q',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+            },
+            description: '搜索关键词，支持昵称、签名、优米号、店铺名',
+          },
+        ],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
     '/api/auth/users/{id}': {
       get: {
         tags: ['Auth'],
         summary: '获取用户资料',
-        parameters: [pathIdParameter('id', '用户 ID')],
+        parameters: [pathIdParameter('id', '用户 UID')],
         responses: {
           200: successResponse({
             type: 'object',
@@ -548,9 +721,106 @@ const openApiDocument = {
               id: '1',
               name: 'Joy User',
               signature: '有点准',
+              worksVisible: false,
+              likedVisible: true,
             },
           }),
           404: errorResponse(404, '用户不存在'),
+        },
+      },
+    },
+    '/api/auth/users/{id}/activity': {
+      get: {
+        tags: ['Auth'],
+        summary: '获取用户公开动态',
+        parameters: [pathIdParameter('id', '用户 UID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              worksVisible: { type: 'boolean', example: true },
+              likedVisible: { type: 'boolean', example: false },
+              works: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+              likes: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          404: errorResponse(404, '用户不存在'),
+        },
+      },
+    },
+    '/api/auth/users/{id}/follow': {
+      post: {
+        tags: ['Auth'],
+        summary: '关注用户',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '用户内部 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '关注失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+      delete: {
+        tags: ['Auth'],
+        summary: '取消关注用户',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '用户内部 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '取消关注失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/friends/requests/{id}/accept': {
+      post: {
+        tags: ['Auth'],
+        summary: '接受好友申请',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '申请发起人用户内部 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '接受好友申请失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/friends/requests/{id}/reject': {
+      post: {
+        tags: ['Auth'],
+        summary: '忽略好友申请',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '申请发起人用户内部 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '忽略好友申请失败'),
+          401: errorResponse(401, '请先登录'),
         },
       },
     },
@@ -601,6 +871,23 @@ const openApiDocument = {
         },
       },
     },
+    '/api/auth/notifications/{id}/read': {
+      post: {
+        tags: ['Auth'],
+        summary: '单条通知标记已读',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '通知 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
     '/api/auth/social': {
       get: {
         tags: ['Auth'],
@@ -628,6 +915,300 @@ const openApiDocument = {
               },
             },
           }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/feed': {
+      get: {
+        tags: ['Auth'],
+        summary: '获取社区动态流',
+        security: bearerSecurity,
+        parameters: [
+          {
+            name: 'tab',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: ['recommend', 'follow'],
+              default: 'recommend',
+            },
+            description: '动态流类型',
+          },
+        ],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/discovery': {
+      get: {
+        tags: ['Auth'],
+        summary: '获取社区发现区数据',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              hero: { type: 'object', nullable: true, additionalProperties: true },
+              hotTopics: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/search': {
+      get: {
+        tags: ['Auth'],
+        summary: '搜索社区内容',
+        security: bearerSecurity,
+        parameters: [
+          {
+            name: 'q',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: '搜索关键词',
+          },
+        ],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              posts: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+              users: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/posts': {
+      post: {
+        tags: ['Auth'],
+        summary: '发布社区动态',
+        security: bearerSecurity,
+        requestBody: jsonRequestBody({
+          type: 'object',
+          required: ['content'],
+          properties: {
+            content: { type: 'string', example: '今天这波竞猜我看好黄瓜味反超。' },
+            tag: { type: 'string', nullable: true, example: '竞猜心得' },
+            scope: { type: 'string', enum: ['public', 'followers', 'private'], example: 'public' },
+            guessId: { type: 'string', nullable: true, example: '1' },
+            location: { type: 'string', nullable: true, example: '北京·朝阳区' },
+            images: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+        }),
+        responses: {
+          200: successResponse({
+            type: 'object',
+            additionalProperties: true,
+          }),
+          400: errorResponse(400, '发布动态失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/posts/{id}/repost': {
+      post: {
+        tags: ['Auth'],
+        summary: '转发社区动态',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '动态 ID')],
+        requestBody: jsonRequestBody({
+          type: 'object',
+          properties: {
+            content: { type: 'string', example: '这条判断我认同。' },
+            scope: { type: 'string', enum: ['public', 'followers', 'private'], example: 'public' },
+            location: { type: 'string', nullable: true, example: '北京·朝阳区' },
+            images: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+        }),
+        responses: {
+          200: successResponse({
+            type: 'object',
+            additionalProperties: true,
+          }),
+          400: errorResponse(400, '转发失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/posts/{id}': {
+      get: {
+        tags: ['Auth'],
+        summary: '获取社区动态详情',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '动态 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              post: { type: 'object', additionalProperties: true },
+              comments: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+              related: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+          404: errorResponse(404, '动态不存在或不可见'),
+        },
+      },
+    },
+    '/api/auth/community/posts/{id}/comments': {
+      post: {
+        tags: ['Auth'],
+        summary: '发表评论',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '动态 ID')],
+        requestBody: jsonRequestBody({
+          type: 'object',
+          required: ['content'],
+          properties: {
+            content: { type: 'string', example: '这一条我也认同。' },
+            parentId: { type: 'string', nullable: true, example: '12' },
+          },
+        }),
+        responses: {
+          200: successResponse({
+            type: 'object',
+            additionalProperties: true,
+          }),
+          400: errorResponse(400, '发表评论失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/comments/{id}/like': {
+      post: {
+        tags: ['Auth'],
+        summary: '点赞社区评论',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '评论 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '评论点赞失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+      delete: {
+        tags: ['Auth'],
+        summary: '取消点赞社区评论',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '评论 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '取消评论点赞失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/posts/{id}/like': {
+      post: {
+        tags: ['Auth'],
+        summary: '点赞社区动态',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '动态 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '点赞失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+      delete: {
+        tags: ['Auth'],
+        summary: '取消点赞社区动态',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '动态 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '取消点赞失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/auth/community/posts/{id}/bookmark': {
+      post: {
+        tags: ['Auth'],
+        summary: '收藏社区动态',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '动态 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '收藏失败'),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+      delete: {
+        tags: ['Auth'],
+        summary: '取消收藏社区动态',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '动态 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+            },
+          }),
+          400: errorResponse(400, '取消收藏失败'),
           401: errorResponse(401, '请先登录'),
         },
       },
@@ -799,6 +1380,121 @@ const openApiDocument = {
         },
       },
     },
+    '/api/products': {
+      get: {
+        tags: ['Product'],
+        summary: '获取商城商品列表',
+        parameters: [
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', example: 20, minimum: 1, maximum: 50 },
+            description: '返回商品数量，默认 20，最大 50',
+          },
+          {
+            name: 'q',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', example: '乐事' },
+            description: '按商品名、品牌名或类目搜索',
+          },
+          {
+            name: 'categoryId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', example: '301' },
+            description: '按商品分类 ID 过滤，分类来源为 category.biz_type=30',
+          },
+        ],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', example: '101' },
+                    name: { type: 'string', example: '乐事薯片原味分享装' },
+                    categoryId: { type: 'string', nullable: true, example: '301' },
+                    category: { type: 'string', example: '食品饮料' },
+                    price: { type: 'number', example: 19.9 },
+                    originalPrice: { type: 'number', example: 29.9 },
+                    discountAmount: { type: 'number', example: 10 },
+                    sales: { type: 'integer', example: 1860 },
+                    rating: { type: 'number', example: 4.8 },
+                    stock: { type: 'integer', example: 240 },
+                    img: { type: 'string', nullable: true, example: 'https://example.com/lays.jpg' },
+                    tag: { type: 'string', example: '特惠' },
+                    miniTag: { type: 'string', example: 'mt-sale' },
+                    height: { type: 'integer', example: 192 },
+                    brand: { type: 'string', example: '乐事' },
+                    guessPrice: { type: 'number', example: 9.9 },
+                    status: { type: 'string', example: 'active' },
+                    shopName: { type: 'string', nullable: true, example: '乐事优选店' },
+                    tags: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      example: ['限时特惠', '零食必买'],
+                    },
+                    collab: { type: 'string', nullable: true, example: '乐事 × 优米精选' },
+                    isNew: { type: 'boolean', example: true },
+                  },
+                },
+              },
+              categories: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', example: '301' },
+                    name: { type: 'string', example: '食品饮料' },
+                    iconUrl: { type: 'string', nullable: true, example: 'https://example.com/cat-food.png' },
+                    parentId: { type: 'string', nullable: true, example: '300' },
+                    level: { type: 'integer', example: 2 },
+                    sort: { type: 'integer', example: 10 },
+                    count: { type: 'integer', example: 18 },
+                  },
+                },
+              },
+            },
+          }),
+          500: errorResponse(500, '读取商品列表失败'),
+        },
+      },
+    },
+    '/api/products/{id}': {
+      get: {
+        tags: ['Product'],
+        summary: '获取商品详情',
+        parameters: [pathIdParameter('id', '商品 ID')],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              product: { type: 'object', additionalProperties: true },
+              activeGuess: {
+                anyOf: [
+                  { type: 'object', additionalProperties: true },
+                  { type: 'null' },
+                ],
+              },
+              warehouseItems: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+              recommendations: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          404: errorResponse(404, '商品不存在'),
+        },
+      },
+    },
     '/api/orders': {
       get: {
         tags: ['Order'],
@@ -926,6 +1622,44 @@ const openApiDocument = {
         },
       },
     },
+    '/api/warehouse/admin/virtual': {
+      get: {
+        tags: ['Warehouse'],
+        summary: '管理台获取虚拟仓库列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/warehouse/admin/physical': {
+      get: {
+        tags: ['Warehouse'],
+        summary: '管理台获取实体仓库列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
     '/api/admin/dashboard/stats': {
       get: {
         tags: ['Admin'],
@@ -935,6 +1669,11 @@ const openApiDocument = {
           200: successResponse({
             type: 'object',
             properties: {
+              generatedAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2026-04-19T08:30:00.000Z',
+              },
               users: { type: 'integer', example: 12840 },
               products: { type: 'integer', example: 218 },
               activeGuesses: { type: 'integer', example: 18 },
@@ -1033,17 +1772,122 @@ const openApiDocument = {
         tags: ['Admin'],
         summary: '管理台用户列表',
         security: bearerSecurity,
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', example: 1 },
+          },
+          {
+            name: 'pageSize',
+            in: 'query',
+            schema: { type: 'integer', example: 20 },
+          },
+          {
+            name: 'keyword',
+            in: 'query',
+            schema: { type: 'string', example: '1380013' },
+          },
+          {
+            name: 'role',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['all', 'user', 'shop_owner', 'banned'],
+              example: 'shop_owner',
+            },
+          },
+        ],
+        responses: {
+          200: successResponse({ $ref: '#/components/schemas/UserListResult' }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/users/{id}': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台用户详情',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '用户 ID')],
+        responses: {
+          200: successResponse({ $ref: '#/components/schemas/UserSummary' }),
+          401: errorResponse(401, '请先登录'),
+          404: errorResponse(404, '用户不存在'),
+        },
+      },
+    },
+    '/api/admin/users/{id}/guesses': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台用户竞猜记录',
+        security: bearerSecurity,
+        parameters: [
+          pathIdParameter('id', '用户 ID'),
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', example: 1 },
+          },
+          {
+            name: 'pageSize',
+            in: 'query',
+            schema: { type: 'integer', example: 10 },
+          },
+        ],
+        responses: {
+          200: successResponse({ $ref: '#/components/schemas/PaginatedGuessListResult' }),
+          401: errorResponse(401, '请先登录'),
+          404: errorResponse(404, '用户不存在'),
+        },
+      },
+    },
+    '/api/admin/users/{id}/orders': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台用户订单记录',
+        security: bearerSecurity,
+        parameters: [
+          pathIdParameter('id', '用户 ID'),
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', example: 1 },
+          },
+          {
+            name: 'pageSize',
+            in: 'query',
+            schema: { type: 'integer', example: 10 },
+          },
+        ],
+        responses: {
+          200: successResponse({ $ref: '#/components/schemas/PaginatedOrderListResult' }),
+          401: errorResponse(401, '请先登录'),
+          404: errorResponse(404, '用户不存在'),
+        },
+      },
+    },
+    '/api/admin/users/{id}/ban': {
+      put: {
+        tags: ['Admin'],
+        summary: '管理台封禁或解封用户',
+        security: bearerSecurity,
+        parameters: [pathIdParameter('id', '用户 ID')],
+        requestBody: jsonRequestBody(
+          { $ref: '#/components/schemas/UpdateUserBanPayload' },
+          '封禁状态变更',
+        ),
         responses: {
           200: successResponse({
             type: 'object',
+            required: ['id', 'banned'],
             properties: {
-              items: {
-                type: 'array',
-                items: { type: 'object', additionalProperties: true },
-              },
+              id: { type: 'string', example: '1001' },
+              banned: { type: 'boolean', example: true },
             },
           }),
           401: errorResponse(401, '请先登录'),
+          404: errorResponse(404, '用户不存在'),
         },
       },
     },
@@ -1085,6 +1929,408 @@ const openApiDocument = {
         },
       },
     },
+    '/api/admin/products': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台商品列表',
+        security: bearerSecurity,
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
+          { name: 'pageSize', in: 'query', schema: { type: 'integer', example: 20 } },
+          { name: 'keyword', in: 'query', schema: { type: 'string', example: 'Panda' } },
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['all', 'active', 'low_stock', 'paused', 'off_shelf', 'disabled'],
+              example: 'active',
+            },
+          },
+        ],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            required: ['items', 'total', 'page', 'pageSize'],
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              total: { type: 'integer', example: 128 },
+              page: { type: 'integer', example: 1 },
+              pageSize: { type: 'integer', example: 20 },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/products/brand-library': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台品牌商品库',
+        security: bearerSecurity,
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
+          { name: 'pageSize', in: 'query', schema: { type: 'integer', example: 20 } },
+          { name: 'keyword', in: 'query', schema: { type: 'string', example: 'Nike' } },
+          {
+            name: 'status',
+            in: 'query',
+            schema: { type: 'string', enum: ['all', 'active', 'disabled'], example: 'active' },
+          },
+        ],
+        responses: {
+          200: successResponse({
+            type: 'object',
+            required: ['items', 'total', 'page', 'pageSize'],
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              total: { type: 'integer', example: 68 },
+              page: { type: 'integer', example: 1 },
+              pageSize: { type: 'integer', example: 20 },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/guesses/friends': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台好友竞猜列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/pk': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台 PK 对战列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/orders/transactions': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台交易流水',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/orders/logistics': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台物流列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/orders/consign': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台寄售列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/shops': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台店铺列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/shops/applies': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台开店审核列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/brands': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台品牌方列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/brands/applies': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台品牌入驻审核列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/brands/auth-applies': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台品牌授权审核列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/brands/auth-records': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台品牌授权记录',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/shops/products': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台店铺授权商品列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/product-auth': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台商品授权列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/product-auth/records': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台商品授权记录',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/notifications': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台通知批次列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+              basis: { type: 'string', example: '按通知内容聚合后的已发送批次视图' },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/chats': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台聊天会话列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+              basis: { type: 'string', example: '按 chat_message 聚合的双人会话视图' },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/system-users': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台系统用户列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/roles': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台角色列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/permissions/matrix': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台权限矩阵',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              roles: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              modules: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
+    '/api/admin/categories': {
+      get: {
+        tags: ['Admin'],
+        summary: '管理台分类列表',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              summary: { type: 'object', additionalProperties: true },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+        },
+      },
+    },
     '/api/shops/me': {
       get: {
         tags: ['Shop'],
@@ -1112,6 +2358,73 @@ const openApiDocument = {
           }),
           401: errorResponse(401, '请先登录'),
           500: errorResponse(500, '读取店铺失败'),
+        },
+      },
+    },
+    '/api/shops/me/status': {
+      get: {
+        tags: ['Shop'],
+        summary: '获取我的开店状态',
+        security: bearerSecurity,
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              status: {
+                type: 'string',
+                enum: ['none', 'pending', 'rejected', 'active'],
+                example: 'pending',
+              },
+              shop: {
+                oneOf: [
+                  { type: 'object', additionalProperties: true },
+                  { type: 'null' },
+                ],
+              },
+              latestApplication: {
+                oneOf: [
+                  { type: 'object', additionalProperties: true },
+                  { type: 'null' },
+                ],
+              },
+              categories: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['id', 'name'],
+                  properties: {
+                    id: { type: 'string', example: '12' },
+                    name: { type: 'string', example: '零食百货' },
+                  },
+                },
+              },
+            },
+          }),
+          401: errorResponse(401, '请先登录'),
+          500: errorResponse(500, '读取开店状态失败'),
+        },
+      },
+    },
+    '/api/shops/apply': {
+      post: {
+        tags: ['Shop'],
+        summary: '提交开店申请',
+        security: bearerSecurity,
+        requestBody: jsonRequestBody({
+          $ref: '#/components/schemas/SubmitShopApplicationPayload',
+        }),
+        responses: {
+          200: successResponse({
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: '301' },
+              applyNo: { type: 'string', example: 'SAa1b2c3d4e5f6' },
+              status: { type: 'string', example: 'pending' },
+            },
+          }),
+          400: errorResponse(400, '请填写店铺名称'),
+          401: errorResponse(401, '请先登录'),
+          500: errorResponse(500, '提交开店申请失败'),
         },
       },
     },

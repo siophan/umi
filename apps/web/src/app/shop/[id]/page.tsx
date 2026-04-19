@@ -8,13 +8,6 @@ import styles from './page.module.css';
 type TabKey = 'all' | 'hot' | 'guess' | 'new';
 type FilterKey = 'default' | 'sales' | 'price' | 'rating';
 
-const coupons = [
-  { value: 5, name: '新人专享', cond: '满29可用' },
-  { value: 10, name: '店铺满减', cond: '满59可用' },
-  { value: 20, name: '品牌大额', cond: '满99可用' },
-  { value: 50, name: '限时特惠', cond: '满199可用' },
-];
-
 function formatNum(value: number) {
   if (value >= 10000) {
     return `${(value / 10000).toFixed(1)}万`;
@@ -48,7 +41,6 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
   const [filter, setFilter] = useState<FilterKey>('default');
   const [followed, setFollowed] = useState(false);
   const [shopFavorited, setShopFavorited] = useState(false);
-  const [claimedCoupons, setClaimedCoupons] = useState<number[]>([]);
   const [likedProducts, setLikedProducts] = useState<string[]>([]);
   const [navSolid, setNavSolid] = useState(false);
   const [toast, setToast] = useState('');
@@ -190,6 +182,15 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
 
   const scoreCircumference = 2 * Math.PI * 22;
   const scoreOffset = scoreCircumference * (1 - Number(scoreAverage) / 5);
+  const shopFacts = useMemo(
+    () => [
+      { value: `${shopData?.shop?.brandAuthCount ?? 0}`, name: '品牌授权', desc: '已通过审核品牌数' },
+      { value: `${shopProducts.length}`, name: '在售商品', desc: '当前店铺商品数量' },
+      { value: avgRating, name: '综合评分', desc: '根据当前商品数据生成' },
+      { value: openedYear, name: '开店时间', desc: `${meta.city} · 店铺经营时间` },
+    ],
+    [avgRating, meta.city, openedYear, shopData?.shop?.brandAuthCount, shopProducts.length],
+  );
 
   useEffect(() => {
     const onScroll = () => setNavSolid(window.scrollY > 80);
@@ -201,15 +202,6 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     document.title = `${meta.full} - 优米`;
   }, [meta.full]);
-
-  function claimCoupon(value: number) {
-    if (claimedCoupons.includes(value)) {
-      return;
-    }
-
-    setClaimedCoupons((current) => [...current, value]);
-    showToast(`🎫 ¥${value}优惠券已领取`);
-  }
 
   function toggleFollow() {
     setFollowed((current) => {
@@ -238,6 +230,13 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
       showToast('❤️ 已收藏');
       return [...current, productId];
     });
+  }
+
+  function jumpToMainContent(nextTab: TabKey) {
+    setTab(nextTab);
+    window.setTimeout(() => {
+      window.scrollTo({ top: 420, behavior: 'smooth' });
+    }, 50);
   }
 
   if (loading) {
@@ -333,7 +332,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
 
           <div className={styles.heroTags}>
             <span className={styles.heroTag}><i className="fa-solid fa-crown" style={{ fontSize: 9, color: '#FFD700' }} /> 品牌授权</span>
-            <span className={styles.heroTag}><i className="fa-solid fa-truck-fast" style={{ fontSize: 9 }} /> 顺丰包邮</span>
+            <span className={styles.heroTag}><i className="fa-solid fa-cubes-stacked" style={{ fontSize: 9 }} /> 在售商品 {shopProducts.length}</span>
             <span className={styles.heroTag}>
               <i className="fa-solid fa-location-dot" style={{ fontSize: 9 }} /> {meta.city} · {openedYear}
             </span>
@@ -394,20 +393,16 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
       </section>
 
       <section className={styles.couponBar}>
-        {coupons.map((item) => (
-          <button type="button" key={item.name} className={styles.coupon} onClick={() => claimCoupon(item.value)}>
+        {shopFacts.map((item) => (
+          <div key={item.name} className={styles.coupon}>
             <div className={styles.couponAmt}>
-              <small>¥</small>
               {item.value}
             </div>
             <div>
               <div className={styles.couponName}>{item.name}</div>
-              <div className={styles.couponCond}>{item.cond}</div>
+              <div className={styles.couponCond}>{item.desc}</div>
             </div>
-            <div className={`${styles.couponBtn} ${claimedCoupons.includes(item.value) ? styles.couponBtnClaimed : ''}`}>
-              {claimedCoupons.includes(item.value) ? '已领取' : '领取'}
-            </div>
-          </button>
+          </div>
         ))}
       </section>
 
@@ -431,13 +426,13 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
         <button
           type="button"
           className={`${styles.activityCard} ${styles.activityPurple}`}
-          onClick={() => showToast('活动即将开启')}
+          onClick={() => jumpToMainContent('new')}
         >
           <div className={styles.activityIcon}>🎁</div>
           <div className={styles.activityBody}>
-            <div className={`${styles.activityTitle} ${styles.activityTitlePurple}`}>会员专属福利</div>
+            <div className={`${styles.activityTitle} ${styles.activityTitlePurple}`}>店铺经营概览</div>
             <div className={`${styles.activityDesc} ${styles.activityDescPurple}`}>
-              关注店铺享额外折扣 · 新品优先体验
+              {shopData?.shop?.brandAuthCount ?? 0} 个授权品牌 · {shopProducts.length} 件在售商品
             </div>
           </div>
           <div className={`${styles.activityArrow} ${styles.activityArrowPurple}`}><i className="fa-solid fa-chevron-right" /></div>
@@ -715,7 +710,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
           <button
             className={styles.primaryBtn}
             type="button"
-            onClick={() => setTab(shopGuess.length ? 'guess' : 'all')}
+            onClick={() => jumpToMainContent(shopGuess.length ? 'guess' : 'all')}
           >
             {shopGuess.length ? '🎯 参与竞猜' : '🛒 全部商品'}
           </button>

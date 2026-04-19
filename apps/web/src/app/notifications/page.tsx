@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { fetchNotifications, markAllNotificationsRead } from '../../lib/api';
+import type { NotificationItem } from '@joy/shared';
+
+import { fetchNotifications, markAllNotificationsRead, markNotificationRead } from '../../lib/api';
 import styles from './page.module.css';
 
 const icons: Record<'guess' | 'social' | 'system' | 'order', string> = {
@@ -16,16 +18,32 @@ const icons: Record<'guess' | 'social' | 'system' | 'order', string> = {
 export default function NotificationsPage() {
   const router = useRouter();
   const [tab, setTab] = useState<'all' | 'guess' | 'social' | 'system' | 'order'>('all');
-  const [items, setItems] = useState<Array<{
-    id: number;
-    type: 'guess' | 'social' | 'system' | 'order';
-    read: boolean;
-    title: string;
-    content: string;
-    createdAt: string;
-  }>>([]);
+  const [items, setItems] = useState<NotificationItem[]>([]);
   const [toast, setToast] = useState('');
   const [ready, setReady] = useState(false);
+
+  function formatTime(value: string) {
+    const timestamp = new Date(value).getTime();
+    if (Number.isNaN(timestamp)) {
+      return value;
+    }
+
+    const diff = Date.now() - timestamp;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diff < minute) {
+      return '刚刚';
+    }
+    if (diff < hour) {
+      return `${Math.max(1, Math.floor(diff / minute))}分钟前`;
+    }
+    if (diff < day) {
+      return `${Math.max(1, Math.floor(diff / hour))}小时前`;
+    }
+    return new Date(value).toISOString().slice(0, 10);
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -58,8 +76,18 @@ export default function NotificationsPage() {
     [items, tab],
   );
 
-  function handleMarkRead(id: number) {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, read: true } : item)));
+  async function handleMarkRead(item: NotificationItem) {
+    if (item.read) {
+      return;
+    }
+
+    setItems((prev) => prev.map((entry) => (entry.id === item.id ? { ...entry, read: true } : entry)));
+
+    try {
+      await markNotificationRead(item.id);
+    } catch {
+      setItems((prev) => prev.map((entry) => (entry.id === item.id ? { ...entry, read: false } : entry)));
+    }
   }
 
   async function handleMarkAllRead() {
@@ -113,7 +141,7 @@ export default function NotificationsPage() {
           <article
             key={item.id}
             className={`${styles.item} ${item.read ? '' : styles.unread}`}
-            onClick={() => handleMarkRead(item.id)}
+            onClick={() => void handleMarkRead(item)}
           >
             <div className={`${styles.icon} ${styles[item.type]}`}>
               <span>{icons[item.type]}</span>
@@ -121,7 +149,7 @@ export default function NotificationsPage() {
             <div className={styles.info}>
               <div className={styles.itemTitle}>{item.title}</div>
               <div className={styles.content}>{item.content}</div>
-              <div className={styles.time}>{item.createdAt}</div>
+              <div className={styles.time}>{formatTime(item.createdAt)}</div>
             </div>
           </article>
         ))}

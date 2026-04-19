@@ -24,7 +24,7 @@
 
 ### `user_profile`
 
-`id`, `user_id`, `name`, `avatar_url`, `signature`, `gender`, `birthday`, `region`, `created_at`, `updated_at`
+`id`, `user_id`, `name`, `avatar_url`, `signature`, `gender`, `birthday`, `region`, `works_privacy`, `fav_privacy`, `created_at`, `updated_at`
 
 ### `auth_session`
 
@@ -72,6 +72,30 @@
 
 `id`, `biz_type`, `parent_id`, `level`, `path`, `name`, `icon_url`, `description`, `sort`, `status`, `created_at`, `updated_at`
 
+说明：
+
+- 这是当前系统的分类主数据表，不是通用文案表
+- 需要结合 `biz_type` 才能正确理解一条分类记录属于哪个业务域
+- 当前约定：
+  - `10` = 品牌分类
+  - `20` = 店铺经营分类
+  - `30` = 商品分类
+  - `40` = 竞猜分类
+- `parent_id / level / path` 用于分类树
+- 别的线程如果只知道“某张表有 `category_id`”，先回到这里看该表对应哪个 `biz_type`
+
+当前主要对应关系：
+
+- `brand.category_id` / `brand_apply.category_id` -> `biz_type = 10`
+- `shop.category_id` / `shop_apply.category_id` -> `biz_type = 20`
+- `brand_product.category_id` -> `biz_type = 30`
+- `guess.category_id` -> `biz_type = 40`
+
+补充：
+
+- 早期占位分类已经清理，不要再把 `零食品牌`、`零食店铺`、`膨化零食`、`零食竞猜` 这类旧测试值当成当前事实
+- 当前本地测试库已经补入一批按老系统语义整理过的标准分类种子，可直接用于页面联调
+
 ### `brand`
 
 `id`, `name`, `logo_url`, `category_id`, `contact_name`, `contact_phone`, `description`, `status`, `created_at`, `updated_at`
@@ -95,6 +119,26 @@
 ### `shop_brand_auth`
 
 `id`, `auth_no`, `shop_id`, `brand_id`, `auth_type`, `auth_scope`, `scope_value`, `status`, `granted_at`, `expire_at`, `expired_at`, `created_at`, `updated_at`
+
+说明：
+
+- 这是“生效后的店铺品牌授权关系表”
+- 它表达的是店铺当前已经拿到的授权，不是申请过程
+- 申请过程看 `shop_brand_auth_apply`
+- 判断店铺能否经营某品牌，先看这里
+
+接手时重点看：
+
+- `auth_type`
+  授权类型，如普通/独家/试用
+- `auth_scope`
+  授权范围，如全品牌/指定类目/指定商品
+- `scope_value`
+  授权范围扩展值
+- `status`
+  当前授权是否生效
+- `expire_at`
+  授权计划到期时间
 
 ### `shop_brand_auth_apply`
 
@@ -154,6 +198,10 @@
 
 `id`, `target_type`, `target_id`, `user_id`, `parent_id`, `content`, `created_at`, `updated_at`
 
+### `comment_interaction`
+
+`id`, `user_id`, `comment_id`, `interaction_type`, `created_at`, `updated_at`
+
 ## 订单、履约、优惠券、权益
 
 ### `order`
@@ -187,6 +235,21 @@
 ### `coupon_grant_batch`
 
 `id`, `batch_no`, `template_id`, `source_type`, `operator_id`, `target_user_count`, `granted_count`, `status`, `note`, `created_at`, `updated_at`
+
+说明：
+
+- 这是“发券动作表”，不是模板表，也不是用户券表
+- 一条记录代表一次批量发券动作
+- 它用来回答“这批券是哪次发的、谁发的、发了多少”
+
+接手时默认这样理解三层关系：
+
+- `coupon_template`
+  券规则
+- `coupon_grant_batch`
+  发券动作
+- `coupon`
+  用户实际持有的券
 
 ### `coupon`
 
@@ -241,6 +304,25 @@
 ### `leaderboard_entry`
 
 `id`, `board_type`, `period_type`, `period_value`, `user_id`, `rank_no`, `score`, `extra_json`, `created_at`, `updated_at`
+
+说明：
+
+- 这是“排行榜结果表”
+- 一条记录表示：某个榜单、某个周期、某个用户的一条结果
+- 它不负责定义榜单规则，也不存用户资料快照
+
+接手时重点理解：
+
+- `board_type`
+  是榜单类型，不是字符串榜单名
+- `period_type + period_value`
+  一起定义榜单周期
+- `rank_no`
+  表示该用户在这一期榜单里的排名
+- `score`
+  表示该榜单采用的分值
+- `extra_json`
+  用来放附加指标，比如胜场、胜率、邀请数
 
 ### `post`
 

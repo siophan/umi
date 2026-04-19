@@ -5,7 +5,10 @@
 进入这个项目的新线程，先按这个顺序建立上下文：
 
 - [docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
+- [docs/schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md)
 - [docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+- [docs/ui-spec.md](/Users/ezreal/Downloads/joy/umi/docs/ui-spec.md)
+- [docs/flows.md](/Users/ezreal/Downloads/joy/umi/docs/flows.md)
 - [README.md](/Users/ezreal/Downloads/joy/umi/README.md)
 
 如果任务和数据库无关，再按对应模块继续下钻。
@@ -23,6 +26,8 @@
 - 数据库结构入口：[docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
 - 真实表字段速查：[docs/schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md)
 - 状态编码入口：[docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+- UI 约束入口：[docs/ui-spec.md](/Users/ezreal/Downloads/joy/umi/docs/ui-spec.md)
+- 业务流程入口：[docs/flows.md](/Users/ezreal/Downloads/joy/umi/docs/flows.md)
 - 当前线程接手说明：[AGENTS.md](/Users/ezreal/Downloads/joy/umi/AGENTS.md)
 - 当前工作区说明：[README.md](/Users/ezreal/Downloads/joy/umi/README.md)
 - 老系统后端：[/Users/ezreal/Downloads/joy/backend](/Users/ezreal/Downloads/joy/backend)
@@ -51,6 +56,19 @@
 
 新线程如果没有特别说明，优先基于 `umi/` 下的代码和文档工作。
 
+## Current UI Rules
+
+- UI 任务默认先读 [docs/ui-spec.md](/Users/ezreal/Downloads/joy/umi/docs/ui-spec.md)
+- 用户端对齐仍以 [docs/ui-rules.md](/Users/ezreal/Downloads/joy/umi/docs/ui-rules.md) 和老系统 `frontend/` 为参考
+- 不允许从页面现状反推产品要求
+- 不允许因为缺说明就自行重做结构、筛选器、流程步骤
+
+## Current Flow Rules
+
+- 流程判断默认先读 [docs/flows.md](/Users/ezreal/Downloads/joy/umi/docs/flows.md)
+- 不允许从单个页面文案反推完整业务流程
+- 不允许把老系统局部实现当新系统最终流程
+
 ## Current DB Rules
 
 - 当前数据库事实来源只看 `umi/docs/`
@@ -76,6 +94,11 @@
 - 成就配置：`achievement_config`
 - 举报记录：`report_item`
 - 后台 RBAC：`admin_user -> admin_user_role -> admin_role -> admin_role_permission -> admin_permission`
+
+当前本地测试库还已经补了较完整的测试数据：
+
+- `uid_code = DOACgEkT` 的用户下，已经有较多订单、竞猜、仓库、动态、通知、聊天数据
+- `category` 表已经补入按老系统语义整理过的标准分类池
 
 这轮补强过的关键字段：
 

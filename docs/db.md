@@ -2,7 +2,7 @@
 
 ## 概览
 
-当前文档对应 `joy-dev` 在 2026-04-19 的最新结构。
+当前文档对应本地测试库 `joy-test` 在 2026-04-19 的最新结构。
 
 ## TL;DR
 
@@ -58,6 +58,33 @@
   - `shop_apply`
 - 分类名称、图标、排序、状态统一从 `category` 表维护
 - `category.parent_id / level / path` 用于表达分类树
+- 当前本地测试库已经补入一批按老系统语义整理的标准分类种子，覆盖：
+  - 品牌分类
+  - 店铺经营分类
+  - 商品分类
+  - 竞猜分类
+- 早期测试占位分类（如 `零食品牌`、`零食店铺`、`膨化零食`、`零食竞猜`、`GuessCat-*`、`PublicShopCat-*`）已清理，不再作为当前事实
+
+`category` 这张表当前的职责不是“随便放一些分类文案”，而是整个系统的分类主数据表，承担 4 个业务域的统一分类来源：
+
+- `biz_type = 10`
+  品牌分类，给 `brand` / `brand_apply` 用
+- `biz_type = 20`
+  店铺经营分类，给 `shop` / `shop_apply` 用
+- `biz_type = 30`
+  商品分类，给 `brand_product` 用，后续 `product` 也应通过品牌商品间接继承
+- `biz_type = 40`
+  竞猜分类，给 `guess` 用
+
+别的线程在看这张表时，默认按下面这几个原则理解：
+
+1. 它不是一个“全站所有地方都能混用”的万能字典表。
+2. 同名分类如果跨业务域复用，必须靠不同 `biz_type` 隔离语义。
+3. `brand_product.category_id` 和 `guess.category_id` 即使名字看起来接近，也不代表可互换。
+4. 如果页面要新增分类，优先先判断它属于哪个业务域，再往对应 `biz_type` 下加，不要直接复用别的域的分类。
+5. 如果只是页面展示标签，而不是主业务分类，不要直接塞进 `category`。
+
+当前 `category` 表更像“带业务域隔离的分类主数据表”，不是旧系统那种自由文本分类字段的简单替代。
 
 ### 编码
 
@@ -166,6 +193,7 @@
 | --- | --- |
 | `post` | 社区动态主表 |
 | `post_interaction` | 帖子互动关系表 |
+| `comment_interaction` | 评论互动关系表 |
 | `report_item` | 举报记录表 |
 | `notification` | 用户通知表 |
 | `chat_conversation` | 用户私聊会话表 |
@@ -207,6 +235,28 @@
 - `shop` 维护店铺
 - `product` 维护店铺在售商品
 - `shop_brand_auth` 表示店铺对品牌的授权关系
+- `category` 为品牌、店铺、商品、竞猜四条链路提供分类主数据
+
+`shop_brand_auth` 的职责要固定理解成“店铺已经拿到的有效品牌授权关系”。
+
+它负责承接：
+
+- 哪个店铺
+- 对哪个品牌
+- 当前授权是否生效
+- 授权类型是什么
+- 授权范围到哪里
+- 到期时间是什么
+
+它不负责承接：
+
+- 申请过程
+- 审核历史
+- 品牌主数据
+- 商品主数据
+
+所以别的线程在判断“某店能不能经营某品牌”时，默认先看 `shop_brand_auth`；
+在判断“某店提交过什么授权申请”时，再看 `shop_brand_auth_apply`。
 
 ### 竞猜主链路
 
@@ -233,6 +283,21 @@
 - `virtual_warehouse` / `physical_warehouse` 负责用户仓库资产
 - `consign_trade` 承接寄售上架、成交、取消这条交易事实链
 - `warehouse_item_log` 记录仓库物品操作
+
+`coupon_grant_batch` 这张表也不要理解错：
+
+- 它记录的是“一次发券动作”
+- 不是模板
+- 也不是用户最终拿到的券
+
+三层关系固定这样理解：
+
+- `coupon_template`
+  定义券规则
+- `coupon_grant_batch`
+  定义这次是谁发的、按什么来源发的、原计划发多少、实际发多少
+- `coupon`
+  记录每个用户实际拿到的券实例
 
 ## 核心表速查
 
@@ -351,6 +416,8 @@
 | `gender` | 性别编码 |
 | `birthday` | 生日 |
 | `region` | 地区 |
+| `works_privacy` | 作品可见范围 |
+| `fav_privacy` | 收藏可见范围 |
 
 ### `product`
 
@@ -659,6 +726,7 @@
 - `coupon_template` 定义券规则
 - `coupon_grant_batch` 记录发券动作
 - `coupon` 记录用户最终拿到的券实例
+- 它不承接券规则本身，也不承接单个用户的领券结果
 
 ### `virtual_warehouse`
 
@@ -770,6 +838,25 @@
 - 当前只承载 `post` 的点赞和收藏
 - 唯一约束：`(user_id, post_id, interaction_type)`
 
+### `comment_interaction`
+
+用途：
+
+- 评论互动关系
+
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `user_id` | 用户 ID |
+| `comment_id` | 评论 ID |
+| `interaction_type` | 互动类型编码 |
+
+说明：
+
+- 当前承载评论点赞关系
+- 唯一约束：`(user_id, comment_id, interaction_type)`
+
 ### `comment_item`
 
 用途：
@@ -825,6 +912,8 @@
 
 - 只承载榜单结果，不存用户名、头像等快照字段
 - 支持多榜单、多周期
+- 它不是榜单规则定义表，也不是排行榜刷新任务表
+- 榜单排序逻辑仍在应用层，`leaderboard_entry` 只负责承接刷新后的结果
 
 ## 关键约束与索引
 

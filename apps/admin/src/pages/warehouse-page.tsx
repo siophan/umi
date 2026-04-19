@@ -1,9 +1,10 @@
 import type { WarehouseItem } from '@joy/shared';
 import type { TableColumnsType } from 'antd';
 
-import { Card, Descriptions, Drawer, Segmented, Space, Statistic, Table, Tag, Typography } from 'antd';
-import { useState } from 'react';
+import { Card, Descriptions, Drawer, Form, Input, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
+import { useMemo, useState } from 'react';
 
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminWarehouseStats } from '../lib/admin-data';
 import { formatAmount, formatDateTime, warehouseStatusMeta } from '../lib/format';
 
@@ -17,10 +18,49 @@ type WarehouseFilter = 'all' | 'virtual' | 'physical';
 
 export function WarehousePage({ items, loading, stats }: WarehousePageProps) {
   const [selected, setSelected] = useState<WarehouseItem | null>(null);
+  const [filters, setFilters] = useState<{
+    productName?: string;
+    sourceType?: string;
+    userId?: string;
+  }>({});
   const [scope, setScope] = useState<WarehouseFilter>('all');
+  const [status, setStatus] = useState<'all' | WarehouseItem['status']>('all');
+  const [form] = Form.useForm<{ productName?: string; sourceType?: string; userId?: string }>();
 
-  const filteredItems = items.filter((item) =>
-    scope === 'all' ? true : item.warehouseType === scope,
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      if (scope !== 'all' && item.warehouseType !== scope) {
+        return false;
+      }
+      if (status !== 'all' && item.status !== status) {
+        return false;
+      }
+      if (
+        filters.productName &&
+        !item.productName.toLowerCase().includes(filters.productName.trim().toLowerCase())
+      ) {
+        return false;
+      }
+      if (filters.sourceType && item.sourceType !== filters.sourceType) {
+        return false;
+      }
+      if (
+        filters.userId &&
+        !String(item.userId).toLowerCase().includes(filters.userId.trim().toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [filters, items, scope, status]);
+
+  const sourceTypeOptions = useMemo(
+    () =>
+      Array.from(new Set(items.map((item) => item.sourceType).filter(Boolean))).map((value) => ({
+        label: value,
+        value,
+      })),
+    [items],
   );
 
   const columns: TableColumnsType<WarehouseItem> = [
@@ -69,27 +109,21 @@ export function WarehousePage({ items, loading, stats }: WarehousePageProps) {
 
   return (
     <div className="page-stack">
-      <Space wrap size={16}>
-        <Card className="metric-card">
-          <Statistic title="虚拟仓总量" value={stats.totalVirtual} />
-        </Card>
-        <Card className="metric-card">
-          <Statistic title="实体仓总量" value={stats.totalPhysical} />
-        </Card>
-        <Card className="metric-card">
-          <Statistic
-            title="寄售中"
-            value={items.filter((item) => item.status === 'consigning').length}
-          />
-        </Card>
-      </Space>
-
-      <Card
-        title="仓库与寄售"
+      <AdminSearchPanel
+        form={form}
+        onSearch={() => {
+          setFilters(form.getFieldsValue());
+        }}
+        onReset={() => {
+          form.resetFields();
+          setFilters({});
+          setScope('all');
+          setStatus('all');
+        }}
         extra={
           <Segmented<WarehouseFilter>
             options={[
-              { label: '全部', value: 'all' },
+              { label: '全部仓型', value: 'all' },
               { label: '虚拟仓', value: 'virtual' },
               { label: '实体仓', value: 'physical' },
             ]}
@@ -98,12 +132,34 @@ export function WarehousePage({ items, loading, stats }: WarehousePageProps) {
           />
         }
       >
+        <Form.Item name="productName">
+          <Input placeholder="商品名称" allowClear />
+        </Form.Item>
+        <Form.Item name="sourceType">
+          <Select placeholder="来源类型" allowClear options={sourceTypeOptions} />
+        </Form.Item>
+        <Form.Item name="userId">
+          <Input placeholder="用户 ID" allowClear />
+        </Form.Item>
+      </AdminSearchPanel>
+      <AdminStatusTabs
+        activeKey={status}
+        items={[
+          { key: 'all', label: '全部', count: filteredItems.length },
+          { key: 'stored', label: '已入仓', count: items.filter((item) => item.status === 'stored').length },
+          { key: 'locked', label: '锁定', count: items.filter((item) => item.status === 'locked').length },
+          { key: 'consigning', label: '寄售中', count: items.filter((item) => item.status === 'consigning').length },
+          { key: 'completed', label: '已完成', count: items.filter((item) => item.status === 'completed').length },
+        ]}
+        onChange={(key) => setStatus(key as 'all' | WarehouseItem['status'])}
+      />
+      <Card>
         <Table
           rowKey="id"
           columns={columns}
           dataSource={filteredItems}
           loading={loading}
-          pagination={{ pageSize: 6 }}
+          pagination={{ pageSize: 10 }}
           onRow={(record) => ({
             onClick: () => setSelected(record),
           })}

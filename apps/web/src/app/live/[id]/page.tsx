@@ -213,7 +213,13 @@ export default function LiveDetailPage() {
                 <button
                   className={styles.joinBtn}
                   type="button"
-                  onClick={() => setToast('参与成功！')}
+                  onClick={() => {
+                    if (options.length === 0) {
+                      setToast('暂无进行中的竞猜');
+                      return;
+                    }
+                    setToast('参与成功！');
+                  }}
                 >
                   参与竞猜
                 </button>

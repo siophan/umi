@@ -14,6 +14,7 @@ export interface UserSummary {
   phone: string;
   name: string;
   role: UserRole;
+  banned?: boolean;
   coins: number;
   avatar?: string | null;
   level?: number;
@@ -27,9 +28,12 @@ export interface UserSummary {
   following?: number;
   winRate?: number;
   totalGuess?: number;
+  totalOrders?: number;
   wins?: number;
   joinDate?: string | null;
   shopVerified?: boolean;
+  worksPrivacy?: 'all' | 'friends' | 'me';
+  favPrivacy?: 'all' | 'me';
 }
 
 export interface UserPublicProfile {
@@ -50,6 +54,9 @@ export interface UserPublicProfile {
   wins?: number;
   joinDate?: string | null;
   shopVerified?: boolean;
+  worksVisible?: boolean;
+  likedVisible?: boolean;
+  relation?: 'self' | 'friend' | 'following' | 'fan' | 'none';
 }
 
 export interface ProductSummary {

@@ -358,6 +358,12 @@
 | `like` | `10` | 点赞 |
 | `bookmark` | `20` | 收藏 |
 
+### `comment_interaction.interaction_type`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `like` | `10` | 点赞 |
+
 ### `notification.type`
 
 | 原语义 | 编码 | 说明 |
@@ -614,6 +620,21 @@
 | `unknown` | `10` | 未设置 |
 | `male` | `20` | 男 |
 | `female` | `30` | 女 |
+
+### `user_profile.works_privacy`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `public` | `10` | 所有人可见 |
+| `friends` | `20` | 仅好友可见 |
+| `private` | `90` | 仅自己可见 |
+
+### `user_profile.fav_privacy`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `public` | `10` | 所有人可见 |
+| `private` | `90` | 仅自己可见 |
 
 ### `sms_verification_code.biz_type`
 

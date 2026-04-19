@@ -346,19 +346,15 @@ export default function HomePage() {
   const [breakingIndex, setBreakingIndex] = useState(0);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!window.sessionStorage.getItem('splashShown')) {
-      window.sessionStorage.setItem('splashShown', '1');
-      router.replace('/splash');
-    }
-  }, [router]);
-
-  useEffect(() => {
     const timer = window.setInterval(() => {
       setHeroIndex((current) => (current + 1) % heroDots.length);
     }, 3200);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    setHeroIndex(0);
+  }, [mode]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -374,7 +370,10 @@ export default function HomePage() {
   const heroCards = heroCardsByMode[mode];
   const heroCard = heroCards[heroIndex % heroCards.length];
   const breakingEvent = breakingEvents[breakingIndex % breakingEvents.length];
-  const sectionSubtitle = mode === 'guess' ? '8场竞猜进行中' : '2场直播竞猜进行中';
+  const sectionSubtitle =
+    mode === 'guess'
+      ? `${visibleCards.length}场竞猜进行中`
+      : `${visibleCards.length}场直播竞猜进行中`;
 
   return (
     <MobileShell tab="home" tone="dark">

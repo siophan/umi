@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { GuessSummary, ProductFeedItem } from '@joy/shared';
+
+import { fetchGuessList, fetchProductList } from '../../lib/api';
 import styles from './page.module.css';
 
 type ResultTab = 'all' | 'product' | 'guess';
@@ -19,79 +22,49 @@ const hotSearches = [
   { text: '元气森林', rank: 8, badge: '' },
 ];
 
-const products = [
-  {
-    id: 'p002',
-    name: '奥利奥原味夹心饼干 67g*3',
-    price: 26.8,
-    originalPrice: 29.9,
-    sales: 12000,
-    salesText: '1.2万',
-    rating: 4.9,
-    tag: '热销',
-    img: '/legacy/images/products/p002-oreo.jpg',
-  },
-  {
-    id: 'p003',
-    name: '三只松鼠坚果礼盒 520g',
-    price: 128,
-    originalPrice: 168,
-    sales: 9832,
-    salesText: '9832',
-    rating: 4.8,
-    tag: '品牌',
-    img: '/legacy/images/products/p003-squirrels.jpg',
-  },
-  {
-    id: 'p009',
-    name: '可口可乐零糖组合装',
-    price: 72,
-    originalPrice: 88,
-    sales: 8443,
-    salesText: '8443',
-    rating: 4.8,
-    tag: '新品',
-    img: '/legacy/images/products/p009-genki.jpg',
-  },
-  {
-    id: 'p005',
-    name: '良品铺子海苔脆片礼盒',
-    price: 58,
-    originalPrice: 69,
-    sales: 7900,
-    salesText: '7900',
-    rating: 4.7,
-    tag: '品牌',
-    img: '/legacy/images/products/p005-liangpin.jpg',
-  },
-];
+type SearchProductItem = ProductFeedItem & {
+  salesText: string;
+  rating: number;
+};
 
-const guesses = [
-  {
-    id: 'g001',
-    title: '2026 世界杯冠军会是阿根廷还是法国？',
-    meta: '1.28万参与 · 6天后截止',
-    optA: '阿根廷卫冕 56%',
-    optB: '44% 法国夺冠',
-    img: '/legacy/images/guess/g001.jpg',
-  },
-  {
-    id: 'g002',
-    title: '新 iPhone 会不会推出折叠屏？',
-    meta: '9340参与 · 2小时后截止',
-    optA: '会发布 62%',
-    optB: '38% 不会发布',
-    img: '/legacy/images/guess/g002.jpg',
-  },
-  {
-    id: 'g003',
-    title: '国庆自驾最火路线会是哪条？',
-    meta: '5870参与 · 明晚开奖',
-    optA: '川藏线 51%',
-    optB: '49% 独库公路',
-    img: '/legacy/images/guess/g003.jpg',
-  },
-];
+type SearchGuessItem = {
+  id: string;
+  title: string;
+  meta: string;
+  optA: string;
+  optB: string;
+  img: string;
+};
+
+function formatSalesText(value: number) {
+  return value >= 10000 ? `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万` : String(value);
+}
+
+function formatRemainingText(endTime: string) {
+  const diff = new Date(endTime).getTime() - Date.now();
+  if (diff <= 0) return '已截止';
+  const hours = Math.ceil(diff / (1000 * 60 * 60));
+  if (hours < 24) return `${hours}小时后截止`;
+  const days = Math.ceil(hours / 24);
+  return `${days}天后截止`;
+}
+
+function buildGuessSearchItem(item: GuessSummary): SearchGuessItem {
+  const totalVotes = item.options.reduce((sum, option) => sum + option.voteCount, 0);
+  const first = item.options[0];
+  const second = item.options[1];
+  const firstRate = totalVotes > 0 && first ? Math.round((first.voteCount / totalVotes) * 100) : 0;
+  const secondRate = totalVotes > 0 && second ? Math.round((second.voteCount / totalVotes) * 100) : 0;
+
+  return {
+    id: item.id,
+    title: item.title,
+    meta: `${totalVotes}参与 · ${formatRemainingText(item.endTime)}`,
+    optA: first ? `${first.optionText} ${firstRate}%` : '暂无选项',
+    optB: second ? `${secondRate}% ${second.optionText}` : '0% 暂无选项',
+    img: item.product.img || '/legacy/images/placeholder/product-fallback.svg',
+  };
+}
 
 export default function SearchPage() {
   const router = useRouter();
@@ -100,6 +73,8 @@ export default function SearchPage() {
   const [tab, setTab] = useState<ResultTab>('all');
   const [sort, setSort] = useState<SortKey>('default');
   const [focused, setFocused] = useState(false);
+  const [products, setProducts] = useState<SearchProductItem[]>([]);
+  const [guesses, setGuesses] = useState<SearchGuessItem[]>([]);
 
   useEffect(() => {
     try {
@@ -113,6 +88,48 @@ export default function SearchPage() {
       // ignore malformed storage
     }
   }, []);
+
+  useEffect(() => {
+    const keyword = query.trim();
+    if (!keyword) {
+      setProducts([]);
+      setGuesses([]);
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all([
+      fetchProductList({ q: keyword, limit: 50 }),
+      fetchGuessList(),
+    ])
+      .then(([productResult, guessResult]) => {
+        if (cancelled) return;
+
+        setProducts(
+          productResult.items.map((item, index) => ({
+            ...item,
+            salesText: formatSalesText(item.sales),
+            rating: item.rating > 0 ? item.rating : 4.6 + ((index % 4) * 0.1),
+          })),
+        );
+
+        const loweredKeyword = keyword.toLowerCase();
+        setGuesses(
+          guessResult.items
+            .filter((item) => item.title.toLowerCase().includes(loweredKeyword))
+            .map((item) => buildGuessSearchItem(item)),
+        );
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setProducts([]);
+        setGuesses([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
 
   const saveHistory = (value: string) => {
     const trimmed = value.trim();
@@ -155,10 +172,7 @@ export default function SearchPage() {
   };
 
   const visibleProducts = useMemo(() => {
-    const filtered = !hasQuery
-      ? products
-      : products.filter((item) => item.name.includes(query) || item.tag.includes(query));
-    const next = [...filtered];
+    const next = [...products];
     switch (sort) {
       case 'sales':
         next.sort((a, b) => b.sales - a.sales);
@@ -176,12 +190,11 @@ export default function SearchPage() {
         break;
     }
     return next;
-  }, [hasQuery, query, sort]);
+  }, [products, sort]);
 
   const visibleGuesses = useMemo(() => {
-    if (!hasQuery) return guesses;
-    return guesses.filter((item) => item.title.includes(query));
-  }, [hasQuery, query]);
+    return guesses;
+  }, [guesses]);
 
   const noResults = hasQuery && visibleProducts.length === 0 && visibleGuesses.length === 0;
 

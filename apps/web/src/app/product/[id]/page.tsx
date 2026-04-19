@@ -8,28 +8,6 @@ import type { GuessOption, ProductSummary, WarehouseItem } from '@joy/shared';
 import { fetchProductDetail } from '../../../lib/api';
 import styles from './page.module.css';
 
-const reviews = [
-  {
-    user: '阿柠',
-    avatar: '/legacy/images/mascot/mouse-main.png',
-    stars: 5,
-    text: '正品！质量很好，包装完好无损，物流也很快！',
-    time: '2 小时前',
-    likes: 327,
-  },
-  {
-    user: '零食控',
-    avatar: '/legacy/images/mascot/mouse-happy.png',
-    stars: 5,
-    text: '买了好多次了，品质稳定，价格实惠，竞猜超有趣。',
-    time: '3 天前',
-    likes: 215,
-  },
-];
-
-const colorOptions = ['曜黑', '雾白', '奶咖', '樱桃红'];
-const sizeOptions = ['39', '40', '41', '42'];
-
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -65,10 +43,7 @@ export default function ProductDetailPage() {
   const [scrolled, setScrolled] = useState(false);
   const [favActive, setFavActive] = useState(false);
   const [selectedGuessOpt, setSelectedGuessOpt] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(0);
-  const [selectedSize, setSelectedSize] = useState(1);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string[]>(['vw-1']);
-  const [reviewLikes, setReviewLikes] = useState<number[]>(reviews.map((item) => item.likes));
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string[]>([]);
   const [toast, setToast] = useState('');
   const productId = typeof params?.id === 'string' ? params.id : '';
 
@@ -272,14 +247,14 @@ export default function ProductDetailPage() {
           <span>{guessPrice} 竞猜价</span>
         </div>
         <div className={styles.promoStrip}>
-          <button className={styles.promoChip} type="button" onClick={() => setToast('领取优惠券')}>
-            <span className={`${styles.pcTag} ${styles.pcCoupon}`}>券</span> 满 50 减 5 <i className="fa-solid fa-chevron-right" />
+          <button className={styles.promoChip} type="button" onClick={() => setCurrentTab('direct')}>
+            <span className={`${styles.pcTag} ${styles.pcCoupon}`}>货</span> 库存 {product.stock} 件 <i className="fa-solid fa-chevron-right" />
           </button>
           <button className={styles.promoChip} type="button" onClick={() => setCurrentTab('guess')}>
             <span className={`${styles.pcTag} ${styles.pcGuess}`}>猜</span> ¥{guessPrice}参与竞猜赢商品 <i className="fa-solid fa-chevron-right" />
           </button>
-          <button className={styles.promoChip} type="button" onClick={() => setToast('服务保障')}>
-            <span className={`${styles.pcTag} ${styles.pcSvc}`}>保</span> 正品 · 24h发货 · 7天退换 <i className="fa-solid fa-chevron-right" />
+          <button className={styles.promoChip} type="button" onClick={() => setCurrentTab('inv')}>
+            <span className={`${styles.pcTag} ${styles.pcSvc}`}>换</span> 当前可抵扣 {warehouseItems.length} 件库存 <i className="fa-solid fa-chevron-right" />
           </button>
         </div>
       </section>
@@ -312,43 +287,32 @@ export default function ProductDetailPage() {
 
       <section className={styles.specSection}>
         <div className={styles.specRow}>
-          <div className={styles.specLabel}>颜色</div>
+          <div className={styles.specLabel}>标签</div>
           <div className={styles.specScroll}>
-            {colorOptions.map((item, index) => (
-              <button
-                className={selectedColor === index ? styles.specChipOn : styles.specChip}
-                key={item}
-                type="button"
-                onClick={() => setSelectedColor(index)}
-              >
+            {(product.tags.length ? product.tags : ['优米精选', product.brand, product.category]).map((item) => (
+              <span className={styles.specChipOn} key={item}>
                 <span className={styles.specDot} />
                 {item}
-              </button>
+              </span>
             ))}
           </div>
         </div>
         <div className={styles.specRow}>
-          <div className={styles.specLabel}>尺码</div>
+          <div className={styles.specLabel}>库存</div>
           <div className={styles.specScroll}>
-            {sizeOptions.map((item, index) => (
-              <button
-                className={selectedSize === index ? styles.specChipOn : styles.specChip}
-                key={item}
-                type="button"
-                onClick={() => setSelectedSize(index)}
-              >
-                {item}
-                <span className={styles.specDp}>现货</span>
-              </button>
-            ))}
+            <span className={styles.specChipOn}>
+              现货库存 {product.stock}
+              <span className={styles.specDp}>{product.stock > 0 ? '可下单' : '缺货'}</span>
+            </span>
+            {product.shopName ? <span className={styles.specChip}>店铺：{product.shopName}</span> : null}
           </div>
         </div>
         <div className={styles.specFoot}>
           <span className={styles.specFootSel}>
-            已选 <b>{colorOptions[selectedColor]}</b> / <b>{sizeOptions[selectedSize]}</b>
+            当前商品 <b>{product.brand}</b> / <b>{product.category}</b>
           </span>
           <span className={styles.specFootPrice}>
-            ¥{activePrice} <small>现价</small>
+            ¥{activePrice} <small>{product.stock > 0 ? '现价' : '暂不可下单'}</small>
           </span>
         </div>
       </section>
@@ -436,20 +400,22 @@ export default function ProductDetailPage() {
                   查看更多 <i className="fa-solid fa-chevron-down" />
                 </button>
                 <div className={styles.recList}>
-                  {[
-                    { name: '美食猎人', choice: '猜大', time: '2 分钟前', av: '/legacy/images/mascot/mouse-main.png', cls: styles.recTagBig },
-                    { name: '零食控小王', choice: '猜小', time: '5 分钟前', av: '/legacy/images/mascot/mouse-happy.png', cls: styles.recTagSmall },
-                    { name: '零食猎人', choice: '猜大', time: '8 分钟前', av: '/legacy/images/mascot/mouse-casual.png', cls: styles.recTagBig },
-                  ].map((item) => (
-                    <div className={styles.recItem} key={`${item.name}-${item.time}`}>
-                      <img src={item.av} alt={item.name} />
+                  {(activeGuess?.options || []).map((item, index) => {
+                    const totalVotes = activeGuess?.options.reduce((sum, option) => sum + option.voteCount, 0) || 0;
+                    const percent = totalVotes > 0 ? Math.round((item.voteCount / totalVotes) * 100) : 0;
+                    return (
+                    <div className={styles.recItem} key={item.id}>
+                      <img src={product.img} alt={item.optionText} />
                       <div className={styles.recInfo}>
-                        <div className={styles.recName}>{item.name}</div>
-                        <div className={styles.recTime}>{item.time}</div>
+                        <div className={styles.recName}>{item.optionText}</div>
+                        <div className={styles.recTime}>{item.voteCount} 票 · 当前占比 {percent}%</div>
                       </div>
-                      <span className={item.cls}>{item.choice}</span>
+                      <span className={index === 0 ? styles.recTagBig : styles.recTagSmall}>
+                        {index === 0 ? '高热度' : '待反转'}
+                      </span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             ) : currentTab === 'direct' ? (
@@ -466,33 +432,33 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
                 <div className={styles.panelHead}>
-                  <div className={styles.panelTitle}>优惠券</div>
+                  <div className={styles.panelTitle}>商品信息</div>
                 </div>
                 <div className={styles.couponStrip}>
                   <div className={styles.couponCard}>
-                    <strong>¥5</strong>
+                    <strong>{product.stock}</strong>
                     <div>
-                      <span>满 50 可用</span>
-                      <em>领取</em>
+                      <span>当前库存</span>
+                      <em>{product.stock > 0 ? '可购买' : '缺货'}</em>
                     </div>
                   </div>
                   <div className={styles.couponCard}>
-                    <strong>¥15</strong>
+                    <strong>{product.brand}</strong>
                     <div>
-                      <span>满 100 可用</span>
-                      <em>领取</em>
+                      <span>品牌信息</span>
+                      <em>{product.category}</em>
                     </div>
                   </div>
                   <div className={styles.couponCard}>
-                    <strong>¥20</strong>
+                    <strong>{product.shopName || '优米平台'}</strong>
                     <div>
-                      <span>新人专享</span>
-                      <em>领取</em>
+                      <span>发货店铺</span>
+                      <em>{product.tags[0] || '正品保证'}</em>
                     </div>
                   </div>
                 </div>
                 <div className={styles.serviceGrid}>
-                  {['正品保证', '24h发货', '顺丰包邮', '7天退换', '运费险', '极速退款'].map((item) => (
+                  {['正品保证', '24h发货', '7天退换', `${product.brand} 品牌商品`, `${product.category} 类目`, `库存 ${product.stock}`].map((item) => (
                     <div className={styles.serviceItem} key={item}>
                       <span><i className="fa-solid fa-check" /></span>
                       <em>{item}</em>
@@ -580,7 +546,9 @@ export default function ProductDetailPage() {
 
 • 品牌：${product.brand}
 • 分类：${product.category}
-• 发货：24小时内发货，顺丰/中通
+• 店铺：${product.shopName || '优米平台'}
+• 库存：${product.stock}
+• 发货：24小时内发货
 • 保障：7天无理由退换，正品保证
 
 优米独家渠道商品，支持直购、竞猜、库存换购三种方式。`}
@@ -594,38 +562,9 @@ export default function ProductDetailPage() {
         <div className={styles.panel}>
           <div className={styles.panelInner}>
             <div className={styles.panelHead}>
-              <div className={styles.panelTitle}><i className="fa-solid fa-comment-dots" style={{ color: '#FFB400' }} /> 用户评价 <span>{reviews.length}</span></div>
-              <button className={styles.panelMore} type="button" onClick={() => setToast('查看全部评价')}>
-                全部 <i className="fa-solid fa-chevron-right" style={{ fontSize: 8 }} />
-              </button>
+              <div className={styles.panelTitle}><i className="fa-solid fa-comment-dots" style={{ color: '#FFB400' }} /> 用户评价 <span>0</span></div>
             </div>
-              {reviews.map((review, index) => (
-              <article className={styles.reviewItem} key={review.user}>
-                <img src={review.avatar} alt={review.user} />
-                <div className={styles.reviewBody}>
-                  <div className={styles.reviewName}>
-                    {review.user}
-                    <span className={styles.reviewStars}>★★★★★</span>
-                  </div>
-                  <div className={styles.reviewText}>{review.text}</div>
-                  <div className={styles.reviewFoot}>
-                    <span>{review.time}</span>
-                    <button
-                      className={styles.reviewLike}
-                      type="button"
-                      onClick={() => {
-                        setReviewLikes((current) =>
-                          current.map((likes, itemIndex) => (itemIndex === index ? likes + 1 : likes)),
-                        );
-                        setToast('已点赞');
-                      }}
-                    >
-                      <i className="fa-regular fa-thumbs-up" /> {reviewLikes[index]}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+            <div className={styles.directRow}>当前还没有真实评价数据，后续会接入评论与评分接口。</div>
           </div>
         </div>
 

@@ -3,6 +3,8 @@ import type { Router as ExpressRouter } from 'express';
 
 import type {
   ChangePasswordPayload,
+  CreateCommunityCommentPayload,
+  CreateCommunityPostPayload,
   LoginPayload,
   RegisterPayload,
   SendCodePayload,
@@ -12,20 +14,41 @@ import type {
 
 import { ok } from '../../lib/http';
 import {
+  acceptFriendRequest,
+  bookmarkCommunityPost,
   changePassword,
+  createCommunityComment,
+  createCommunityPost,
+  getCommunityFeed,
+  getCommunityDiscovery,
+  getCommunityPostDetail,
   getMeActivity,
+  getMeSummary,
   getNotifications,
   getSocialOverview,
   getChatConversations,
   getChatDetail,
+  getUserPublicActivity,
   getUserByToken,
   getUserProfileById,
+  followUser,
+  likeCommunityComment,
+  likeCommunityPost,
   login,
   markAllNotificationsRead,
+  markNotificationRead,
   logoutByToken,
   register,
+  repostCommunityPost,
+  rejectFriendRequest,
+  searchUsers,
+  searchCommunity,
   sendCode,
   sendChatMessage,
+  unlikeCommunityPost,
+  unlikeCommunityComment,
+  unfollowUser,
+  unbookmarkCommunityPost,
   updateMe,
 } from './store';
 
@@ -137,8 +160,115 @@ authRouter.get('/me/activity', async (request, response) => {
   ok(response, await getMeActivity(user.id));
 });
 
+authRouter.get('/me/summary', async (request, response) => {
+  const token = getBearerToken(request.headers.authorization);
+  const user = token ? await getUserByToken(token) : null;
+
+  if (!user) {
+    response.status(401).json({ success: false, message: '请先登录' });
+    return;
+  }
+
+  ok(response, await getMeSummary(user.id));
+});
+
+authRouter.get('/users/search', async (request, response) => {
+  const token = getBearerToken(request.headers.authorization);
+  const user = token ? await getUserByToken(token) : null;
+
+  if (!user) {
+    response.status(401).json({ success: false, message: '请先登录' });
+    return;
+  }
+
+  ok(response, await searchUsers(user.id, typeof request.query.q === 'string' ? request.query.q : ''));
+});
+
+authRouter.get('/users/:id/activity', async (request, response) => {
+  const token = getBearerToken(request.headers.authorization);
+  const viewer = token ? await getUserByToken(token) : null;
+  const activity = await getUserPublicActivity(String(request.params.id), viewer?.id ?? null);
+
+  if (!activity) {
+    response.status(404).json({ success: false, message: '用户不存在' });
+    return;
+  }
+
+  ok(response, activity);
+});
+
+authRouter.post('/users/:id/follow', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const viewer = token ? await getUserByToken(token) : null;
+
+    if (!viewer) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await followUser(viewer.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '关注失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.delete('/users/:id/follow', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const viewer = token ? await getUserByToken(token) : null;
+
+    if (!viewer) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await unfollowUser(viewer.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '取消关注失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.post('/friends/requests/:id/accept', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const viewer = token ? await getUserByToken(token) : null;
+
+    if (!viewer) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await acceptFriendRequest(viewer.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '接受好友申请失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.post('/friends/requests/:id/reject', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const viewer = token ? await getUserByToken(token) : null;
+
+    if (!viewer) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await rejectFriendRequest(viewer.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '忽略好友申请失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
 authRouter.get('/users/:id', async (request, response) => {
-  const user = await getUserProfileById(String(request.params.id));
+  const token = getBearerToken(request.headers.authorization);
+  const viewer = token ? await getUserByToken(token) : null;
+  const user = await getUserProfileById(String(request.params.id), viewer?.id ?? null);
 
   if (!user) {
     response.status(404).json({ success: false, message: '用户不存在' });
@@ -173,6 +303,19 @@ authRouter.post('/notifications/read-all', async (request, response) => {
   ok(response, { success: true });
 });
 
+authRouter.post('/notifications/:id/read', async (request, response) => {
+  const token = getBearerToken(request.headers.authorization);
+  const user = token ? await getUserByToken(token) : null;
+
+  if (!user) {
+    response.status(401).json({ success: false, message: '请先登录' });
+    return;
+  }
+
+  await markNotificationRead(user.id, String(request.params.id));
+  ok(response, { success: true });
+});
+
 authRouter.get('/social', async (request, response) => {
   const token = getBearerToken(request.headers.authorization);
   const user = token ? await getUserByToken(token) : null;
@@ -183,6 +326,214 @@ authRouter.get('/social', async (request, response) => {
   }
 
   ok(response, await getSocialOverview(user.id));
+});
+
+authRouter.get('/community/feed', async (request, response) => {
+  const token = getBearerToken(request.headers.authorization);
+  const user = token ? await getUserByToken(token) : null;
+
+  if (!user) {
+    response.status(401).json({ success: false, message: '请先登录' });
+    return;
+  }
+
+  const tab = request.query.tab === 'follow' ? 'follow' : 'recommend';
+  ok(response, await getCommunityFeed(user.id, tab));
+});
+
+authRouter.get('/community/discovery', async (request, response) => {
+  const token = getBearerToken(request.headers.authorization);
+  const user = token ? await getUserByToken(token) : null;
+
+  if (!user) {
+    response.status(401).json({ success: false, message: '请先登录' });
+    return;
+  }
+
+  ok(response, await getCommunityDiscovery(user.id));
+});
+
+authRouter.get('/community/search', async (request, response) => {
+  const token = getBearerToken(request.headers.authorization);
+  const user = token ? await getUserByToken(token) : null;
+
+  if (!user) {
+    response.status(401).json({ success: false, message: '请先登录' });
+    return;
+  }
+
+  ok(response, await searchCommunity(user.id, typeof request.query.q === 'string' ? request.query.q : ''));
+});
+
+authRouter.post('/community/posts', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await createCommunityPost(user.id, request.body as CreateCommunityPostPayload));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '发布动态失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.post('/community/posts/:id/repost', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await repostCommunityPost(user.id, String(request.params.id), request.body as CreateCommunityPostPayload));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '转发失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.get('/community/posts/:id', async (request, response) => {
+  const token = getBearerToken(request.headers.authorization);
+  const user = token ? await getUserByToken(token) : null;
+
+  if (!user) {
+    response.status(401).json({ success: false, message: '请先登录' });
+    return;
+  }
+
+  const post = await getCommunityPostDetail(user.id, String(request.params.id));
+  if (!post) {
+    response.status(404).json({ success: false, message: '动态不存在或不可见' });
+    return;
+  }
+
+  ok(response, post);
+});
+
+authRouter.post('/community/posts/:id/comments', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await createCommunityComment(user.id, String(request.params.id), request.body as CreateCommunityCommentPayload));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '发表评论失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.post('/community/comments/:id/like', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await likeCommunityComment(user.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '评论点赞失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.delete('/community/comments/:id/like', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await unlikeCommunityComment(user.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '取消评论点赞失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.post('/community/posts/:id/like', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await likeCommunityPost(user.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '点赞失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.delete('/community/posts/:id/like', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await unlikeCommunityPost(user.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '取消点赞失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.post('/community/posts/:id/bookmark', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await bookmarkCommunityPost(user.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '收藏失败';
+    response.status(400).json({ success: false, message });
+  }
+});
+
+authRouter.delete('/community/posts/:id/bookmark', async (request, response) => {
+  try {
+    const token = getBearerToken(request.headers.authorization);
+    const user = token ? await getUserByToken(token) : null;
+
+    if (!user) {
+      response.status(401).json({ success: false, message: '请先登录' });
+      return;
+    }
+
+    ok(response, await unbookmarkCommunityPost(user.id, String(request.params.id)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '取消收藏失败';
+    response.status(400).json({ success: false, message });
+  }
 });
 
 authRouter.get('/chats', async (request, response) => {

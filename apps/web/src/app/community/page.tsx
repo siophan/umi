@@ -1,17 +1,32 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { MobileShell } from '../../components/mobile-shell';
+import type { CommunityFeedItem as CommunityFeedApiItem } from '@joy/shared';
+
+import {
+  bookmarkCommunityPost,
+  createCommunityPost,
+  fetchCommunityDiscovery,
+  fetchCommunityFeed,
+  fetchSocialOverview,
+  likeCommunityPost,
+  repostCommunityPost,
+  unbookmarkCommunityPost,
+  unlikeCommunityPost,
+} from '../../lib/api';
 import styles from './page.module.css';
 
-type Scope = 'public' | 'friends' | 'fans' | 'private';
+type Scope = 'public' | 'friends' | 'fans' | 'followers' | 'private';
 
 type FeedItem = {
   id: string;
   author: {
+    uid?: string;
     name: string;
     avatar: string;
     verified: boolean;
@@ -37,6 +52,7 @@ type FeedItem = {
 
 type FollowUser = {
   id: string;
+  uid?: string;
   name: string;
   avatar: string;
   hasNew: boolean;
@@ -86,6 +102,13 @@ const SCOPE_META: Record<
     iconClass: styles.scopeIconFans,
     feedLabel: '粉丝可见',
   },
+  followers: {
+    label: '粉丝',
+    desc: '仅关注你的粉丝可见',
+    icon: 'fa-heart',
+    iconClass: styles.scopeIconFans,
+    feedLabel: '粉丝可见',
+  },
   private: {
     label: '仅自己',
     desc: '仅自己可见，用于保存草稿',
@@ -95,104 +118,11 @@ const SCOPE_META: Record<
   },
 };
 
-const hotTopics = [
-  { icon: '🔥', text: '德芙vs费列罗', href: '/post/post-1' },
-  { icon: '🏆', text: '马年年货王', href: '/post/post-2' },
-  { icon: '🎯', text: '薯片新口味', href: '/post/post-3' },
-  { icon: '📊', text: '本周胜率榜', href: '/ranking' },
-  { icon: '🎉', text: '情人节竞猜', href: '/guess/guess-1' },
-  { icon: '🌟', text: '热门竞猜', href: '/guess/guess-2' },
-  { icon: '🤝', text: 'PK排行榜', href: '/ranking' },
-];
-
-const followedUsers: FollowUser[] = [
-  { id: 'brand-1', name: '乐事官方旗舰店', avatar: '/legacy/images/products/p001-lays.jpg', hasNew: true },
-  { id: 'friend-1', name: '零食达人小王', avatar: '/legacy/images/mascot/mouse-main.png', hasNew: false },
-  { id: 'brand-2', name: '三只松鼠', avatar: '/legacy/images/products/p003-squirrels.jpg', hasNew: false },
-  { id: 'friend-2', name: '德芙官方', avatar: '/legacy/images/products/p007-dove.jpg', hasNew: true },
-];
-
-const recommendFeedData: FeedItem[] = [
-  {
-    id: 'post-1',
-    author: { name: '乐事官方旗舰店', avatar: '/legacy/images/products/p001-lays.jpg', verified: true },
-    tag: { text: '品牌竞猜', cls: TAG_CLS_MAP.品牌竞猜 },
-    title: '乐事2026马年限定口味投票开启！番茄味 vs 黄瓜味',
-    desc: '参与竞猜赢正品零食大礼包，猜中直接发货到家。当前3890人参与！',
-    images: ['/legacy/images/guess/g001.jpg'],
-    guessInfo: { id: 'guess-1', options: ['番茄味', '黄瓜味'], participants: 3890, pcts: [58, 42] },
-    likes: 2341,
-    comments: 456,
-    shares: 89,
-    time: '15分钟前',
-    liked: true,
-    bookmarked: false,
-    scope: 'public',
-  },
-  {
-    id: 'post-2',
-    author: { name: '零食测评官', avatar: '/legacy/images/guess/g202.jpg', verified: false },
-    tag: { text: '零食测评', cls: TAG_CLS_MAP.零食测评 },
-    title: '2026年度十大零食品牌排行榜出炉！三只松鼠再登榜首',
-    desc: '根据全平台销售数据与用户口碑综合评选，看看你喜欢的品牌有没有上榜。',
-    images: ['/legacy/images/products/p002-oreo.jpg', '/legacy/images/products/p005-liangpin.jpg'],
-    likes: 8723,
-    comments: 1204,
-    shares: 188,
-    time: '1小时前',
-    liked: false,
-    bookmarked: true,
-    scope: 'friends',
-  },
-  {
-    id: 'post-3',
-    author: { name: '品牌观察员', avatar: '/legacy/images/products/p009-genki.jpg', verified: false },
-    tag: { text: '品牌资讯', cls: TAG_CLS_MAP.品牌资讯 },
-    title: '新品试吃开箱：今年最值得期待的年货礼盒',
-    desc: '这期给大家看一下礼盒开箱和口味预测，最后还会附上开奖时间。',
-    images: ['/legacy/images/guess/g202.jpg'],
-    likes: 5031,
-    comments: 681,
-    shares: 96,
-    time: '3小时前',
-    liked: false,
-    bookmarked: false,
-    scope: 'fans',
-  },
-];
-
-const followFeedData: FeedItem[] = [
-  {
-    id: 'follow-post-1',
-    author: { name: '乐事官方旗舰店', avatar: '/legacy/images/products/p001-lays.jpg', verified: true },
-    tag: { text: '店铺动态', cls: TAG_CLS_MAP.店铺动态 },
-    title: '今天仓库补了三款断货零食，评论区告诉我你最想先抢哪一包',
-    desc: '刚把周末补货单整理完，黄瓜味薯片、海盐坚果和巧克力曲奇已经重新上架，晚上 8 点前下单还会加送试吃包。',
-    images: ['/legacy/images/products/p001-lays.jpg', '/legacy/images/products/p003-squirrels.jpg'],
-    likes: 1288,
-    comments: 230,
-    shares: 46,
-    time: '9分钟前',
-    liked: false,
-    bookmarked: false,
-    scope: 'public',
-  },
-  {
-    id: 'follow-post-2',
-    author: { name: '德芙官方', avatar: '/legacy/images/products/p007-dove.jpg', verified: true },
-    tag: { text: '品牌竞猜', cls: TAG_CLS_MAP.品牌竞猜 },
-    title: '德芙礼盒 PK 竞猜还剩最后 2 小时，黑巧还是榛仁更稳？',
-    desc: '目前黑巧阵营暂时领先，但榛仁组追得很紧，投票区已经有不少粉丝开始晒单站队。',
-    images: ['/legacy/images/products/p007-dove.jpg'],
-    guessInfo: { id: 'guess-2', options: ['黑巧礼盒', '榛仁礼盒'], participants: 2145, pcts: [54, 46] },
-    likes: 2450,
-    comments: 312,
-    shares: 71,
-    time: '28分钟前',
-    liked: true,
-    bookmarked: true,
-    scope: 'public',
-  },
+const defaultFollowedUsers: FollowUser[] = [
+  { id: 'brand-1', uid: 'brand-1', name: '乐事官方旗舰店', avatar: '/legacy/images/products/p001-lays.jpg', hasNew: true },
+  { id: 'friend-1', uid: 'friend-1', name: '零食达人小王', avatar: '/legacy/images/mascot/mouse-main.png', hasNew: false },
+  { id: 'brand-2', uid: 'brand-2', name: '三只松鼠', avatar: '/legacy/images/products/p003-squirrels.jpg', hasNew: false },
+  { id: 'friend-2', uid: 'friend-2', name: '德芙官方', avatar: '/legacy/images/products/p007-dove.jpg', hasNew: true },
 ];
 
 const topicOptions = ['🎯 竞猜心得', '🍿 零食测评', '🤝 PK战报', '🔥 热门话题', '📊 数据分析', '💡 攻略分享'];
@@ -204,12 +134,6 @@ const locationData = [
   { name: '🛍️ 王府井步行街', address: '北京市东城区王府井大街' },
   { name: '🌃 外滩', address: '上海市黄浦区中山东一路' },
   { name: '🏞️ 西湖风景区', address: '杭州市西湖区龙井路1号' },
-];
-
-const mentionUsers: FollowUser[] = [
-  ...followedUsers,
-  { name: '零食测评官', avatar: '/legacy/images/guess/g202.jpg', hasNew: false },
-  { name: '品牌观察员', avatar: '/legacy/images/products/p009-genki.jpg', hasNew: false },
 ];
 
 const guessActivities: GuessActivity[] = [
@@ -240,6 +164,85 @@ function fmtNum(value: number) {
   return String(value);
 }
 
+function formatRelativeTime(value: string) {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) {
+    return '刚刚';
+  }
+
+  const diff = Date.now() - timestamp;
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diff < minute) {
+    return '刚刚';
+  }
+  if (diff < hour) {
+    return `${Math.max(1, Math.floor(diff / minute))}分钟前`;
+  }
+  if (diff < day) {
+    return `${Math.max(1, Math.floor(diff / hour))}小时前`;
+  }
+  if (diff < 7 * day) {
+    return `${Math.max(1, Math.floor(diff / day))}天前`;
+  }
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function mapCommunityFeedItem(item: CommunityFeedApiItem): FeedItem {
+  const tagText = item.tag?.trim() || '猜友动态';
+  return {
+    id: item.id,
+    author: {
+      uid: item.author.uid,
+      name: item.author.name,
+      avatar: item.author.avatar || '/legacy/images/mascot/mouse-main.png',
+      verified: item.author.verified,
+    },
+    tag: {
+      text: tagText,
+      cls: TAG_CLS_MAP[tagText] ?? styles.tagCommunity,
+    },
+    title: item.title,
+    desc: item.desc,
+    images: item.images,
+    guessInfo: item.guessInfo
+      ? {
+          id: item.guessInfo.id,
+          options: item.guessInfo.options,
+          participants: item.guessInfo.participants,
+          pcts: item.guessInfo.pcts,
+        }
+      : undefined,
+    likes: item.likes,
+    comments: item.comments,
+    shares: item.shares,
+    time: formatRelativeTime(item.createdAt),
+    liked: item.liked,
+    bookmarked: item.bookmarked,
+    scope: item.scope,
+  };
+}
+
+function normalizePostPreviewText(value: string | null | undefined) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function shouldRenderStandaloneTitle(title: string | null | undefined, desc: string | null | undefined) {
+  const normalizedTitle = normalizePostPreviewText(title);
+  if (!normalizedTitle) {
+    return false;
+  }
+
+  const normalizedDesc = normalizePostPreviewText(desc);
+  if (!normalizedDesc) {
+    return true;
+  }
+
+  return normalizedTitle !== normalizedDesc;
+}
+
 function getScopeLabel(scopes: Scope[]) {
   return scopes.map((item) => SCOPE_META[item].label).join('、');
 }
@@ -251,6 +254,7 @@ function getPrimaryScope(scopes: Scope[]) {
 export default function CommunityPage() {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [tab, setTab] = useState<'recommend' | 'follow'>('recommend');
   const [publishOpen, setPublishOpen] = useState(false);
   const [scopeOpen, setScopeOpen] = useState(false);
@@ -260,8 +264,8 @@ export default function CommunityPage() {
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [publishText, setPublishText] = useState('');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [recommendFeed, setRecommendFeed] = useState(recommendFeedData);
-  const [followFeed, setFollowFeed] = useState(followFeedData);
+  const [recommendFeed, setRecommendFeed] = useState<FeedItem[]>([]);
+  const [followFeed, setFollowFeed] = useState<FeedItem[]>([]);
   const [toast, setToast] = useState('');
   const [publishScopes, setPublishScopes] = useState<Scope[]>(['public']);
   const [scopeDraft, setScopeDraft] = useState<Scope[]>(['public']);
@@ -273,11 +277,119 @@ export default function CommunityPage() {
   const [guessQuery, setGuessQuery] = useState('');
   const [emojiCategory, setEmojiCategory] = useState<keyof typeof emojiCategories>('😀 表情');
   const [bookmarkAnimating, setBookmarkAnimating] = useState<string | null>(null);
+  const [followedUsers, setFollowedUsers] = useState<FollowUser[]>([]);
+  const [mentionUsers, setMentionUsers] = useState<FollowUser[]>([]);
+  const [socialReady, setSocialReady] = useState(false);
+  const [feedReady, setFeedReady] = useState(false);
+  const [feedError, setFeedError] = useState('');
+  const [likeSavingId, setLikeSavingId] = useState('');
+  const [bookmarkSavingId, setBookmarkSavingId] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [hotTopics, setHotTopics] = useState<Array<{ text: string; desc: string; href: string }>>([]);
+  const [heroPost, setHeroPost] = useState<FeedItem | null>(null);
+  const [repostTarget, setRepostTarget] = useState<{
+    postId: string;
+    tab: 'recommend' | 'follow';
+    title: string;
+    author: string;
+  } | null>(null);
+  const [repostDraft, setRepostDraft] = useState('转发动态');
+  const [repostSaving, setRepostSaving] = useState(false);
 
   const visibleFeed = useMemo(
     () => (tab === 'recommend' ? recommendFeed : followFeed),
     [followFeed, recommendFeed, tab],
   );
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadSocial() {
+      try {
+        const result = await fetchSocialOverview();
+        if (ignore) {
+          return;
+        }
+
+        const mergedUsers = [...result.following, ...result.friends];
+        const deduped = mergedUsers.reduce<FollowUser[]>((acc, item, index) => {
+          const uid = String(item.uid || item.id || '').trim();
+          if (!uid || acc.some((entry) => entry.id === String(item.id))) {
+            return acc;
+          }
+
+          acc.push({
+            id: String(item.id),
+            uid,
+            name: item.name || '未知用户',
+            avatar: item.avatar || '/legacy/images/mascot/mouse-main.png',
+            hasNew: index < result.following.length,
+          });
+          return acc;
+        }, []);
+
+        setFollowedUsers(deduped.filter((_, index) => index < 10));
+        setMentionUsers(deduped.filter((_, index) => index < 12));
+      } catch {
+        if (ignore) {
+          return;
+        }
+        setFollowedUsers([]);
+        setMentionUsers([]);
+      } finally {
+        if (!ignore) {
+          setSocialReady(true);
+        }
+      }
+    }
+
+    void loadSocial();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadFeed() {
+      try {
+        const [recommendResult, followResult, discoveryResult] = await Promise.all([
+          fetchCommunityFeed('recommend'),
+          fetchCommunityFeed('follow'),
+          fetchCommunityDiscovery(),
+        ]);
+        if (ignore) {
+          return;
+        }
+
+        setRecommendFeed(recommendResult.items.map(mapCommunityFeedItem));
+        setFollowFeed(followResult.items.map(mapCommunityFeedItem));
+        setHeroPost(discoveryResult.hero ? mapCommunityFeedItem(discoveryResult.hero) : null);
+        setHotTopics(discoveryResult.hotTopics);
+        setFeedError('');
+      } catch (error) {
+        if (ignore) {
+          return;
+        }
+        setRecommendFeed([]);
+        setFollowFeed([]);
+        setHeroPost(null);
+        setHotTopics([]);
+        setFeedError(error instanceof Error ? error.message : '社区动态加载失败');
+      } finally {
+        if (!ignore) {
+          setFeedReady(true);
+        }
+      }
+    }
+
+    void loadFeed();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const locationList = useMemo(() => {
     if (!locationQuery.trim()) {
@@ -320,6 +432,7 @@ export default function CommunityPage() {
     setMentionQuery('');
     setGuessQuery('');
     setEmojiCategory('😀 表情');
+    setSelectedImages([]);
     setScopeOpen(false);
     setLocationOpen(false);
     setMentionOpen(false);
@@ -327,27 +440,87 @@ export default function CommunityPage() {
     setEmojiOpen(false);
   }
 
-  function toggleLike(postId: string, currentTab: 'recommend' | 'follow') {
+  function openRepostComposer(item: FeedItem, currentTab: 'recommend' | 'follow') {
+    setRepostTarget({
+      postId: item.id,
+      tab: currentTab,
+      title: item.title,
+      author: item.author.name,
+    });
+    setRepostDraft('转发动态');
+  }
+
+  function closeRepostComposer() {
+    if (repostSaving) {
+      return;
+    }
+    setRepostTarget(null);
+    setRepostDraft('转发动态');
+  }
+
+  function updateFeedList(currentTab: 'recommend' | 'follow', updater: (list: FeedItem[]) => FeedItem[]) {
+    if (currentTab === 'recommend') {
+      setRecommendFeed(updater);
+      return;
+    }
+    setFollowFeed(updater);
+  }
+
+  async function toggleLike(postId: string, currentTab: 'recommend' | 'follow') {
+    if (likeSavingId === postId) {
+      return;
+    }
+
+    const target = (currentTab === 'recommend' ? recommendFeed : followFeed).find((item) => item.id === postId);
+    if (!target) {
+      return;
+    }
+
+    const nextLiked = !target.liked;
     const update = (list: FeedItem[]) =>
       list.map((post) =>
         post.id === postId
           ? {
               ...post,
-              liked: !post.liked,
+              liked: nextLiked,
               likes: post.likes + (post.liked ? -1 : 1),
             }
           : post,
       );
 
-    if (currentTab === 'recommend') {
-      setRecommendFeed(update);
-      return;
+    updateFeedList(currentTab, update);
+    setLikeSavingId(postId);
+
+    try {
+      if (nextLiked) {
+        await likeCommunityPost(postId);
+      } else {
+        await unlikeCommunityPost(postId);
+      }
+    } catch (error) {
+      updateFeedList(currentTab, (list) =>
+        list.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                liked: target.liked,
+                likes: target.likes,
+              }
+            : post,
+        ),
+      );
+      showToast(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setLikeSavingId('');
     }
-    setFollowFeed(update);
   }
 
-  function toggleBookmark(postId: string, currentTab: 'recommend' | 'follow', bookmarked: boolean) {
-    const update = (list: FeedItem[]) =>
+  async function toggleBookmark(postId: string, currentTab: 'recommend' | 'follow', bookmarked: boolean) {
+    if (bookmarkSavingId === postId) {
+      return;
+    }
+
+    updateFeedList(currentTab, (list) =>
       list.map((post) =>
         post.id === postId
           ? {
@@ -355,13 +528,8 @@ export default function CommunityPage() {
               bookmarked: !post.bookmarked,
             }
           : post,
-      );
-
-    if (currentTab === 'recommend') {
-      setRecommendFeed(update);
-    } else {
-      setFollowFeed(update);
-    }
+      ),
+    );
 
     if (!bookmarked) {
       setBookmarkAnimating(postId);
@@ -369,8 +537,30 @@ export default function CommunityPage() {
         setBookmarkAnimating((current) => (current === postId ? null : current));
       }, 300);
     }
+    setBookmarkSavingId(postId);
 
-    showToast(bookmarked ? '已取消收藏' : '⭐ 收藏成功');
+    try {
+      if (bookmarked) {
+        await unbookmarkCommunityPost(postId);
+      } else {
+        await bookmarkCommunityPost(postId);
+      }
+      showToast(bookmarked ? '已取消收藏' : '⭐ 收藏成功');
+    } catch (error) {
+      updateFeedList(currentTab, (list) =>
+        list.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                bookmarked,
+              }
+            : post,
+        ),
+      );
+      showToast(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setBookmarkSavingId('');
+    }
   }
 
   function openScopePanel() {
@@ -447,44 +637,95 @@ export default function CommunityPage() {
     setFollowFeed(update);
   }
 
-  function submitPublish() {
+  function removeSelectedImage(target: string) {
+    setSelectedImages((current) => current.filter((item) => item !== target));
+  }
+
+  async function selectImages(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []).slice(0, 3);
+    if (!files.length) {
+      return;
+    }
+
+    const encoded = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+            reader.onerror = () => reject(new Error('图片读取失败'));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
+    setSelectedImages((current) => [...current, ...encoded].filter(Boolean).slice(0, 3));
+    event.target.value = '';
+  }
+
+  async function submitPublish() {
     const text = publishText.trim();
-    if (!text) {
+    if (!text || publishing) {
       return;
     }
 
     const tagText = selectedTopics[0]?.replace(/^.\s*/u, '') || '猜友动态';
-    const primaryScope = getPrimaryScope(publishScopes);
+    const rawScope = getPrimaryScope(publishScopes);
+    const primaryScope: 'public' | 'followers' | 'private' =
+      rawScope === 'fans' ? 'followers' : rawScope === 'private' ? 'private' : 'public';
 
-    const newPost: FeedItem = {
-      id: `local-post-${Date.now()}`,
-      author: { name: myProfile.name, avatar: myProfile.avatar, verified: false },
-      tag: { text: tagText, cls: TAG_CLS_MAP[tagText] ?? styles.tagCommunity },
-      title: text.length > 40 ? `${text.slice(0, 40)}...` : text,
-      desc: text,
-      images: [],
-      guessInfo: guessLink
-        ? {
-            id: guessLink.id,
-            options: guessLink.options,
-            participants: guessLink.participants,
-            pcts: guessLink.pcts,
-          }
-        : undefined,
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      time: '刚刚',
-      liked: false,
-      bookmarked: false,
-      scope: primaryScope,
-    };
+    try {
+      setPublishing(true);
+      const created = await createCommunityPost({
+        content: text,
+        tag: tagText,
+        scope: primaryScope,
+        guessId: guessLink?.id ?? null,
+        location,
+        images: selectedImages,
+      });
+      const mapped = mapCommunityFeedItem(created);
+      setRecommendFeed((current) => [mapped, ...current]);
+      if (tab === 'follow') {
+        setFollowFeed((current) => [mapped, ...current]);
+      }
+      setPublishOpen(false);
+      showToast(`✅ 动态已发布 · ${getScopeLabel(publishScopes)}可见`);
+      resetPublish();
+      setTab('recommend');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '发布失败');
+    } finally {
+      setPublishing(false);
+    }
+  }
 
-    setRecommendFeed((current) => [newPost, ...current]);
-    setPublishOpen(false);
-    showToast(`✅ 动态已发布 · ${getScopeLabel(publishScopes)}可见`);
-    resetPublish();
-    setTab('recommend');
+  async function handleRepostSubmit() {
+    if (!repostTarget || repostSaving) {
+      return;
+    }
+
+    const content = repostDraft.trim() || '转发动态';
+
+    try {
+      setRepostSaving(true);
+      const reposted = await repostCommunityPost(repostTarget.postId, {
+        content,
+        scope: 'public',
+      });
+      const mapped = mapCommunityFeedItem(reposted);
+      setRecommendFeed((current) => [mapped, ...current]);
+      if (repostTarget.tab === 'follow') {
+        setFollowFeed((current) => [mapped, ...current]);
+      }
+      updateShares(repostTarget.postId, repostTarget.tab);
+      setRepostTarget(null);
+      setRepostDraft('转发动态');
+      showToast('✅ 转发成功');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '转发失败');
+    } finally {
+      setRepostSaving(false);
+    }
   }
 
   return (
@@ -521,8 +762,8 @@ export default function CommunityPage() {
               </Link>
             </div>
             <div className={styles.followScroll}>
-              {followedUsers.map((item) => (
-                <button className={styles.followItem} key={item.id} type="button" onClick={() => router.push(`/user/${item.id}`)}>
+              {followedUsers.length ? followedUsers.map((item) => (
+                <button className={styles.followItem} key={item.id} type="button" onClick={() => router.push(`/user/${encodeURIComponent(item.uid || item.id)}`)}>
                   <div className={styles.followAvatarWrap}>
                     <img
                       className={`${styles.followAvatar} ${item.hasNew ? styles.followAvatarNew : styles.followAvatarOld}`}
@@ -533,25 +774,33 @@ export default function CommunityPage() {
                   </div>
                   <span className={styles.followName}>{item.name}</span>
                 </button>
-              ))}
+              )) : socialReady ? (
+                <div className={styles.followEmpty}>你还没有关注任何猜友</div>
+              ) : (
+                defaultFollowedUsers.map((item) => (
+                  <div className={styles.followItemSkeleton} key={item.id} />
+                ))
+              )}
             </div>
           </section>
         ) : null}
 
         {tab === 'recommend' ? (
           <>
-            <button className={styles.banner} type="button" onClick={() => router.push('/guess/guess-2')}>
-              <img src="/legacy/images/products/p001-lays.jpg" alt="热门竞猜" />
-              <div className={styles.bannerOverlay}>
-                <div className={styles.bannerTag}>🔥 热门竞猜</div>
-                <div className={styles.bannerTitle}>马年糖果品牌大战：德芙 vs 费列罗，谁能称王？</div>
-              </div>
-            </button>
+            {heroPost ? (
+              <button className={styles.banner} type="button" onClick={() => router.push(`/post/${encodeURIComponent(heroPost.id)}`)}>
+                <img src={heroPost.images[0] || heroPost.author.avatar || '/legacy/images/mascot/mouse-main.png'} alt={heroPost.title} />
+                <div className={styles.bannerOverlay}>
+                  <div className={styles.bannerTag}>🔥 社区热议</div>
+                  <div className={styles.bannerTitle}>{heroPost.title}</div>
+                </div>
+              </button>
+            ) : null}
 
             <section className={styles.hotBar}>
               {hotTopics.map((item) => (
                 <Link className={styles.hotItem} href={item.href} key={item.text}>
-                  <span>{item.icon}</span>
+                  <span>🔥</span>
                   {item.text}
                 </Link>
               ))}
@@ -560,8 +809,16 @@ export default function CommunityPage() {
         ) : null}
 
         <section className={styles.feed}>
-          {visibleFeed.length ? (
-            visibleFeed.map((item) => (
+          {!feedReady ? (
+            <div className={styles.empty}>
+              <i className="fa-solid fa-spinner fa-spin" />
+              <div className={styles.emptyTitle}>动态加载中</div>
+              <div className={styles.emptyDesc}>正在同步社区内容...</div>
+            </div>
+          ) : visibleFeed.length ? (
+            visibleFeed.map((item) => {
+              const showStandaloneTitle = shouldRenderStandaloneTitle(item.title, item.desc);
+              return (
               <article className={styles.card} key={item.id} onClick={() => router.push(`/post/${encodeURIComponent(item.id)}`)}>
                 <header className={styles.authorRow}>
                   <button
@@ -569,7 +826,7 @@ export default function CommunityPage() {
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      router.push(`/user/${encodeURIComponent(item.author.name)}`);
+                      router.push(`/user/${encodeURIComponent(item.author.uid || item.author.name)}`);
                     }}
                   >
                     <img src={item.author.avatar} alt={item.author.name} />
@@ -595,8 +852,8 @@ export default function CommunityPage() {
                 </header>
 
                 <div className={styles.body}>
-                  <h2 className={styles.titleText}>{item.title}</h2>
-                  <p className={styles.descText}>{item.desc}</p>
+                  {showStandaloneTitle ? <h2 className={styles.titleText}>{item.title}</h2> : null}
+                  <p className={`${styles.descText} ${showStandaloneTitle ? '' : styles.descTextOnly}`}>{item.desc}</p>
                 </div>
 
                 {item.images.length ? (
@@ -644,9 +901,10 @@ export default function CommunityPage() {
                   <button
                     className={styles.actionItem}
                     type="button"
+                    disabled={likeSavingId === item.id}
                     onClick={(event) => {
                       event.stopPropagation();
-                      toggleLike(item.id, tab);
+                      void toggleLike(item.id, tab);
                     }}
                   >
                     <i className={`fa-${item.liked ? 'solid' : 'regular'} fa-heart ${item.liked ? styles.actionLiked : ''}`} />
@@ -668,12 +926,7 @@ export default function CommunityPage() {
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      const content = window.prompt('添加转发评论（可选）：', '');
-                      if (content === null) {
-                        return;
-                      }
-                      updateShares(item.id, tab);
-                      showToast('✅ 转发成功');
+                      openRepostComposer(item, tab);
                     }}
                   >
                     <i className="fa-solid fa-share-nodes" />
@@ -684,27 +937,33 @@ export default function CommunityPage() {
                       bookmarkAnimating === item.id ? styles.favoritedPop : ''
                     }`}
                     type="button"
+                    disabled={bookmarkSavingId === item.id}
                     onClick={(event) => {
                       event.stopPropagation();
-                      toggleBookmark(item.id, tab, Boolean(item.bookmarked));
+                      void toggleBookmark(item.id, tab, Boolean(item.bookmarked));
                     }}
                   >
                     <i className={`fa-${item.bookmarked ? 'solid' : 'regular'} fa-bookmark`} />
                   </button>
                 </footer>
               </article>
-            ))
+              );
+            })
           ) : (
             <div className={styles.empty}>
-              <i className="fa-solid fa-inbox" />
-              <div className={styles.emptyTitle}>暂无该分类内容</div>
-              <div className={styles.emptyDesc}>换个分类看看吧~</div>
+              <i className={`fa-solid ${feedError ? 'fa-triangle-exclamation' : 'fa-inbox'}`} />
+              <div className={styles.emptyTitle}>{feedError ? '动态加载失败' : '暂无该分类内容'}</div>
+              <div className={styles.emptyDesc}>{feedError || '换个分类看看吧~'}</div>
             </div>
           )}
         </section>
 
         <div className={styles.loadMore}>
-          <i className="fa-solid fa-spinner fa-spin" /> 加载更多动态...
+          {feedReady ? (
+            <><i className="fa-solid fa-check" /> 已展示最新动态</>
+          ) : (
+            <><i className="fa-solid fa-spinner fa-spin" /> 加载更多动态...</>
+          )}
         </div>
 
         <button className={styles.publishFab} type="button" onClick={() => setPublishOpen(true)}>
@@ -748,18 +1007,45 @@ export default function CommunityPage() {
               />
 
               <div className={styles.mediaRow}>
-                <button className={styles.mediaBtn} type="button" onClick={() => showToast('选择图片')}>
+                <input
+                  ref={imageInputRef}
+                  className={styles.hiddenInput}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(event) => void selectImages(event)}
+                />
+                <button className={styles.mediaBtn} type="button" onClick={() => imageInputRef.current?.click()}>
                   <i className="fa-solid fa-image" />
                   <span>图片</span>
                 </button>
-                <button className={styles.mediaBtn} type="button" onClick={() => showToast('拍摄视频')}>
-                  <i className="fa-solid fa-video" />
-                  <span>视频</span>
+                <button className={styles.mediaBtn} type="button" onClick={() => setSelectedImages([])}>
+                  <i className="fa-solid fa-eraser" />
+                  <span>清空图片</span>
                 </button>
               </div>
 
-              {location || mentions.length || guessLink ? (
+              {selectedImages.length ? (
+                <div className={styles.imagePreviewRow}>
+                  {selectedImages.map((image) => (
+                    <div className={styles.imagePreviewCard} key={image}>
+                      <img src={image} alt="动态图片" />
+                      <button className={styles.imagePreviewRemove} type="button" onClick={() => removeSelectedImage(image)}>
+                        <i className="fa-solid fa-xmark" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {selectedImages.length || location || mentions.length || guessLink ? (
                 <div className={styles.attachments}>
+                  {selectedImages.length ? (
+                    <span className={styles.attachmentTag}>
+                      <i className="fa-solid fa-image" />
+                      已添加 {selectedImages.length} 张图片
+                    </span>
+                  ) : null}
                   {location ? (
                     <span className={`${styles.attachmentTag} ${styles.attachmentLocation}`}>
                       <i className="fa-solid fa-location-dot" />
@@ -822,9 +1108,67 @@ export default function CommunityPage() {
                 </button>
               </div>
 
-              <button className={styles.submitBtn} type="button" disabled={!publishText.trim()} onClick={submitPublish}>
-                <i className="fa-solid fa-paper-plane" /> 发布动态
+              <button className={styles.submitBtn} type="button" disabled={!publishText.trim() || publishing} onClick={() => void submitPublish()}>
+                <i className={`fa-solid ${publishing ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`} /> {publishing ? '发布中' : '发布动态'}
               </button>
+            </section>
+          </div>
+        ) : null}
+
+        {repostTarget ? (
+          <div className={styles.subOverlay} onClick={closeRepostComposer} role="presentation">
+            <section className={styles.subPanel} onClick={(event) => event.stopPropagation()} role="presentation">
+              <div className={styles.scopeHandle} />
+              <div className={styles.scopeHeader}>
+                <h3>转发动态</h3>
+                <button className={styles.closeBtn} type="button" onClick={closeRepostComposer}>
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              </div>
+
+              <div className={styles.repostLead}>
+                <span className={styles.repostLeadIcon}>
+                  <i className="fa-solid fa-retweet" />
+                </span>
+                <div className={styles.repostLeadText}>
+                  <strong>转发到猜友圈</strong>
+                  <span>补一句态度，动态会更完整。</span>
+                </div>
+              </div>
+
+              <div className={styles.repostSummary}>
+                <div className={styles.repostLabel}>原动态</div>
+                <div className={styles.repostTitle}>{repostTarget.title || '未命名动态'}</div>
+                <div className={styles.repostMeta}>作者 · {repostTarget.author}</div>
+              </div>
+
+              <div className={styles.repostField}>
+                <textarea
+                  autoFocus
+                  className={styles.repostTextarea}
+                  placeholder="这一条我为什么想转发？"
+                  value={repostDraft}
+                  onChange={(event) => setRepostDraft(event.target.value)}
+                />
+                <div className={styles.repostFieldMeta}>
+                  <span>公开发布，所有人可见</span>
+                  <span>{repostDraft.trim().length} 字</span>
+                </div>
+              </div>
+
+              <div className={styles.repostActions}>
+                <button className={styles.repostGhostBtn} type="button" onClick={closeRepostComposer}>
+                  取消
+                </button>
+                <button
+                  className={styles.repostSubmitBtn}
+                  type="button"
+                  disabled={repostSaving}
+                  onClick={() => void handleRepostSubmit()}
+                >
+                  <i className={`fa-solid ${repostSaving ? 'fa-spinner fa-spin' : 'fa-retweet'}`} /> {repostSaving ? '转发中' : '确认转发'}
+                </button>
+              </div>
             </section>
           </div>
         ) : null}

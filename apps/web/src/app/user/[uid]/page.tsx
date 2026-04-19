@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-import { fetchUserProfile } from '../../../lib/api';
+import { fetchChatDetail, fetchUserProfile, fetchUserProfileActivity, followUser, sendChatMessage, unfollowUser } from '../../../lib/api';
 import styles from './page.module.css';
 
 type ProfilePost = {
@@ -211,11 +211,69 @@ function getFallbackProfile(id: string) {
   return fallbackProfiles[id] ?? buildDefaultProfile(id);
 }
 
+function formatTimeLabel(value: string) {
+  if (!value) {
+    return '';
+  }
+
+  const diff = Date.now() - new Date(value).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) {
+    return '刚刚';
+  }
+  if (minutes < 60) {
+    return `${minutes}分钟前`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours}小时前`;
+  }
+  const days = Math.floor(hours / 24);
+  if (days < 30) {
+    return `${days}天前`;
+  }
+  return new Date(value).toLocaleDateString('zh-CN');
+}
+
+function mapPostTag(tag: string | null) {
+  if (!tag) {
+    return { text: '猜友动态' };
+  }
+
+  if (tag.includes('品牌')) {
+    return { text: tag, cls: 'tagBrand' };
+  }
+  if (tag.includes('竞猜') || tag.includes('预测')) {
+    return { text: tag, cls: 'tagGuess' };
+  }
+  if (tag.includes('PK')) {
+    return { text: tag, cls: 'tagPk' };
+  }
+  return { text: tag, cls: 'tagHot' };
+}
+
+function mapProfilePost(item: Awaited<ReturnType<typeof fetchUserProfileActivity>>['works'][number]): ProfilePost {
+  return {
+    id: item.id,
+    tag: mapPostTag(item.tag),
+    title: item.title,
+    desc: item.desc,
+    images: item.images,
+    likes: item.likes,
+    comments: item.comments,
+    time: formatTimeLabel(item.createdAt),
+    author: {
+      name: item.authorName || '优米用户',
+      avatar: item.authorAvatar || '/legacy/images/mascot/mouse-casual.png',
+    },
+  };
+}
+
 export default function UserProfilePage() {
   const router = useRouter();
-  const params = useParams<{ id: string }>();
-  const profileId = typeof params?.id === 'string' ? params.id : '';
-  const fallbackProfile = useMemo(() => getFallbackProfile(profileId), [profileId]);
+  const params = useParams<{ uid: string }>();
+  const profileUid = typeof params?.uid === 'string' ? params.uid : '';
+  const fallbackProfile = useMemo(() => getFallbackProfile(profileUid), [profileUid]);
   const [profile, setProfile] = useState<ProfileViewModel>(fallbackProfile);
   const [tab, setTab] = useState<'works' | 'liked'>('works');
   const [following, setFollowing] = useState(false);
@@ -227,6 +285,9 @@ export default function UserProfilePage() {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(fallbackProfile.chatSeed);
   const [typing, setTyping] = useState(false);
+  const [visibility, setVisibility] = useState({ works: true, liked: true });
+  const [chatLoading, setChatLoading] = useState(false);
+  const [followSaving, setFollowSaving] = useState(false);
 
   const statItems = useMemo(
     () => [
@@ -258,11 +319,15 @@ export default function UserProfilePage() {
 
     setProfile(fallbackProfile);
     setChatMessages(fallbackProfile.chatSeed);
+    setVisibility({ works: true, liked: true });
     setLoading(true);
 
     async function loadProfile() {
       try {
-        const user = await fetchUserProfile(profileId);
+        const [user, activity] = await Promise.all([
+          fetchUserProfile(profileUid),
+          fetchUserProfileActivity(profileUid),
+        ]);
         if (ignore) {
           return;
         }
@@ -288,10 +353,19 @@ export default function UserProfilePage() {
           followers: user.followers || fallbackProfile.followers,
           following: user.following || fallbackProfile.following,
           wins: user.wins || fallbackProfile.wins,
+          works: activity.works.map((item) => mapProfilePost(item)),
+          liked: activity.likes.map((item) => mapProfilePost(item)),
         });
+        setVisibility({
+          works: activity.worksVisible,
+          liked: activity.likedVisible,
+        });
+        setFollowing(user.relation === 'friend' || user.relation === 'following');
       } catch {
         if (!ignore) {
           setProfile(fallbackProfile);
+          setVisibility({ works: true, liked: true });
+          setFollowing(false);
           setToast('已显示默认主页');
         }
       } finally {
@@ -301,7 +375,7 @@ export default function UserProfilePage() {
       }
     }
 
-    if (profileId) {
+    if (profileUid) {
       void loadProfile();
     } else {
       setLoading(false);
@@ -310,7 +384,7 @@ export default function UserProfilePage() {
     return () => {
       ignore = true;
     };
-  }, [fallbackProfile, profileId]);
+  }, [fallbackProfile, profileUid]);
 
   async function handleCopyUid() {
     try {
@@ -321,35 +395,69 @@ export default function UserProfilePage() {
     setToast('已复制优米号');
   }
 
-  function handleToggleFollow() {
-    setFollowing((current) => {
-      const next = !current;
-      setToast(next ? '✅ 关注成功' : '已取消关注');
-      return next;
-    });
-  }
-
-  function sendMessage() {
-    const text = chatInput.trim();
-    if (!text) {
+  async function handleToggleFollow() {
+    if (!profile.id || followSaving) {
       return;
     }
 
-    setChatMessages((current) => [...current, { id: `me-${Date.now()}`, side: 'me', text }]);
-    setChatInput('');
-    setTyping(true);
+    try {
+      setFollowSaving(true);
+      if (following) {
+        await unfollowUser(profile.id);
+        setFollowing(false);
+        setToast('已取消关注');
+      } else {
+        await followUser(profile.id);
+        setFollowing(true);
+        setToast('✅ 关注成功');
+      }
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setFollowSaving(false);
+    }
+  }
 
-    window.setTimeout(() => {
+  async function openChat() {
+    if (!profile.id) {
+      return;
+    }
+
+    try {
+      setChatLoading(true);
+      setChatOpen(true);
+      const detail = await fetchChatDetail(profile.id);
+      setChatMessages(
+        detail.items.map((item) => ({
+          id: String(item.id),
+          side: item.from === 'me' ? 'me' : 'other',
+          text: item.content,
+        })),
+      );
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : '读取聊天记录失败');
+      setChatOpen(false);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  async function sendMessage() {
+    const text = chatInput.trim();
+    if (!text || !profile.id) {
+      return;
+    }
+
+    try {
+      setTyping(true);
+      const sent = await sendChatMessage(profile.id, { content: text });
+      setChatMessages((current) => [...current, { id: String(sent.id), side: 'me', text: sent.content }]);
+      setChatInput('');
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : '发送消息失败');
+    } finally {
       setTyping(false);
-      setChatMessages((current) => [
-        ...current,
-        {
-          id: `other-${Date.now()}`,
-          side: 'other',
-          text: '收到啦，晚点给你回复。',
-        },
-      ]);
-    }, 900);
+    }
   }
 
   const renderPostCard = (post: ProfilePost, liked: boolean) => {
@@ -460,14 +568,15 @@ export default function UserProfilePage() {
               <span>{item.label}</span>
             </div>
           ))}
-          <button className={styles.chatBtn} type="button" onClick={() => setChatOpen(true)}>
+          <button className={styles.chatBtn} type="button" onClick={() => void openChat()} disabled={!profile.id}>
             <i className="fa-regular fa-comment-dots" />
             私信
           </button>
           <button
             className={`${styles.followBtn} ${following ? styles.following : ''}`}
             type="button"
-            onClick={handleToggleFollow}
+            onClick={() => void handleToggleFollow()}
+            disabled={!profile.id || followSaving}
           >
             {following ? (
               <>
@@ -524,8 +633,10 @@ export default function UserProfilePage() {
           ) : (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>📝</div>
-              <div className={styles.emptyTitle}>TA还没有发布过猜友圈</div>
-              <div className={styles.emptyDesc}>关注TA，第一时间获取新动态</div>
+              <div className={styles.emptyTitle}>{visibility.works ? 'TA还没有发布过猜友圈' : '作品内容已设为不可见'}</div>
+              <div className={styles.emptyDesc}>
+                {visibility.works ? '关注TA，第一时间获取新动态' : '当前仅自己或好友可见'}
+              </div>
             </div>
           )}
         </div>
@@ -541,8 +652,10 @@ export default function UserProfilePage() {
           ) : (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>💗</div>
-              <div className={styles.emptyTitle}>TA还没有点赞过帖子</div>
-              <div className={styles.emptyDesc}>暂无喜欢的内容</div>
+              <div className={styles.emptyTitle}>{visibility.liked ? 'TA还没有点赞过帖子' : '喜欢列表已设为不可见'}</div>
+              <div className={styles.emptyDesc}>
+                {visibility.liked ? '暂无喜欢的内容' : '当前仅自己可见'}
+              </div>
             </div>
           )}
         </div>
@@ -563,7 +676,7 @@ export default function UserProfilePage() {
               </button>
             </div>
             <div className={styles.chatMessages}>
-              <div className={styles.timeLabel}>今天 14:20</div>
+              {chatLoading ? <div className={styles.timeLabel}>正在读取聊天记录…</div> : <div className={styles.timeLabel}>聊天记录</div>}
               {chatMessages.map((message) => (
                 <div key={message.id} className={`${styles.msgRow} ${styles[message.side]}`}>
                   <img src={message.side === 'me' ? '/legacy/images/mascot/mouse-main.png' : profile.avatar} alt="" />

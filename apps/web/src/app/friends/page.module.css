@@ -153,11 +153,12 @@
   color: #ff5722;
 }
 
-.hotTitle em {
+.hotTitle button {
   margin-left: auto;
+  border: 0;
+  background: transparent;
   color: #999;
   font-size: 11px;
-  font-style: normal;
   font-weight: 500;
 }
 
@@ -206,6 +207,14 @@
   gap: 4px;
   color: #bbb;
   font-size: 10px;
+}
+
+.hotEmpty {
+  padding: 18px 16px;
+  border-radius: 14px;
+  background: #fff;
+  color: #999;
+  font-size: 12px;
 }
 
 .hotChipHot {
@@ -339,6 +348,14 @@
   flex-shrink: 0;
 }
 
+.avatarButton {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .avatar {
   width: 50px;
   height: 50px;
@@ -384,6 +401,20 @@
   overflow: hidden;
   font-size: 15px;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nameButton {
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -741,6 +772,15 @@
   overflow-y: auto;
 }
 
+.pkEmpty {
+  padding: 16px 14px;
+  border-radius: 14px;
+  background: #fafafa;
+  color: #999;
+  font-size: 12px;
+  text-align: center;
+}
+
 .pkItem,
 .pkItemActive {
   display: flex;
@@ -806,6 +846,11 @@
   box-shadow: 0 4px 16px rgba(255, 87, 34, 0.25);
   color: #fff;
   font-size: 14px;
+}
+
+.primaryFooterBtn:disabled {
+  opacity: 0.45;
+  box-shadow: none;
 }
 
 .pkFooter .primaryFooterBtn {

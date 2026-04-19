@@ -6,18 +6,27 @@ import type {
   BrandProductListResult,
   ChatConversationListResult,
   ChatDetailResult,
+  CommunityCommentItem,
+  CommunityDiscoveryResult,
+  CommunityPostDetailResult,
+  CommunityFeedResult,
+  CommunitySearchResult,
+  CreateCommunityCommentPayload,
+  CreateCommunityPostPayload,
   GuessHistoryResult,
   GuessListResult,
   GuessSummary,
   LoginPayload,
   LoginResult,
   MeActivityResult,
+  MeSummaryResult,
   MyShopResult,
   LogoutResult,
   NotificationListResult,
   OrderListResult,
   ProductDetailResult,
   ProductListResult,
+  PublicUserActivityResult,
   PublicShopDetailResult,
   RegisterPayload,
   SendCodePayload,
@@ -26,8 +35,12 @@ import type {
   SocialOverviewResult,
   SubmitBrandAuthApplicationPayload,
   SubmitBrandAuthApplicationResult,
+  SubmitShopApplicationPayload,
+  SubmitShopApplicationResult,
   UpdateMePayload,
+  UserSearchResult,
   UserPublicProfile,
+  ShopStatusResult,
   WalletLedgerResult,
   WarehouseListResult,
   UserSummary,
@@ -129,6 +142,24 @@ async function putJson<TResponse, TPayload>(
   return data.data;
 }
 
+async function deleteJson<TResponse>(path: string): Promise<TResponse> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'DELETE',
+    headers: getAuthToken()
+      ? {
+          Authorization: `Bearer ${getAuthToken()}`,
+        }
+      : undefined,
+  });
+
+  const data = (await response.json()) as ApiEnvelope<TResponse>;
+  if (!response.ok) {
+    throw new Error(data.message || `Request failed: ${path}`);
+  }
+
+  return data.data;
+}
+
 export function fetchGuessList() {
   return getJson<GuessListResult>('/api/guesses');
 }
@@ -145,9 +176,24 @@ export function fetchProductDetail(id: string) {
   return getJson<ProductDetailResult>(`/api/products/${id}`);
 }
 
-export function fetchProductList(limit?: number) {
-  const query = typeof limit === 'number' ? `?limit=${encodeURIComponent(String(limit))}` : '';
-  return getJson<ProductListResult>(`/api/products${query}`);
+export function fetchProductList(options?: number | { limit?: number; q?: string; categoryId?: string }) {
+  const searchParams = new URLSearchParams();
+  if (typeof options === 'number') {
+    searchParams.set('limit', String(options));
+  } else if (options) {
+    if (typeof options.limit === 'number') {
+      searchParams.set('limit', String(options.limit));
+    }
+    if (options.q?.trim()) {
+      searchParams.set('q', options.q.trim());
+    }
+    if (options.categoryId?.trim()) {
+      searchParams.set('categoryId', options.categoryId.trim());
+    }
+  }
+
+  const query = searchParams.toString();
+  return getJson<ProductListResult>(`/api/products${query ? `?${query}` : ''}`);
 }
 
 export function fetchOrders() {
@@ -164,6 +210,14 @@ export function fetchPhysicalWarehouse() {
 
 export function fetchMyShop() {
   return getJson<MyShopResult>('/api/shops/me');
+}
+
+export function fetchShopStatus() {
+  return getJson<ShopStatusResult>('/api/shops/me/status');
+}
+
+export function submitShopApplication(payload: SubmitShopApplicationPayload) {
+  return postJson<SubmitShopApplicationResult, SubmitShopApplicationPayload>('/api/shops/apply', payload);
 }
 
 export function fetchShopDetail(id: string) {
@@ -218,8 +272,25 @@ export async function fetchUserProfile(userId: string) {
   return getJson<UserPublicProfile>(`/api/auth/users/${userId}`);
 }
 
+export async function fetchUserProfileActivity(userId: string) {
+  return getJson<PublicUserActivityResult>(`/api/auth/users/${userId}/activity`);
+}
+
 export async function fetchMeActivity() {
   return getJson<MeActivityResult>('/api/auth/me/activity');
+}
+
+export async function fetchMeSummary() {
+  return getJson<MeSummaryResult>('/api/auth/me/summary');
+}
+
+export async function searchUsers(q?: string) {
+  const searchParams = new URLSearchParams();
+  if (q?.trim()) {
+    searchParams.set('q', q.trim());
+  }
+  const query = searchParams.toString();
+  return getJson<UserSearchResult>(`/api/auth/users/search${query ? `?${query}` : ''}`);
 }
 
 export async function fetchNotifications() {
@@ -230,8 +301,51 @@ export async function markAllNotificationsRead() {
   return postJson<{ success: true }, Record<string, never>>('/api/auth/notifications/read-all', {});
 }
 
+export async function markNotificationRead(notificationId: number | string) {
+  return postJson<{ success: true }, Record<string, never>>(
+    `/api/auth/notifications/${encodeURIComponent(String(notificationId))}/read`,
+    {},
+  );
+}
+
 export async function fetchSocialOverview() {
   return getJson<SocialOverviewResult>('/api/auth/social');
+}
+
+export async function fetchCommunityFeed(tab: 'recommend' | 'follow') {
+  return getJson<CommunityFeedResult>(`/api/auth/community/feed?tab=${encodeURIComponent(tab)}`);
+}
+
+export async function fetchCommunityDiscovery() {
+  return getJson<CommunityDiscoveryResult>('/api/auth/community/discovery');
+}
+
+export async function fetchCommunityPost(postId: string) {
+  return getJson<CommunityPostDetailResult>(`/api/auth/community/posts/${postId}`);
+}
+
+export async function createCommunityPost(payload: CreateCommunityPostPayload) {
+  return postJson<CommunityFeedResult['items'][number], CreateCommunityPostPayload>('/api/auth/community/posts', payload);
+}
+
+export async function createCommunityComment(postId: string, payload: CreateCommunityCommentPayload) {
+  return postJson<CommunityCommentItem, CreateCommunityCommentPayload>(`/api/auth/community/posts/${postId}/comments`, payload);
+}
+
+export async function likeCommunityComment(commentId: string) {
+  return postJson<{ success: true }, Record<string, never>>(`/api/auth/community/comments/${commentId}/like`, {});
+}
+
+export async function unlikeCommunityComment(commentId: string) {
+  return deleteJson<{ success: true }>(`/api/auth/community/comments/${commentId}/like`);
+}
+
+export async function repostCommunityPost(postId: string, payload: CreateCommunityPostPayload) {
+  return postJson<CommunityFeedResult['items'][number], CreateCommunityPostPayload>(`/api/auth/community/posts/${postId}/repost`, payload);
+}
+
+export async function searchCommunity(q: string) {
+  return getJson<CommunitySearchResult>(`/api/auth/community/search?q=${encodeURIComponent(q.trim())}`);
 }
 
 export async function fetchChats() {
@@ -244,4 +358,42 @@ export async function fetchChatDetail(userId: string) {
 
 export async function sendChatMessage(userId: string, payload: SendChatMessagePayload) {
   return postJson<ChatDetailResult['items'][number], SendChatMessagePayload>(`/api/auth/chats/${userId}`, payload);
+}
+
+export async function followUser(userId: string) {
+  return postJson<{ success: true }, Record<string, never>>(`/api/auth/users/${userId}/follow`, {});
+}
+
+export async function unfollowUser(userId: string) {
+  return deleteJson<{ success: true }>(`/api/auth/users/${userId}/follow`);
+}
+
+export async function acceptFriendRequest(userId: string) {
+  return postJson<{ success: true }, Record<string, never>>(
+    `/api/auth/friends/requests/${encodeURIComponent(userId)}/accept`,
+    {},
+  );
+}
+
+export async function rejectFriendRequest(userId: string) {
+  return postJson<{ success: true }, Record<string, never>>(
+    `/api/auth/friends/requests/${encodeURIComponent(userId)}/reject`,
+    {},
+  );
+}
+
+export async function likeCommunityPost(postId: string) {
+  return postJson<{ success: true }, Record<string, never>>(`/api/auth/community/posts/${postId}/like`, {});
+}
+
+export async function unlikeCommunityPost(postId: string) {
+  return deleteJson<{ success: true }>(`/api/auth/community/posts/${postId}/like`);
+}
+
+export async function bookmarkCommunityPost(postId: string) {
+  return postJson<{ success: true }, Record<string, never>>(`/api/auth/community/posts/${postId}/bookmark`, {});
+}
+
+export async function unbookmarkCommunityPost(postId: string) {
+  return deleteJson<{ success: true }>(`/api/auth/community/posts/${postId}/bookmark`);
 }

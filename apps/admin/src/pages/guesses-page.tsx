@@ -1,18 +1,84 @@
 import type { GuessSummary } from '@joy/shared';
 import type { TableColumnsType } from 'antd';
 
-import { Card, Descriptions, Drawer, List, Progress, Space, Statistic, Table, Tag, Typography } from 'antd';
-import { useState } from 'react';
+import { Card, Descriptions, Drawer, Form, Input, List, Progress, Select, Space, Table, Tag, Typography } from 'antd';
+import { useMemo, useState } from 'react';
 
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import type { AdminCategoryItem } from '../lib/admin-data';
 import { formatAmount, formatDateTime, guessReviewStatusMeta, guessStatusMeta } from '../lib/format';
 
 interface GuessesPageProps {
   guesses: GuessSummary[];
   loading: boolean;
+  categories?: AdminCategoryItem[];
 }
 
-export function GuessesPage({ guesses, loading }: GuessesPageProps) {
+export function GuessesPage({ guesses, loading, categories = [] }: GuessesPageProps) {
   const [selected, setSelected] = useState<GuessSummary | null>(null);
+  const [filters, setFilters] = useState<{
+    title?: string;
+    category?: string;
+    brand?: string;
+  }>({});
+  const [status, setStatus] = useState<'all' | 'pending_review' | GuessSummary['status']>('all');
+  const [form] = Form.useForm<{ title?: string; category?: string; brand?: string }>();
+
+  const filteredGuesses = useMemo(() => {
+    return guesses.filter((guess) => {
+      if (status === 'pending_review' && guess.reviewStatus !== 'pending') {
+        return false;
+      }
+      if (status !== 'all' && status !== 'pending_review' && guess.status !== status) {
+        return false;
+      }
+      if (
+        filters.title &&
+        !guess.title.toLowerCase().includes(filters.title.trim().toLowerCase())
+      ) {
+        return false;
+      }
+      if (filters.category && guess.category !== filters.category) {
+        return false;
+      }
+      if (filters.brand && guess.product.brand !== filters.brand) {
+        return false;
+      }
+      return true;
+    });
+  }, [filters, guesses, status]);
+
+  const categoryOptions = useMemo(
+    () => {
+      const fullCategoryOptions = categories
+        .filter((item) => item.bizType === 'guess' && item.status === 'active')
+        .map((item) => ({
+          label: item.name,
+          value: item.name,
+        }));
+
+      if (fullCategoryOptions.length > 0) {
+        return fullCategoryOptions;
+      }
+
+      return Array.from(new Set(guesses.map((item) => item.category).filter(Boolean))).map((value) => ({
+        label: value,
+        value,
+      }));
+    },
+    [categories, guesses],
+  );
+
+  const brandOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(guesses.map((item) => item.product.brand).filter(Boolean)),
+      ).map((value) => ({
+        label: value,
+        value,
+      })),
+    [guesses],
+  );
 
   const columns: TableColumnsType<GuessSummary> = [
     {
@@ -59,34 +125,46 @@ export function GuessesPage({ guesses, loading }: GuessesPageProps) {
 
   return (
     <div className="page-stack">
-      <Space wrap size={16}>
-        <Card className="metric-card">
-          <Statistic
-            title="进行中"
-            value={guesses.filter((guess) => guess.status === 'active').length}
-          />
-        </Card>
-        <Card className="metric-card">
-          <Statistic
-            title="待审核"
-            value={guesses.filter((guess) => guess.reviewStatus === 'pending').length}
-          />
-        </Card>
-        <Card className="metric-card">
-          <Statistic
-            title="已结算"
-            value={guesses.filter((guess) => guess.status === 'settled').length}
-          />
-        </Card>
-      </Space>
-
-      <Card title="竞猜管理">
+      <AdminSearchPanel
+        form={form}
+        onSearch={() => {
+          const values = form.getFieldsValue();
+          setFilters(values);
+        }}
+        onReset={() => {
+          form.resetFields();
+          setFilters({});
+          setStatus('all');
+        }}
+      >
+        <Form.Item name="title">
+          <Input placeholder="竞猜标题" allowClear />
+        </Form.Item>
+        <Form.Item name="category">
+          <Select placeholder="分类" allowClear options={categoryOptions} />
+        </Form.Item>
+        <Form.Item name="brand">
+          <Select placeholder="品牌" allowClear options={brandOptions} />
+        </Form.Item>
+      </AdminSearchPanel>
+      <AdminStatusTabs
+        activeKey={status}
+        items={[
+          { key: 'all', label: '全部', count: guesses.length },
+          { key: 'pending_review', label: '待审核', count: guesses.filter((item) => item.reviewStatus === 'pending').length },
+          { key: 'active', label: '进行中', count: guesses.filter((item) => item.status === 'active').length },
+          { key: 'settled', label: '已结算', count: guesses.filter((item) => item.status === 'settled').length },
+          { key: 'cancelled', label: '已取消', count: guesses.filter((item) => item.status === 'cancelled').length },
+        ]}
+        onChange={(key) => setStatus(key as 'all' | 'pending_review' | GuessSummary['status'])}
+      />
+      <Card>
         <Table
           rowKey="id"
           columns={columns}
-          dataSource={guesses}
+          dataSource={filteredGuesses}
           loading={loading}
-          pagination={{ pageSize: 6 }}
+          pagination={{ pageSize: 10 }}
           onRow={(record) => ({
             onClick: () => setSelected(record),
           })}

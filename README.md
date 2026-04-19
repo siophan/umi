@@ -15,7 +15,8 @@
 - 以当前新数据库结构为基线重建系统
 - 用 monorepo 承载 `web / admin / api / shared / db`
 - 先打通登录、竞猜、订单、仓库闭环
-- 暂缓 AI、社区、直播、营销等非核心模块
+- 在此基础上继续把社区、社交、店铺等高频页面接成真实链路
+- 暂缓 AI、直播、营销等非核心模块
 
 ## 目录
 
@@ -40,8 +41,8 @@
 ## 当前状态
 
 - workspace 已完成初始化并通过 `pnpm typecheck`
-- `apps/api` 已有最小可编译服务骨架，并挂上首批业务路由
-- `apps/web` 已有首页、登录、竞猜详情、订单、仓库页面骨架
+- `apps/api` 已从最小骨架推进到多模块真实读写，Swagger 入口为 `/docs`
+- `apps/web` 已覆盖旧静态页主要用户路径，`mall / me / community / user / friends / notifications / chat / shop / guess / product` 等高频页已多轮收口
 - `apps/admin` 已有管理台壳层和模块面板骨架
 - `packages/shared` 已抽出领域类型、状态枚举和 API 契约
 
@@ -52,13 +53,51 @@
 - `GET /health`
 - `GET /openapi.json`
 - `GET /docs`
+- `POST /api/auth/send-code`
+- `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
+- `PUT /api/auth/me`
+- `GET /api/auth/me/activity`
+- `GET /api/auth/me/summary`
+- `GET /api/auth/users/search`
+- `GET /api/auth/users/:id`
+- `GET /api/auth/users/:id/activity`
+- `POST /api/auth/users/:id/follow`
+- `DELETE /api/auth/users/:id/follow`
+- `GET /api/auth/notifications`
+- `POST /api/auth/notifications/read-all`
+- `POST /api/auth/notifications/:id/read`
+- `GET /api/auth/social`
+- `GET /api/auth/chats`
+- `GET /api/auth/chats/:userId`
+- `POST /api/auth/chats/:userId`
+- `GET /api/auth/community/feed`
+- `GET /api/auth/community/discovery`
+- `GET /api/auth/community/search`
+- `POST /api/auth/community/posts`
+- `POST /api/auth/community/posts/:id/repost`
+- `GET /api/auth/community/posts/:id`
+- `POST /api/auth/community/posts/:id/comments`
+- `POST /api/auth/community/posts/:id/like`
+- `DELETE /api/auth/community/posts/:id/like`
+- `POST /api/auth/community/posts/:id/bookmark`
+- `DELETE /api/auth/community/posts/:id/bookmark`
 - `GET /api/guesses`
 - `GET /api/guesses/:id`
+- `GET /api/guesses/user/history`
 - `GET /api/guesses/:id/stats`
+- `GET /api/products`
+- `GET /api/products/:id`
 - `GET /api/orders`
 - `GET /api/orders/:id`
+- `GET /api/shops/me`
+- `GET /api/shops/me/status`
+- `POST /api/shops/apply`
+- `GET /api/shops/brand-auth`
+- `POST /api/shops/brand-auth`
+- `GET /api/shops/brand-products`
+- `POST /api/shops/products`
 - `GET /api/wallet/ledger`
 - `GET /api/warehouse/virtual`
 - `GET /api/warehouse/physical`
@@ -68,13 +107,29 @@
 - `GET /api/admin/guesses`
 - `GET /api/admin/orders`
 
-当前这些接口先用演示数据返回，目的是先把新系统的接口形状固定下来。
+当前状态不是“接口全是 demo”。用户端高频链路里，认证、个人资料、通知、聊天、社交、社区、竞猜列表/详情、商品列表/搜索/详情、订单列表、仓库、店铺申请与品牌授权都已经有真实接口承接；仍然偏 demo 的主要是 Admin、订单详情和部分次级业务页。
 
 ### Web
 
 - `/`
+- `/mall`
 - `/login`
+- `/me`
+- `/edit-profile`
+- `/user/[uid]`
+- `/friends`
+- `/notifications`
+- `/chat`
+- `/chat/[id]`
+- `/community`
+- `/community-search`
+- `/post/[id]`
 - `/guess/[id]`
+- `/guess-history`
+- `/product/[id]`
+- `/search`
+- `/shop/[id]`
+- `/my-shop`
 - `/orders`
 - `/warehouse`
 
@@ -114,8 +169,8 @@ pnpm --filter @joy/admin dev
 
 ## 下一阶段
 
-1. 用真实数据库替换 API 演示数据
-2. 在 `apps/api` 建立 `auth / guess / order / wallet / warehouse` service 层
-3. 给关键链路补事务、权限和状态校验
-4. 在 `apps/web` 接登录、竞猜列表、下注流
-5. 在 `apps/admin` 接竞猜审核、开奖、订单履约
+1. 继续把剩余次级页面从 demo / fallback 收到真实接口
+2. 在 `apps/api` 继续补事务、权限、状态校验和写操作闭环
+3. 清理社区、商城活动位、订单详情等页面的残留占位交互或前端派生展示
+4. 在 `apps/admin` 接竞猜审核、开奖、订单履约
+5. 继续补文档，保证新线程不按旧状态误判

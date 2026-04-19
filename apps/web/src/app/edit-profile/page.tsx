@@ -43,6 +43,8 @@ const xpRules = [
 
 const cityOptions = ["北京", "上海", "广州", "深圳", "杭州", "成都", "武汉", "南京", "重庆", "西安", "长沙", "苏州"];
 
+type GenderSelection = "female" | "male" | "other";
+
 export default function EditProfilePage() {
   const router = useRouter();
   const [avatarIndex, setAvatarIndex] = useState(0);
@@ -52,10 +54,9 @@ export default function EditProfilePage() {
   const [title, setTitle] = useState("");
   const [totalGuess, setTotalGuess] = useState(0);
   const [wins, setWins] = useState(0);
-  const [shopName, setShopName] = useState("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
-  const [gender, setGender] = useState<"female" | "male" | "other">("other");
+  const [gender, setGender] = useState<GenderSelection>("other");
   const [birthday, setBirthday] = useState("");
   const [location, setLocation] = useState("");
   const [worksPrivacy, setWorksPrivacy] = useState<"all" | "friends" | "me">("all");
@@ -70,12 +71,13 @@ export default function EditProfilePage() {
   const [saving, setSaving] = useState(false);
   const [initialProfile, setInitialProfile] = useState({
     avatar: avatarOptions[0],
-    shopName: "",
     name: "",
     bio: "",
-    gender: "other" as "female" | "male" | "other",
+    gender: "other" as GenderSelection,
     birthday: "",
     location: "",
+    worksPrivacy: "all" as "all" | "friends" | "me",
+    favPrivacy: "all" as "all" | "me",
   });
 
   useEffect(() => {
@@ -92,15 +94,16 @@ export default function EditProfilePage() {
         const nextBio = user.signature || defaultSignature;
 
         setBio(nextBio);
-        setGender((user.gender as "female" | "male" | "other" | null) || "other");
+        setGender((user.gender as GenderSelection | null) || "other");
         setBirthday(user.birthday || "");
         setLocation(user.region || "");
-        setShopName(user.shopName || "");
         setUserUid(user.uid || "");
         setLevel(user.level || 1);
         setTitle(user.title || "");
         setTotalGuess(user.totalGuess || 0);
         setWins(user.wins || 0);
+        setWorksPrivacy(user.worksPrivacy || "all");
+        setFavPrivacy(user.favPrivacy || "all");
 
         const matchedAvatarIndex = avatarOptions.findIndex((avatar) => user.avatar === avatar);
         const nextAvatarIndex = matchedAvatarIndex >= 0 ? matchedAvatarIndex : 0;
@@ -108,12 +111,13 @@ export default function EditProfilePage() {
         setAvatarUrl(user.avatar || avatarOptions[nextAvatarIndex] || avatarOptions[0]);
         setInitialProfile({
           avatar: user.avatar || avatarOptions[nextAvatarIndex] || avatarOptions[0],
-          shopName: user.shopName || "",
           name: user.name || "",
           bio: nextBio,
-          gender: (user.gender as "female" | "male" | "other" | null) || "other",
+          gender: (user.gender as GenderSelection | null) || "other",
           birthday: user.birthday || "",
           location: user.region || "",
+          worksPrivacy: user.worksPrivacy || "all",
+          favPrivacy: user.favPrivacy || "all",
         });
       } catch {
         if (ignore) {
@@ -160,7 +164,6 @@ export default function EditProfilePage() {
   const trimmedName = name.trim();
   const trimmedBio = bio.trim();
   const trimmedLocation = location.trim();
-  const trimmedShopName = shopName.trim();
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const currentLevel = levelSteps[Math.max(0, Math.min(levelSteps.length - 1, level - 1))] || levelSteps[0];
   const prevXpNeed = level > 1 ? (levelSteps[level - 2]?.xpNeed || 0) : 0;
@@ -170,12 +173,13 @@ export default function EditProfilePage() {
   const levelRemaining = Math.max(0, nextXpNeed - currentXp);
   const isDirty =
     avatarUrl !== initialProfile.avatar ||
-    trimmedShopName !== initialProfile.shopName.trim() ||
     trimmedName !== initialProfile.name.trim() ||
     trimmedBio !== initialProfile.bio.trim() ||
     gender !== initialProfile.gender ||
     birthday !== initialProfile.birthday ||
-    trimmedLocation !== initialProfile.location.trim();
+    trimmedLocation !== initialProfile.location.trim() ||
+    worksPrivacy !== initialProfile.worksPrivacy ||
+    favPrivacy !== initialProfile.favPrivacy;
   async function handleSave() {
     if (saving) {
       return;
@@ -197,10 +201,11 @@ export default function EditProfilePage() {
         name: trimmedName,
         avatar: avatarUrl,
         signature: trimmedBio,
-        gender,
+        gender: gender === "other" ? null : gender,
         birthday,
         region: trimmedLocation,
-        shopName: trimmedShopName,
+        worksPrivacy,
+        favPrivacy,
       });
       setToast("保存成功");
       window.setTimeout(() => {
@@ -359,21 +364,6 @@ export default function EditProfilePage() {
         <button className={styles.navRow} type="button" onClick={() => openSheet("location")}>
           <span className={styles.label}>地区</span>
           <span className={`${styles.value} ${trimmedLocation ? styles.valueActive : ""}`}>{locationLabel}</span>
-          <span className={styles.arrow}>
-            <i className="fa-solid fa-chevron-right" />
-          </span>
-        </button>
-      </section>
-
-      <div className={styles.sectionTitle}>店铺信息</div>
-      <section className={styles.card}>
-        <div className={styles.row}>
-          <span className={styles.label}>店铺名称</span>
-          <input value={shopName} maxLength={20} onChange={(event) => setShopName(event.target.value)} placeholder="设置你的店铺名" />
-        </div>
-        <button className={styles.navRow} type="button" onClick={() => router.push('/my-shop')}>
-          <span className={styles.label}>管理店铺</span>
-          <span className={styles.value}>查看详情</span>
           <span className={styles.arrow}>
             <i className="fa-solid fa-chevron-right" />
           </span>

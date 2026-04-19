@@ -149,9 +149,9 @@ export async function getAdminDashboardStats() {
         SELECT COALESCE(SUM(amount), 0) AS total
         FROM \`order\`
         WHERE created_at >= ?
-          AND status IN (?, ?, ?)
+          AND status IN (?, ?)
       `,
-      [todayStart, ORDER_PAID, ORDER_FULFILLED, ORDER_REFUNDED],
+      [todayStart, ORDER_PAID, ORDER_FULFILLED],
     ),
     db.execute<mysql.RowDataPacket[]>(
       `
@@ -216,12 +216,12 @@ export async function getAdminDashboardStats() {
         LEFT JOIN order_item oi ON oi.product_id = p.id
         LEFT JOIN \`order\` o
           ON o.id = oi.order_id
-         AND o.status IN (?, ?, ?)
+         AND o.status IN (?, ?)
         GROUP BY p.id, p.name, p.image_url, p.price, p.status, p.stock, p.sales
         ORDER BY sales_count DESC, p.sales DESC, p.updated_at DESC
         LIMIT 5
       `,
-      [ORDER_PAID, ORDER_FULFILLED, ORDER_REFUNDED],
+      [ORDER_PAID, ORDER_FULFILLED],
     ),
     db.execute<mysql.RowDataPacket[]>(
       `
@@ -284,7 +284,7 @@ export async function getAdminDashboardStats() {
                 FROM \`order\`
                 WHERE created_at >= ?
                   AND created_at < ?
-                  AND status IN (?, ?, ?)
+                  AND status IN (?, ?)
               ) AS total_gmv
           `,
           [
@@ -298,7 +298,6 @@ export async function getAdminDashboardStats() {
             rangeEnd,
             ORDER_PAID,
             ORDER_FULFILLED,
-            ORDER_REFUNDED,
           ],
         )
         .then(([rows]) => {
@@ -354,6 +353,7 @@ export async function getAdminDashboardStats() {
   ];
 
   return {
+    generatedAt: new Date().toISOString(),
     users: toNumber((userRows[0] as CountRow | undefined)?.total),
     products: toNumber((productRows[0] as CountRow | undefined)?.total),
     activeGuesses: toNumber((activeGuessRows[0] as CountRow | undefined)?.total),

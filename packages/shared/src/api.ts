@@ -92,7 +92,8 @@ export interface UpdateMePayload {
   gender?: string | null;
   birthday?: string | null;
   region?: string | null;
-  shopName?: string | null;
+  worksPrivacy?: 'all' | 'friends' | 'me';
+  favPrivacy?: 'all' | 'me';
 }
 
 export interface MePostItem {
@@ -115,6 +116,102 @@ export interface MeActivityResult {
   likes: MePostItem[];
 }
 
+export interface PublicUserActivityResult {
+  worksVisible: boolean;
+  likedVisible: boolean;
+  works: MePostItem[];
+  likes: MePostItem[];
+}
+
+export interface CommunityFeedGuessInfo {
+  id: string;
+  options: [string, string];
+  participants: number;
+  pcts: [number, number];
+}
+
+export interface CommunityFeedItem {
+  id: string;
+  title: string;
+  desc: string;
+  tag: string | null;
+  location?: string | null;
+  images: string[];
+  likes: number;
+  comments: number;
+  shares: number;
+  createdAt: string;
+  scope: 'public' | 'followers' | 'private';
+  liked: boolean;
+  bookmarked: boolean;
+  author: {
+    id: string;
+    uid: string;
+    name: string;
+    avatar?: string | null;
+    verified: boolean;
+  };
+  guessInfo?: CommunityFeedGuessInfo | null;
+}
+
+export interface CommunityFeedResult {
+  items: CommunityFeedItem[];
+}
+
+export interface CommunityCommentItem {
+  id: string;
+  authorName: string;
+  authorUid: string;
+  authorAvatar?: string | null;
+  content: string;
+  createdAt: string;
+  likes: number;
+  liked: boolean;
+  replies?: CommunityCommentItem[];
+}
+
+export interface CommunityPostDetailResult {
+  post: CommunityFeedItem;
+  comments: CommunityCommentItem[];
+  related: CommunityFeedItem[];
+}
+
+export interface CreateCommunityPostPayload {
+  content: string;
+  tag?: string | null;
+  scope?: 'public' | 'followers' | 'private';
+  guessId?: string | null;
+  location?: string | null;
+  images?: string[];
+}
+
+export interface CreateCommunityCommentPayload {
+  content: string;
+  parentId?: string | null;
+}
+
+export interface CommunitySearchResult {
+  posts: CommunityFeedItem[];
+  users: UserSearchItem[];
+}
+
+export interface CommunityDiscoveryTopic {
+  text: string;
+  desc: string;
+  href: string;
+}
+
+export interface CommunityDiscoveryResult {
+  hero: CommunityFeedItem | null;
+  hotTopics: CommunityDiscoveryTopic[];
+}
+
+export interface MeSummaryResult {
+  activeOrderCount: number;
+  warehouseItemCount: number;
+  availableCouponCount: number;
+}
+
 export interface NotificationItem {
   id: number;
   type: 'guess' | 'social' | 'system' | 'order';
@@ -130,6 +227,7 @@ export interface NotificationListResult {
 
 export interface SocialUserItem {
   id: string;
+  uid: string;
   name: string;
   avatar?: string | null;
   level?: number;
@@ -149,6 +247,26 @@ export interface SocialOverviewResult {
   following: SocialUserItem[];
   fans: SocialUserItem[];
   requests: SocialUserItem[];
+}
+
+export interface UserSearchItem {
+  id: string;
+  uid: string;
+  name: string;
+  avatar?: string | null;
+  signature?: string | null;
+  level?: number;
+  followers?: number;
+  totalGuess?: number;
+  wins?: number;
+  winRate?: number;
+  shopVerified?: boolean;
+  shopName?: string | null;
+  relation: 'self' | 'friend' | 'following' | 'fan' | 'none';
+}
+
+export interface UserSearchResult {
+  items: UserSearchItem[];
 }
 
 export interface ChatConversationItem {
@@ -187,13 +305,58 @@ export interface GuessListResult {
   items: GuessSummary[];
 }
 
+export type AdminUserFilter = 'all' | 'user' | 'shop_owner' | 'banned';
+
+export interface AdminUserListQuery {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  role?: AdminUserFilter;
+}
+
+export interface UserListResult {
+  items: UserSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: {
+    totalUsers: number;
+    verifiedUsers: number;
+    bannedUsers: number;
+  };
+}
+
+export interface PaginatedListResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AdminUserGuessListResult extends PaginatedListResult<GuessSummary> {}
+
+export interface AdminUserOrderListResult extends PaginatedListResult<OrderSummary> {}
+
+export interface UpdateUserBanPayload {
+  banned: boolean;
+}
+
+export interface UpdateUserBanResult {
+  id: string;
+  banned: boolean;
+}
+
 export interface ProductFeedItem {
   id: string;
   name: string;
+  categoryId: string | null;
   category: string;
   price: number;
   originalPrice: number;
+  discountAmount: number;
   sales: number;
+  rating: number;
+  stock: number;
   img: string;
   tag: string;
   miniTag: string;
@@ -201,10 +364,25 @@ export interface ProductFeedItem {
   brand: string;
   guessPrice: number;
   status: string;
+  shopName: string | null;
+  tags: string[];
+  collab: string | null;
+  isNew: boolean;
+}
+
+export interface ProductCategoryItem {
+  id: string;
+  name: string;
+  iconUrl: string | null;
+  parentId: string | null;
+  level: number;
+  sort: number;
+  count: number;
 }
 
 export interface ProductListResult {
   items: ProductFeedItem[];
+  categories: ProductCategoryItem[];
 }
 
 export interface GuessHistoryStats {
@@ -295,6 +473,47 @@ export interface MyShopProductItem {
   price: number;
   img: string | null;
   status: string;
+}
+
+export interface ShopCategoryOption {
+  id: string;
+  name: string;
+}
+
+export interface ShopApplicationItem {
+  id: string;
+  applyNo: string;
+  shopName: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  reason: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  rejectReason: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface ShopStatusResult {
+  status: 'none' | 'pending' | 'rejected' | 'active';
+  shop: {
+    id: string;
+    name: string;
+    status: string;
+  } | null;
+  latestApplication: ShopApplicationItem | null;
+  categories: ShopCategoryOption[];
+}
+
+export interface SubmitShopApplicationPayload {
+  shopName: string;
+  categoryId: string;
+  reason: string;
+}
+
+export interface SubmitShopApplicationResult {
+  id: string;
+  applyNo: string;
+  status: 'pending';
 }
 
 export interface MyShopResult {

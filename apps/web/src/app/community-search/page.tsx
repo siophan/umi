@@ -3,26 +3,12 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import type { CommunityFeedItem, UserSearchItem } from '@joy/shared';
+
+import { fetchCommunityDiscovery, followUser, searchCommunity, searchUsers, unfollowUser } from '../../lib/api';
 import styles from './page.module.css';
 
 type SearchFilter = 'all' | 'post' | 'guess' | 'user' | 'topic' | 'video';
-
-type SearchResult = {
-  id: string;
-  type: SearchFilter | 'brand';
-  author: string;
-  avatar: string;
-  verified: boolean;
-  tag: string;
-  tagClass: 'tagGuess' | 'tagBrand' | 'tagHot' | 'tagCommunity' | 'tagLive';
-  title: string;
-  desc: string;
-  images: string[];
-  likes: number;
-  comments: number;
-  shares: number;
-  time: string;
-};
 
 const HISTORY_KEY = 'cy_search_history';
 const filters = [
@@ -34,7 +20,7 @@ const filters = [
   { key: 'video', label: '视频' },
 ] as const;
 
-const hotSearches = [
+const fallbackHotSearches = [
   { title: '德芙vs费列罗', desc: '3890人参与竞猜', tag: '热', kind: 'hotFire' as const },
   { title: '马年年货王', desc: '坚果礼盒 vs 糕点系列', tag: '热', kind: 'hotFire' as const },
   { title: '乐事新口味投票', desc: '番茄味 vs 黄瓜味', tag: '新', kind: 'hotNew' as const },
@@ -43,82 +29,7 @@ const hotSearches = [
   { title: '旺旺大礼包2026', desc: '马年限定版开箱', tag: '新', kind: 'hotNew' as const },
   { title: 'PK战报', desc: '本周最强猜友排行', tag: '热', kind: 'hotFire' as const },
   { title: '情人节竞猜', desc: '德芙限定礼盒口味', tag: '新', kind: 'hotNew' as const },
-];
-
-const recommendedUsers = [
-  { name: '乐事官方', avatar: '/legacy/images/products/p001-lays.jpg', desc: '品牌认证', verified: true },
-  { name: '三只松鼠', avatar: '/legacy/images/products/p003-squirrels.jpg', desc: '品牌认证', verified: true },
-  { name: '零食达人小王', avatar: '/legacy/images/mascot/mouse-happy.png', desc: '胜率82%', verified: false },
-  { name: '德芙官方', avatar: '/legacy/images/products/p007-dove.jpg', desc: '品牌认证', verified: true },
-  { name: '坚果控大李', avatar: '/legacy/images/products/p005-liangpin.jpg', desc: '三连胜', verified: false },
-];
-
-const searchResults: SearchResult[] = [
-  {
-    id: 'post-1',
-    type: 'guess',
-    author: '优米数据中心',
-    avatar: '/legacy/images/mascot/mouse-main.png',
-    verified: true,
-    tag: '品牌竞猜',
-    tagClass: 'tagBrand',
-    title: '乐事2026马年限定口味投票开启！番茄味 vs 黄瓜味',
-    desc: '参与竞猜赢正品零食大礼包，猜中直接发货到家。当前3890人参与！',
-    images: ['/legacy/images/guess/g001.jpg'],
-    likes: 2341,
-    comments: 456,
-    shares: 89,
-    time: '15分钟前',
-  },
-  {
-    id: 'post-2',
-    type: 'post',
-    author: '零食测评官',
-    avatar: '/legacy/images/mascot/mouse-casual.png',
-    verified: false,
-    tag: '零食测评',
-    tagClass: 'tagHot',
-    title: '2026年度十大零食品牌排行榜出炉！三只松鼠再登榜首',
-    desc: '根据全平台销售数据与用户口碑综合评选，坚果礼盒、糕点系列和膨化零食的热度继续走高。',
-    images: ['/legacy/images/products/p003-squirrels.jpg', '/legacy/images/products/p005-liangpin.jpg'],
-    likes: 8723,
-    comments: 1204,
-    shares: 188,
-    time: '1小时前',
-  },
-  {
-    id: 'post-3',
-    type: 'topic',
-    author: '猜友圈',
-    avatar: '/legacy/images/mascot/mouse-main.png',
-    verified: true,
-    tag: '猜友动态',
-    tagClass: 'tagCommunity',
-    title: '# 马年年货王 # 你更看好坚果礼盒还是糕点系列？',
-    desc: '话题页聚合了最新年货投票、晒单和猜友战报，实时刷新热度排名。',
-    images: ['/legacy/images/products/p014-qiaqia.jpg', '/legacy/images/products/p011-haidilao.jpg', '/legacy/images/products/p016-wangzai.jpg'],
-    likes: 1534,
-    comments: 326,
-    shares: 77,
-    time: '2小时前',
-  },
-  {
-    id: 'post-4',
-    type: 'video',
-    author: '开箱实验室',
-    avatar: '/legacy/images/mascot/mouse-sunny.png',
-    verified: false,
-    tag: '直播速看',
-    tagClass: 'tagLive',
-    title: '旺旺大礼包2026 开箱速看，限定礼盒里到底有什么？',
-    desc: '一分钟看完礼盒内容物、试吃反馈和本期热门竞猜入口。',
-    images: ['/legacy/images/products/p006-wangwang.jpg'],
-    likes: 926,
-    comments: 112,
-    shares: 43,
-    time: '3小时前',
-  },
-];
+] as const;
 
 function formatNum(value: number) {
   if (value >= 10000) {
@@ -128,6 +39,29 @@ function formatNum(value: number) {
     return `${(value / 1000).toFixed(1)}k`;
   }
   return String(value);
+}
+
+function formatRelativeTime(value: string) {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) {
+    return '刚刚';
+  }
+
+  const diff = Date.now() - timestamp;
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diff < minute) {
+    return '刚刚';
+  }
+  if (diff < hour) {
+    return `${Math.max(1, Math.floor(diff / minute))}分钟前`;
+  }
+  if (diff < day) {
+    return `${Math.max(1, Math.floor(diff / hour))}小时前`;
+  }
+  return `${Math.max(1, Math.floor(diff / day))}天前`;
 }
 
 function highlight(text: string, keyword: string) {
@@ -144,6 +78,45 @@ function highlight(text: string, keyword: string) {
   ));
 }
 
+function userDesc(user: UserSearchItem) {
+  if (user.shopVerified) {
+    return '品牌认证';
+  }
+  if ((user.winRate ?? 0) > 0) {
+    return `胜率${user.winRate}%`;
+  }
+  if ((user.followers ?? 0) > 0) {
+    return `${formatNum(user.followers ?? 0)}粉丝`;
+  }
+  return '猜友';
+}
+
+function postType(post: CommunityFeedItem): Exclude<SearchFilter, 'all' | 'user'> {
+  if (post.guessInfo) {
+    return 'guess';
+  }
+  if ((post.tag || '').includes('视频')) {
+    return 'video';
+  }
+  if ((post.title || '').includes('#') || (post.desc || '').includes('#')) {
+    return 'topic';
+  }
+  return 'post';
+}
+
+function postTagClass(post: CommunityFeedItem) {
+  if (post.guessInfo || post.author.verified) {
+    return 'tagBrand';
+  }
+  if ((post.tag || '').includes('测评')) {
+    return 'tagHot';
+  }
+  if ((post.tag || '').includes('视频')) {
+    return 'tagLive';
+  }
+  return 'tagCommunity';
+}
+
 export default function CommunitySearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -155,8 +128,14 @@ export default function CommunitySearchPage() {
   const [focused, setFocused] = useState(false);
   const [searchedQuery, setSearchedQuery] = useState('');
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [followMap, setFollowMap] = useState<Record<string, boolean>>({});
+  const [recommendedUsers, setRecommendedUsers] = useState<UserSearchItem[]>([]);
+  const [posts, setPosts] = useState<CommunityFeedItem[]>([]);
+  const [users, setUsers] = useState<UserSearchItem[]>([]);
+  const [ready, setReady] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [followSavingId, setFollowSavingId] = useState('');
   const [toast, setToast] = useState('');
+  const [hotSearches, setHotSearches] = useState<Array<{ title: string; desc: string; tag: string; kind: 'hotFire' | 'hotNew' | 'hotBoom' }>>([]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(HISTORY_KEY);
@@ -189,6 +168,80 @@ export default function CommunitySearchPage() {
     };
   }, [searchParams]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadRecommended() {
+      try {
+        const [result, discovery] = await Promise.all([searchUsers(), fetchCommunityDiscovery()]);
+        if (ignore) {
+          return;
+        }
+        setRecommendedUsers(result.items.slice(0, 6));
+        setHotSearches(
+          discovery.hotTopics.slice(0, 8).map((item, index) => ({
+            title: item.text,
+            desc: item.desc,
+            tag: index === 0 ? '爆' : index < 3 ? '热' : '新',
+            kind: index === 0 ? 'hotBoom' : index < 3 ? 'hotFire' : 'hotNew',
+          })),
+        );
+      } catch {
+        if (!ignore) {
+          setRecommendedUsers([]);
+          setHotSearches(fallbackHotSearches.map((item) => ({ ...item })));
+        }
+      } finally {
+        if (!ignore) {
+          setReady(true);
+        }
+      }
+    }
+
+    void loadRecommended();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function runSearch() {
+      const keyword = searchedQuery.trim();
+      if (!keyword) {
+        setPosts([]);
+        setUsers([]);
+        setSearching(false);
+        return;
+      }
+
+      try {
+        setSearching(true);
+        const result = await searchCommunity(keyword);
+        if (ignore) {
+          return;
+        }
+        setPosts(result.posts);
+        setUsers(result.users);
+      } catch {
+        if (!ignore) {
+          setPosts([]);
+          setUsers([]);
+        }
+      } finally {
+        if (!ignore) {
+          setSearching(false);
+        }
+      }
+    }
+
+    void runSearch();
+    return () => {
+      ignore = true;
+    };
+  }, [searchedQuery]);
+
   const suggestions = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     if (!keyword || searchedQuery) {
@@ -198,43 +251,34 @@ export default function CommunitySearchPage() {
     const list: Array<{ title: string; hot: boolean }> = [];
     hotSearches
       .filter((item) => item.title.toLowerCase().includes(keyword))
-      .slice(0, 3)
+      .slice(0, 4)
       .forEach((item) => list.push({ title: item.title, hot: true }));
 
-    searchResults
-      .filter((item) => `${item.title}${item.desc}${item.tag}`.toLowerCase().includes(keyword))
-      .slice(0, 5)
+    recommendedUsers
+      .filter((item) => item.name.toLowerCase().includes(keyword))
+      .slice(0, 4)
       .forEach((item) => {
-        if (!list.some((entry) => entry.title === item.title)) {
-          list.push({ title: item.title, hot: false });
+        if (!list.some((entry) => entry.title === item.name)) {
+          list.push({ title: item.name, hot: false });
         }
       });
 
-    return list;
-  }, [query, searchedQuery]);
+    return list.slice(0, 6);
+  }, [query, recommendedUsers, searchedQuery]);
 
-  const filteredResults = useMemo(() => {
-    if (!searchedQuery.trim()) {
-      return [];
+  const filteredPosts = useMemo(() => {
+    if (filter === 'all' || filter === 'post') {
+      return posts;
     }
+    return posts.filter((item) => postType(item) === filter);
+  }, [filter, posts]);
 
-    const keyword = searchedQuery.trim().toLowerCase();
-    let list = searchResults.filter((item) => `${item.title}${item.desc}${item.tag}${item.author}`.toLowerCase().includes(keyword));
-
-    if (filter === 'post') {
-      list = list.filter((item) => item.type === 'post' || item.type === 'brand');
-    } else if (filter === 'guess') {
-      list = list.filter((item) => item.type === 'guess');
-    } else if (filter === 'topic') {
-      list = list.filter((item) => item.type === 'topic');
-    } else if (filter === 'video') {
-      list = list.filter((item) => item.type === 'video');
-    } else if (filter === 'user') {
-      list = [];
+  const filteredUsers = useMemo(() => {
+    if (filter === 'user' || filter === 'all') {
+      return users;
     }
-
-    return list;
-  }, [filter, searchedQuery]);
+    return [];
+  }, [filter, users]);
 
   function showToast(message: string) {
     setToast(message);
@@ -266,6 +310,32 @@ export default function CommunitySearchPage() {
     setSearchedQuery('');
     setFocused(false);
     inputRef.current?.focus();
+  }
+
+  async function toggleFollow(user: UserSearchItem) {
+    try {
+      setFollowSavingId(user.id);
+      const followed = user.relation === 'friend' || user.relation === 'following';
+      if (followed) {
+        await unfollowUser(user.id);
+      } else {
+        await followUser(user.id);
+      }
+
+      const nextRelation: UserSearchItem['relation'] = followed
+        ? (user.relation === 'friend' ? 'fan' : 'none')
+        : (user.relation === 'fan' ? 'friend' : 'following');
+      const update = (list: UserSearchItem[]) =>
+        list.map((item) => (item.id === user.id ? { ...item, relation: nextRelation } : item));
+
+      setRecommendedUsers(update);
+      setUsers(update);
+      showToast(followed ? `已取消关注 ${user.name}` : `已关注 ${user.name}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setFollowSavingId('');
+    }
   }
 
   return (
@@ -385,65 +455,113 @@ export default function CommunitySearchPage() {
               <span><i className="fa-solid fa-user-plus" /></span> 推荐关注
             </div>
             <div className={styles.userScroll}>
-              {recommendedUsers.map((user) => (
-                <button className={styles.userCard} key={user.name} type="button" onClick={() => router.push(`/community-search?q=${encodeURIComponent(user.name)}`)}>
-                  <img src={user.avatar} alt={user.name} />
-                  <div className={styles.userName}>
-                    {user.name}
-                    {user.verified ? <i className="fa-solid fa-circle-check" /> : null}
-                  </div>
-                  <div className={styles.userDesc}>{user.desc}</div>
-                  <span
-                    className={followMap[user.name] ? styles.followedBtn : styles.followBtn}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setFollowMap((current) => ({ ...current, [user.name]: !current[user.name] }));
-                      showToast(followMap[user.name] ? `已取消关注 ${user.name}` : `已关注 ${user.name}`);
-                    }}
-                  >
-                    {followMap[user.name] ? '已关注' : '+ 关注'}
-                  </span>
-                </button>
-              ))}
+              {ready ? recommendedUsers.map((user) => {
+                const followed = user.relation === 'friend' || user.relation === 'following';
+                return (
+                  <button className={styles.userCard} key={user.id} type="button" onClick={() => router.push(`/user/${encodeURIComponent(user.uid)}`)}>
+                    <img src={user.avatar || '/legacy/images/mascot/mouse-main.png'} alt={user.name} />
+                    <div className={styles.userName}>
+                      {user.name}
+                      {user.shopVerified ? <i className="fa-solid fa-circle-check" /> : null}
+                    </div>
+                    <div className={styles.userDesc}>{userDesc(user)}</div>
+                    <span
+                      className={followed ? styles.followedBtn : styles.followBtn}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void toggleFollow(user);
+                      }}
+                    >
+                      {followSavingId === user.id ? '处理中' : followed ? '已关注' : '+ 关注'}
+                    </span>
+                  </button>
+                );
+              }) : null}
             </div>
           </section>
         </div>
       ) : (
         <div className={styles.resultsView}>
-          {filteredResults.length ? filteredResults.map((item) => (
-            <button className={styles.resultCard} key={item.id} type="button">
-              <div className={styles.resultAuthor}>
-                <img src={item.avatar} alt={item.author} />
-                <div>
-                  <div className={styles.resultName}>
-                    {item.author}
-                    {item.verified ? <i className="fa-solid fa-circle-check" /> : null}
-                  </div>
-                  <div className={styles.resultTime}>{item.time}</div>
-                </div>
-                <span className={`${styles.resultTag} ${styles[item.tagClass]}`}>{item.tag}</span>
-              </div>
-              <div className={styles.resultBody}>
-                <div className={styles.resultTitle}>{highlight(item.title, searchedQuery)}</div>
-                <div className={styles.resultDesc}>{item.desc}</div>
-              </div>
-              <div className={`${styles.resultImages} ${styles[`img${item.images.length >= 3 ? 3 : item.images.length}` as const]}`}>
-                {item.images.slice(0, 3).map((image) => (
-                  <img src={image} alt={item.title} key={image} />
-                ))}
-              </div>
-              <div className={styles.resultActions}>
-                <span><i className="fa-regular fa-heart" /> {formatNum(item.likes)}</span>
-                <span><i className="fa-regular fa-comment" /> {formatNum(item.comments)}</span>
-                <span><i className="fa-solid fa-share-nodes" /> {formatNum(item.shares)}</span>
-              </div>
-            </button>
-          )) : (
+          {searching ? (
             <div className={styles.empty}>
-              <i className="fa-solid fa-magnifying-glass" />
-              <div className={styles.emptyTitle}>未找到“{searchedQuery}”相关内容</div>
-              <div className={styles.emptyDesc}>换个关键词试试吧~</div>
+              <i className="fa-solid fa-spinner fa-spin" />
+              <div className={styles.emptyTitle}>搜索中</div>
+              <div className={styles.emptyDesc}>正在查找相关内容...</div>
             </div>
+          ) : (
+            <>
+              {filteredUsers.length ? (
+                <section className={styles.section}>
+                  <div className={styles.sectionTitle}>
+                    <span><i className="fa-solid fa-user" /></span> 相关猜友
+                  </div>
+                  <div className={styles.userScroll}>
+                    {filteredUsers.map((user) => {
+                      const followed = user.relation === 'friend' || user.relation === 'following';
+                      return (
+                        <button className={styles.userCard} key={user.id} type="button" onClick={() => router.push(`/user/${encodeURIComponent(user.uid)}`)}>
+                          <img src={user.avatar || '/legacy/images/mascot/mouse-main.png'} alt={user.name} />
+                          <div className={styles.userName}>
+                            {user.name}
+                            {user.shopVerified ? <i className="fa-solid fa-circle-check" /> : null}
+                          </div>
+                          <div className={styles.userDesc}>{userDesc(user)}</div>
+                          <span
+                            className={followed ? styles.followedBtn : styles.followBtn}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void toggleFollow(user);
+                            }}
+                          >
+                            {followSavingId === user.id ? '处理中' : followed ? '已关注' : '+ 关注'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
+
+              {filteredPosts.length ? filteredPosts.map((item) => (
+                <button className={styles.resultCard} key={item.id} type="button" onClick={() => router.push(`/post/${encodeURIComponent(item.id)}`)}>
+                  <div className={styles.resultAuthor}>
+                    <img src={item.author.avatar || '/legacy/images/mascot/mouse-main.png'} alt={item.author.name} />
+                    <div>
+                      <div className={styles.resultName}>
+                        {item.author.name}
+                        {item.author.verified ? <i className="fa-solid fa-circle-check" /> : null}
+                      </div>
+                      <div className={styles.resultTime}>{formatRelativeTime(item.createdAt)}</div>
+                    </div>
+                    <span className={`${styles.resultTag} ${styles[postTagClass(item)]}`}>{item.tag || '猜友动态'}</span>
+                  </div>
+                  <div className={styles.resultBody}>
+                    <div className={styles.resultTitle}>{highlight(item.title, searchedQuery)}</div>
+                    <div className={styles.resultDesc}>{item.desc}</div>
+                  </div>
+                  {item.images.length ? (
+                    <div className={`${styles.resultImages} ${styles[`img${item.images.length >= 3 ? 3 : item.images.length}` as const]}`}>
+                      {item.images.slice(0, 3).map((image) => (
+                        <img src={image} alt={item.title} key={image} />
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className={styles.resultActions}>
+                    <span><i className="fa-regular fa-heart" /> {formatNum(item.likes)}</span>
+                    <span><i className="fa-regular fa-comment" /> {formatNum(item.comments)}</span>
+                    <span><i className="fa-solid fa-share-nodes" /> {formatNum(item.shares)}</span>
+                  </div>
+                </button>
+              )) : null}
+
+              {!filteredPosts.length && !filteredUsers.length ? (
+                <div className={styles.empty}>
+                  <i className="fa-solid fa-magnifying-glass" />
+                  <div className={styles.emptyTitle}>未找到“{searchedQuery}”相关内容</div>
+                  <div className={styles.emptyDesc}>换个关键词试试吧~</div>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       )}

@@ -4,15 +4,11 @@ import { Button, Card, Space, Tag, Typography } from 'antd';
 export function ModuleCard({
   title,
   description,
-  owner,
-  status,
   active,
   onOpen,
 }: {
   title: string;
   description: string;
-  owner: string;
-  status: string;
   active: boolean;
   onOpen: () => void;
 }) {
@@ -32,7 +28,6 @@ export function ModuleCard({
         <Tag color={active ? 'processing' : 'default'}>
           {active ? '当前查看' : '模块'}
         </Tag>
-        <Tag>{status}</Tag>
       </Space>
 
       <div>
@@ -41,11 +36,6 @@ export function ModuleCard({
           {description}
         </Typography.Paragraph>
       </div>
-
-      <Space className="module-card-meta">
-        <Typography.Text type="secondary">Owner</Typography.Text>
-        <Typography.Text>{owner}</Typography.Text>
-      </Space>
 
       <Button
         type={active ? 'primary' : 'default'}

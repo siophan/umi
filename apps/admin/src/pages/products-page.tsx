@@ -1,18 +1,78 @@
 import type { TableColumnsType } from 'antd';
 
-import { Card, Descriptions, Drawer, Space, Statistic, Table, Tag, Typography } from 'antd';
-import { useState } from 'react';
+import { Card, Descriptions, Drawer, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
+import { useMemo, useState } from 'react';
 
-import type { AdminProduct } from '../lib/admin-data';
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import type { AdminCategoryItem, AdminProduct } from '../lib/admin-data';
 import { formatAmount, formatDateTime, productStatusMeta } from '../lib/format';
 
 interface ProductsPageProps {
   loading: boolean;
   products: AdminProduct[];
+  categories?: AdminCategoryItem[];
 }
 
-export function ProductsPage({ loading, products }: ProductsPageProps) {
+export function ProductsPage({ loading, products, categories = [] }: ProductsPageProps) {
   const [selected, setSelected] = useState<AdminProduct | null>(null);
+  const [filters, setFilters] = useState<{
+    name?: string;
+    category?: string;
+    shopName?: string;
+  }>({});
+  const [status, setStatus] = useState<'all' | AdminProduct['status']>('all');
+  const [form] = Form.useForm<{ name?: string; category?: string; shopName?: string }>();
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      if (status !== 'all' && product.status !== status) {
+        return false;
+      }
+      if (
+        filters.name &&
+        !product.name.toLowerCase().includes(filters.name.trim().toLowerCase())
+      ) {
+        return false;
+      }
+      if (filters.category && product.category !== filters.category) {
+        return false;
+      }
+      if (filters.shopName && product.shopName !== filters.shopName) {
+        return false;
+      }
+      return true;
+    });
+  }, [filters, products, status]);
+
+  const categoryOptions = useMemo(
+    () => {
+      const fullCategoryOptions = categories
+        .filter((item) => item.bizType === 'product' && item.status === 'active')
+        .map((item) => ({
+          label: item.name,
+          value: item.name,
+        }));
+
+      if (fullCategoryOptions.length > 0) {
+        return fullCategoryOptions;
+      }
+
+      return Array.from(new Set(products.map((item) => item.category).filter(Boolean))).map((value) => ({
+        label: value,
+        value,
+      }));
+    },
+    [categories, products],
+  );
+
+  const shopOptions = useMemo(
+    () =>
+      Array.from(new Set(products.map((item) => item.shopName).filter(Boolean))).map((value) => ({
+        label: value,
+        value,
+      })),
+    [products],
+  );
 
   const columns: TableColumnsType<AdminProduct> = [
     {
@@ -58,31 +118,47 @@ export function ProductsPage({ loading, products }: ProductsPageProps) {
 
   return (
     <div className="page-stack">
-      <Space wrap size={16}>
-        <Card className="metric-card">
-          <Statistic title="商品数" value={products.length} />
-        </Card>
-        <Card className="metric-card">
-          <Statistic
-            title="低库存"
-            value={products.filter((product) => product.status === 'low_stock').length}
-          />
-        </Card>
-        <Card className="metric-card">
-          <Statistic
-            title="在售商品"
-            value={products.filter((product) => product.status === 'active').length}
-          />
-        </Card>
-      </Space>
-
-      <Card title="商品管理">
+      <AdminSearchPanel
+        form={form}
+        onSearch={() => {
+          const values = form.getFieldsValue();
+          setFilters(values);
+        }}
+        onReset={() => {
+          form.resetFields();
+          setFilters({});
+          setStatus('all');
+        }}
+      >
+        <Form.Item name="name">
+          <Input placeholder="商品名称" allowClear />
+        </Form.Item>
+        <Form.Item name="category">
+          <Select placeholder="分类" allowClear options={categoryOptions} />
+        </Form.Item>
+        <Form.Item name="shopName">
+          <Select placeholder="店铺" allowClear options={shopOptions} />
+        </Form.Item>
+      </AdminSearchPanel>
+      <AdminStatusTabs
+        activeKey={status}
+        items={[
+          { key: 'all', label: '全部', count: products.length },
+          { key: 'active', label: '在售', count: products.filter((item) => item.status === 'active').length },
+          { key: 'low_stock', label: '低库存', count: products.filter((item) => item.status === 'low_stock').length },
+          { key: 'paused', label: '暂停', count: products.filter((item) => item.status === 'paused').length },
+          { key: 'off_shelf', label: '下架', count: products.filter((item) => item.status === 'off_shelf').length },
+          { key: 'disabled', label: '不可售', count: products.filter((item) => item.status === 'disabled').length },
+        ]}
+        onChange={(key) => setStatus(key as 'all' | AdminProduct['status'])}
+      />
+      <Card>
         <Table
           rowKey="id"
           columns={columns}
-          dataSource={products}
+          dataSource={filteredProducts}
           loading={loading}
-          pagination={{ pageSize: 6 }}
+          pagination={{ pageSize: 10 }}
           onRow={(record) => ({
             onClick: () => setSelected(record),
           })}

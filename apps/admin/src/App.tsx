@@ -1,28 +1,20 @@
-import {
-  DownOutlined,
-  LockOutlined,
-  LogoutOutlined,
-  ReloadOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
-import { PageContainer, ProLayout } from '@ant-design/pro-components';
 import type { AdminProfile, ChangePasswordPayload } from '@joy/shared';
 import {
-  Avatar,
-  Button,
   ConfigProvider,
-  Dropdown,
   Form,
   Input,
+  Layout,
+  Menu,
   Modal,
-  Space,
-  Tag,
+  Result,
   Typography,
   message,
 } from 'antd';
-import type { ReactNode } from 'react';
+import type { MenuProps } from 'antd';
 import { useEffect, useState } from 'react';
 
+import { AdminContentLoading } from './components/admin-content-loading';
+import { AdminShellHeader } from './components/admin-shell-header';
 import {
   changePassword,
   clearAuthToken,
@@ -33,60 +25,183 @@ import {
   setAuthToken,
 } from './lib/api';
 import {
-  fallbackDashboardStats,
-  fallbackGuesses,
-  fallbackOrders,
-  fallbackProducts,
-  fallbackUsers,
-  fallbackWarehouseItems,
-  fallbackWarehouseStats,
-} from './lib/admin-data';
-import { loadAdminRuntimeData, type AdminRuntimeData } from './lib/admin-loader';
+  emptyAdminPageData,
+  loadAdminPageData,
+  type AdminPageData,
+} from './lib/admin-page-data';
 import { LoginScreen } from './components/login-screen';
 import {
-  findLegacyPageMeta,
-  getLegacyMenuTree,
-  getLegacyPage,
-} from './lib/legacy-admin';
-import { formatDateTime } from './lib/format';
+  findAdminPageMeta,
+  getAdminMenuTree,
+} from './lib/admin-navigation';
+import { ContentSystemPage } from './pages/content-system-page';
 import { DashboardPage } from './pages/dashboard-page';
-import { LegacyFeaturePage } from './pages/legacy-feature-page';
+import { MarketingPage } from './pages/marketing-page';
+import { OrderFulfillmentPage } from './pages/order-fulfillment-page';
+import { ProductGuessPage } from './pages/product-guess-page';
+import { ProductsPage } from './pages/products-page';
+import { GuessesPage } from './pages/guesses-page';
+import { OrdersPage } from './pages/orders-page';
+import { UserMerchantPage } from './pages/user-merchant-page';
+import { UsersPage } from './pages/users-page';
+import { WarehousePage } from './pages/warehouse-page';
+
+const DASHBOARD_PATH = '/dashboard';
+const USERS_LIST_PATH = '/users/list';
+const PRODUCTS_LIST_PATH = '/products/list';
+const GUESSES_LIST_PATH = '/guesses/list';
+const ORDERS_LIST_PATH = '/orders/list';
+const USER_MERCHANT_PATHS = new Set([
+  '/shops/list',
+  '/shops/apply',
+  '/shops/brand-auth',
+  '/shops/brand-auth/records',
+  '/shops/products',
+  '/brands/list',
+  '/brands/apply',
+  '/product-auth/list',
+  '/product-auth/records',
+] as const);
+const PRODUCT_GUESS_PATHS = new Set([
+  '/products/brands',
+  '/guesses/create',
+  '/guesses/friends',
+  '/pk',
+] as const);
+const ORDER_FULFILLMENT_PATHS = new Set([
+  '/orders/transactions',
+  '/orders/logistics',
+  '/warehouse/consign',
+] as const);
+const MARKETING_PATHS = new Set([
+  '/equity',
+  '/marketing/banners',
+  '/marketing/coupons',
+  '/marketing/checkin',
+  '/marketing/invite',
+  '/system/rankings',
+] as const);
+const CONTENT_SYSTEM_PATHS = new Set([
+  '/community/posts',
+  '/community/comments',
+  '/community/reports',
+  '/live/list',
+  '/live/danmaku',
+  '/system/chats',
+  '/system/users',
+  '/system/roles',
+  '/users/permissions',
+  '/system/categories',
+  '/system/notifications',
+] as const);
+const PATH_ALIASES: Record<string, string> = {
+  '/users': '/users/list',
+  '/products': '/products/list',
+  '/guesses': '/guesses/list',
+  '/orders': '/orders/list',
+  '/shops': '/shops/list',
+  '/brands': '/brands/list',
+  '/product-auth': '/product-auth/list',
+  '/warehouse': '/warehouse/virtual',
+  '/community': '/community/posts',
+  '/live': '/live/list',
+};
+const MENU_TREE = getAdminMenuTree();
+const SIDER_WIDTH = 256;
+const SIDER_COLLAPSED_WIDTH = 64;
+const ADMIN_THEME = {
+  token: {
+    colorPrimary: '#1677ff',
+    borderRadius: 16,
+    colorBgLayout: '#f3f5f8',
+    colorBgContainer: '#ffffff',
+    colorBgElevated: '#ffffff',
+    colorText: '#1b2130',
+    colorTextSecondary: '#64748b',
+  },
+  components: {
+    Menu: {
+      darkItemBg: '#141422',
+      darkItemColor: 'rgba(255,255,255,0.65)',
+      darkItemHoverBg: 'rgba(255,255,255,0.07)',
+      darkItemHoverColor: 'rgba(255,255,255,0.85)',
+      darkItemSelectedBg: '#1677ff',
+      darkItemSelectedColor: '#ffffff',
+      darkPopupBg: '#141422',
+      darkSubMenuItemBg: '#141422',
+      darkGroupTitleColor: 'rgba(255,255,255,0.35)',
+      itemBorderRadius: 8,
+      subMenuItemBorderRadius: 8,
+      itemHeight: 40,
+    },
+  },
+} as const;
 
 function normalizePath(hash: string) {
   const raw = hash.replace(/^#/, '').trim();
   if (!raw || raw === '/') {
-    return '/';
+    return DASHBOARD_PATH;
   }
 
-  return raw.startsWith('/') ? raw : `/${raw}`;
+  const normalized = raw.startsWith('/') ? raw : `/${raw}`;
+  return PATH_ALIASES[normalized] ?? normalized;
 }
 
-function toProRoutes(nodes: ReturnType<typeof getLegacyMenuTree>) {
-  return nodes.map((node): {
-    path: string;
-    name: string;
-    icon: ReactNode;
-    routes?: ReturnType<typeof toProRoutes>;
-  } => ({
-    path: node.path ?? node.key,
-    name: node.name,
-    icon: node.icon,
-    routes: node.children ? toProRoutes(node.children) : undefined,
-  }));
+function toMenuItems(
+  nodes: ReturnType<typeof getAdminMenuTree>,
+): NonNullable<MenuProps['items']> {
+  return nodes.map((node) => {
+    if (node.children?.length) {
+      return {
+        key: node.key,
+        icon: node.icon,
+        label: node.name,
+        children: toMenuItems(node.children),
+      };
+    }
+
+    const path = node.path ?? node.key;
+    return {
+      key: path,
+      icon: node.icon,
+      label: node.name,
+    };
+  });
 }
 
-const initialData: AdminRuntimeData = {
-  dashboard: fallbackDashboardStats,
-  users: fallbackUsers,
-  products: fallbackProducts,
-  guesses: fallbackGuesses,
-  orders: fallbackOrders,
-  warehouseStats: fallbackWarehouseStats,
-  warehouseItems: fallbackWarehouseItems,
-  usingFallback: true,
-  issues: [],
-  lastUpdatedAt: new Date().toISOString(),
-};
+function findMenuOpenKeys(
+  nodes: ReturnType<typeof getAdminMenuTree>,
+  targetPath: string,
+  parentKeys: string[] = [],
+): string[] {
+  for (const node of nodes) {
+    if (node.path === targetPath) {
+      return parentKeys;
+    }
+
+    if (node.children?.length) {
+      const nextKeys = findMenuOpenKeys(node.children, targetPath, [
+        ...parentKeys,
+        node.key,
+      ]);
+      if (nextKeys.length > 0) {
+        return nextKeys;
+      }
+    }
+  }
+
+  return [];
+}
+
+function sameKeys(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((key, index) => key === right[index]);
+}
+
+const initialData: AdminPageData = emptyAdminPageData;
 
 export function App() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -101,10 +216,16 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [menuOpenKeys, setMenuOpenKeys] = useState<string[]>(() =>
+    findMenuOpenKeys(MENU_TREE, normalizePath(window.location.hash)),
+  );
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AdminProfile | null>(null);
-  const [data, setData] = useState<AdminRuntimeData>(initialData);
+  const [data, setData] = useState<AdminPageData>(initialData);
+  const [bootstrapped, setBootstrapped] = useState(false);
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
   useEffect(() => {
     const syncFromHash = () => {
@@ -112,7 +233,7 @@ export function App() {
     };
 
     if (!window.location.hash) {
-      window.location.hash = '/';
+      window.location.hash = DASHBOARD_PATH;
     }
 
     window.addEventListener('hashchange', syncFromHash);
@@ -172,13 +293,14 @@ export function App() {
     async function bootstrap() {
       setLoading(true);
       try {
-        const nextData = await loadAdminRuntimeData();
+        const nextData = await loadAdminPageData(activePath);
         if (alive) {
           setData(nextData);
         }
       } finally {
         if (alive) {
           setLoading(false);
+          setBootstrapped(true);
         }
       }
     }
@@ -188,7 +310,7 @@ export function App() {
     return () => {
       alive = false;
     };
-  }, [authenticated]);
+  }, [activePath, authenticated, refreshNonce]);
 
   useEffect(() => {
     if (!authenticated || data.issues.length === 0) {
@@ -197,6 +319,13 @@ export function App() {
 
     messageApi.warning(data.issues[0]);
   }, [authenticated, data.issues, messageApi]);
+
+  useEffect(() => {
+    const nextKeys = findMenuOpenKeys(MENU_TREE, activePath);
+    setMenuOpenKeys((currentKeys) =>
+      sameKeys(currentKeys, nextKeys) ? currentKeys : nextKeys,
+    );
+  }, [activePath]);
 
   async function handleLogin(values: { username: string; password: string }) {
     setLoginLoading(true);
@@ -211,13 +340,15 @@ export function App() {
       setAuthToken(result.token);
       setCurrentUser(result.user);
       setAuthenticated(true);
+      setBootstrapped(false);
       setLoginError(null);
-      window.location.hash = normalizePath(window.location.hash);
+      window.location.hash = normalizePath(window.location.hash || DASHBOARD_PATH);
       messageApi.success('登录成功');
     } catch (error) {
       clearAuthToken();
       setAuthenticated(false);
       setCurrentUser(null);
+      setBootstrapped(false);
       setLoginError(error instanceof Error ? error.message : '登录失败');
     } finally {
       setLoginLoading(false);
@@ -226,15 +357,8 @@ export function App() {
   }
 
   async function handleRefresh() {
-    setLoading(true);
-
-    try {
-      const nextData = await loadAdminRuntimeData();
-      setData(nextData);
-      messageApi.success('后台数据已刷新');
-    } finally {
-      setLoading(false);
-    }
+    setRefreshNonce((value) => value + 1);
+    messageApi.success('当前页面已刷新');
   }
 
   async function handlePasswordSubmit() {
@@ -277,21 +401,14 @@ export function App() {
       setAuthenticated(false);
       setCurrentUser(null);
       setData(initialData);
+      setBootstrapped(false);
       messageApi.success('已退出登录');
     }
   }
 
   if (authChecking) {
     return (
-      <ConfigProvider
-        theme={{
-          token: {
-            colorPrimary: '#1677ff',
-            borderRadius: 16,
-            colorBgLayout: '#f3f5f8',
-          },
-        }}
-      >
+      <ConfigProvider theme={ADMIN_THEME}>
         {contextHolder}
         <div className="login-screen login-screen--loading">
           <Typography.Text type="secondary">正在校验登录状态...</Typography.Text>
@@ -302,15 +419,7 @@ export function App() {
 
   if (!authenticated || !currentUser) {
     return (
-      <ConfigProvider
-        theme={{
-          token: {
-            colorPrimary: '#1677ff',
-            borderRadius: 16,
-            colorBgLayout: '#f3f5f8',
-          },
-        }}
-      >
+      <ConfigProvider theme={ADMIN_THEME}>
         {contextHolder}
         <LoginScreen
           errorMessage={loginError}
@@ -321,167 +430,190 @@ export function App() {
     );
   }
 
-  const pageContext = {
-    currentUserName: currentUser.displayName,
-    data,
-    loading,
-    usingFallback: data.usingFallback,
-  };
-  const activePage = getLegacyPage(activePath, pageContext);
-  const activeDefinition = activePath === '/' ? null : activePage.builder(pageContext);
-  const activeMeta = findLegacyPageMeta(activePath);
-  const menuTree = getLegacyMenuTree();
-  const menuRoutes = toProRoutes(menuTree);
-  const userMenuItems = [
-    {
-      key: 'change-password',
-      icon: <LockOutlined />,
-      label: '修改密码',
-      onClick: () => setPasswordModalOpen(true),
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '退出登录',
-      onClick: () => void handleLogout(),
-    },
+  const activeMeta = findAdminPageMeta(activePath);
+  const menuItems = toMenuItems(MENU_TREE);
+  const breadcrumbItems = [
+    ...(activeMeta.parentName ? [{ title: activeMeta.parentName }] : []),
+    { title: activeMeta.name },
   ];
+  const showPageLoading = loading && !bootstrapped;
 
   return (
-    <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: '#1677ff',
-          borderRadius: 16,
-          colorBgLayout: '#f3f5f8',
-        },
-      }}
-    >
+    <ConfigProvider theme={ADMIN_THEME}>
       {contextHolder}
 
-      <ProLayout
-        className="joy-admin-layout"
-        title="JOY Admin"
-        logo={false}
-        layout="mix"
-        fixedHeader
-        fixSiderbar
-        splitMenus={false}
-        route={{ routes: menuRoutes }}
-        location={{ pathname: activePath }}
-        menuItemRender={(item, dom) => {
-          const menuItem = item as { path?: string; routes?: unknown[] };
-
-          if (Array.isArray(menuItem.routes) && menuItem.routes.length > 0) {
-            return dom;
-          }
-
-          return <a href={`#${menuItem.path}`}>{dom}</a>;
-        }}
-        actionsRender={() => [
-          <Dropdown key="user-menu" menu={{ items: userMenuItems }} trigger={['click']}>
-            <button className="toolbar-user" type="button">
-              <Avatar
-                icon={<UserOutlined />}
-                className="toolbar-user__avatar"
-                size={36}
-              />
-              <span className="toolbar-user__meta">
-                <Typography.Text className="toolbar-user__name" strong>
-                  {currentUser.displayName}
-                </Typography.Text>
-                <span className="toolbar-user__sub">
-                  <span className="toolbar-user__dot is-live" />
-                  <Typography.Text className="toolbar-user__subtext" type="secondary">
-                    {currentUser.roles[0]?.name ?? currentUser.username}
-                  </Typography.Text>
-                </span>
-              </span>
-              <DownOutlined className="toolbar-user__arrow" />
-            </button>
-          </Dropdown>,
-        ]}
-      >
-        <PageContainer
-          header={{
-            title: activePage.title,
-            subTitle: activePage.description,
-            tags: (
-              <Space wrap>
-                <Tag color="processing">Legacy Menu</Tag>
-                <Tag color="processing">Ant Design Pro</Tag>
-                {data.usingFallback ? <Tag color="warning">演示数据</Tag> : null}
-                {data.issues.length > 0 ? (
-                  <Tag color="error">{`接口告警 ${data.issues.length}`}</Tag>
-                ) : null}
-              </Space>
-            ),
-            extra: [
-              <Button
-                key="docs"
-                href="http://localhost:4000/docs"
-                rel="noreferrer"
-                target="_blank"
-              >
-                打开接口文档
-              </Button>,
-              <Button
-                key="refresh"
-                icon={<ReloadOutlined />}
-                loading={loading}
-                onClick={() => void handleRefresh()}
-              >
-                刷新数据
-              </Button>,
-            ],
-            breadcrumb: {
-              items: [
-                { path: '#/', title: '后台' },
-                ...(activeMeta.parentName
-                  ? [{ title: activeMeta.parentName }]
-                  : []),
-                { title: activeMeta.name },
-              ],
-            },
-            footer: (
-              <Typography.Text type="secondary">
-                最近同步时间 {formatDateTime(data.lastUpdatedAt)}
-              </Typography.Text>
-            ),
-          }}
+      <Layout className="joy-admin-layout">
+        <Layout.Sider
+          breakpoint="lg"
+          className="joy-admin-sider"
+          collapsed={collapsed}
+          collapsedWidth={SIDER_COLLAPSED_WIDTH}
+          theme="dark"
+          trigger={null}
+          width={SIDER_WIDTH}
         >
-          {activePath === '/' ? (
-            <DashboardPage
-              activeKey="dashboard"
-              lastUpdatedAt={data.lastUpdatedAt}
-              loading={loading}
-              onOpenModule={(key) => {
-                const nextPath =
-                  key === 'dashboard'
-                    ? '/'
-                    : key === 'users'
-                      ? '/users'
-                      : key === 'products'
-                        ? '/products'
-                        : key === 'guesses'
-                          ? '/guesses'
-                          : key === 'orders'
-                            ? '/orders'
-                            : '/warehouse';
-                window.location.hash = nextPath;
-              }}
-              stats={data.dashboard}
-              usingFallback={data.usingFallback}
-            />
-          ) : (
-            <LegacyFeaturePage
-              definition={activeDefinition!}
-              loading={loading}
-              usingFallback={data.usingFallback}
-            />
-          )}
-        </PageContainer>
-      </ProLayout>
+          <a className="app-sider-brand" href={`#${DASHBOARD_PATH}`}>
+            <span className="app-sider-brand__mark">U</span>
+            {collapsed ? null : (
+              <span className="app-sider-brand__meta">
+                <span className="app-sider-brand__title">Umi 管理后台</span>
+              </span>
+            )}
+          </a>
+          <Menu
+            className="joy-admin-menu"
+            inlineCollapsed={collapsed}
+            inlineIndent={16}
+            items={menuItems}
+            mode="inline"
+            onClick={({ key }) => {
+              if (typeof key === 'string' && key.startsWith('/')) {
+                window.location.hash = key;
+              }
+            }}
+            onOpenChange={(keys) => {
+              if (!collapsed) {
+                setMenuOpenKeys(keys as string[]);
+              }
+            }}
+            openKeys={collapsed ? [] : menuOpenKeys}
+            selectedKeys={[activePath]}
+            theme="dark"
+          />
+        </Layout.Sider>
+
+        <Layout className="joy-admin-main">
+          <AdminShellHeader
+            breadcrumbItems={breadcrumbItems}
+            collapsed={collapsed}
+            currentUser={currentUser}
+            loading={loading}
+            onCollapse={setCollapsed}
+            onLogout={() => void handleLogout()}
+            onOpenDocs={() => window.open('http://localhost:4000/docs', '_blank', 'noopener,noreferrer')}
+            onOpenPassword={() => setPasswordModalOpen(true)}
+            onRefresh={() => void handleRefresh()}
+          />
+
+          <div className="joy-admin-page">
+            {showPageLoading ? (
+              <AdminContentLoading />
+            ) : activePath === DASHBOARD_PATH ? (
+              <DashboardPage
+                generatedAt={data.dashboard.generatedAt || data.lastUpdatedAt}
+                dashboardIssue={data.dashboardIssue}
+                loading={loading}
+                stats={data.dashboard}
+              />
+            ) : activePath === USERS_LIST_PATH ? (
+              <UsersPage
+                issue={data.usersIssue}
+                loading={loading}
+                onReload={() => void handleRefresh()}
+                users={data.users}
+              />
+            ) : activePath === PRODUCTS_LIST_PATH ? (
+              <ProductsPage loading={loading} products={data.products} categories={data.categories} />
+            ) : activePath === GUESSES_LIST_PATH ? (
+              <GuessesPage guesses={data.guesses} loading={loading} categories={data.categories} />
+            ) : activePath === ORDERS_LIST_PATH ? (
+              <OrdersPage loading={loading} orders={data.orders} />
+            ) : activePath === '/warehouse/virtual' ||
+              activePath === '/warehouse/physical' ? (
+              <WarehousePage
+                items={data.warehouseItems}
+                loading={loading}
+                stats={data.warehouseStats}
+              />
+            ) : USER_MERCHANT_PATHS.has(
+                activePath as (typeof USER_MERCHANT_PATHS extends Set<infer T> ? T : never),
+              ) ? (
+              <UserMerchantPage
+                data={data}
+                loading={loading}
+                path={
+                  activePath as
+                    | '/shops/list'
+                    | '/shops/apply'
+                    | '/shops/brand-auth'
+                    | '/shops/brand-auth/records'
+                    | '/shops/products'
+                    | '/brands/list'
+                    | '/brands/apply'
+                    | '/product-auth/list'
+                    | '/product-auth/records'
+                }
+              />
+            ) : PRODUCT_GUESS_PATHS.has(
+                activePath as (typeof PRODUCT_GUESS_PATHS extends Set<infer T> ? T : never),
+              ) ? (
+              <ProductGuessPage
+                data={data}
+                loading={loading}
+                path={
+                  activePath as
+                    | '/products/brands'
+                    | '/guesses/create'
+                    | '/guesses/friends'
+                    | '/pk'
+                }
+              />
+            ) : ORDER_FULFILLMENT_PATHS.has(
+                activePath as (typeof ORDER_FULFILLMENT_PATHS extends Set<infer T> ? T : never),
+              ) ? (
+              <OrderFulfillmentPage
+                data={data}
+                loading={loading}
+                path={
+                  activePath as
+                    | '/orders/transactions'
+                    | '/orders/logistics'
+                    | '/warehouse/consign'
+                }
+              />
+            ) : MARKETING_PATHS.has(
+                activePath as (typeof MARKETING_PATHS extends Set<infer T> ? T : never),
+              ) ? (
+              <MarketingPage
+                data={data}
+                loading={loading}
+                path={
+                  activePath as
+                    | '/equity'
+                    | '/marketing/banners'
+                    | '/marketing/coupons'
+                    | '/marketing/checkin'
+                    | '/marketing/invite'
+                    | '/system/rankings'
+                }
+              />
+            ) : CONTENT_SYSTEM_PATHS.has(
+                activePath as (typeof CONTENT_SYSTEM_PATHS extends Set<infer T> ? T : never),
+              ) ? (
+              <ContentSystemPage
+                data={data}
+                loading={loading}
+                path={
+                  activePath as
+                    | '/community/posts'
+                    | '/community/comments'
+                    | '/community/reports'
+                    | '/live/list'
+                    | '/live/danmaku'
+                    | '/system/chats'
+                    | '/system/users'
+                    | '/system/roles'
+                    | '/users/permissions'
+                    | '/system/categories'
+                    | '/system/notifications'
+                }
+              />
+            ) : (
+              <Result status="404" title="页面未配置" subTitle={activePath} />
+            )}
+          </div>
+        </Layout>
+      </Layout>
 
       <Modal
         confirmLoading={passwordSubmitting}

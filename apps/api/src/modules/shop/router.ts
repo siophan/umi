@@ -9,7 +9,9 @@ import type {
   BrandProductListResult,
   MyShopResult,
   PublicShopDetailResult,
+  ShopStatusResult,
   SubmitBrandAuthApplicationResult,
+  SubmitShopApplicationResult,
 } from '@joy/shared';
 
 import { getDbPool } from '../../lib/db';
@@ -64,6 +66,19 @@ type PublicShopGuessRow = {
   related_product_id: number | string | null;
 };
 
+type ShopApplyRow = {
+  id: number | string;
+  apply_no: string;
+  shop_name: string;
+  category_id: number | string | null;
+  category_name: string | null;
+  reason: string | null;
+  status: number | string;
+  reject_reason: string | null;
+  reviewed_at: Date | string | null;
+  created_at: Date | string;
+};
+
 async function requireCurrentUser(request: { headers: { authorization?: string } }) {
   const token = getBearerToken(request.headers.authorization);
   const user = token ? await getUserByToken(token) : null;
@@ -87,11 +102,125 @@ async function getCurrentShop(userId: string) {
       FROM shop s
       LEFT JOIN category c ON c.id = s.category_id
       WHERE s.user_id = ?
+      ORDER BY CASE WHEN s.status = ${STATUS_ACTIVE} THEN 0 ELSE 1 END, s.id DESC
       LIMIT 1
     `,
     [userId],
   );
   return (rows[0] as ShopRow | undefined) ?? null;
+}
+
+async function getLatestShopApplication(userId: string) {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        sa.id,
+        sa.apply_no,
+        sa.shop_name,
+        sa.category_id,
+        c.name AS category_name,
+        sa.reason,
+        sa.status,
+        sa.reject_reason,
+        sa.reviewed_at,
+        sa.created_at
+      FROM shop_apply sa
+      LEFT JOIN category c ON c.id = sa.category_id
+      WHERE sa.user_id = ?
+      ORDER BY sa.created_at DESC, sa.id DESC
+      LIMIT 1
+    `,
+    [userId],
+  );
+  return (rows[0] as ShopApplyRow | undefined) ?? null;
+}
+
+async function listShopCategories() {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id, name
+      FROM category
+      WHERE biz_type = 20
+        AND status = 10
+      ORDER BY sort ASC, id ASC
+    `,
+  );
+  return (rows as Array<{ id: number | string; name: string }>).map((row) => ({
+    id: String(row.id),
+    name: row.name,
+  }));
+}
+
+function mapApplicationStatus(status: number) {
+  if (status === STATUS_APPROVED) {
+    return 'approved';
+  }
+  if (status === STATUS_PENDING) {
+    return 'pending';
+  }
+  return 'rejected';
+}
+
+function toShopStatusResult(
+  shop: ShopRow | null,
+  latestApplication: ShopApplyRow | null,
+  categories: Awaited<ReturnType<typeof listShopCategories>>,
+): ShopStatusResult {
+  if (shop && Number(shop.status) === STATUS_ACTIVE) {
+    return {
+      status: 'active',
+      shop: {
+        id: String(shop.id),
+        name: shop.name,
+        status: 'active',
+      },
+      latestApplication: latestApplication
+        ? {
+            id: String(latestApplication.id),
+            applyNo: latestApplication.apply_no,
+            shopName: latestApplication.shop_name,
+            categoryId: latestApplication.category_id ? String(latestApplication.category_id) : null,
+            categoryName: latestApplication.category_name ?? null,
+            reason: latestApplication.reason ?? null,
+            status: mapApplicationStatus(Number(latestApplication.status)),
+            rejectReason: latestApplication.reject_reason ?? null,
+            reviewedAt: latestApplication.reviewed_at ? new Date(latestApplication.reviewed_at).toISOString() : null,
+            createdAt: new Date(latestApplication.created_at).toISOString(),
+          }
+        : null,
+      categories,
+    };
+  }
+
+  if (latestApplication) {
+    const applicationStatus = mapApplicationStatus(Number(latestApplication.status));
+    return {
+      status: applicationStatus === 'pending' ? 'pending' : applicationStatus === 'rejected' ? 'rejected' : 'none',
+      shop: null,
+      latestApplication: {
+        id: String(latestApplication.id),
+        applyNo: latestApplication.apply_no,
+        shopName: latestApplication.shop_name,
+        categoryId: latestApplication.category_id ? String(latestApplication.category_id) : null,
+        categoryName: latestApplication.category_name ?? null,
+        reason: latestApplication.reason ?? null,
+        status: applicationStatus,
+        rejectReason: latestApplication.reject_reason ?? null,
+        reviewedAt: latestApplication.reviewed_at ? new Date(latestApplication.reviewed_at).toISOString() : null,
+        createdAt: new Date(latestApplication.created_at).toISOString(),
+      },
+      categories,
+    };
+  }
+
+  return {
+    status: 'none',
+    shop: null,
+    latestApplication: null,
+    categories,
+  };
 }
 
 async function getMyShopResult(userId: string): Promise<MyShopResult> {
@@ -191,6 +320,111 @@ shopRouter.get('/me', async (request, response) => {
     response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
       success: false,
       message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '读取店铺失败',
+    });
+  }
+});
+
+shopRouter.get('/me/status', async (request, response) => {
+  try {
+    const user = await requireCurrentUser(request);
+    const [shop, latestApplication, categories] = await Promise.all([
+      getCurrentShop(user.id),
+      getLatestShopApplication(user.id),
+      listShopCategories(),
+    ]);
+    ok(response, toShopStatusResult(shop, latestApplication, categories));
+  } catch (error) {
+    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      success: false,
+      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '读取开店状态失败',
+    });
+  }
+});
+
+shopRouter.post('/apply', async (request, response) => {
+  try {
+    const user = await requireCurrentUser(request);
+    const shopName = typeof request.body?.shopName === 'string' ? request.body.shopName.trim() : '';
+    const categoryId = typeof request.body?.categoryId === 'string' ? request.body.categoryId.trim() : '';
+    const reason = typeof request.body?.reason === 'string' ? request.body.reason.trim() : '';
+
+    if (!shopName) {
+      response.status(400).json({ success: false, message: '请填写店铺名称' });
+      return;
+    }
+    if (shopName.length > 24) {
+      response.status(400).json({ success: false, message: '店铺名称请控制在 24 字以内' });
+      return;
+    }
+    if (!categoryId) {
+      response.status(400).json({ success: false, message: '请选择经营分类' });
+      return;
+    }
+    if (!reason) {
+      response.status(400).json({ success: false, message: '请填写开店说明' });
+      return;
+    }
+
+    const db = getDbPool();
+    const [shop, latestApplication, categoryRows] = await Promise.all([
+      getCurrentShop(user.id),
+      getLatestShopApplication(user.id),
+      db.execute<mysql.RowDataPacket[]>(
+        `
+          SELECT id
+          FROM category
+          WHERE id = ?
+            AND biz_type = 20
+            AND status = 10
+          LIMIT 1
+        `,
+        [categoryId],
+      ),
+    ]);
+
+    if (shop && Number(shop.status) === STATUS_ACTIVE) {
+      response.status(400).json({ success: false, message: '你已开通店铺' });
+      return;
+    }
+
+    if (latestApplication && Number(latestApplication.status) === STATUS_PENDING) {
+      response.status(400).json({ success: false, message: '当前已有开店申请在审核中' });
+      return;
+    }
+
+    const category = categoryRows[0][0] as { id?: number | string } | undefined;
+    if (!category?.id) {
+      response.status(400).json({ success: false, message: '经营分类不存在' });
+      return;
+    }
+
+    const applyNo = createNo('SA');
+    const [result] = await db.execute<mysql.ResultSetHeader>(
+      `
+        INSERT INTO shop_apply (
+          apply_no,
+          user_id,
+          shop_name,
+          category_id,
+          reason,
+          status,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      `,
+      [applyNo, user.id, shopName, categoryId, reason, STATUS_PENDING],
+    );
+
+    const payload: SubmitShopApplicationResult = {
+      id: String(result.insertId),
+      applyNo,
+      status: 'pending',
+    };
+    ok(response, payload);
+  } catch (error) {
+    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      success: false,
+      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '提交开店申请失败',
     });
   }
 });
