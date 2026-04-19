@@ -5,8 +5,11 @@ import { Alert, Card, Descriptions, Drawer, Form, Input, List, Progress, Select,
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type { AdminCategoryItem } from '../lib/admin-data';
-import { fetchAdminCategories, fetchAdminGuesses } from '../lib/api/catalog';
+import {
+  fetchAdminCategories,
+  fetchAdminGuesses,
+  type AdminCategoryItem,
+} from '../lib/api/catalog';
 import { formatAmount, formatDateTime, guessReviewStatusMeta, guessStatusMeta } from '../lib/format';
 
 interface GuessesPageProps {

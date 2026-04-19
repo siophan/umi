@@ -23,7 +23,7 @@
 
 详细规则见：
 
-- [ui-rules.md](/Users/ezreal/Downloads/joy/umi/docs/ui-rules.md)
+- [ui-rules.md](docs/ui-rules.md)
 
 ## 已完成的关键事项
 
@@ -131,38 +131,38 @@
 3. 改完跑：
 
 ```bash
-pnpm --dir /Users/ezreal/Downloads/joy/umi/apps/web exec tsc -p tsconfig.json --pretty false
+pnpm --dir apps/web exec tsc -p tsconfig.json --pretty false
 ```
 
 4. 如果某页状态发生明显变化，再更新：
-- [progress.md](/Users/ezreal/Downloads/joy/umi/docs/progress.md)
-- [handoff.md](/Users/ezreal/Downloads/joy/umi/docs/handoff.md)
+- [progress.md](docs/progress.md)
+- [handoff.md](docs/handoff.md)
 
 ## 常用参考文件
 
-旧页面：
+旧页面（位于本机老系统 clone 下的 `frontend/`，不在当前仓库内）：
 
-- `/Users/ezreal/Downloads/joy/frontend/index.html`
-- `/Users/ezreal/Downloads/joy/frontend/profile.html`
-- `/Users/ezreal/Downloads/joy/frontend/user-profile.html`
-- `/Users/ezreal/Downloads/joy/frontend/community.html`
-- `/Users/ezreal/Downloads/joy/frontend/community-search.html`
-- `/Users/ezreal/Downloads/joy/frontend/detail.html`
-- `/Users/ezreal/Downloads/joy/frontend/product-detail.html`
-- `/Users/ezreal/Downloads/joy/frontend/shop-detail.html`
+- `frontend/index.html`
+- `frontend/profile.html`
+- `frontend/user-profile.html`
+- `frontend/community.html`
+- `frontend/community-search.html`
+- `frontend/detail.html`
+- `frontend/product-detail.html`
+- `frontend/shop-detail.html`
 
 新页面：
 
-- `/Users/ezreal/Downloads/joy/umi/apps/web/src/app/page.tsx`
-- `/Users/ezreal/Downloads/joy/umi/apps/web/src/app/me/page.tsx`
-- `/Users/ezreal/Downloads/joy/umi/apps/web/src/app/user/[uid]/page.tsx`
-- `/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/page.tsx`
-- `/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community-search/page.tsx`
+- `apps/web/src/app/page.tsx`
+- `apps/web/src/app/me/page.tsx`
+- `apps/web/src/app/user/[uid]/page.tsx`
+- `apps/web/src/app/community/page.tsx`
+- `apps/web/src/app/community-search/page.tsx`
 
 ## 文档职责
 
 这几份文档分别承担：
 
-- [progress.md](/Users/ezreal/Downloads/joy/umi/docs/progress.md)：整体模块完成度
-- [ui-rules.md](/Users/ezreal/Downloads/joy/umi/docs/ui-rules.md)：用户端 UI 对齐规则
-- [handoff.md](/Users/ezreal/Downloads/joy/umi/docs/handoff.md)：当前阶段最小交接信息
+- [progress.md](docs/progress.md)：整体模块完成度
+- [ui-rules.md](docs/ui-rules.md)：用户端 UI 对齐规则
+- [handoff.md](docs/handoff.md)：当前阶段最小交接信息

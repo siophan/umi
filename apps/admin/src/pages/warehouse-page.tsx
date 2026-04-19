@@ -5,8 +5,11 @@ import { Alert, Card, Descriptions, Drawer, Form, Input, Segmented, Select, Spac
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type { AdminWarehouseStats } from '../lib/admin-data';
-import { fetchAdminWarehouseItems, fetchWarehouseStats } from '../lib/api/catalog';
+import {
+  fetchAdminWarehouseItems,
+  fetchWarehouseStats,
+  type AdminWarehouseStats,
+} from '../lib/api/catalog';
 import { formatAmount, formatDateTime, warehouseStatusMeta } from '../lib/format';
 
 interface WarehousePageProps {

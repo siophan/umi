@@ -12,7 +12,7 @@
 
 使用顺序：
 
-1. 先看 [AGENTS.md](/Users/ezreal/Downloads/joy/umi/AGENTS.md)
+1. 先看 [AGENTS.md](AGENTS.md)
 2. 再看本文件
 3. 再看具体页面对应的旧系统页面或当前页面代码
 
@@ -28,7 +28,7 @@
 UI 相关任务默认按这个顺序找事实源：
 
 1. 本文件
-2. [docs/flows.md](/Users/ezreal/Downloads/joy/umi/docs/flows.md)
+2. [docs/flows.md](docs/flows.md)
 3. 当前 `umi` 代码
 4. 老系统页面
 
@@ -76,8 +76,8 @@ UI 相关任务默认按这个顺序找事实源：
 
 直接参考：
 
-- 旧前端目录：[/Users/ezreal/Downloads/joy/frontend](/Users/ezreal/Downloads/joy/frontend)
-- 细则文档：[docs/ui-rules.md](/Users/ezreal/Downloads/joy/umi/docs/ui-rules.md)
+- 旧前端目录：本机老系统 clone 下的 `frontend/`（不在当前仓库内）
+- 细则文档：[docs/ui-rules.md](docs/ui-rules.md)
 
 ## 管理端规则
 

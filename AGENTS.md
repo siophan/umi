@@ -4,12 +4,12 @@
 
 进入这个项目的新线程，先按这个顺序建立上下文：
 
-- [docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
-- [docs/schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md)
-- [docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
-- [docs/ui-spec.md](/Users/ezreal/Downloads/joy/umi/docs/ui-spec.md)
-- [docs/flows.md](/Users/ezreal/Downloads/joy/umi/docs/flows.md)
-- [README.md](/Users/ezreal/Downloads/joy/umi/README.md)
+- [docs/db.md](docs/db.md)
+- [docs/schema-reference.md](docs/schema-reference.md)
+- [docs/status-codes.md](docs/status-codes.md)
+- [docs/ui-spec.md](docs/ui-spec.md)
+- [docs/flows.md](docs/flows.md)
+- [README.md](README.md)
 
 如果任务和数据库无关，再按对应模块继续下钻。
 
@@ -23,43 +23,35 @@
 
 ## Quick Links
 
-- 数据库结构入口：[docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
-- 真实表字段速查：[docs/schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md)
-- 状态编码入口：[docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
-- UI 约束入口：[docs/ui-spec.md](/Users/ezreal/Downloads/joy/umi/docs/ui-spec.md)
-- 业务流程入口：[docs/flows.md](/Users/ezreal/Downloads/joy/umi/docs/flows.md)
-- 当前线程接手说明：[AGENTS.md](/Users/ezreal/Downloads/joy/umi/AGENTS.md)
-- 当前工作区说明：[README.md](/Users/ezreal/Downloads/joy/umi/README.md)
-- 老系统后端：[/Users/ezreal/Downloads/joy/backend](/Users/ezreal/Downloads/joy/backend)
-- 老系统管理端：[/Users/ezreal/Downloads/joy/admin](/Users/ezreal/Downloads/joy/admin)
-- 老系统前端：[/Users/ezreal/Downloads/joy/frontend](/Users/ezreal/Downloads/joy/frontend)
+- 数据库结构入口：[docs/db.md](docs/db.md)
+- 真实表字段速查：[docs/schema-reference.md](docs/schema-reference.md)
+- 状态编码入口：[docs/status-codes.md](docs/status-codes.md)
+- UI 约束入口：[docs/ui-spec.md](docs/ui-spec.md)
+- 业务流程入口：[docs/flows.md](docs/flows.md)
+- 当前线程接手说明：[AGENTS.md](AGENTS.md)
+- 当前工作区说明：[README.md](README.md)
+- 老系统后端、管理端、前端：本机另一处 clone，不在当前仓库内，默认目录名分别是 `backend/`、`admin/`、`frontend/`
 
 ## Project Layout
 
-这个仓库根目录下同时存在“老系统”和“当前工作区”两套内容：
+这个仓库是"当前工作区"。"老系统"的后端、管理端、前端静态资源、历史文档在本机另一处 clone 的 `backend/`、`admin/`、`frontend/`、`docs/` 目录下，不在当前仓库内，具体路径依本机而异。
 
-- 当前工作区：[/Users/ezreal/Downloads/joy/umi](/Users/ezreal/Downloads/joy/umi)
-- 老系统后端：[/Users/ezreal/Downloads/joy/backend](/Users/ezreal/Downloads/joy/backend)
-- 老系统管理端：[/Users/ezreal/Downloads/joy/admin](/Users/ezreal/Downloads/joy/admin)
-- 老系统前端静态资源：[/Users/ezreal/Downloads/joy/frontend](/Users/ezreal/Downloads/joy/frontend)
-- 根目录历史文档：[/Users/ezreal/Downloads/joy/docs](/Users/ezreal/Downloads/joy/docs)
-
-默认把 `umi/` 当作当前主要工作区。
+默认把当前仓库（`umi/`）当作主要工作区。
 
 ## What Umi Is
 
 `umi/` 是当前整理后的工作区，里面有：
 
-- [apps](/Users/ezreal/Downloads/joy/umi/apps)：应用层代码
-- [packages](/Users/ezreal/Downloads/joy/umi/packages)：共享包
-- [docs](/Users/ezreal/Downloads/joy/umi/docs)：当前事实文档
+- [apps](apps)：应用层代码
+- [packages](packages)：共享包
+- [docs](docs)：当前事实文档
 
 新线程如果没有特别说明，优先基于 `umi/` 下的代码和文档工作。
 
 ## Current UI Rules
 
-- UI 任务默认先读 [docs/ui-spec.md](/Users/ezreal/Downloads/joy/umi/docs/ui-spec.md)
-- 用户端对齐仍以 [docs/ui-rules.md](/Users/ezreal/Downloads/joy/umi/docs/ui-rules.md) 和老系统 `frontend/` 为参考
+- UI 任务默认先读 [docs/ui-spec.md](docs/ui-spec.md)
+- 用户端对齐仍以 [docs/ui-rules.md](docs/ui-rules.md) 和老系统 `frontend/` 为参考
 - 不允许从页面现状反推产品要求
 - 不允许因为缺说明就自行重做结构、筛选器、流程步骤
 
@@ -112,15 +104,15 @@
 
 ## Current Flow Rules
 
-- 流程判断默认先读 [docs/flows.md](/Users/ezreal/Downloads/joy/umi/docs/flows.md)
+- 流程判断默认先读 [docs/flows.md](docs/flows.md)
 - 不允许从单个页面文案反推完整业务流程
 - 不允许把老系统局部实现当新系统最终流程
 
 ## Current DB Rules
 
 - 当前数据库事实来源只看 `umi/docs/`
-- 真实表和字段优先查 [docs/schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md)
-- 当前测试库以 [umi/.env](/Users/ezreal/Downloads/joy/umi/.env) 为准，当前使用本地 `joy-test`
+- 真实表和字段优先查 [docs/schema-reference.md](docs/schema-reference.md)
+- 当前测试库以 [umi/.env](.env) 为准，当前使用本地 `joy-test`
 - 当前不再操作远程测试库，数据库调整默认只落本地测试库
 - 默认先读文档，不直接连库；只有文档找不到对应表/字段，或需要核实真实列类型、索引、约束时，才查本地 MySQL
 - 主键和主链路关联 ID 已整型化，不再使用字符串 ID
@@ -183,20 +175,20 @@
 
 如果任务涉及数据库，默认按这个顺序做：
 
-1. 先读 [docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)、[docs/schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md) 和 [docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)。
+1. 先读 [docs/db.md](docs/db.md)、[docs/schema-reference.md](docs/schema-reference.md) 和 [docs/status-codes.md](docs/status-codes.md)。
 2. 在文档里定位目标表、目标字段、当前链路。
 3. 只有文档没有覆盖，或者需要确认真实列类型 / 索引 / 约束时，才连接本地 MySQL。
-4. 再确认当前连接只以 [umi/.env](/Users/ezreal/Downloads/joy/umi/.env) 为准。
+4. 再确认当前连接只以 [umi/.env](.env) 为准。
 5. 先判断是“缺配置层 / 缺结果层 / 缺关系字段 / 缺索引约束”，不要先上来讨论代码。
 6. 如果要对照旧实现，再去看根目录 `backend/`、`admin/`、`frontend/`，只把它们当需求线索，不当当前事实来源。
 7. 改完库结构后，只同步 `umi/docs/` 下文档，不同步根目录 `docs/`。
 
 ## When To Edit Docs
 
-- 改了表：更新 [docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
-- 改了真实字段：更新 [docs/schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md)
-- 改了编码字段：更新 [docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
-- 改了接手规则、边界、当前事实：更新 [AGENTS.md](/Users/ezreal/Downloads/joy/umi/AGENTS.md)
+- 改了表：更新 [docs/db.md](docs/db.md)
+- 改了真实字段：更新 [docs/schema-reference.md](docs/schema-reference.md)
+- 改了编码字段：更新 [docs/status-codes.md](docs/status-codes.md)
+- 改了接手规则、边界、当前事实：更新 [AGENTS.md](AGENTS.md)
 - 改了 `apps/api` 路由、请求参数或响应结构：同时检查 Swagger 入口
 
 ## What Good Looks Like
@@ -247,7 +239,7 @@
 - 看某个前台结果页，判断是否缺结果表
 - 看某条业务链，判断是不是少一个关系字段或来源字段
 - 看某张表里的字段，判断是不是还有冗余、弱表达或类型不一致
-- 看某个枚举域，判断是否要补进 [docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+- 看某个枚举域，判断是否要补进 [docs/status-codes.md](docs/status-codes.md)
 
 ## Recent Decisions
 
@@ -303,9 +295,9 @@
 
 数据库查询策略固定如下：
 
-1. 先查 [docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
-2. 再查 [docs/schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md)
-3. 再查 [docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+1. 先查 [docs/db.md](docs/db.md)
+2. 再查 [docs/schema-reference.md](docs/schema-reference.md)
+3. 再查 [docs/status-codes.md](docs/status-codes.md)
 4. 文档里找不到目标表或目标字段时，才允许查本地 `joy-test`
 5. 只有以下任务默认允许直接查库：
    - 看真实列类型

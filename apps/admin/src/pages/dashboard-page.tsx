@@ -2,8 +2,7 @@ import { Alert, Card, Col, Empty, List, Progress, Row, Space, Statistic, Tag, Ty
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
-import type { AdminDashboardStats } from '../lib/admin-data';
-import { fetchAdminDashboard } from '../lib/api/dashboard';
+import { fetchAdminDashboard, type AdminDashboardStats } from '../lib/api/dashboard';
 import { formatAmount, formatDateTime, formatNumber, productStatusMeta } from '../lib/format';
 
 interface DashboardPageProps {

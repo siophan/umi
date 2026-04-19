@@ -4,18 +4,7 @@ import type { TableColumnsType } from 'antd';
 import { cloneElement, useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type {
-  AdminBrandApplyItem,
-  AdminBrandAuthApplyItem,
-  AdminBrandAuthRecordItem,
-  AdminBrandItem,
-  AdminCategoryItem,
-  AdminProductAuthItem,
-  AdminProductAuthRecordItem,
-  AdminShopApplyItem,
-  AdminShopItem,
-  AdminShopProductItem,
-} from '../lib/admin-data';
+import type { AdminCategoryItem } from '../lib/api/catalog';
 import {
   fetchAdminBrandApplies,
   fetchAdminBrandAuthApplies,
@@ -26,6 +15,15 @@ import {
   fetchAdminShopApplies,
   fetchAdminShopProducts,
   fetchAdminShops,
+  type AdminBrandApplyItem,
+  type AdminBrandAuthApplyItem,
+  type AdminBrandAuthRecordItem,
+  type AdminBrandItem,
+  type AdminProductAuthItem,
+  type AdminProductAuthRecordItem,
+  type AdminShopApplyItem,
+  type AdminShopItem,
+  type AdminShopProductItem,
 } from '../lib/api/merchant';
 import { fetchAdminCategories } from '../lib/api/system';
 import { formatAmount, formatDateTime, formatNumber, productStatusMeta } from '../lib/format';

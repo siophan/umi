@@ -22,7 +22,7 @@
 | 管理台 `apps/admin` | `进行中` | 只有单页骨架和模块规划，尚未形成真实后台 |
 | 后端 `apps/api` | `进行中` | 认证、个人资料、好友、通知、聊天、钱包、竞猜列表/详情、订单、仓库、店铺已接真实数据库，Admin 和部分商城/社区接口仍有 demo 路由 |
 | 共享契约 `packages/shared` | `已完成` | 已抽出领域类型、状态枚举、API 契约基础层，并承接真实联调字段扩展（如 `uid`） |
-| 数据库文档 / 结构说明 | `已完成` | 已有 [db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md) |
+| 数据库文档 / 结构说明 | `已完成` | 已有 [db.md](docs/db.md) |
 
 ## 基础工程
 
@@ -213,7 +213,7 @@
 | --- | --- | --- |
 | `packages/shared` 类型与状态枚举 | `已完成` | 已供 Web / Admin / API 共用 |
 | `packages/db` 结构承接 | `进行中` | 已补 `sms_verification_code`、`auth_session`、`chat_conversation`、`user_profile/user_stats/user_shop_profile`、`brand_product`、`shop_brand_auth`、`uid_code` 等 SQL，运行期仍在逐步接入 |
-| 数据库结构说明文档 | `已完成` | 见 [db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md) |
+| 数据库结构说明文档 | `已完成` | 见 [db.md](docs/db.md) |
 
 ## 当前最大缺口
 

@@ -1,12 +1,101 @@
-import type {
-  AdminCategoryItem,
-  AdminChatItem,
-  AdminNotificationItem,
-  AdminPermissionMatrixData,
-  AdminRoleListItem,
-  AdminSystemUserItem,
-} from '../admin-data';
+import type { AdminCategoryItem } from './catalog';
 import { getJson } from './shared';
+
+export interface AdminNotificationItem {
+  id: string;
+  title: string;
+  audience: 'all_users' | 'order_users' | 'guess_users' | 'post_users' | 'chat_users' | 'targeted_users';
+  type: 'system' | 'order' | 'guess' | 'social';
+  status: 'sent';
+  targetType: 'order' | 'guess' | 'post' | 'chat' | 'unknown';
+  targetId: string | null;
+  actionUrl: string | null;
+  recipientCount: number;
+  readCount: number;
+  unreadCount: number;
+  createdAt: string;
+  sentAt: string;
+}
+
+export interface AdminChatItem {
+  id: string;
+  userA: { id: string; uid: string | null; name: string };
+  userB: { id: string; uid: string | null; name: string };
+  messages: number;
+  unreadMessages: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  status: 'normal' | 'review' | 'escalated';
+  updatedAt: string;
+}
+
+export interface AdminSystemUserItem {
+  id: string;
+  username: string;
+  displayName: string;
+  phoneNumber: string | null;
+  email: string | null;
+  role: string;
+  roleCodes: string[];
+  status: 'active' | 'disabled';
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminRoleListItem {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  scope: string;
+  memberCount: number;
+  permissionCount: number;
+  status: 'active' | 'disabled';
+  isSystem: boolean;
+  sort: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminPermissionMatrixPermission {
+  id: string;
+  code: string;
+  name: string;
+  action: 'view' | 'create' | 'edit' | 'manage' | 'unknown';
+  parentId: string | null;
+  enabledRoleIds: string[];
+}
+
+export interface AdminPermissionMatrixCell {
+  roleId: string;
+  roleCode: string;
+  roleName: string;
+  level: 'none' | 'view' | 'create' | 'edit' | 'manage';
+  permissionCodes: string[];
+  permissionNames: string[];
+}
+
+export interface AdminPermissionMatrixModule {
+  module: string;
+  permissions: AdminPermissionMatrixPermission[];
+  cells: AdminPermissionMatrixCell[];
+}
+
+export interface AdminPermissionMatrixData {
+  roles: Array<{
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    status: 'active' | 'disabled';
+    isSystem: boolean;
+  }>;
+  modules: AdminPermissionMatrixModule[];
+  summary: {
+    roles: number;
+    modules: number;
+    permissions: number;
+  };
+}
 
 type AdminNotificationListResult = {
   items: AdminNotificationItem[];

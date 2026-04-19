@@ -1,14 +1,117 @@
 import type { GuessListResult, WarehouseListResult } from '@joy/shared';
 
-import type {
-  AdminBrandLibraryItem,
-  AdminCategoryItem,
-  AdminFriendGuessItem,
-  AdminPkMatchItem,
-  AdminProduct,
-  AdminWarehouseStats,
-} from '../admin-data';
 import { getJson } from './shared';
+
+export interface AdminProduct {
+  id: string;
+  name: string;
+  brand: string;
+  category: string;
+  shopId: string | null;
+  price: number;
+  stock: number;
+  availableStock: number;
+  frozenStock: number;
+  status: 'active' | 'paused' | 'low_stock' | 'off_shelf' | 'disabled';
+  shopName: string;
+  updatedAt: string;
+  tags: string[];
+  imageUrl?: string | null;
+  brandProductId?: string | null;
+}
+
+export interface AdminBrandLibraryItem {
+  id: string;
+  brandId: string | null;
+  brandName: string;
+  productName: string;
+  category: string;
+  guidePrice: number;
+  status: 'active' | 'disabled';
+  updatedAt: string;
+  imageUrl: string | null;
+  productCount: number;
+  activeProductCount: number;
+}
+
+export interface AdminFriendGuessItem {
+  id: string;
+  guessId: string;
+  roomName: string;
+  inviterId: string;
+  inviter: string;
+  participants: number;
+  reward: string;
+  status: 'pending' | 'active' | 'ended';
+  statusLabel: '待开赛' | '进行中' | '已结束';
+  endTime: string;
+  invitationCount: number;
+  pendingInvitations: number;
+  acceptedInvitations: number;
+  rejectedInvitations: number;
+  expiredInvitations: number;
+  confirmedResults: number;
+  rejectedResults: number;
+  betParticipantCount: number;
+  paidAmount: number;
+  paymentMode: number | null;
+  paidBy: string | null;
+}
+
+export interface AdminPkMatchItem {
+  id: string;
+  guessId: string;
+  title: string;
+  leftUserId: string;
+  leftUser: string;
+  rightUserId: string;
+  rightUser: string;
+  leftChoice: string | null;
+  rightChoice: string | null;
+  stake: number;
+  result: string;
+  resultCode: number;
+  status: 'pending' | 'active' | 'completed' | 'cancelled';
+  statusLabel: '待开赛' | '进行中' | '完成' | '已取消';
+  rewardType: number | null;
+  rewardValue: number | null;
+  rewardRefId: string | null;
+  createdAt: string;
+  settledAt: string | null;
+}
+
+export interface AdminCategoryItem {
+  id: string;
+  bizType: 'brand' | 'shop' | 'product' | 'guess' | 'unknown';
+  bizTypeCode: number;
+  bizTypeLabel: '品牌分类' | '店铺经营分类' | '商品分类' | '竞猜分类' | '未知业务';
+  parentId: string | null;
+  parentName: string | null;
+  level: number;
+  path: string | null;
+  name: string;
+  iconUrl: string | null;
+  description: string | null;
+  sort: number;
+  status: 'active' | 'disabled';
+  statusLabel: '启用中' | '停用';
+  usageCount: number;
+  usageBreakdown: {
+    brands: number;
+    brandApplies: number;
+    brandProducts: number;
+    shops: number;
+    shopApplies: number;
+    guesses: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminWarehouseStats {
+  totalVirtual: number;
+  totalPhysical: number;
+}
 
 type PaginatedListResult<T> = {
   items: T[];

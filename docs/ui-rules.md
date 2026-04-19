@@ -15,8 +15,8 @@
 
 所有页面都先查旧文件，再改新页面：
 
-- 旧前端目录：`/Users/ezreal/Downloads/joy/frontend`
-- 新用户端目录：`/Users/ezreal/Downloads/joy/umi/apps/web`
+- 旧前端目录：本机老系统 clone 下的 `frontend/`（不在当前仓库内）
+- 新用户端目录：`apps/web`
 
 常用对照页：
 

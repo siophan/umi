@@ -15,7 +15,7 @@
 
 1. 主键和主链路关联 ID 已去掉字符串方案，核心主键以 `BIGINT` 为主。
 2. 主业务金额统一按“分”存储，除非字段明确是比例或概率。
-3. 高频枚举字段统一使用数字编码，编码表见 [status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)。
+3. 高频枚举字段统一使用数字编码，编码表见 [status-codes.md](docs/status-codes.md)。
 4. 数据库不依赖外键，关系由应用层维护，但关键唯一约束和索引已经补齐。
 
 这一版数据库已经完成这些收口：
@@ -90,7 +90,7 @@
 
 - `status/type/scope/interaction_type/...` 默认使用 `TINYINT UNSIGNED`
 - `source_type/sub_type` 默认使用 `SMALLINT UNSIGNED`
-- 具体映射以 [status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md) 为准
+- 具体映射以 [status-codes.md](docs/status-codes.md) 为准
 
 ### JSON
 
@@ -957,5 +957,5 @@
 - 看库里有哪些表：先看“表清单”
 - 看表之间主关系：看“主链路关系”
 - 看一张核心表长什么样：看“核心表速查”
-- 看编码含义：看 [status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+- 看编码含义：看 [status-codes.md](docs/status-codes.md)
 - 看金额口径：默认按“分”理解，除非字段明确是比例或概率

@@ -6,9 +6,9 @@
 
 新线程进入 `umi/` 后，涉及数据库和结构判断时，先读：
 
-- [AGENTS.md](/Users/ezreal/Downloads/joy/umi/AGENTS.md)
-- [docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
-- [docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+- [AGENTS.md](AGENTS.md)
+- [docs/db.md](docs/db.md)
+- [docs/status-codes.md](docs/status-codes.md)
 
 ## 目标
 

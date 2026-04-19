@@ -4,15 +4,13 @@ import type { TableColumnsType } from 'antd';
 import { cloneElement, useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type {
-  AdminConsignRow,
-  AdminLogisticsRow,
-  AdminTransactionRow,
-} from '../lib/admin-data';
 import {
   fetchAdminConsignRows,
   fetchAdminLogistics,
   fetchAdminTransactions,
+  type AdminConsignRow,
+  type AdminLogisticsRow,
+  type AdminTransactionRow,
 } from '../lib/api/orders';
 import { formatAmount, formatDateTime, formatNumber } from '../lib/format';
 

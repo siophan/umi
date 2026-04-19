@@ -4,8 +4,12 @@ import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Table, T
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type { AdminCategoryItem, AdminProduct } from '../lib/admin-data';
-import { fetchAdminCategories, fetchAdminProducts } from '../lib/api/catalog';
+import {
+  fetchAdminCategories,
+  fetchAdminProducts,
+  type AdminCategoryItem,
+  type AdminProduct,
+} from '../lib/api/catalog';
 import { formatAmount, formatDateTime, productStatusMeta } from '../lib/format';
 
 interface ProductsPageProps {

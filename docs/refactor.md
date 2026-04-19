@@ -3,7 +3,7 @@
 最后更新：2026-04-19
 
 本文档用于说明 `umi` 这条新主线工程的重构背景、目标、范围、原则、当前完成情况和后续计划。  
-它和 [progress.md](/Users/ezreal/Downloads/joy/umi/docs/progress.md) 的区别是：
+它和 [progress.md](docs/progress.md) 的区别是：
 
 - `refactor.md` 解释“为什么这样重构、重构到哪一层、下一阶段做什么”
 - `progress.md` 只记录“哪些功能已经完成、哪些还没完成”
@@ -86,7 +86,7 @@
 
 更细规则见：
 
-- [ui-rules.md](/Users/ezreal/Downloads/joy/umi/docs/ui-rules.md)
+- [ui-rules.md](docs/ui-rules.md)
 
 ## 5. 当前技术方案
 
@@ -114,10 +114,10 @@
 5. 用户端页面正在按旧系统逐页进行 UI 与功能行为对齐，`/mall` 等高频页已边对齐边接真实商品数据。
 6. `packages/shared` 已抽出共享类型、状态枚举和 API 契约基础层，并承接真实联调字段扩展。
 7. 文档体系已建立：
-- [db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
-- [progress.md](/Users/ezreal/Downloads/joy/umi/docs/progress.md)
-- [ui-rules.md](/Users/ezreal/Downloads/joy/umi/docs/ui-rules.md)
-- [handoff.md](/Users/ezreal/Downloads/joy/umi/docs/handoff.md)
+- [db.md](docs/db.md)
+- [progress.md](docs/progress.md)
+- [ui-rules.md](docs/ui-rules.md)
+- [handoff.md](docs/handoff.md)
 
 ### 6.2 当前未完成
 
@@ -203,10 +203,10 @@
 
 后面继续推进时，至少同步维护这些文档：
 
-1. [progress.md](/Users/ezreal/Downloads/joy/umi/docs/progress.md)
-2. [ui-rules.md](/Users/ezreal/Downloads/joy/umi/docs/ui-rules.md)
-3. [handoff.md](/Users/ezreal/Downloads/joy/umi/docs/handoff.md)
-4. [refactor.md](/Users/ezreal/Downloads/joy/umi/docs/refactor.md)
+1. [progress.md](docs/progress.md)
+2. [ui-rules.md](docs/ui-rules.md)
+3. [handoff.md](docs/handoff.md)
+4. [refactor.md](docs/refactor.md)
 
 更新场景：
 

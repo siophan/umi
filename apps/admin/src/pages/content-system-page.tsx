@@ -4,14 +4,7 @@ import type { TableColumnsType } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type {
-  AdminCategoryItem,
-  AdminChatItem,
-  AdminNotificationItem,
-  AdminPermissionMatrixData,
-  AdminRoleListItem,
-  AdminSystemUserItem,
-} from '../lib/admin-data';
+import type { AdminCategoryItem } from '../lib/api/catalog';
 import {
   fetchAdminCategories,
   fetchAdminChats,
@@ -19,6 +12,11 @@ import {
   fetchAdminPermissionsMatrix,
   fetchAdminRoles,
   fetchAdminSystemUsers,
+  type AdminChatItem,
+  type AdminNotificationItem,
+  type AdminPermissionMatrixData,
+  type AdminRoleListItem,
+  type AdminSystemUserItem,
 } from '../lib/api/system';
 import { formatDateTime, formatNumber, formatPercent } from '../lib/format';
 

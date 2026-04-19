@@ -6,7 +6,7 @@
 
 使用顺序：
 
-1. 先读 [db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md) 了解业务结构和主链路
+1. 先读 [db.md](docs/db.md) 了解业务结构和主链路
 2. 再读本文件，对照真实表名和字段名
 3. 只有本文件也找不到，或者需要确认真实索引、唯一约束、列类型时，才允许直接查本地 MySQL
 
@@ -358,7 +358,7 @@
 
 ## 维护要求
 
-- 新增表或删字段后，先更新 [db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
+- 新增表或删字段后，先更新 [db.md](docs/db.md)
 - 再同步更新本文件
-- 如果是编码字段，额外更新 [status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+- 如果是编码字段，额外更新 [status-codes.md](docs/status-codes.md)
 - 别的线程默认先查本文件，不先查 MySQL

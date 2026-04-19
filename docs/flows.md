@@ -8,9 +8,9 @@
 
 分工：
 
-- [db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)：讲结构和表职责
-- [schema-reference.md](/Users/ezreal/Downloads/joy/umi/docs/schema-reference.md)：讲真实表和字段
-- [status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)：讲数字编码
+- [db.md](docs/db.md)：讲结构和表职责
+- [schema-reference.md](docs/schema-reference.md)：讲真实表和字段
+- [status-codes.md](docs/status-codes.md)：讲数字编码
 - 本文件：讲“业务流程是怎么走的”
 
 ## 总规则

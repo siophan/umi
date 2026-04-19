@@ -5,13 +5,6 @@ import type { TableColumnsType } from 'antd';
 import { cloneElement, useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type {
-  AdminBrandLibraryItem,
-  AdminCategoryItem,
-  AdminFriendGuessItem,
-  AdminProduct,
-  AdminPkMatchItem,
-} from '../lib/admin-data';
 import {
   fetchAdminBrandLibrary,
   fetchAdminCategories,
@@ -19,6 +12,11 @@ import {
   fetchAdminGuesses,
   fetchAdminPkMatches,
   fetchAdminProducts,
+  type AdminBrandLibraryItem,
+  type AdminCategoryItem,
+  type AdminFriendGuessItem,
+  type AdminPkMatchItem,
+  type AdminProduct,
 } from '../lib/api/catalog';
 import {
   formatAmount,
