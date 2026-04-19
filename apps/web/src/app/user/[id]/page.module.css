@@ -141,7 +141,9 @@
   font-size: 11px;
 }
 
-.uid span {
+.uidCopy {
+  border: 0;
+  background: transparent;
   color: #bbb;
   font-size: 10px;
 }
@@ -183,7 +185,6 @@
 }
 
 .followBtn {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -200,13 +201,18 @@
 }
 
 .chatBtn {
-  margin-left: 10px;
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 5px;
   border: 1.5px solid #ddd;
   background: #fff;
   color: #555;
+}
+
+.followBtn {
+  margin-left: 10px;
+  padding: 0 28px;
 }
 
 .bio {
@@ -231,6 +237,23 @@
   color: #777;
   font-size: 11px;
   font-weight: 600;
+}
+
+.tagLoc {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(33, 150, 243, 0.08);
+  color: #1976d2;
+}
+
+.tagLoc i {
+  font-size: 10px;
+}
+
+.tagGender {
+  background: rgba(233, 30, 99, 0.08);
+  color: #c2185b;
 }
 
 .tabs {
@@ -333,6 +356,12 @@
   font-weight: 700;
 }
 
+.postVerified {
+  margin-left: 4px;
+  color: #ff9800;
+  font-size: 11px;
+}
+
 .postAuthorMeta {
   color: #999;
   font-size: 10px;
@@ -347,9 +376,24 @@
   font-weight: 700;
 }
 
-.pinkTag {
+.tagGuess {
+  background: rgba(255, 87, 34, 0.08);
+  color: #ff5722;
+}
+
+.tagBrand {
+  background: rgba(255, 152, 0, 0.08);
+  color: #ff9800;
+}
+
+.tagHot {
   background: rgba(244, 67, 54, 0.08);
   color: #f44336;
+}
+
+.tagPk {
+  background: rgba(33, 150, 243, 0.08);
+  color: #2196f3;
 }
 
 .postBody {
@@ -388,6 +432,10 @@
   grid-template-columns: repeat(2, 1fr);
 }
 
+.cols3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .postImages img {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -405,8 +453,47 @@
   font-size: 12px;
 }
 
+.postActions button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.postShare {
+  margin-left: auto;
+}
+
 .liked {
   color: #ff5722;
+}
+
+.empty {
+  min-height: 30vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.emptyIcon {
+  margin-bottom: 12px;
+  font-size: 40px;
+  opacity: 0.6;
+}
+
+.emptyTitle {
+  color: #999;
+  font-size: 14px;
+}
+
+.emptyDesc {
+  margin-top: 4px;
+  color: #ccc;
+  font-size: 12px;
 }
 
 .chatOverlay {
@@ -527,6 +614,47 @@
   box-shadow: 0 2px 8px rgba(255, 87, 34, 0.2);
 }
 
+.typingDots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.typingDots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ccc;
+  animation: dotBounce 1.2s infinite;
+}
+
+.typingDots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typingDots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
 .chatInputBar {
   position: fixed;
   inset: auto 0 0;
@@ -582,4 +710,18 @@
 
 .chatSendActive {
   opacity: 1;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 80;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
 }

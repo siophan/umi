@@ -186,6 +186,32 @@
   align-items: flex-start;
 }
 
+.productPoster {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: #f5f5f5;
+}
+
+.productPoster img {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+}
+
+.productPosterTag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .divider {
   height: 1px;
   margin-bottom: 12px;
@@ -275,6 +301,56 @@
   justify-content: space-between;
   padding: 8px 0;
   font-size: 13px;
+}
+
+.detailRow,
+.detailRowButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+}
+
+.detailRow + .detailRow,
+.detailRow + .detailRowButton,
+.detailRowButton + .detailRow,
+.detailRowButton + .detailRowButton {
+  border-top: 1px solid #f8f8f8;
+}
+
+.detailRow i,
+.detailRowButton i {
+  width: 20px;
+  flex-shrink: 0;
+  color: #ff5722;
+  font-size: 13px;
+  text-align: center;
+}
+
+.detailGreenIcon {
+  color: #4caf50 !important;
+}
+
+.detailLabel {
+  flex: 1;
+  color: #333;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.detailValue {
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.detailLink {
+  color: #ff5722;
 }
 
 .row span,
@@ -419,6 +495,24 @@
 
 .serviceTag i {
   color: #ff5722;
+}
+
+.remarkInput {
+  width: 100%;
+  resize: none;
+  border: 1.5px solid #eee;
+  border-radius: 10px;
+  background: #fafafa;
+  padding: 10px 12px;
+  color: #333;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.remarkInput:focus {
+  border-color: #ff5722;
+  background: #fff;
 }
 
 .priceValue {

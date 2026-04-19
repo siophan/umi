@@ -47,17 +47,16 @@
 .tagActive {
   flex: none;
   border: 0;
-  border-radius: 999px;
-  padding: 8px 12px;
+  background: transparent;
+  padding: 0;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: #666;
-  background: #f1f1f4;
 }
 
 .tagActive {
-  color: #fff;
-  background: linear-gradient(135deg, #ff7043, #e64a19);
+  color: #ff5722;
+  font-weight: 700;
 }
 
 .section {
@@ -76,6 +75,12 @@
   margin: 0 16px;
   overflow: hidden;
   border-radius: 20px;
+  padding: 0;
+  border: 0;
+  display: block;
+  width: calc(100% - 32px);
+  background: transparent;
+  text-align: left;
 }
 
 .featuredImg {
@@ -110,6 +115,7 @@
 }
 
 .liveTag { background: #f44336; }
+.liveTagLive { background: #f44336; }
 .viewerTag { background: rgba(0, 0, 0, 0.48); }
 
 .overlayBottom { color: #fff; }
@@ -150,6 +156,12 @@
   position: relative;
   overflow: hidden;
   border-radius: 16px;
+  padding: 0;
+  border: 0;
+  display: block;
+  width: 100%;
+  background: transparent;
+  text-align: left;
 }
 
 .card img {
@@ -178,4 +190,10 @@
   margin-top: 4px;
   font-size: 10px;
   opacity: 0.78;
+}
+
+.divider {
+  height: 8px;
+  margin-top: 16px;
+  background: #ededf0;
 }

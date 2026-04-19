@@ -72,6 +72,8 @@ export default function CreatePage() {
   const [couponMaxOff, setCouponMaxOff] = useState('12');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [publishToast, setPublishToast] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [publishStep, setPublishStep] = useState(0);
 
   const steps = useMemo(() => {
     const step0 = !!template;
@@ -122,6 +124,28 @@ export default function CreatePage() {
   function showToast(message: string) {
     setPublishToast(message);
     window.setTimeout(() => setPublishToast(''), 1800);
+  }
+
+  function handlePublish() {
+    if (publishing) {
+      return;
+    }
+
+    setPublishing(true);
+    setPublishStep(0);
+
+    const steps = [1, 2, 3];
+    steps.forEach((step, index) => {
+      window.setTimeout(() => {
+        setPublishStep(step);
+      }, 500 + index * 500);
+    });
+
+    window.setTimeout(() => {
+      setPublishing(false);
+      setPublishStep(3);
+      showToast('竞猜创建成功！');
+    }, 2200);
   }
 
   return (
@@ -431,7 +455,7 @@ export default function CreatePage() {
         <button className={styles.previewBtn} type="button" onClick={() => setPreviewOpen(true)}>
           预览
         </button>
-        <button className={styles.publishBtn} type="button" onClick={() => showToast('竞猜创建成功！')}>
+        <button className={styles.publishBtn} type="button" onClick={handlePublish}>
           发布竞猜
         </button>
       </div>
@@ -464,11 +488,29 @@ export default function CreatePage() {
                 type="button"
                 onClick={() => {
                   setPreviewOpen(false);
-                  showToast('竞猜创建成功！');
+                  handlePublish();
                 }}
               >
                 确认发布
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {publishing ? (
+        <div className={styles.publishOverlay}>
+          <div className={styles.publishCard}>
+            <div className={styles.publishIcon}>🚀</div>
+            <div className={styles.publishTitle}>正在发布竞猜</div>
+            <div className={styles.publishDesc}>请稍候，系统正在为你生成竞猜内容</div>
+            <div className={styles.publishBar}>
+              <div className={styles.publishFill} style={{ width: `${publishStep * 33.33}%` }} />
+            </div>
+            <div className={styles.publishSteps}>
+              <div className={`${styles.publishStep} ${publishStep >= 1 ? styles.publishStepActive : ''}`}>1. 校验竞猜内容</div>
+              <div className={`${styles.publishStep} ${publishStep >= 2 ? styles.publishStepActive : ''}`}>2. 生成开奖配置</div>
+              <div className={`${styles.publishStep} ${publishStep >= 3 ? styles.publishStepActive : ''}`}>3. 发布到首页</div>
             </div>
           </div>
         </div>

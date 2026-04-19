@@ -1,6 +1,9 @@
 .page { min-height: 100vh; background: #f5f5f8; padding-bottom: 24px; }
 .header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; height: 48px; padding: 0 12px; background: rgba(255,255,255,.92); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0,0,0,.06); }
 .back,.iconBtn { width: 32px; height: 32px; border: 0; border-radius: 999px; background: transparent; color: #333; }
+.back { font-size: 15px; }
+.iconBtn { font-size: 14px; color: #666; }
+.back:active,.iconBtn:active { background:#F0F0F2; transform:scale(.9); }
 .headerTitle { flex: 1; text-align: center; font-size: 15px; font-weight: 700; }
 .actionsTop { display: flex; gap: 4px; }
 .hero { position: relative; overflow: hidden; padding: 20px 16px; color: #fff; background: linear-gradient(135deg,#111,#2a2a2a); }
@@ -14,25 +17,84 @@
 .stats span { display: block; margin-top: 2px; font-size: 10px; opacity: .54; }
 .quickActions { display: flex; gap: 8px; padding: 14px 12px; background: #fff; }
 .quickItem { flex: 1; border: 0; border-radius: 12px; padding: 12px 4px; background: #f8f8fa; }
+.quickItem:active { background:#F0F0F2; transform:scale(.97); }
 .quickIcon { font-size: 22px; }
 .quickLabel { margin-top: 6px; font-size: 11px; font-weight: 600; color: #666; }
+.emptyBlock { padding: 16px 14px; background: #fff; }
+.emptyTitle { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+.emptyDesc { margin-top: 6px; font-size: 11px; line-height: 1.5; color: #8a8a8a; }
 .section { margin-top: 8px; background: #fff; }
 .sectionHead { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 0; }
 .sectionTitle { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; }
 .sectionTitle i:first-child { color: #ff6b35; }
 .section:nth-of-type(4) .sectionTitle i:first-child { color: #4e6ae6; }
-.sectionMore { font-size: 11px; color: #999; }
+.sectionMore { border:0; background:transparent; font-size: 11px; color: #999; }
+.sectionMore:active { color:#666; }
 .brandItem,.productItem { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #f5f5f5; }
 .brandItem:last-child,.productItem:last-child { border-bottom: 0; }
 .brandItem img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
 .brandInfo,.productBody { flex: 1; min-width: 0; }
-.brandName,.productName { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+.brandName { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+.productName { font-size: 12px; font-weight: 600; color: #333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .brandMeta { margin-top: 2px; font-size: 10px; color: #999; }
 .statusActive,.statusPending { border-radius: 8px; padding: 2px 8px; font-size: 9px; font-weight: 700; }
 .statusActive { color: #2e7d32; background: #e8f5e9; }
 .statusPending { color: #e65100; background: #fff3e0; }
 .productItem img { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: #f5f5f5; }
-.productPrice { margin-top: 6px; font-size: 14px; font-weight: 800; color: #e64a19; }
+.productPrice { margin-top: 6px; font-size: 14px; font-weight: 800; color: #E64A19; }
 .productBtns { display: flex; gap: 6px; margin-top: 8px; }
 .miniBtn,.miniBtnDanger { border: 1px solid #e8e8e8; border-radius: 10px; background: #fff; padding: 4px 10px; font-size: 10px; font-weight: 600; color: #666; }
+.miniBtn:active,.miniBtnDanger:active { background:#F5F5F5; }
 .miniBtnDanger { color: #ff3b30; border-color: #ffcdd2; }
+
+.statsOverlay { position:fixed; inset:0; z-index:999; display:flex; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.5); }
+.statsPanel { width:100%; max-width:500px; max-height:80vh; overflow-y:auto; border-radius:16px 16px 0 0; background:#fff; padding:0 0 calc(16px + env(safe-area-inset-bottom,0px)); animation:statsPanelUp .3s cubic-bezier(.25,.46,.45,.94); }
+.statsHead { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; padding:16px; background:#fff; border-bottom:.5px solid #F0F0F0; }
+.statsTitle { font-size:16px; font-weight:800; }
+.statsClose { width:28px; height:28px; border:0; border-radius:50%; background:#F0F0F2; color:#999; }
+.statsClose:active { background:#E0E0E2; }
+.statsSummary { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; padding:14px; }
+.statsCard { padding:14px; border-radius:12px; text-align:center; }
+.revenue { background:linear-gradient(135deg,#FFF8E1,#FFECB3); }
+.orders { background:linear-gradient(135deg,#E3F2FD,#BBDEFB); }
+.views { background:linear-gradient(135deg,#F3E5F5,#E1BEE7); }
+.rate { background:linear-gradient(135deg,#E8F5E9,#C8E6C9); }
+.statsCardVal { font-size:22px; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; }
+.revenue .statsCardVal { color:#E65100; }
+.orders .statsCardVal { color:#1565C0; }
+.views .statsCardVal { color:#7B1FA2; }
+.rate .statsCardVal { color:#2E7D32; }
+.statsCardLbl { margin-top:4px; color:#888; font-size:10px; font-weight:600; }
+.statsCardChange { margin-top:3px; font-size:9px; font-weight:700; }
+.up { color:#2E7D32; }
+.down { color:#FF3B30; }
+.statsChart { padding:14px; }
+.statsChartTitle,.statsRankTitle { display:flex; align-items:center; gap:5px; margin-bottom:10px; font-size:13px; font-weight:700; }
+.overviewGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:12px 0; }
+.overviewItem { text-align:center; }
+.overviewLabel { font-size:11px; color:#999; }
+.overviewSales { margin-top:2px; font-size:16px; font-weight:600; }
+.overviewToday { color:#FF5722; }
+.overviewWeek { color:#4E6AE6; }
+.overviewMonth { color:#4caf50; }
+.overviewOrders { margin-top:1px; font-size:11px; color:#999; }
+.statsRank { padding:0 14px 14px; }
+.statsRankItem { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:.5px solid #F8F8F8; }
+.statsRankItem:last-child { border-bottom:0; }
+.statsRankNum { width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:50%; flex-shrink:0; font-size:10px; font-weight:800; color:#fff; }
+.r1 { background:linear-gradient(135deg,#FFD700,#F7971E); }
+.r2 { background:linear-gradient(135deg,#B0BEC5,#90A4AE); }
+.r3 { background:linear-gradient(135deg,#BCAAA4,#8D6E63); }
+.rn { background:#E0E0E0; color:#999; }
+.statsRankImg { width:36px; height:36px; border-radius:8px; object-fit:cover; flex-shrink:0; }
+.statsRankInfo { flex:1; min-width:0; }
+.statsRankName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:600; }
+.statsRankMeta { margin-top:1px; color:#999; font-size:9px; }
+.statsRankSales { flex-shrink:0; color:#E64A19; font-size:12px; font-weight:800; }
+
+.toast { position:fixed; left:50%; bottom:calc(100px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); z-index:1000; padding:10px 16px; border-radius:999px; background:rgba(26,26,26,.9); color:#fff; font-size:12px; font-weight:600; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.18); }
+
+@keyframes statsPanelUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

@@ -69,9 +69,6 @@
 
 .heroIcon {
   margin-bottom: 12px;
-}
-
-.heroIcon i {
   font-size: 56px;
 }
 
@@ -173,9 +170,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.rewardIcon span {
   font-size: 28px;
   line-height: 1;
 }
@@ -228,6 +222,13 @@
 
 .recordInfo {
   flex: 1;
+}
+
+.recordEmpty {
+  padding: 24px 0;
+  color: #bdbdbd;
+  font-size: 13px;
+  text-align: center;
 }
 
 .toast {

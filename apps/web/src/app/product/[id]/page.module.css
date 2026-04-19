@@ -268,6 +268,11 @@
   font-size: 11px;
 }
 
+.promoChip i {
+  color: #ccc;
+  font-size: 9px;
+}
+
 .pcTag {
   padding: 1px 4px;
   border-radius: 3px;
@@ -690,11 +695,29 @@
   text-align: center;
 }
 
+.guessOptionSelected {
+  border-color: #ff6b00;
+  background: #fff8f0;
+  box-shadow: 0 2px 8px rgba(255, 107, 0, 0.08);
+}
+
 .optionRadio {
   width: 18px;
   height: 18px;
   border: 1.5px solid #d0d0d0;
   border-radius: 50%;
+}
+
+.guessOptionSelected .optionRadio {
+  border-color: #ff6b00;
+  background: #ff6b00;
+}
+
+.guessOptionSelected .optionRadio::after {
+  content: '✓';
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .optionName {
@@ -735,6 +758,22 @@
 
 .recList {
   margin-top: 10px;
+}
+
+.guessMore {
+  width: 100%;
+  padding: 6px 0 0;
+  border: 0;
+  background: transparent;
+  color: #ff6b00;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.guessMore i {
+  margin-left: 3px;
+  font-size: 8px;
 }
 
 .recItem {
@@ -1209,6 +1248,14 @@
   font-size: 9px;
 }
 
+.reviewLike {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}
+
 .recommendTitle {
   padding: 10px 12px 0;
   color: #1a1a1a;
@@ -1448,6 +1495,17 @@
   font-weight: 700;
 }
 
+.exchangePlanBtn {
+  margin-bottom: 10px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2dc88a, #00875a);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .exchangeCard,
 .exchangeCardSelected {
   position: relative;
@@ -1545,6 +1603,19 @@
   color: #fff;
   font-size: 14px;
   font-weight: 700;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 13px;
+  transform: translateX(-50%);
 }
 
 @media (max-width: 420px) {

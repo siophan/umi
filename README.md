@@ -2,6 +2,14 @@
 
 `umi` 是新的主线工程目录，负责承接重构后的前端、管理台和后端。
 
+## Start Here
+
+新线程进入 `umi/` 后，涉及数据库和结构判断时，先读：
+
+- [AGENTS.md](/Users/ezreal/Downloads/joy/umi/AGENTS.md)
+- [docs/db.md](/Users/ezreal/Downloads/joy/umi/docs/db.md)
+- [docs/status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+
 ## 目标
 
 - 以当前新数据库结构为基线重建系统
@@ -11,15 +19,15 @@
 
 ## 目录
 
-| 目录 | 说明 |
-| --- | --- |
-| `apps/web` | 用户端应用，Next.js App Router |
-| `apps/admin` | 管理台应用，React + Vite |
-| `apps/api` | 后端服务，Express + TypeScript |
-| `packages/shared` | 共享类型、状态枚举、API 契约 |
-| `packages/db` | 数据库相关资产和结构说明 |
-| `packages/config` | 共享工程配置 |
-| `docs` | 路线图和架构文档 |
+| 目录              | 说明                           |
+| ----------------- | ------------------------------ |
+| `apps/web`        | 用户端应用，Next.js App Router |
+| `apps/admin`      | 管理台应用，React + Vite       |
+| `apps/api`        | 后端服务，Express + TypeScript |
+| `packages/shared` | 共享类型、状态枚举、API 契约   |
+| `packages/db`     | 数据库相关资产和结构说明       |
+| `packages/config` | 共享工程配置                   |
+| `docs`            | 路线图和架构文档               |
 
 ## 技术栈
 
@@ -42,6 +50,8 @@
 ### API
 
 - `GET /health`
+- `GET /openapi.json`
+- `GET /docs`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
 - `GET /api/guesses`
@@ -99,6 +109,8 @@ pnpm --filter @joy/admin dev
 - 不再使用旧静态前端目录作为正式实现
 - 不在数据库层依赖外键，引用关系由应用层维护
 - 资金、订单、竞猜、仓库链路优先于次要功能
+- `apps/api` 的在线调试入口统一使用 `/docs`
+- 新增或修改 API 时，同步更新 `apps/api/src/routes/openapi.ts`
 
 ## 下一阶段
 

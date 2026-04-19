@@ -19,7 +19,15 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT ?? 4000),
   logLevel: process.env.LOG_LEVEL ?? 'info',
-  corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://127.0.0.1:3000')
+  smsCodePepper: process.env.SMS_CODE_PEPPER ?? '',
+  adminTokenSecret:
+    process.env.ADMIN_TOKEN_SECRET ??
+    process.env.SMS_CODE_PEPPER ??
+    'joy-admin-dev-secret',
+  corsOrigins: (
+    process.env.CORS_ORIGINS ??
+    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001'
+  )
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),

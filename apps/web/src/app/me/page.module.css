@@ -93,6 +93,11 @@
   width: 72px;
   height: 72px;
   margin-bottom: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: block;
+  cursor: pointer;
 }
 
 .avatar {
@@ -163,6 +168,10 @@
   background: transparent;
   color: #bbb;
   font-size: 10px;
+}
+
+.uidRow button:active {
+  color: #666;
 }
 
 .statsBar {
@@ -285,6 +294,10 @@
   text-align: left;
 }
 
+.openShop:active {
+  transform: scale(0.98);
+}
+
 .openShopIcon {
   display: grid;
   flex-shrink: 0;
@@ -360,6 +373,308 @@
 .merchantSub {
   color: #66bb6a;
   font-size: 10px;
+}
+
+.searchOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 92;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f8;
+}
+
+.searchPanel {
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 14px;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchBar input {
+  flex: 1;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 20px;
+  background: #f2f2f5;
+  color: #1a1a1a;
+  font-size: 14px;
+  outline: none;
+}
+
+.searchBar input::placeholder {
+  color: #bbb;
+}
+
+.searchCancel {
+  border: 0;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.searchQuick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.searchChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 20px;
+  background: #f5f5f8;
+  color: #555;
+  font-size: 13px;
+}
+
+.searchChip i {
+  font-size: 12px;
+}
+
+.searchChipAdd {
+  background: linear-gradient(135deg, #fff3e0, #ffecb3);
+  color: #e65100;
+  font-weight: 600;
+}
+
+.searchResults {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+.searchSectionTitle {
+  margin-bottom: 10px;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.searchItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid #f5f5f5;
+  background: transparent;
+  text-align: left;
+}
+
+.searchItem:last-child {
+  border-bottom: 0;
+}
+
+.searchItem img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.searchItemInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.searchItemName {
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.searchItemDesc {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #999;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.searchAction {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.searchAction i {
+  margin-right: 3px;
+}
+
+.searchActionAdded {
+  background: #f0f0f0;
+  color: #999;
+}
+
+.searchEmpty {
+  padding: 30px 0;
+  color: #bbb;
+  font-size: 13px;
+  text-align: center;
+}
+
+.searchEmpty i {
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.3;
+  font-size: 24px;
+}
+
+.shopModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.shopModal {
+  width: 88%;
+  max-width: 360px;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #fff;
+  animation: shopSlideUp 0.3s cubic-bezier(0.32, 0.72, 0.37, 1.12);
+}
+
+@keyframes shopSlideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.shopModalHero {
+  padding: 32px 24px 20px;
+  background: linear-gradient(145deg, #fff8e1, #fff3e0);
+  text-align: center;
+}
+
+.shopModalHeroIcon {
+  margin-bottom: 12px;
+  font-size: 56px;
+}
+
+.shopModalHeroTitle {
+  color: #333;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.shopModalHeroDesc {
+  margin-top: 6px;
+  color: #999;
+  font-size: 13px;
+}
+
+.shopModalPerks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 24px;
+}
+
+.shopModalPerk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shopModalPerkIcon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.perkOrange {
+  background: rgba(255, 87, 34, 0.12);
+}
+
+.perkGold {
+  background: rgba(255, 152, 0, 0.12);
+}
+
+.perkGreen {
+  background: rgba(76, 175, 80, 0.12);
+}
+
+.perkBlue {
+  background: rgba(33, 150, 243, 0.08);
+}
+
+.shopModalPerkText {
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.shopModalPerkSub {
+  color: #999;
+  font-size: 10px;
+}
+
+.shopModalFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 24px 24px;
+}
+
+.shopModalConfirm {
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  box-shadow: 0 4px 16px rgba(255, 87, 34, 0.3);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.shopModalConfirm:active {
+  transform: scale(0.98);
+}
+
+.shopModalCancel {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: #999;
+  font-size: 13px;
+  text-align: center;
 }
 
 .tabs {
@@ -580,6 +895,16 @@
   background: rgba(96, 125, 139, 0.08);
 }
 
+.iconAmber {
+  color: #ffc107;
+  background: rgba(255, 193, 7, 0.08);
+}
+
+.iconDangerSoft {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.06);
+}
+
 .settingsItemText {
   flex: 1;
   color: #1a1a1a;
@@ -626,6 +951,33 @@
   left: 22px;
 }
 
+.settingsFooter {
+  padding: 10px 16px 16px;
+  border-top: 0.5px solid #f0f0f0;
+}
+
+.settingsVersion {
+  color: #bbb;
+  font-size: 10px;
+  text-align: center;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 110;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(26, 26, 26, 0.9);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
 .postList {
   display: flex;
   flex-direction: column;
@@ -638,6 +990,10 @@
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.postCard:active {
+  transform: scale(0.99);
 }
 
 .postAuthor {
@@ -676,6 +1032,26 @@
   color: #ff5722;
   font-size: 9px;
   font-weight: 700;
+}
+
+.tagBrand {
+  background: rgba(255, 152, 0, 0.08);
+  color: #ff9800;
+}
+
+.tagCommunity {
+  background: rgba(158, 158, 158, 0.08);
+  color: #757575;
+}
+
+.tagGuess {
+  background: rgba(255, 87, 34, 0.08);
+  color: #ff5722;
+}
+
+.tagPk {
+  background: rgba(33, 150, 243, 0.08);
+  color: #2196f3;
 }
 
 .tagHot {
@@ -727,6 +1103,10 @@
   background: #f0f0f0;
 }
 
+.cols3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .postActions {
   display: flex;
   align-items: center;
@@ -736,8 +1116,79 @@
   font-size: 12px;
 }
 
+.postAction {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.postActions button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.postShare {
+  margin-left: auto;
+}
+
 .liked {
   color: #ff5722;
+}
+
+.empty {
+  min-height: 30vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  font-size: 32px;
+}
+
+.emptyTitle {
+  color: #999;
+  font-size: 14px;
+}
+
+.emptyDesc {
+  margin-top: 4px;
+  color: #ccc;
+  font-size: 12px;
+}
+
+.goBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  margin-top: 20px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  box-shadow: 0 3px 12px rgba(255, 87, 34, 0.25);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.goBtn:active {
+  transform: scale(0.94);
 }
 
 .favGrid {

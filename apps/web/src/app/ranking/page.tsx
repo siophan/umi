@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 type RankTab = 'winRate' | 'earnings' | 'active';
@@ -116,6 +116,7 @@ export default function RankingPage() {
   const data = useMemo(() => rankData[tab], [tab]);
   const podium = data.slice(0, 3);
   const rest = data.slice(3);
+  const myRank = data[3];
 
   return (
     <div className={styles.page}>
@@ -200,16 +201,16 @@ export default function RankingPage() {
       </main>
 
       <footer className={styles.myRank}>
-        <span className={styles.myNo}>#4</span>
+        <span className={styles.myNo}>#{myRank?.rank ?? 4}</span>
         <img
           className={styles.myAvatar}
           alt="me"
-          src="/legacy/images/mascot/mouse-main.png"
+          src={myRank?.avatar ?? '/legacy/images/mascot/mouse-main.png'}
         />
         <div className={styles.myInfo}>
           <div className={styles.myName}>零食猎人 (我)</div>
         </div>
-        <div className={styles.myValue}>68.5%</div>
+        <div className={styles.myValue}>{myRank?.rate ?? '68.5%'}</div>
       </footer>
     </div>
   );

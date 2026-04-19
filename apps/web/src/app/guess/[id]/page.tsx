@@ -1,48 +1,127 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import type { GuessOption } from '@joy/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import type { GuessOption, GuessSummary } from '@joy/shared';
 
-import { demoGuess } from '../../../lib/demo';
+import { fetchGuess } from '../../../lib/api';
 import styles from './page.module.css';
 
 const participants = [
-  { name: '阿柠', time: '刚刚参与', choice: '会', cls: styles.choiceBig, avatar: demoGuess.product.img },
-  { name: '小夏', time: '2 分钟前', choice: '不会', cls: styles.choiceSmall, avatar: demoGuess.product.img },
-  { name: 'Leo', time: '8 分钟前', choice: '会', cls: styles.choiceBig, avatar: demoGuess.product.img },
-  { name: 'Mika', time: '13 分钟前', choice: '不会', cls: styles.choiceSmall, avatar: demoGuess.product.img },
+  { avatar: '/legacy/images/mascot/mouse-main.png' },
+  { avatar: '/legacy/images/mascot/mouse-happy.png' },
+  { avatar: '/legacy/images/mascot/mouse-casual.png' },
+  { avatar: '/legacy/images/products/p001-lays.jpg' },
+  { avatar: '/legacy/images/products/p002-oreo.jpg' },
+  { avatar: '/legacy/images/products/p003-squirrels.jpg' },
+  { avatar: '/legacy/images/products/p005-liangpin.jpg' },
+  { avatar: '/legacy/images/products/p007-dove.jpg' },
 ];
 
-const comments = [
-  { user: '优米鼠鼠', text: '这波感觉会很快抢空，抢到就赚到。', likes: 18, time: '刚刚', avatar: demoGuess.product.img },
-  { user: '奶盖', text: '卡点要抢，差一点就会翻车。', likes: 7, time: '5 分钟前', avatar: demoGuess.product.img },
-  { user: '橙子', text: '我押不会，库存看起来不算特别多。', likes: 4, time: '11 分钟前', avatar: demoGuess.product.img },
+const danmakuNames = ['零食达人', '坚果控', '甜品达人', '辣味粉', '吃货小张', '巧克力控', '果汁达人', '薯片王'];
+
+const initialComments = [
+  {
+    user: '优米鼠鼠',
+    text: '这波感觉会很快抢空，抢到就赚到。',
+    likes: 18,
+    time: '刚刚',
+    avatar: '/legacy/images/mascot/mouse-main.png',
+    liked: false,
+  },
+  {
+    user: '奶盖',
+    text: '卡点要抢，差一点就会翻车。',
+    likes: 7,
+    time: '5 分钟前',
+    avatar: '/legacy/images/mascot/mouse-happy.png',
+    liked: false,
+  },
+  {
+    user: '橙子',
+    text: '我押不会，库存看起来不算特别多。',
+    likes: 4,
+    time: '11 分钟前',
+    avatar: '/legacy/images/mascot/mouse-casual.png',
+    liked: false,
+  },
 ];
 
 const shareChannels = [
   { label: '微信', icon: 'fa-brands fa-weixin', color: '#07C160' },
-  { label: '朋友圈', icon: 'fa-solid fa-comment-dots', color: '#FF6F00' },
+  { label: '朋友圈', icon: 'fa-solid fa-sun', color: '#FF6F00' },
   { label: 'QQ', icon: 'fa-brands fa-qq', color: '#12B7F5' },
   { label: '复制链接', icon: 'fa-solid fa-link', color: 'rgba(255,255,255,0.08)' },
 ] as const;
 
+type DanmakuItem = {
+  id: number;
+  name: string;
+  optionText: string;
+  top: number;
+  duration: number;
+};
+
 export default function GuessDetailPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
+  const vsAreaRef = useRef<HTMLDivElement | null>(null);
+  const danmakuIdRef = useRef(0);
+  const [guess, setGuess] = useState<GuessSummary | null>(null);
+  const [loading, setLoading] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
   const [betOpen, setBetOpen] = useState(false);
+  const [breathing, setBreathing] = useState(false);
+  const [favorited, setFavorited] = useState(false);
+  const [topicExpanded, setTopicExpanded] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState(initialComments);
+  const [danmakuItems, setDanmakuItems] = useState<DanmakuItem[]>([]);
+  const [toast, setToast] = useState('');
   const [selectedOption, setSelectedOption] = useState(0);
-  const [betAmount, setBetAmount] = useState(100);
+  const [betAmount, setBetAmount] = useState(1);
+  const guessId = typeof params?.id === 'string' ? params.id : '';
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function load() {
+      if (!guessId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const result = await fetchGuess(guessId);
+        if (!ignore) {
+          setGuess(result);
+        }
+      } catch {
+        if (!ignore) {
+          setGuess(null);
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, [guessId]);
+
   const totalVotes = useMemo(
     () =>
-      demoGuess.options.reduce(
+      (guess?.options || []).reduce(
         (sum: number, option: GuessOption) => sum + option.voteCount,
         0,
       ),
-    [],
+    [guess],
   );
 
-  const optionStats = demoGuess.options.map((option: GuessOption, index: number) => {
+  const optionStats = (guess?.options || []).map((option: GuessOption, index: number) => {
     const percent = Math.round((option.voteCount / totalVotes) * 100);
     return {
       ...option,
@@ -50,6 +129,85 @@ export default function GuessDetailPage() {
       tone: index === 0 ? styles.optionTonePink : styles.optionToneBlue,
     };
   });
+  const topicDescription = '参与竞猜，猜中即可获得商品发货！';
+  const displayVotes = optionStats.map((option) => Math.max(option.percent, 3));
+  const topicBadge = guess?.category ? `${guess.category}解读` : '深度解读';
+  const heroImage = guess?.product.img || '/legacy/images/guess/g001.jpg';
+
+  function showToast(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 1800);
+  }
+
+  useEffect(() => {
+    if (!breathing) return undefined;
+    const timer = window.setTimeout(() => setBreathing(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, [breathing]);
+
+  useEffect(() => {
+    if (!guess) {
+      return undefined;
+    }
+    const currentGuess = guess;
+
+    function spawnDanmaku(optionIndex?: number) {
+      const index = optionIndex ?? Math.floor(Math.random() * currentGuess.options.length);
+      const id = danmakuIdRef.current++;
+      const item: DanmakuItem = {
+        id,
+        name: danmakuNames[Math.floor(Math.random() * danmakuNames.length)],
+        optionText: currentGuess.options[index]?.optionText || '支持',
+        top: 8 + (id % 4) * 30,
+        duration: 6 + Math.random() * 3,
+      };
+      setDanmakuItems((current) => [...current, item]);
+      window.setTimeout(() => {
+        setDanmakuItems((current) => current.filter((entry) => entry.id !== id));
+      }, item.duration * 1000 + 200);
+    }
+
+    [0, 1, 0].forEach((optionIndex, order) => {
+      window.setTimeout(() => spawnDanmaku(optionIndex), 500 + order * 800);
+    });
+
+    const interval = window.setInterval(() => spawnDanmaku(), 2800);
+    return () => window.clearInterval(interval);
+  }, [guess]);
+
+  function scrollToOptions() {
+    const node = vsAreaRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const targetY = window.scrollY + rect.top - window.innerHeight / 2 + rect.height / 2;
+    window.scrollTo({ top: targetY, behavior: 'smooth' });
+    window.setTimeout(() => setBreathing(true), 600);
+  }
+
+  if (loading) {
+    return <main className={styles.page} />;
+  }
+
+  if (!guess) {
+    return (
+      <main className={styles.page}>
+        <header className={styles.nav}>
+          <button className={styles.navBtn} type="button" onClick={() => router.back()}>
+            <i className="fa-solid fa-arrow-left" />
+          </button>
+          <div className={styles.navTitle}>竞猜详情</div>
+          <div className={styles.navActions} />
+        </header>
+        <section className={styles.commentsSection}>
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIcon}>🎲</div>
+            <div className={styles.emptyTitle}>竞猜不存在</div>
+            <div className={styles.emptyDesc}>这条竞猜可能已下线或暂不可见。</div>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.page}>
@@ -62,71 +220,132 @@ export default function GuessDetailPage() {
           <button className={styles.navBtn} type="button" onClick={() => setShareOpen(true)}>
             <i className="fa-solid fa-share-nodes" />
           </button>
-          <button className={styles.navBtn} type="button">
-            <i className="fa-solid fa-ellipsis" />
+          <button
+            className={styles.navBtn}
+            type="button"
+            onClick={() => {
+              const next = !favorited;
+              setFavorited(next);
+              showToast(next ? '已收藏' : '已取消收藏');
+            }}
+          >
+            <i className={`${favorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} ${favorited ? styles.navBtnFav : ''}`} />
           </button>
         </div>
       </header>
 
-      <section className={styles.hero}>
-        <img src={demoGuess.product.img} alt={demoGuess.title} className={styles.heroImg} />
-        <div className={styles.danmakuLayer}>
-          <span className={`${styles.danmakuItem} ${styles.danmakuOne}`}>
-            <b>阿柠</b> 刚刚押了 <em>会</em>
-          </span>
-          <span className={`${styles.danmakuItem} ${styles.danmakuTwo}`}>
-            <b>Mika</b> 选择了 <em>不会</em>
-          </span>
-        </div>
-        <div className={styles.heroOverlay}>
-          <div className={styles.heroCountdown}>
-            <span>距开奖</span>
-            <strong>00:38:21</strong>
-          </div>
-          <h1 className={styles.heroTitle}>{demoGuess.title}</h1>
-          <div className={styles.heroMeta}>
-            <span className={styles.badge}>热度</span>
-            <span>{demoGuess.product.brand}</span>
-            <span>{demoGuess.category}</span>
-            <span>{totalVotes} 人参与</span>
-          </div>
-        </div>
-        <div className={styles.heroSource}>
-          <span>数据来源：</span>平台官方数据
-        </div>
-      </section>
-
       <section className={styles.topDashboard}>
         <div className={styles.topItem}>
           <div className={styles.topValue}>
-            <span className={styles.topIcon}>
-              <i className="fa-solid fa-fire" />
-            </span>
+            <span className={styles.topIcon}>🔥</span>
             {totalVotes}
           </div>
           <div className={styles.topLabel}>参与人数</div>
         </div>
         <div className={styles.topItem}>
           <div className={styles.topValue}>
-            <span className={styles.topIcon}><i className="fa-solid fa-dice" /></span>
-            {demoGuess.options.length}
+            <span className={styles.topIcon}>🎯</span>
+            {guess.options.length}
           </div>
           <div className={styles.topLabel}>竞猜选项</div>
         </div>
         <div className={styles.topItem}>
           <div className={styles.topValue}>
-            <span className={styles.topIcon}><i className="fa-solid fa-chart-column" /></span>
+            <span className={styles.topIcon}>📊</span>
             21
           </div>
           <div className={styles.topLabel}>总订单</div>
         </div>
       </section>
 
+      <section className={styles.hero}>
+        <img src={heroImage} alt={guess.title} className={styles.heroImg} />
+        <div className={styles.danmakuLayer}>
+          {danmakuItems.map((item) => (
+            <span
+              className={styles.danmakuItem}
+              key={item.id}
+              style={{ top: `${item.top}px`, animationDuration: `${item.duration}s` }}
+            >
+              <b>{item.name}</b>投了「<em>{item.optionText}</em>」
+            </span>
+          ))}
+        </div>
+        <div className={styles.heroOverlay}>
+          <div className={styles.heroCountdown}>
+            <i className="fa-solid fa-clock" />
+            <span>距开奖</span>
+            <strong>00:38:21</strong>
+          </div>
+          <h1 className={styles.heroTitle}>{guess.title}</h1>
+          <div className={styles.heroMeta}>
+            <span className={styles.badge}>热度</span>
+            <span>{guess.product.brand}</span>
+            <span>{guess.category}</span>
+            <span>{totalVotes} 人参与</span>
+          </div>
+        </div>
+        <div className={styles.heroSource}>
+          <i className="fa-solid fa-database" />
+          开奖数据来源：<span>平台官方数据</span>
+        </div>
+      </section>
+
       <section className={styles.pkPanel}>
-        <h2 className={styles.pkTitle}>实时对阵</h2>
-        <div className={styles.vsRow}>
+        <h2 className={styles.pkTitle}>
+          <span className={styles.pkTitleIcon}>🎲</span>
+          {guess.title}
+        </h2>
+        <div className={styles.dpBarWrap}>
+          <div className={styles.dpBarLabels}>
+            {optionStats.map((option) => (
+              <div className={styles.dblItem} key={`label-${option.id}`} style={{ width: `${Math.max(option.percent, 3)}%` }}>
+                <span className={styles.dblName}>{option.optionText}</span>
+              </div>
+            ))}
+          </div>
+          <div className={styles.dpBarOuter}>
+            <div className={styles.dpBar}>
+              {optionStats.map((option, index) => (
+                <div
+                  className={`${styles.dbSeg} ${styles[`dbSeg${index}` as keyof typeof styles]}`}
+                  key={`seg-${option.id}`}
+                  style={{ width: `${displayVotes[index]}%` }}
+                >
+                  {displayVotes[index] >= 15 ? `${option.percent}%` : ''}
+                </div>
+              ))}
+            </div>
+            {displayVotes.slice(0, -1).map((_, index) => {
+              const offset = displayVotes
+                .slice(0, index + 1)
+                .reduce((sum, value) => sum + value, 0);
+              return (
+                <div className={styles.barClash} key={`clash-${index}`} style={{ left: `${offset}%` }}>
+                  <div className={styles.clashGlow} />
+                  <div className={styles.clashRing} />
+                  <div className={styles.clashBolt}>⚡</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className={styles.betGuideHint}>
+          <i className={`fa-solid fa-angle-down ${styles.ghArrow}`} />
+          点击下方选项即可参与竞猜
+          <i className={`fa-solid fa-angle-down ${styles.ghArrow}`} />
+        </div>
+        <div className={styles.vsRow} ref={vsAreaRef}>
           {optionStats.map((option: (typeof optionStats)[number], index: number) => (
-            <article className={`${styles.optionPill} ${option.tone}`} key={option.id}>
+            <article
+              className={`${styles.optionPill} ${option.tone} ${breathing ? styles.breathing : ''}`}
+              key={option.id}
+              onClick={() => {
+                setSelectedOption(index);
+                setBetOpen(true);
+                setBreathing(false);
+              }}
+            >
               <div className={styles.optionFill} style={{ width: `${option.percent}%` }} />
               <div className={styles.optionContent}>
                 <div className={styles.optionName}>{option.optionText}</div>
@@ -143,31 +362,33 @@ export default function GuessDetailPage() {
 
         <div className={styles.participantsRow}>
           {participants.map((item, index) => (
-            <div className={styles.participant} key={`${item.name}-${index}`}>
-              <img src={item.avatar} alt={item.name} />
-              <div className={styles.participantMeta}>
-                <strong>{item.name}</strong>
-                <span>{item.time}</span>
-              </div>
-              <em className={item.cls}>{item.choice}</em>
-            </div>
+            <img className={styles.participantImg} src={item.avatar} alt="" key={index} />
           ))}
-          <div className={styles.moreBtn}>查看更多</div>
+          <span className={styles.participantMore}>+{totalVotes}</span>
+          <span className={styles.participantText}>{totalVotes}人参与中</span>
         </div>
       </section>
 
       <section className={styles.topicCard}>
         <div className={styles.topicHeader}>
-          <div className={styles.topicLabel}>话题详情</div>
-          <span className={styles.topicBadge}>深度解读</span>
+          <div className={styles.topicLabel}><i className="fa-solid fa-scroll" /> 话题详情</div>
+          <span className={styles.topicBadge}>{topicBadge}</span>
         </div>
-        <p className={styles.topicText}>
-          这是一个围绕商品热度和发售节奏的竞猜场景。用户可以依据库存、品牌热度、历史发售节奏等信息做出判断，猜中即获得商品。
+        <p className={`${styles.topicText} ${topicExpanded ? styles.topicTextExpanded : ''}`}>
+          {topicDescription}
         </p>
+        <button
+          className={styles.topicToggle}
+          type="button"
+          onClick={() => setTopicExpanded((value) => !value)}
+        >
+          {topicExpanded ? '收起' : '展开全文'}
+          <i className={`fa-solid fa-chevron-down ${topicExpanded ? styles.topicToggleExpanded : ''}`} />
+        </button>
         <div className={styles.topicMeta}>
-          <span>商品猜中直接发货</span>
-          <span>支持率实时变化</span>
-          <span>数据同步开奖</span>
+          <span className={styles.topicMetaItem}><i className="fa-solid fa-users" /> {totalVotes}人关注</span>
+          <span className={styles.topicMetaItem}><i className="fa-solid fa-clock" /> 距结束1天</span>
+          <span className={styles.topicMetaItem}><i className="fa-solid fa-fire" /> {guess.category || '热门'}</span>
         </div>
       </section>
 
@@ -180,10 +401,10 @@ export default function GuessDetailPage() {
       <section className={styles.commentsSection}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitle}>热门评论</div>
-          <span className={styles.sectionMore}>{comments.length} 条</span>
+          <span className={styles.sectionMore}>{comments.length}条评论</span>
         </div>
         <div className={styles.commentsList}>
-          {comments.map((comment) => (
+          {comments.map((comment, index) => (
             <article className={styles.commentItem} key={comment.user}>
               <img src={comment.avatar} alt={comment.user} />
               <div className={styles.commentBody}>
@@ -191,38 +412,91 @@ export default function GuessDetailPage() {
                 <div className={styles.commentText}>{comment.text}</div>
                 <div className={styles.commentActions}>
                   <span>{comment.time}</span>
-                  <span className={styles.likeBtn}><i className="fa-regular fa-heart" /> {comment.likes}</span>
+                  <button
+                    className={`${styles.likeBtn} ${comment.liked ? styles.likeBtnLiked : ''}`}
+                    type="button"
+                    onClick={() =>
+                      setComments((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index && !item.liked
+                            ? { ...item, liked: true, likes: item.likes + 1 }
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    <i className={comment.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} /> {comment.likes}
+                  </button>
+                  <span className={styles.replyBtn}>回复</span>
                 </div>
               </div>
             </article>
           ))}
         </div>
+        <div className={styles.commentInputBar}>
+          <input
+            type="text"
+            maxLength={200}
+            placeholder="说说你的看法..."
+            value={commentText}
+            onChange={(event) => setCommentText(event.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (!commentText.trim()) {
+                showToast('请输入评论内容');
+                return;
+              }
+              setComments((current) => [
+                {
+                  user: '我',
+                  text: commentText.trim(),
+                  likes: 0,
+                  time: '刚刚',
+                  avatar: '/legacy/images/mascot/mouse-main.png',
+                  liked: false,
+                },
+                ...current,
+              ]);
+              setCommentText('');
+              showToast('评论成功！');
+            }}
+          >
+            发送
+          </button>
+        </div>
       </section>
 
       <section className={styles.rulesCard}>
-        <h3><i className="fa-solid fa-clipboard-list" /> 竞猜规则</h3>
+        <h3>📋 竞猜规则</h3>
         <div className={styles.ruleItem}>
-          <span><i className="fa-solid fa-gift" /></span>
-          <p>
+          <span>🎉</span>
+          <div className={styles.ruleText}>
             <b>猜中</b>：商品直接发货
-          </p>
+          </div>
         </div>
         <div className={styles.ruleItem}>
-          <span><i className="fa-solid fa-ticket" /></span>
-          <p>
-            <b>没猜中</b>：自动获得竞猜补偿券
-          </p>
+          <span>🎫</span>
+          <div className={styles.ruleText}>
+            <b className={styles.ruleWarn}>没猜中</b>：自动获得竞猜补偿券
+          </div>
         </div>
         <div className={styles.ruleItem}>
-          <span><i className="fa-solid fa-handshake" /></span>
-          <p>
-            <b>好友PK</b>：输的请客赢的提货
-          </p>
+          <span>🤝</span>
+          <div className={styles.ruleText}>
+            <b className={styles.ruleCyan}>好友PK</b>：输的请客赢的提货
+          </div>
+        </div>
+        <div className={styles.ruleItem}>
+          <span>📊</span>
+          <div className={styles.ruleText}>支持率根据投票人数实时变化</div>
         </div>
       </section>
 
       <section className={styles.detailBottom}>
-        <button className={styles.detailPrimary} type="button" onClick={() => setBetOpen(true)}>
+        <button className={styles.detailPrimary} type="button" onClick={scrollToOptions}>
+          <i className="fa-solid fa-hand-pointer" />
           <span>参与竞猜</span>
           <small>· 猜中即发货</small>
         </button>
@@ -236,7 +510,23 @@ export default function GuessDetailPage() {
             <h3>分享竞猜</h3>
             <div className={styles.shareGrid}>
               {shareChannels.map((item) => (
-                <button className={styles.shareItem} type="button" key={item.label}>
+                <button
+                  className={styles.shareItem}
+                  type="button"
+                  key={item.label}
+                  onClick={() => {
+                    showToast(
+                      item.label === '微信'
+                        ? '已复制，去微信分享吧！'
+                        : item.label === '朋友圈'
+                          ? '已生成分享卡片'
+                          : item.label === 'QQ'
+                            ? '已复制，去QQ分享吧！'
+                            : '链接已复制',
+                    );
+                    setShareOpen(false);
+                  }}
+                >
                   <span style={{ background: item.color }}><i className={item.icon} /></span>
                   <em>{item.label}</em>
                 </button>
@@ -255,20 +545,35 @@ export default function GuessDetailPage() {
           <section className={`${styles.sheetPanel} ${styles.betPanel}`}>
             <div className={styles.sheetGrab} />
             <div className={styles.betHeader}>
-              <h3>参与竞猜</h3>
+              <h3>🎰 竞猜下单</h3>
               <button type="button" onClick={() => setBetOpen(false)}>
                 <i className="fa-solid fa-xmark" />
               </button>
             </div>
             <div className={styles.betOptionCard}>
               <div className={styles.betOptionLine}>
-                <span className={selectedOption === 0 ? styles.betAccent : styles.betMuted}>会</span>
-                <strong>{demoGuess.options[0].odds.toFixed(2)} 倍</strong>
+                <span className={styles.betMuted}>预测: {guess.options[selectedOption]?.optionText || ''}</span>
+                <strong>×{(guess.options[selectedOption]?.odds || 1).toFixed(2)}</strong>
               </div>
-              <p>你可以直接选择支持的选项，并决定下注金额。</p>
+              <p>{optionStats[selectedOption]?.percent || 0}% 选择 · {guess.options[selectedOption]?.voteCount || 0}人投票</p>
+            </div>
+            <div className={styles.betProductRow}>
+              <div className={styles.betProductImgWrap}>
+                <img src={guess.product.img} alt={guess.product.name} />
+                <div className={styles.betImgTag}>
+                  {guess.product.name.length > 8 ? `${guess.product.name.slice(0, 8)}…` : guess.product.name}
+                </div>
+              </div>
+              <div className={styles.betProductRight}>
+                <div className={styles.betQtyLabel}>
+                  <i className="fa-solid fa-box" />
+                  竞猜产品数量
+                </div>
+                <div className={styles.betQtyHint}>按件数参与竞猜</div>
+              </div>
             </div>
             <div className={styles.betPills}>
-              {demoGuess.options.map((option: GuessOption, index: number) => (
+              {guess.options.map((option: GuessOption, index: number) => (
                 <button
                   className={selectedOption === index ? styles.betPillActive : styles.betPill}
                   key={option.id}
@@ -280,32 +585,69 @@ export default function GuessDetailPage() {
               ))}
             </div>
             <div className={styles.betAmounts}>
-              {[50, 100, 200, 500].map((value: number) => (
+              {[1, 3, 5].map((value: number) => (
                 <button
                   className={betAmount === value ? styles.betAmountActive : styles.betAmount}
                   key={value}
                   type="button"
                   onClick={() => setBetAmount(value)}
                 >
-                  {value}
+                  {value}件
                 </button>
               ))}
             </div>
             <div className={styles.betStepper}>
-              <button type="button" onClick={() => setBetAmount((value) => Math.max(10, value - 10))}>
+              <button
+                className={betAmount <= 1 ? styles.betStepperDisabled : ''}
+                type="button"
+                onClick={() => setBetAmount((value) => Math.max(1, value - 1))}
+              >
                 -
               </button>
-              <span>{betAmount}</span>
-              <button type="button" onClick={() => setBetAmount((value) => value + 10)}>
+              <span className={styles.betStepperValue}>{betAmount}</span>
+              <span className={styles.betStepperUnit}>件</span>
+              <button
+                className={betAmount >= 999 ? styles.betStepperDisabled : ''}
+                type="button"
+                onClick={() => setBetAmount((value) => Math.min(999, value + 1))}
+              >
                 +
               </button>
             </div>
-            <button className={styles.betConfirm} type="button" onClick={() => setBetOpen(false)}>
-              确认下注
+            <div className={styles.betSummary}>
+              <div className={styles.betRow}>
+                <span className={styles.betLabel}>竞猜数量</span>
+                <span className={styles.betVal}>{betAmount}件 {guess.product.name}</span>
+              </div>
+              <div className={styles.betRow}>
+                <span className={styles.betLabel}>合计金额</span>
+                <span className={styles.betVal}>¥{(guess.product.price * betAmount).toFixed(2)}</span>
+              </div>
+              <div className={`${styles.betRow} ${styles.betRowHighlight}`}>
+                <span className={styles.betLabel}>🎁 猜中可获得</span>
+                <span className={styles.betWin}>
+                  {Math.round(betAmount * (guess.options[selectedOption]?.odds || 1))}件{guess.product.name} · 价值¥{(guess.product.price * betAmount * (guess.options[selectedOption]?.odds || 1)).toFixed(2)}
+                </span>
+              </div>
+            </div>
+            <div className={styles.betFooterText}>🎁赢方瓜分输方商品 · 🎫没猜中退补偿券 · 🤝支持好友PK</div>
+            <button
+              className={styles.betConfirm}
+              type="button"
+              onClick={() => {
+                setBetOpen(false);
+                router.push(
+                  `/guess-order?id=${encodeURIComponent(guess.id)}&choice=${selectedOption}&qty=${betAmount}`,
+                );
+              }}
+            >
+              🎰 立即竞猜
             </button>
           </section>
         </div>
       ) : null}
+
+      {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>
   );
 }

@@ -5,7 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { fetchMe, register, sendCode, setAuthToken } from "../../lib/api";
 import styles from "./page.module.css";
 
-const avatars = ["Nala", "Felix", "Luna", "Leo", "Milo", "Coco", "Zoe", "Max"];
+const avatars = [
+  { id: "mouse-main", label: "主角鼠", src: "/legacy/images/mascot/mouse-main.png" },
+  { id: "mouse-happy", label: "开心鼠", src: "/legacy/images/mascot/mouse-happy.png" },
+  { id: "mouse-cute", label: "可爱鼠", src: "/legacy/images/mascot/mouse-cute.png" },
+  { id: "mouse-casual", label: "休闲鼠", src: "/legacy/images/mascot/mouse-casual.png" },
+  { id: "mouse-excited", label: "兴奋鼠", src: "/legacy/images/mascot/mouse-excited.png" },
+  { id: "mouse-sunny", label: "阳光鼠", src: "/legacy/images/mascot/mouse-sunny.png" },
+  { id: "mouse-reserved", label: "安静鼠", src: "/legacy/images/mascot/mouse-reserved.png" },
+  { id: "mascot-beach", label: "海边鼠", src: "/legacy/images/mascot/mascot-beach.png" },
+] as const;
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -300,16 +309,15 @@ export default function RegisterPage() {
               <div className={styles.avatarSection}>
                 <div className={styles.avatarTitle}>选择你的头像</div>
                 <div className={styles.avatarPicker}>
-                  {avatars.map((seed, index) => {
-                    const src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}`;
+                  {avatars.map((avatar, index) => {
                     return (
                       <button
-                        key={seed}
+                        key={avatar.id}
                         className={`${styles.avatarItem} ${selectedAvatar === index ? styles.avatarActive : ""}`}
                         type="button"
                         onClick={() => setSelectedAvatar(index)}
                       >
-                        <img src={src} alt={seed} />
+                        <img src={avatar.src} alt={avatar.label} />
                       </button>
                     );
                   })}

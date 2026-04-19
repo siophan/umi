@@ -15,7 +15,7 @@
   gap: 10px;
   padding: 0 14px;
   height: 48px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.97);
   backdrop-filter: blur(20px);
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
 }
@@ -24,6 +24,7 @@
 .ruleBtn {
   width: 32px;
   height: 32px;
+  border: 0;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -32,32 +33,13 @@
   flex: 0 0 auto;
 }
 
-.backBtn svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-}
-
-.titleWrap {
+.title {
   flex: 1;
   min-width: 0;
   text-align: center;
-}
-
-.title {
   color: #1a1a1a;
   font-size: 16px;
-  font-weight: 800;
-}
-
-.subtitle {
-  margin-top: 1px;
-  color: #b7b7bd;
-  font-size: 10px;
-}
-
-.ruleBtn {
-  color: #999;
+  font-weight: 700;
 }
 
 .roleBar {
@@ -71,12 +53,13 @@
 
 .roleIcon {
   font-size: 18px;
+  line-height: 1;
 }
 
 .roleText {
   color: #5c6bc0;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .roleDesc {
@@ -90,6 +73,7 @@
   align-items: center;
   gap: 4px;
   padding: 5px 10px;
+  border: 0;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.6);
   color: #999;
@@ -105,26 +89,33 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
-.progressBar {
+.progressSegments {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.progressSeg {
+  flex: 1;
   height: 4px;
-  overflow: hidden;
   border-radius: 2px;
   background: #f0f0f0;
 }
 
-.progressFill {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
+.progressSegDone {
   background: linear-gradient(90deg, #5c6bc0, #7c4dff);
 }
 
 .progressInfo {
-  margin-top: 6px;
   display: flex;
   justify-content: space-between;
   color: #999;
   font-size: 11px;
+}
+
+.progressPct {
+  color: #5c6bc0;
+  font-weight: 700;
 }
 
 .section {
@@ -142,7 +133,7 @@
 }
 
 .sectionTitle i {
-  color: #5c6bc0;
+  color: var(--color-primary, #e8511a);
 }
 
 .sectionTitle span {
@@ -166,10 +157,10 @@
 .topicCard {
   flex: 0 0 auto;
   min-width: 100px;
-  padding: 10px 16px;
+  border: 1.5px solid #f0f0f0;
   border-radius: 14px;
   background: #fff;
-  border: 1.5px solid #f0f0f0;
+  padding: 10px 16px;
   text-align: center;
 }
 
@@ -188,6 +179,10 @@
   color: #333;
   font-size: 12px;
   font-weight: 700;
+}
+
+.topicCardActive .topicName {
+  color: #5c6bc0;
 }
 
 .form {
@@ -214,6 +209,7 @@
 
 .cardTitle i {
   color: #5c6bc0;
+  font-size: 14px;
 }
 
 .required {
@@ -232,14 +228,26 @@
   margin-left: auto;
   padding: 2px 10px;
   border-radius: 10px;
-  background: #fff3e0;
-  color: #ef6c00;
   font-size: 10px;
   font-weight: 700;
 }
 
+.stepTagPending {
+  color: #ef6c00;
+  background: #fff3e0;
+}
+
+.stepTagDone {
+  color: #2e7d32;
+  background: #e8f5e9;
+}
+
 .fieldBlock {
   margin-bottom: 12px;
+}
+
+.fieldBlock:last-child {
+  margin-bottom: 0;
 }
 
 .label {
@@ -258,23 +266,21 @@
 }
 
 .input,
-.textarea,
-.deadline {
+.textarea {
   width: 100%;
   border: 1.5px solid #e8e8e8;
   border-radius: 12px;
   background: #fafafa;
   color: #1a1a1a;
   font-family: inherit;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .input:focus,
-.textarea:focus,
-.deadline:focus {
+.textarea:focus {
   border-color: #5c6bc0;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.08);
 }
 
 .input {
@@ -293,6 +299,10 @@
 }
 
 .vsWrap {
+  position: relative;
+}
+
+.vsRow {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -307,6 +317,11 @@
   text-align: center;
   font-size: 15px;
   font-weight: 700;
+  color: #333;
+}
+
+.optionInput:focus {
+  background: #fff;
 }
 
 .optionA {
@@ -330,25 +345,28 @@
 .vsBadge {
   width: 36px;
   height: 36px;
+  flex: 0 0 auto;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ff5722, #2196f3);
-  color: #fff;
   display: grid;
   place-items: center;
-  flex: 0 0 auto;
+  background: linear-gradient(135deg, #ff5722, #2196f3);
+  color: #fff;
   font-size: 11px;
   font-weight: 900;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .swapBtn {
-  margin: 12px auto 0;
-  display: flex;
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  transform: translateX(-50%);
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 2px 12px;
-  border-radius: 10px;
   border: 1px solid #f0f0f0;
+  border-radius: 10px;
   background: #fff;
   color: #bbb;
   font-size: 10px;
@@ -410,8 +428,8 @@
   align-items: center;
   gap: 6px;
   padding: 10px 4px;
-  border-radius: 12px;
   border: 1.5px solid transparent;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -423,9 +441,9 @@
 .friendAvatar {
   width: 44px;
   height: 44px;
+  border: 2px solid #f0f0f0;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #f0f0f0;
 }
 
 .friendCardActive .friendAvatar {
@@ -474,8 +492,8 @@
   right: 16px;
   width: 8px;
   height: 8px;
-  border-radius: 50%;
   border: 2px solid #fff;
+  border-radius: 50%;
 }
 
 .online {
@@ -492,8 +510,8 @@
   align-items: center;
   gap: 6px;
   padding: 10px 4px;
-  border-radius: 12px;
   border: 1.5px dashed #ddd;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -505,12 +523,6 @@
   place-items: center;
   background: #f5f5f5;
   color: #bbb;
-}
-
-.inviteMoreIcon svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
 }
 
 .inviteMoreText {
@@ -544,6 +556,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  object-fit: cover;
 }
 
 .selectedTag button {
@@ -563,8 +576,8 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: 12px;
   border: 1.5px solid #f0f0f0;
+  border-radius: 12px;
   background: #fff;
   text-align: left;
 }
@@ -578,7 +591,13 @@
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  flex: 0 0 auto;
 }
 
 .groupInfo {
@@ -601,8 +620,8 @@
 .groupCheck {
   width: 22px;
   height: 22px;
-  border-radius: 50%;
   border: 2px solid #ddd;
+  border-radius: 50%;
   display: grid;
   place-items: center;
   color: transparent;
@@ -644,6 +663,7 @@
   height: 36px;
   padding: 0 10px;
   font-size: 12px;
+  font-weight: 500;
 }
 
 .toggle {
@@ -651,8 +671,8 @@
   width: 44px;
   height: 24px;
   flex: 0 0 auto;
-  border-radius: 24px;
-  background: #e0e0e2;
+  border-radius: 12px;
+  background: #ddd;
 }
 
 .toggle span {
@@ -664,11 +684,11 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: transform 0.25s ease;
+  transition: transform 0.3s ease;
 }
 
 .toggleOn {
-  background: linear-gradient(135deg, #5c6bc0, #7c4dff);
+  background: #5c6bc0;
 }
 
 .toggleOn span {
@@ -692,8 +712,8 @@
 
 .stakeChip {
   padding: 5px 12px;
-  border-radius: 16px;
   border: 1px solid #e0e0e0;
+  border-radius: 16px;
   background: #fff;
   color: #666;
   font-size: 12px;
@@ -706,12 +726,17 @@
   color: #fff;
 }
 
+.stakeInput {
+  height: 38px;
+  font-size: 13px;
+}
+
 .previewBar {
-  margin: 12px 16px 0;
-  padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 10px;
+  margin: 12px 16px 0;
+  padding: 12px 16px;
   border: 1px solid rgba(92, 107, 192, 0.1);
   border-radius: 14px;
   background: linear-gradient(135deg, rgba(92, 107, 192, 0.08), rgba(124, 77, 255, 0.06));
@@ -746,6 +771,7 @@
 .previewBadge {
   width: 26px;
   height: 26px;
+  flex: 0 0 auto;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -753,7 +779,6 @@
   color: #fff;
   font-size: 9px;
   font-weight: 900;
-  flex: 0 0 auto;
 }
 
 .previewFriends {
@@ -775,8 +800,7 @@
   gap: 10px;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid #f0f0f0;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
+  background: #fff;
 }
 
 .secondaryBtn,
@@ -790,7 +814,7 @@
 .secondaryBtn {
   flex: 1;
   height: 50px;
-  border: 1.5px solid #ececee;
+  border: 1px solid #ececee;
   background: #fff;
   color: #666;
 }
@@ -804,7 +828,6 @@
   gap: 6px;
   background: linear-gradient(135deg, #5c6bc0, #7c4dff);
   color: #fff;
-  box-shadow: 0 6px 24px rgba(92, 107, 192, 0.25);
 }
 
 .modalOverlay,
@@ -812,8 +835,23 @@
 .successOverlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
   background: rgba(0, 0, 0, 0.55);
+}
+
+.modalOverlay {
+  z-index: 220;
+}
+
+.publishOverlay {
+  z-index: 230;
+  display: grid;
+  place-items: center;
+}
+
+.successOverlay {
+  z-index: 240;
+  display: grid;
+  place-items: center;
 }
 
 .modal {
@@ -825,8 +863,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #fff;
   border-radius: 24px 24px 0 0;
+  background: #fff;
 }
 
 .modalHeader {
@@ -846,17 +884,12 @@
 .modalClose {
   width: 32px;
   height: 32px;
+  border: 0;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: #f5f5f5;
   color: #999;
-}
-
-.modalClose svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
 }
 
 .modalBody {
@@ -884,6 +917,10 @@
   color: #333;
   font-size: 18px;
   font-weight: 900;
+}
+
+.previewPlaceholder {
+  color: #ccc;
 }
 
 .previewDesc {
@@ -932,13 +969,21 @@
   font-size: 10px;
 }
 
-.previewVsCircle {
+.previewVsBadge {
+  width: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
   flex: 0 0 auto;
+}
+
+.previewVsCircle {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #ff5722, #2196f3);
   color: #fff;
   font-size: 10px;
@@ -968,7 +1013,6 @@
 .previewFriendsRow {
   display: flex;
   align-items: center;
-  gap: -4px;
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid rgba(92, 107, 192, 0.08);
@@ -1015,11 +1059,6 @@
   font-size: 11px;
 }
 
-.publishOverlay {
-  display: grid;
-  place-items: center;
-}
-
 .publishCard {
   width: 280px;
   padding: 32px 24px;
@@ -1055,10 +1094,11 @@
 
 .publishFill {
   display: block;
-  width: 45%;
   height: 100%;
+  width: 0;
   border-radius: 3px;
   background: linear-gradient(90deg, #5c6bc0, #7c4dff);
+  transition: width 0.3s ease;
 }
 
 .publishSteps {
@@ -1075,18 +1115,17 @@
   font-size: 12px;
 }
 
-.publishStep i {
-  font-size: 11px;
+.publishStepActive {
+  color: #333;
+  font-weight: 600;
 }
 
-.successOverlay {
-  display: grid;
-  place-items: center;
-  padding: 20px;
+.publishStepDone {
+  color: #4caf50;
 }
 
 .successCard {
-  width: 100%;
+  width: 85%;
   max-width: 340px;
   padding: 32px 24px;
   border-radius: 20px;
@@ -1114,8 +1153,8 @@
 
 .successShares {
   display: flex;
-  gap: 10px;
   justify-content: center;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
@@ -1127,20 +1166,25 @@
 }
 
 .shareIcon {
-  display: grid;
-  place-items: center;
   width: 44px;
   height: 44px;
   margin: 0 auto 4px;
   border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
   background: #f5f5f8;
   color: #666;
 }
 
-.shareIcon svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
+.shareIconwechat {
+  background: #07c160;
+  color: #fff;
+}
+
+.shareIconfriends {
+  background: rgba(92, 107, 192, 0.1);
+  color: #5c6bc0;
 }
 
 .shareLabel {
@@ -1150,13 +1194,10 @@
 
 .primaryBtnFull {
   width: 100%;
-  height: 50px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  height: 48px;
+  border: 0;
   background: linear-gradient(135deg, #5c6bc0, #7c4dff);
   color: #fff;
-  box-shadow: 0 6px 24px rgba(92, 107, 192, 0.25);
 }
 
 .laterBtn {
@@ -1167,26 +1208,22 @@
   font-size: 12px;
 }
 
-.page button {
-  cursor: pointer;
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 104px;
+  z-index: 260;
+  transform: translateX(-50%);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  padding: 8px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.page button:active {
-  transform: scale(0.98);
-}
-
-@media (max-width: 480px) {
-  .page {
-    padding-bottom: 100px;
-  }
-
-  .section,
-  .form {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-
-  .friendGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+.toastShow {
+  opacity: 1;
 }

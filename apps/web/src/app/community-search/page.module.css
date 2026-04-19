@@ -7,7 +7,7 @@
 .header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -27,6 +27,7 @@
 }
 
 .inputWrap {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
@@ -39,13 +40,14 @@
 }
 
 .inputFocus {
-  background: #fff;
   border-color: #ff5722;
+  background: #fff;
 }
 
-.inputWrap span {
+.inputWrap i {
   color: #bbb;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .inputWrap input {
@@ -57,7 +59,12 @@
   font-size: 14px;
 }
 
+.inputWrap input::placeholder {
+  color: #bbb;
+}
+
 .clearBtn {
+  display: none;
   width: 20px;
   height: 20px;
   border: 0;
@@ -65,6 +72,12 @@
   background: #ddd;
   color: #fff;
   font-size: 10px;
+}
+
+.clearBtnShow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cancelBtn {
@@ -75,13 +88,56 @@
   font-weight: 600;
 }
 
+.suggestList {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 120;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.suggestItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid #f8f8f8;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  text-align: left;
+}
+
+.suggestItem:last-child {
+  border-bottom: 0;
+}
+
+.suggestItem i {
+  color: #bbb;
+  font-size: 12px;
+}
+
+.suggestItem em,
+.resultTitle em {
+  color: #ff5722;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .filters {
   display: flex;
   gap: 8px;
-  padding: 12px 14px;
   overflow-x: auto;
+  padding: 12px 14px;
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
+  scrollbar-width: none;
 }
 
 .filters::-webkit-scrollbar,
@@ -99,12 +155,11 @@
   color: #777;
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
 }
 
 .filterActive {
-  background: rgba(255, 87, 34, 0.08);
   border-color: rgba(255, 87, 34, 0.2);
+  background: rgba(255, 87, 34, 0.08);
   color: #ff5722;
 }
 
@@ -121,7 +176,6 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 14px;
-  color: #1a1a1a;
   font-size: 16px;
   font-weight: 800;
 }
@@ -156,7 +210,7 @@
   font-size: 13px;
 }
 
-.historyItem span {
+.historyItem i {
   color: #bbb;
   font-size: 11px;
 }
@@ -178,15 +232,15 @@
 }
 
 .hotRank {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
   display: grid;
   place-items: center;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
   color: #fff;
   font-size: 12px;
   font-weight: 900;
+  flex-shrink: 0;
 }
 
 .rank1 {
@@ -210,13 +264,12 @@
   flex: 1;
 }
 
-.hotTitle {
-  color: #1a1a1a;
+.hotItemTitle {
   font-size: 14px;
   font-weight: 600;
 }
 
-.hotDesc {
+.hotItemDesc {
   margin-top: 2px;
   color: #999;
   font-size: 11px;
@@ -261,9 +314,7 @@
   border: 1px solid #f0f0f0;
   border-radius: 14px;
   background: #fff;
-  color: inherit;
   text-align: center;
-  text-decoration: none;
 }
 
 .userCard img {
@@ -275,7 +326,6 @@
 }
 
 .userName {
-  color: #1a1a1a;
   font-size: 12px;
   font-weight: 700;
 }
@@ -292,15 +342,24 @@
   font-size: 10px;
 }
 
-.followBtn {
+.followBtn,
+.followedBtn {
   display: inline-block;
   margin-top: 8px;
   padding: 4px 16px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #ff5722, #ff9800);
-  color: #fff;
   font-size: 11px;
   font-weight: 700;
+}
+
+.followBtn {
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+}
+
+.followedBtn {
+  background: #eee;
+  color: #999;
 }
 
 .resultsView {
@@ -312,11 +371,11 @@
 
 .resultCard {
   overflow: hidden;
+  border: 0;
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  color: inherit;
-  text-decoration: none;
+  text-align: left;
 }
 
 .resultAuthor {
@@ -334,9 +393,14 @@
 }
 
 .resultName {
-  color: #1a1a1a;
   font-size: 13px;
   font-weight: 700;
+}
+
+.resultName i {
+  margin-left: 4px;
+  color: #ff9800;
+  font-size: 10px;
 }
 
 .resultTime {
@@ -357,9 +421,24 @@
   color: #ff5722;
 }
 
-.tagHot {
+.tagBrand {
   background: rgba(255, 152, 0, 0.08);
   color: #ff9800;
+}
+
+.tagHot {
+  background: rgba(244, 67, 54, 0.08);
+  color: #f44336;
+}
+
+.tagLive {
+  background: rgba(76, 175, 80, 0.08);
+  color: #4caf50;
+}
+
+.tagCommunity {
+  background: rgba(33, 150, 243, 0.08);
+  color: #2196f3;
 }
 
 .resultBody {
@@ -369,7 +448,6 @@
 .resultTitle {
   display: -webkit-box;
   overflow: hidden;
-  color: #1a1a1a;
   font-size: 15px;
   font-weight: 700;
   line-height: 1.5;
@@ -394,58 +472,66 @@
 
 .img1 img {
   width: 100%;
-  aspect-ratio: 16 / 9;
   border-radius: 10px;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
 }
 
-.img2 {
+.img2,
+.img3 {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
+}
+
+.img2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.img3 {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .img2 img {
   width: 100%;
-  aspect-ratio: 4 / 3;
   border-radius: 8px;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
-}
-
-.img3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
 }
 
 .img3 img {
   width: 100%;
-  aspect-ratio: 1;
   border-radius: 8px;
+  aspect-ratio: 1;
   object-fit: cover;
 }
 
 .resultActions {
   display: flex;
   align-items: center;
-  gap: 0;
   padding: 8px 14px 12px;
-  color: #999;
-  font-size: 11px;
 }
 
 .resultActions span {
   flex: 1;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #999;
+  font-size: 11px;
+}
+
+.resultActions i {
+  font-size: 13px;
 }
 
 .empty {
   padding: 60px 20px;
-  text-align: center;
   color: #bbb;
+  text-align: center;
 }
 
-.emptyIcon {
+.empty i {
   display: block;
   margin-bottom: 16px;
   font-size: 48px;
@@ -460,6 +546,19 @@
 
 .emptyDesc {
   margin-top: 8px;
-  color: #bbb;
   font-size: 12px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 90px;
+  z-index: 140;
+  transform: translateX(-50%);
+  padding: 9px 18px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
 }

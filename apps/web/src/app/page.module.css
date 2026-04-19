@@ -18,6 +18,16 @@
   background: rgba(255, 215, 0, 0.06);
 }
 
+.breakingBar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.04), transparent);
+  background-size: 200% 100%;
+  animation: tickerShimmer 4s ease infinite;
+  pointer-events: none;
+}
+
 .breakingTag {
   flex-shrink: 0;
   padding: 2px 8px;
@@ -27,9 +37,24 @@
   letter-spacing: 0.5px;
 }
 
-.breakingTagHot {
+.breakingTagBreaking {
   background: rgba(255, 61, 0, 0.8);
   color: #fff;
+}
+
+.breakingTagBet {
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+}
+
+.breakingTagResult {
+  background: rgba(0, 230, 118, 0.15);
+  color: #00e676;
+}
+
+.breakingTagHot {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
 }
 
 .breakingDot {
@@ -39,6 +64,7 @@
   border-radius: 50%;
   background: #ffd700;
   box-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+  animation: breakDot 1.2s ease-in-out infinite;
 }
 
 .breakingScroll {
@@ -57,6 +83,31 @@
 .highlight {
   color: #ffd700;
   font-weight: 700;
+}
+
+@keyframes tickerShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes breakDot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.6);
+    box-shadow: 0 0 2px rgba(255, 215, 0, 0.2);
+  }
 }
 
 .sep {
@@ -172,6 +223,8 @@
 .heroDot {
   width: 6px;
   height: 6px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.22);
 }
@@ -325,6 +378,8 @@
 }
 
 .sectionMore {
+  border: 0;
+  background: transparent;
   color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
 }

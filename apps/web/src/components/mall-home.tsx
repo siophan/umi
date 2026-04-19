@@ -1,4 +1,15 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
 export function MallHome() {
+  const router = useRouter();
+  const [catOpen, setCatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'recommend' | 'seckill' | 'new' | 'category' | 'sale'>('recommend');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'beauty' | 'toys' | 'food' | 'digital' | 'fashion' | 'lifestyle'>('all');
+  const [activeSort, setActiveSort] = useState<'default' | 'salesDesc' | 'priceAsc' | 'priceDesc' | 'discountDesc'>('default');
+  const [seckillSeconds, setSeckillSeconds] = useState(2 * 3600 + 59 * 60 + 48);
   const heroAvatars = [
     '/legacy/images/mascot/mouse-main.png',
     '/legacy/images/mascot/mouse-happy.png',
@@ -9,6 +20,7 @@ export function MallHome() {
     {
       id: 'p001',
       name: '乐事薯片大礼包',
+      category: 'food',
       price: 29.9,
       originalPrice: 45.9,
       sales: 12563,
@@ -20,6 +32,7 @@ export function MallHome() {
     {
       id: 'p002',
       name: '奥利奥夹心饼干组合',
+      category: 'food',
       price: 19.9,
       originalPrice: 32,
       sales: 8641,
@@ -31,6 +44,7 @@ export function MallHome() {
     {
       id: 'p007',
       name: '德芙巧克力丝滑礼盒',
+      category: 'food',
       price: 55,
       originalPrice: 78,
       sales: 4260,
@@ -42,6 +56,7 @@ export function MallHome() {
     {
       id: 'p010',
       name: '东方树叶乌龙茶',
+      category: 'food',
       price: 5,
       originalPrice: 6.5,
       sales: 2435,
@@ -53,6 +68,7 @@ export function MallHome() {
     {
       id: 'p003',
       name: '三只松鼠坚果礼盒',
+      category: 'food',
       price: 68,
       originalPrice: 99,
       sales: 6230,
@@ -63,6 +79,130 @@ export function MallHome() {
     },
   ];
 
+  const heroHref = '/product-detail?id=p007&tab=guess';
+  const categoryLabelMap = {
+    all: '分类▾',
+    beauty: '美妆护肤 ▾',
+    toys: '潮玩盲盒 ▾',
+    food: '食品饮料 ▾',
+    digital: '数码配件 ▾',
+    fashion: '服饰鞋包 ▾',
+    lifestyle: '生活好物 ▾',
+  } as const;
+
+  useEffect(() => {
+    if (activeTab !== 'seckill') return undefined;
+    const timer = window.setInterval(() => {
+      setSeckillSeconds((current) => {
+        if (current <= 1) return 2 * 3600 + 59 * 60 + 48;
+        return current - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [activeTab]);
+
+  const visibleItems = useMemo(
+    () =>
+      [...mallItems]
+        .filter((item) => activeCategory === 'all' || item.category === activeCategory)
+        .filter((item) => {
+          if (activeTab === 'seckill') return item.tag === '特惠';
+          if (activeTab === 'new') return item.tag === '新品';
+          if (activeTab === 'sale') return item.originalPrice - item.price >= 10;
+          return true;
+        })
+        .sort((a, b) => {
+          if (activeSort === 'salesDesc') return b.sales - a.sales;
+          if (activeSort === 'priceAsc') return a.price - b.price;
+          if (activeSort === 'priceDesc') return b.price - a.price;
+          if (activeSort === 'discountDesc') return (b.originalPrice - b.price) - (a.originalPrice - a.price);
+          return 0;
+        }),
+    [activeCategory, activeSort, activeTab],
+  );
+
+  const maxDiscount = useMemo(
+    () =>
+      visibleItems.reduce((max, item) => {
+        const savePct = Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
+        return Math.max(max, savePct);
+      }, 0),
+    [visibleItems],
+  );
+
+  const seckillCountdown = useMemo(() => {
+    const hours = Math.floor(seckillSeconds / 3600);
+    const minutes = Math.floor((seckillSeconds % 3600) / 60);
+    const seconds = seckillSeconds % 60;
+    return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0'));
+  }, [seckillSeconds]);
+
+  function selectCategory(category: 'all' | 'beauty' | 'toys' | 'food' | 'digital' | 'fashion' | 'lifestyle') {
+    setActiveCategory(category);
+    setCatOpen(false);
+    setActiveTab('category');
+  }
+
+  function handleTabClick(tab: 'recommend' | 'seckill' | 'new' | 'category' | 'sale') {
+    if (tab === 'category') {
+      setCatOpen((open) => !open);
+      setActiveTab('category');
+      return;
+    }
+
+    setCatOpen(false);
+    setActiveTab(tab);
+  }
+
+  const tabBanner =
+    activeTab === 'seckill' ? (
+      <div className="m-tab-banner" style={{ background: 'linear-gradient(135deg,#FF3D00,#FF6D00)' }}>
+        <span className="mtb-icon">⚡</span>
+        <span className="mtb-text">限时秒杀 · {visibleItems.length}款折扣商品</span>
+        <span className="mtb-countdown" id="mSeckillTimer">
+          <span>{seckillCountdown[0]}</span>:<span>{seckillCountdown[1]}</span>:<span>{seckillCountdown[2]}</span>
+        </span>
+      </div>
+    ) : activeTab === 'new' ? (
+      <div className="m-tab-banner" style={{ background: 'linear-gradient(135deg,#00C853,#64DD17)' }}>
+        <span className="mtb-icon">🆕</span>
+        <span className="mtb-text">新品上架 · {visibleItems.length}款新品</span>
+        <span className="mtb-tag">抢先体验</span>
+      </div>
+    ) : activeTab === 'sale' ? (
+      <div className="m-tab-banner" style={{ background: 'linear-gradient(135deg,#E8511A,#FF8A65)' }}>
+        <span className="mtb-icon">🏷️</span>
+        <span className="mtb-text">特价专区 · {visibleItems.length}款特卖</span>
+        <span className="mtb-tag">最高省{maxDiscount}%</span>
+      </div>
+    ) : activeTab === 'category' && activeCategory !== 'all' ? (
+      <div className="m-tab-banner" style={{ background: 'linear-gradient(135deg,#5C6BC0,#7E57C2)' }}>
+        <span className="mtb-icon">
+          {{
+            beauty: '💄',
+            toys: '🎲',
+            food: '🍜',
+            digital: '📱',
+            fashion: '👟',
+            lifestyle: '🏠',
+            all: '🔖',
+          }[activeCategory]}
+        </span>
+        <span className="mtb-text">
+          {{
+            beauty: '美妆护肤',
+            toys: '潮玩盲盒',
+            food: '食品饮料',
+            digital: '数码配件',
+            fashion: '服饰鞋包',
+            lifestyle: '生活好物',
+            all: '全部',
+          }[activeCategory]}{' '}
+          · {visibleItems.length}款商品
+        </span>
+      </div>
+    ) : null;
+
   return (
     <main className="mall-home">
       <div className="m-nav">
@@ -70,15 +210,15 @@ export function MallHome() {
           <span className="m-logo-main">优米</span>
           <span className="m-logo-sub">优选</span>
         </div>
-        <div className="m-search">
+        <div className="m-search" onClick={() => router.push('/search?from=mall')} role="button" tabIndex={0}>
           <i className="fa-solid fa-magnifying-glass" />
           <span>搜索商品/竞猜</span>
         </div>
         <div className="m-icons">
-          <button className="m-ico" type="button">
+          <button className="m-ico" type="button" onClick={() => router.push('/community')}>
             <i className="fa-regular fa-comment-dots" />
           </button>
-          <button className="m-ico" type="button">
+          <button className="m-ico" type="button" onClick={() => router.push('/cart')}>
             <i className="fa-solid fa-cart-shopping" />
             <span className="m-ico-badge">5</span>
           </button>
@@ -86,83 +226,85 @@ export function MallHome() {
       </div>
 
       <div className="m-tabs" id="mTabs">
-        <button className="m-tab on" type="button">
+        <button className={`m-tab ${activeTab === 'recommend' ? 'on' : ''}`} type="button" onClick={() => handleTabClick('recommend')}>
           推荐
         </button>
-        <button className="m-tab" type="button">
+        <button className={`m-tab ${activeTab === 'seckill' ? 'on' : ''}`} type="button" onClick={() => handleTabClick('seckill')}>
           秒杀 <span className="m-tab-badge badge-seckill">HOT</span>
         </button>
-        <button className="m-tab" type="button">
+        <button className={`m-tab ${activeTab === 'new' ? 'on' : ''}`} type="button" onClick={() => handleTabClick('new')}>
           新品 <span className="m-tab-badge badge-new">NEW</span>
         </button>
-        <button className="m-tab" type="button">
-          分类▾
+        <button className={`m-tab ${activeTab === 'category' ? 'on' : ''}`} id="mCatTab" type="button" onClick={() => handleTabClick('category')}>
+          {categoryLabelMap[activeCategory]}
         </button>
-        <button className="m-tab" type="button">
+        <button className={`m-tab ${activeTab === 'sale' ? 'on' : ''}`} type="button" onClick={() => handleTabClick('sale')}>
           特卖 <span className="m-tab-badge badge-special">省</span>
         </button>
       </div>
 
-      <div className="m-cat-dropdown" id="mCatDropdown">
-        <div className="m-cat-mask" />
+      <div className={`m-cat-dropdown ${catOpen ? 'open' : ''}`} id="mCatDropdown">
+        <div className="m-cat-mask" onClick={() => setCatOpen(false)} />
         <div className="m-cat-panel">
           <div className="m-cat-title">🔥 热门分类</div>
           <div className="m-cat-hot" id="mCatHot">
-            <div className="m-cat-hot-item on">
+            <div className={`m-cat-hot-item ${activeCategory === 'beauty' ? 'on' : ''}`} onClick={() => selectCategory('beauty')}>
               <div className="mchi-icon">💄</div>
               <div className="mchi-name">美妆护肤</div>
             </div>
-            <div className="m-cat-hot-item">
+            <div className={`m-cat-hot-item ${activeCategory === 'toys' ? 'on' : ''}`} onClick={() => selectCategory('toys')}>
               <div className="mchi-icon">🎲</div>
               <div className="mchi-name">潮玩盲盒</div>
             </div>
-            <div className="m-cat-hot-item">
+            <div className={`m-cat-hot-item ${activeCategory === 'food' ? 'on' : ''}`} onClick={() => selectCategory('food')}>
               <div className="mchi-icon">🍜</div>
               <div className="mchi-name">食品饮料</div>
             </div>
-            <div className="m-cat-hot-item">
+            <div className={`m-cat-hot-item ${activeCategory === 'digital' ? 'on' : ''}`} onClick={() => selectCategory('digital')}>
               <div className="mchi-icon">📱</div>
               <div className="mchi-name">数码配件</div>
             </div>
           </div>
           <div className="m-cat-title">全部分类</div>
           <div className="m-cat-grid" id="mCatGrid">
-            <div className="m-cat-item on">
+            <div className={`m-cat-item ${activeCategory === 'all' ? 'on' : ''}`} onClick={() => selectCategory('all')}>
               🔖 全部 <span className="mci-count">32</span>
             </div>
-            <div className="m-cat-item">
+            <div className={`m-cat-item ${activeCategory === 'beauty' ? 'on' : ''}`} onClick={() => selectCategory('beauty')}>
               💄 美妆护肤 <span className="mci-count">8</span>
             </div>
-            <div className="m-cat-item">
+            <div className={`m-cat-item ${activeCategory === 'toys' ? 'on' : ''}`} onClick={() => selectCategory('toys')}>
               🎲 潮玩盲盒 <span className="mci-count">5</span>
             </div>
-            <div className="m-cat-item">
+            <div className={`m-cat-item ${activeCategory === 'food' ? 'on' : ''}`} onClick={() => selectCategory('food')}>
               🍜 食品饮料 <span className="mci-count">7</span>
             </div>
-            <div className="m-cat-item">
+            <div className={`m-cat-item ${activeCategory === 'digital' ? 'on' : ''}`} onClick={() => selectCategory('digital')}>
               📱 数码配件 <span className="mci-count">4</span>
             </div>
-            <div className="m-cat-item">
+            <div className={`m-cat-item ${activeCategory === 'fashion' ? 'on' : ''}`} onClick={() => selectCategory('fashion')}>
               👟 服饰鞋包 <span className="mci-count">5</span>
             </div>
-            <div className="m-cat-item">
+            <div className={`m-cat-item ${activeCategory === 'lifestyle' ? 'on' : ''}`} onClick={() => selectCategory('lifestyle')}>
               🏠 生活好物 <span className="mci-count">3</span>
             </div>
           </div>
           <div className="m-cat-sort">
             <span className="m-cat-sort-label">排序：</span>
-            <span className="m-cat-sort-btn on">综合</span>
-            <span className="m-cat-sort-btn">销量↓</span>
-            <span className="m-cat-sort-btn">价格↑</span>
-            <span className="m-cat-sort-btn">价格↓</span>
-            <span className="m-cat-sort-btn">折扣↓</span>
+            <span className={`m-cat-sort-btn ${activeSort === 'default' ? 'on' : ''}`} onClick={() => setActiveSort('default')}>综合</span>
+            <span className={`m-cat-sort-btn ${activeSort === 'salesDesc' ? 'on' : ''}`} onClick={() => setActiveSort('salesDesc')}>销量↓</span>
+            <span className={`m-cat-sort-btn ${activeSort === 'priceAsc' ? 'on' : ''}`} onClick={() => setActiveSort('priceAsc')}>价格↑</span>
+            <span className={`m-cat-sort-btn ${activeSort === 'priceDesc' ? 'on' : ''}`} onClick={() => setActiveSort('priceDesc')}>价格↓</span>
+            <span className={`m-cat-sort-btn ${activeSort === 'discountDesc' ? 'on' : ''}`} onClick={() => setActiveSort('discountDesc')}>折扣↓</span>
           </div>
         </div>
       </div>
 
       <div className="m-feed-area" id="mFeedArea">
-        <section className="m-hero">
-          <div className="m-hero-header">
+        {tabBanner}
+
+        {activeTab === 'recommend' ? <section className="m-hero">
+          <div className="m-hero-header" onClick={() => router.push(heroHref)}>
             <div className="m-hero-collab">
               <span className="collab-left">鞠婧祎</span>
               <span className="collab-divider" />
@@ -171,7 +313,7 @@ export function MallHome() {
           </div>
 
           <div className="m-hero-poster-wrap">
-            <div className="m-hero-img">
+            <div className="m-hero-img" onClick={() => router.push(heroHref)}>
               <img alt="hero" src="/legacy/images/mac-jjy-hd-poster.jpg" />
               <div className="m-hero-img-logo">
                 <span className="m-hero-img-logo-text">M·A·C</span>
@@ -186,13 +328,13 @@ export function MallHome() {
                   <span className="p-big">9.9</span> 起
                 </div>
               </div>
-              <button className="m-hero-promo-cta" type="button">
+              <button className="m-hero-promo-cta" type="button" onClick={(event) => { event.stopPropagation(); router.push(heroHref); }}>
                 立即参与 &gt;
               </button>
             </div>
           </div>
 
-          <div className="m-hero-info">
+          <div className="m-hero-info" onClick={() => router.push(heroHref)}>
             <div className="m-hero-brand-row">
               <img
                 alt="MAC"
@@ -228,14 +370,14 @@ export function MallHome() {
               <span className="m-hero-people-text">12.6k+ 人已参与</span>
             </div>
           </div>
-        </section>
+        </section> : null}
 
         <div className="m-grid">
-          {mallItems.map((item) => (
-            <article className="m-card mfc-enter" key={item.id}>
+          {visibleItems.map((item) => (
+            <article className="m-card mfc-enter" key={item.id} onClick={() => router.push(`/product/${item.id}`)}>
               <div className="m-card-img" style={{ height: item.height }}>
                 <img alt={item.name} src={item.img} />
-                <button className="m-card-fav" type="button">
+                <button className="m-card-fav" type="button" onClick={(event) => event.stopPropagation()}>
                   <i className="fa-regular fa-heart" />
                 </button>
               </div>
@@ -258,32 +400,40 @@ export function MallHome() {
             </article>
           ))}
 
-          <article className="m-collab-card text-only">
+          <article className="m-collab-card text-only" onClick={() => router.push('/shop-detail?id=s001')}>
             <div className="m-collab-badge">品牌大使</div>
             <div className="m-collab-content">
               <div className="m-collab-title">
                 LISA <span className="collab-x">×</span> CELINE
               </div>
               <div className="m-collab-sub">定义你的法式优雅</div>
-              <button className="m-collab-cta" type="button">
+              <button className="m-collab-cta" type="button" onClick={(event) => { event.stopPropagation(); router.push('/shop-detail?id=s001'); }}>
                 查看系列 →
               </button>
             </div>
           </article>
         </div>
+        {visibleItems.length === 0 ? <div className="m-load-more">当前分类暂无商品</div> : null}
       </div>
 
-      <div className="m-banner">
+      {activeTab === 'recommend' ? <div className="m-banner" onClick={() => router.push('/product-detail?id=p001&tab=direct')}>
         <div className="m-banner-img">
           <div className="m-banner-center">
             <div className="m-banner-collab">年少有为 × 乐事</div>
             <div className="m-banner-sub">猜对裴谦最爱的口味，赢大礼包🎁</div>
-            <button className="m-banner-cta banner-centered" type="button">
+            <button
+              className="m-banner-cta banner-centered"
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                router.push('/product-detail?id=p001&tab=direct');
+              }}
+            >
               立即参与 →
             </button>
           </div>
         </div>
-      </div>
+      </div> : null}
       <div className="m-load-more">加载更多好物 ↓</div>
       <div style={{ height: 24 }} />
     </main>

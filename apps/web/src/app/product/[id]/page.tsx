@@ -2,57 +2,28 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import type { GuessOption, WarehouseItem } from '@joy/shared';
+import { useParams, useRouter } from 'next/navigation';
+import type { GuessOption, ProductSummary, WarehouseItem } from '@joy/shared';
 
-import { demoGuess, demoProduct, demoProduct2, demoWarehouse } from '../../../lib/demo';
+import { fetchProductDetail } from '../../../lib/api';
 import styles from './page.module.css';
-
-const heroImages = [
-  demoProduct.img,
-  '/legacy/images/products/p002-oreo.jpg',
-  '/legacy/images/products/p003-squirrels.jpg',
-  '/legacy/images/products/p005-liangpin.jpg',
-  '/legacy/images/products/p007-dove.jpg',
-];
 
 const reviews = [
   {
     user: '阿柠',
-    avatar: demoProduct.img,
+    avatar: '/legacy/images/mascot/mouse-main.png',
     stars: 5,
-    text: '页面排版很顺，商品图和价格层级非常清晰。',
+    text: '正品！质量很好，包装完好无损，物流也很快！',
     time: '2 小时前',
-    likes: 12,
+    likes: 327,
   },
   {
-    user: 'Mika',
-    avatar: demoProduct2.img,
+    user: '零食控',
+    avatar: '/legacy/images/mascot/mouse-happy.png',
     stars: 5,
-    text: '竞猜和直购的切换逻辑很直观，底部操作也很顺手。',
-    time: '昨天',
-    likes: 8,
-  },
-];
-
-const recommend = [
-  {
-    id: demoProduct.id,
-    name: demoProduct.name,
-    price: demoProduct.price,
-    img: demoProduct.img,
-  },
-  {
-    id: demoProduct2.id,
-    name: demoProduct2.name,
-    price: demoProduct2.price,
-    img: demoProduct2.img,
-  },
-  {
-    id: 'prod-3',
-    name: '蓝莓冻干酸奶块',
-    price: 39,
-    img: '/legacy/images/products/p006-wangwang.jpg',
+    text: '买了好多次了，品质稳定，价格实惠，竞猜超有趣。',
+    time: '3 天前',
+    likes: 215,
   },
 ];
 
@@ -60,20 +31,112 @@ const colorOptions = ['曜黑', '雾白', '奶咖', '樱桃红'];
 const sizeOptions = ['39', '40', '41', '42'];
 
 export default function ProductDetailPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState<null | {
+    id: string;
+    name: string;
+    brand: string;
+    img: string;
+    price: number;
+    guessPrice: number;
+    category: string;
+    status: string;
+    shopId: string | null;
+    shopName: string | null;
+    images: string[];
+    originalPrice: number;
+    stock: number;
+    tags: string[];
+    description: string;
+  }>(null);
+  const [activeGuess, setActiveGuess] = useState<null | {
+    id: string;
+    title: string;
+    options: GuessOption[];
+  }>(null);
+  const [warehouseItems, setWarehouseItems] = useState<WarehouseItem[]>([]);
+  const [recommendations, setRecommendations] = useState<ProductSummary[]>([]);
   const [currentTab, setCurrentTab] = useState<'direct' | 'guess' | 'inv'>('direct');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [detailExpanded, setDetailExpanded] = useState(false);
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [favActive, setFavActive] = useState(false);
+  const [selectedGuessOpt, setSelectedGuessOpt] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedSize, setSelectedSize] = useState(1);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string[]>(['vw-1']);
+  const [reviewLikes, setReviewLikes] = useState<number[]>(reviews.map((item) => item.likes));
+  const [toast, setToast] = useState('');
+  const productId = typeof params?.id === 'string' ? params.id : '';
 
-  const guessPrice = useMemo(() => demoProduct.guessPrice, []);
-  const directPrice = useMemo(() => demoProduct.price, []);
-  const invPrice = useMemo(() => demoProduct.price - 120, []);
+  useEffect(() => {
+    let ignore = false;
+
+    async function load() {
+      if (!productId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const result = await fetchProductDetail(productId);
+        if (ignore) {
+          return;
+        }
+        setProduct(result.product);
+        setActiveGuess(
+          result.activeGuess
+            ? {
+                id: result.activeGuess.id,
+                title: result.activeGuess.title,
+                options: result.activeGuess.options,
+              }
+            : null,
+        );
+        setWarehouseItems(result.warehouseItems);
+        setRecommendations(result.recommendations);
+        if (!result.activeGuess) {
+          setCurrentTab('direct');
+        }
+      } catch {
+        if (!ignore) {
+          setProduct(null);
+          setActiveGuess(null);
+          setWarehouseItems([]);
+          setRecommendations([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, [productId]);
+
+  const heroImages = useMemo(() => {
+    if (!product) {
+      return [];
+    }
+    const images = product.images.length ? product.images : [product.img];
+    return images.filter(Boolean);
+  }, [product]);
+
+  const guessPrice = useMemo(() => product?.guessPrice ?? 0, [product]);
+  const directPrice = useMemo(() => product?.price ?? 0, [product]);
+  const invPrice = useMemo(() => Math.max(0, directPrice - 120), [directPrice]);
+  const selectedDeduct = selectedWarehouse.reduce((sum, id) => {
+    const item = warehouseItems.find((entry: WarehouseItem) => entry.id === id);
+    return sum + (item ? Number(item.price ?? 0) : 0);
+  }, 0);
+  const exchangeOverflow = Math.max(0, selectedDeduct - directPrice);
+  const exchangeToPay = Math.max(0, directPrice - selectedDeduct);
 
   useEffect(() => {
     const onScroll = () => {
@@ -84,20 +147,70 @@ export default function ProductDetailPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(''), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const activePrice = currentTab === 'guess' ? guessPrice : currentTab === 'inv' ? invPrice : directPrice;
+
+  async function sharePage() {
+    if (!product) {
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: product.name,
+          text: `在优米发现了${product.name}`,
+          url: window.location.href,
+        });
+      } catch {
+        return;
+      }
+      return;
+    }
+    setToast('链接已复制');
+  }
+
+  if (loading) {
+    return <main className={styles.page} />;
+  }
+
+  if (!product) {
+    return (
+      <main className={styles.page}>
+        <header className={styles.nav}>
+          <button className={styles.navBtn} type="button" onClick={() => router.back()}>
+            <i className="fa-solid fa-chevron-left" />
+          </button>
+          <div className={styles.navTitle}>商品详情</div>
+          <div className={styles.navActions} />
+        </header>
+        <section className={styles.body}>
+          <div className={styles.panel}>
+            <div className={styles.panelInner}>
+              <div className={styles.recommendTitle}>商品不存在</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.page}>
       <header className={`${styles.nav} ${scrolled ? styles.navScrolled : ''}`}>
         <button className={styles.navBtn} type="button" onClick={() => router.back()}>
-          <i className="fa-solid fa-arrow-left" />
+          <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.navTitle}>商品详情</div>
         <div className={styles.navActions}>
-          <button className={styles.navBtn} type="button">
-            <i className="fa-solid fa-share-nodes" />
+          <button className={styles.navBtn} type="button" onClick={() => void sharePage()}>
+            <i className="fa-solid fa-arrow-up-from-bracket" />
           </button>
-          <button className={styles.navBtn} type="button">
+          <button className={styles.navBtn} type="button" onClick={() => setToast('更多')}>
             <i className="fa-solid fa-ellipsis" />
           </button>
         </div>
@@ -114,7 +227,7 @@ export default function ProductDetailPage() {
         >
           {heroImages.map((src, index) => (
             <div className={styles.heroSlide} key={`${src}-${index}`}>
-              <img src={src} alt={`${demoProduct.name} ${index + 1}`} />
+              <img src={src} alt={`${product.name} ${index + 1}`} />
             </div>
           ))}
         </div>
@@ -139,7 +252,7 @@ export default function ProductDetailPage() {
             <small>¥</small>
             {activePrice}
           </div>
-          <div className={styles.priceOrig}>¥{demoProduct.price}</div>
+          <div className={styles.priceOrig}>¥{product.originalPrice}</div>
           <div className={styles.priceTags}>
             <span className={`${styles.priceTag} ${styles.tagHot}`}>热门</span>
             <span className={`${styles.priceTag} ${styles.tagOff}`}>低价</span>
@@ -149,24 +262,24 @@ export default function ProductDetailPage() {
           <span className={`${styles.titleBadge} ${styles.selfBadge}`}>自营</span>
           <span className={`${styles.titleBadge} ${styles.authBadge}`}>认证</span>
           <span className={`${styles.titleBadge} ${styles.guessBadge}`}>竞猜</span>
-          <span className={styles.productTitle}>{demoProduct.name}</span>
+          <span className={styles.productTitle}>{product.name}</span>
         </div>
         <div className={styles.productSub}>
-          <span>{demoProduct.brand}</span>
+          <span>{product.brand}</span>
           <span className={styles.sep}>·</span>
-          <span>{demoProduct.category}</span>
+          <span>{product.category}</span>
           <span className={styles.sep}>·</span>
           <span>{guessPrice} 竞猜价</span>
         </div>
         <div className={styles.promoStrip}>
-          <button className={styles.promoChip} type="button">
-            <span className={`${styles.pcTag} ${styles.pcCoupon}`}>券</span> 满 50 减 5
+          <button className={styles.promoChip} type="button" onClick={() => setToast('领取优惠券')}>
+            <span className={`${styles.pcTag} ${styles.pcCoupon}`}>券</span> 满 50 减 5 <i className="fa-solid fa-chevron-right" />
           </button>
-          <button className={styles.promoChip} type="button">
-            <span className={`${styles.pcTag} ${styles.pcGuess}`}>猜</span> 参与竞猜得好礼
+          <button className={styles.promoChip} type="button" onClick={() => setCurrentTab('guess')}>
+            <span className={`${styles.pcTag} ${styles.pcGuess}`}>猜</span> ¥{guessPrice}参与竞猜赢商品 <i className="fa-solid fa-chevron-right" />
           </button>
-          <button className={styles.promoChip} type="button">
-            <span className={`${styles.pcTag} ${styles.pcSvc}`}>保</span> 正品保障
+          <button className={styles.promoChip} type="button" onClick={() => setToast('服务保障')}>
+            <span className={`${styles.pcTag} ${styles.pcSvc}`}>保</span> 正品 · 24h发货 · 7天退换 <i className="fa-solid fa-chevron-right" />
           </button>
         </div>
       </section>
@@ -178,21 +291,21 @@ export default function ProductDetailPage() {
             type="button"
             onClick={() => setCurrentTab('direct')}
           >
-            <span className={styles.modeIcon}><i className="fa-solid fa-cart-shopping" /></span> 直购 <span className={styles.modePrice}>¥{directPrice}</span>
+            <span className={styles.modeIcon}>🛒</span> 直购 <span className={styles.modePrice}>¥{directPrice}</span>
           </button>
           <button
             className={`${styles.modeTab} ${currentTab === 'guess' ? styles.modeGuessOn : ''}`}
             type="button"
             onClick={() => setCurrentTab('guess')}
           >
-            <span className={styles.modeIcon}><i className="fa-solid fa-dice" /></span> 竞猜 <span className={styles.modePrice}>¥{guessPrice}</span>
+            <span className={styles.modeIcon}>🎲</span> 竞猜 <span className={styles.modePrice}>¥{guessPrice}</span>
           </button>
           <button
             className={`${styles.modeTab} ${currentTab === 'inv' ? styles.modeInvOn : ''}`}
             type="button"
             onClick={() => setCurrentTab('inv')}
           >
-            <span className={styles.modeIcon}><i className="fa-solid fa-coins" /></span> 换购 <span className={styles.modePrice}>¥{invPrice}</span>
+            <span className={styles.modeIcon}>💰</span> 换购 <span className={styles.modePrice}>¥{invPrice}</span>
           </button>
         </div>
       </section>
@@ -263,51 +376,70 @@ export default function ProductDetailPage() {
                     <small>¥</small>
                     {guessPrice}
                   </div>
-                  <div className={styles.guessSub}>原价 ¥{demoProduct.price}</div>
+                  <div className={styles.guessSub}>原价 ¥{product.originalPrice}</div>
                 </div>
                 <div className={styles.panelHead}>
                   <div className={styles.panelTitle}>当前进度</div>
                   <div className={styles.panelMore}>
-                    剩余 <strong>2</strong> 个名额
+                    剩余 <strong>{Math.max(0, 50 - (activeGuess?.options.reduce((sum, option) => sum + option.voteCount, 0) || 0))}</strong> 个名额
                   </div>
                 </div>
                 <div className={styles.ringSection}>
                   <div className={styles.ringWrap}>
                     <div className={styles.ringInner}>
-                      <span className={styles.ringPct}>96%</span>
+                      <span className={styles.ringPct}>
+                        {Math.min(
+                          100,
+                          Math.round((((activeGuess?.options.reduce((sum, option) => sum + option.voteCount, 0) || 0) / 50) * 100)),
+                        )}
+                        %
+                      </span>
                       <span className={styles.ringLabel}>已满</span>
                     </div>
                   </div>
                   <div className={styles.ringInfo}>
                     <div className={styles.ringStat}>
-                      <strong>48</strong>
+                      <strong>{activeGuess?.options.reduce((sum, option) => sum + option.voteCount, 0) || 0}</strong>
                       <span>/50 人</span>
                     </div>
                     <div className={styles.ringStatLabel}>已参与人数</div>
                     <div className={styles.ringStat}>
-                      <strong>¥{demoProduct.price}</strong>
+                      <strong>¥{product.price}</strong>
                     </div>
                     <div className={styles.ringStatLabel}>商品市场价值</div>
                   </div>
                 </div>
                 <div className={styles.guessOptions}>
-                  {demoGuess.options.map((option: GuessOption, index: number) => (
-                    <button className={styles.guessOption} key={option.id} type="button">
+                  {(activeGuess?.options || []).map((option: GuessOption, index: number) => {
+                    const totalVotes = activeGuess?.options.reduce((sum, item) => sum + item.voteCount, 0) || 0;
+                    const percent = totalVotes > 0 ? Math.round((option.voteCount / totalVotes) * 100) : 0;
+                    return (
+                    <button
+                      className={`${styles.guessOption} ${selectedGuessOpt === index ? styles.guessOptionSelected : ''}`}
+                      key={option.id}
+                      type="button"
+                      onClick={() => setSelectedGuessOpt(index)}
+                    >
                       <span className={styles.optionRadio} />
                       <span className={styles.optionName}>{option.optionText}</span>
                       <span className={styles.optionOdds}>{option.odds.toFixed(1)}x</span>
-                      <span className={styles.optionDesc}>{index === 0 ? '偏大 · 58%' : '偏小 · 42%'}</span>
+                      <span className={styles.optionDesc}>{`当前占比 · ${percent}%`}</span>
                       <span className={styles.optionBar}>
-                        <span style={{ width: index === 0 ? '58%' : '42%' }} />
+                        <span style={{ width: `${percent}%` }} />
                       </span>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
+                {!activeGuess ? <div className={styles.directRow}>当前暂无进行中的竞猜。</div> : null}
+                <button className={styles.guessMore} type="button" onClick={() => setToast('查看全部')}>
+                  查看更多 <i className="fa-solid fa-chevron-down" />
+                </button>
                 <div className={styles.recList}>
                   {[
-                    { name: '阿柠', choice: '猜大', time: '1 分钟前', av: demoProduct.img, cls: styles.recTagBig },
-                    { name: 'Mika', choice: '猜小', time: '4 分钟前', av: demoProduct2.img, cls: styles.recTagSmall },
-                    { name: 'Leo', choice: '猜大', time: '6 分钟前', av: demoProduct.img, cls: styles.recTagBig },
+                    { name: '美食猎人', choice: '猜大', time: '2 分钟前', av: '/legacy/images/mascot/mouse-main.png', cls: styles.recTagBig },
+                    { name: '零食控小王', choice: '猜小', time: '5 分钟前', av: '/legacy/images/mascot/mouse-happy.png', cls: styles.recTagSmall },
+                    { name: '零食猎人', choice: '猜大', time: '8 分钟前', av: '/legacy/images/mascot/mouse-casual.png', cls: styles.recTagBig },
                   ].map((item) => (
                     <div className={styles.recItem} key={`${item.name}-${item.time}`}>
                       <img src={item.av} alt={item.name} />
@@ -329,8 +461,8 @@ export default function ProductDetailPage() {
                     {directPrice}
                   </div>
                   <div className={styles.directRow}>
-                    <span className={styles.directOrig}>¥{demoProduct.price + 120}</span>
-                    <span className={styles.directSave}>省 ¥120</span>
+                    <span className={styles.directOrig}>¥{product.originalPrice}</span>
+                    <span className={styles.directSave}>省 ¥{Math.max(0, product.originalPrice - directPrice)}</span>
                   </div>
                 </div>
                 <div className={styles.panelHead}>
@@ -398,12 +530,12 @@ export default function ProductDetailPage() {
                 </div>
                 <div className={styles.exchangeVis}>
                   <div className={styles.exchangeBlock}>
-                    <div className={styles.exchangeValueMuted}>¥{demoProduct.price}</div>
+                    <div className={styles.exchangeValueMuted}>¥{directPrice}</div>
                     <div className={styles.exchangeLabel}>商品售价</div>
                   </div>
                   <div className={styles.exchangeArrow}>-</div>
                   <div className={styles.exchangeBlock}>
-                    <div className={styles.exchangeValueAccent}>¥{Math.min(demoProduct.price - invPrice, 120)}</div>
+                    <div className={styles.exchangeValueAccent}>¥{selectedDeduct}</div>
                     <div className={styles.exchangeLabel}>库存可抵</div>
                   </div>
                   <div className={styles.exchangeArrow}>=</div>
@@ -413,16 +545,17 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
                 <div className={styles.inventoryList}>
-                  {demoWarehouse.map((item: WarehouseItem) => (
+                  {warehouseItems.map((item: WarehouseItem) => (
                     <div className={styles.inventoryItem} key={item.id}>
-                      <img src={item.warehouseType === 'virtual' ? demoProduct.img : demoProduct2.img} alt={item.productName} />
+                      <img src={item.productImg || product.img} alt={item.productName} />
                       <div className={styles.inventoryInfo}>
                         <div className={styles.inventoryName}>{item.productName}</div>
                         <div className={styles.inventoryMeta}>来源：{item.sourceType}</div>
                       </div>
-                      <span className={styles.inventoryPrice}>¥{item.warehouseType === 'virtual' ? 49 : 59}</span>
+                      <span className={styles.inventoryPrice}>¥{Number(item.price ?? 0)}</span>
                     </div>
                   ))}
+                  {warehouseItems.length === 0 ? <div className={styles.directRow}>当前没有可用于换购的同款库存。</div> : null}
                 </div>
                 <div className={styles.flowSteps}>
                   {['选择抵扣', '确认价格', '下单发货'].map((item, index) => (
@@ -443,7 +576,14 @@ export default function ProductDetailPage() {
               <div className={styles.panelTitle}>商品详情</div>
             </div>
             <div className={`${styles.detailText} ${detailExpanded ? styles.detailExpanded : ''}`}>
-              这是一个接近旧版商城的商品详情页，顶部展示商品图轮播和价格信息，中部提供竞猜、直购、换购三种方式，并在底部继续保留商品详情、评价和推荐区块。
+              {`${product.description}
+
+• 品牌：${product.brand}
+• 分类：${product.category}
+• 发货：24小时内发货，顺丰/中通
+• 保障：7天无理由退换，正品保证
+
+优米独家渠道商品，支持直购、竞猜、库存换购三种方式。`}
             </div>
             <button className={styles.detailToggle} type="button" onClick={() => setDetailExpanded((value) => !value)}>
               {detailExpanded ? '收起' : '展开全部'} <span><i className={`fa-solid ${detailExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`} /></span>
@@ -454,12 +594,12 @@ export default function ProductDetailPage() {
         <div className={styles.panel}>
           <div className={styles.panelInner}>
             <div className={styles.panelHead}>
-              <div className={styles.panelTitle}>用户评价 <span>{reviews.length}</span></div>
-              <button className={styles.panelMore} type="button">
-                全部
+              <div className={styles.panelTitle}><i className="fa-solid fa-comment-dots" style={{ color: '#FFB400' }} /> 用户评价 <span>{reviews.length}</span></div>
+              <button className={styles.panelMore} type="button" onClick={() => setToast('查看全部评价')}>
+                全部 <i className="fa-solid fa-chevron-right" style={{ fontSize: 8 }} />
               </button>
             </div>
-              {reviews.map((review) => (
+              {reviews.map((review, index) => (
               <article className={styles.reviewItem} key={review.user}>
                 <img src={review.avatar} alt={review.user} />
                 <div className={styles.reviewBody}>
@@ -470,7 +610,18 @@ export default function ProductDetailPage() {
                   <div className={styles.reviewText}>{review.text}</div>
                   <div className={styles.reviewFoot}>
                     <span>{review.time}</span>
-                    <span><i className="fa-regular fa-heart" /> {review.likes}</span>
+                    <button
+                      className={styles.reviewLike}
+                      type="button"
+                      onClick={() => {
+                        setReviewLikes((current) =>
+                          current.map((likes, itemIndex) => (itemIndex === index ? likes + 1 : likes)),
+                        );
+                        setToast('已点赞');
+                      }}
+                    >
+                      <i className="fa-regular fa-thumbs-up" /> {reviewLikes[index]}
+                    </button>
                   </div>
                 </div>
               </article>
@@ -481,7 +632,7 @@ export default function ProductDetailPage() {
         <div className={styles.panel}>
           <div className={styles.recommendTitle}>猜你喜欢</div>
           <div className={styles.recommendGrid}>
-            {recommend.map((item) => (
+            {recommendations.map((item) => (
               <Link className={styles.recommendItem} href={`/product/${item.id}`} key={item.id}>
                 <img className={styles.recommendImg} src={item.img} alt={item.name} />
                 <div className={styles.recommendName}>{item.name}</div>
@@ -494,21 +645,39 @@ export default function ProductDetailPage() {
 
       <div className={styles.bottomBar}>
         <div className={styles.barLeft}>
-          <Link className={styles.barIcon} href="/shop/shop-1">
+          <Link className={styles.barIcon} href={product.shopId ? `/shop/${product.shopId}` : '/my-shop'}>
             <span><i className="fa-solid fa-store" /></span>
             <em>店铺</em>
           </Link>
-          <button className={`${styles.barIcon} ${favActive ? styles.barIconFavActive : ''}`} type="button" onClick={() => setFavActive((value) => !value)}>
+          <button
+            className={`${styles.barIcon} ${favActive ? styles.barIconFavActive : ''}`}
+            type="button"
+            onClick={() => {
+              setFavActive((value) => {
+                const next = !value;
+                setToast(next ? '已收藏 ❤️' : '取消收藏');
+                return next;
+              });
+            }}
+          >
             <span><i className={`fa-${favActive ? 'solid' : 'regular'} fa-heart`} /></span>
             <em>收藏</em>
           </button>
-          <button className={styles.barIcon} type="button">
+          <button className={styles.barIcon} type="button" onClick={() => setToast('💬 正在接入客服...')}>
             <span><i className="fa-regular fa-comment-dots" /></span>
             <em>客服</em>
           </button>
         </div>
         <div className={styles.barBtns}>
-          <button className={styles.barSub} type="button">
+          <button
+            className={styles.barSub}
+            type="button"
+            onClick={() => {
+              if (currentTab === 'guess') router.push('/guess-history');
+              else if (currentTab === 'inv') router.push('/warehouse');
+              else setToast('已加入购物车 🛒');
+            }}
+          >
             {currentTab === 'guess' ? (
               '我的竞猜'
             ) : currentTab === 'inv' ? (
@@ -527,7 +696,18 @@ export default function ProductDetailPage() {
             className={`${styles.barPrimary} ${currentTab === 'guess' ? styles.barPrimaryGuess : currentTab === 'inv' ? styles.barPrimaryInv : styles.barPrimaryDirect}`}
             type="button"
             onClick={() => {
-              if (currentTab === 'inv') setExchangeOpen(true);
+              if (currentTab === 'guess') {
+                if (!activeGuess) {
+                  setToast('当前暂无可参与的竞猜');
+                  return;
+                }
+                router.push(`/guess-order?id=${encodeURIComponent(activeGuess.id)}`);
+              } else if (currentTab === 'direct') {
+                router.push(
+                  `/payment?from=product&pid=${encodeURIComponent(product.id)}&name=${encodeURIComponent(product.name)}&price=${encodeURIComponent(String(directPrice))}&img=${encodeURIComponent(product.img)}`,
+                );
+              }
+              else setExchangeOpen(true);
             }}
           >
             {currentTab === 'guess' ? `参与竞猜 ¥${guessPrice}` : currentTab === 'inv' ? `换购 ¥${invPrice}` : `立即购买 ¥${directPrice}`}
@@ -546,16 +726,22 @@ export default function ProductDetailPage() {
               </button>
             </div>
             <div className={styles.exchangeTarget}>
-              <img src={demoProduct.img} alt={demoProduct.name} />
+              <img src={product.img} alt={product.name} />
               <div>
-                <h3>{demoProduct.name}</h3>
-                <strong>¥{demoProduct.price}</strong>
+                <h3>{product.name}</h3>
+                <strong>¥{product.price}</strong>
                 <p>当前可用库存合计足以抵扣这件商品的绝大部分价格。</p>
               </div>
             </div>
             <div className={styles.exchangeBody}>
-              <div className={styles.exchangeBodyTitle}>我的仓库库存</div>
-              {demoWarehouse.map((item: WarehouseItem) => (
+                <div className={styles.exchangeBodyTitle}>我的仓库库存</div>
+              <button className={styles.exchangePlanBtn} type="button" onClick={() => {
+                setSelectedWarehouse(warehouseItems.map((item: WarehouseItem) => item.id));
+                setToast('✨ 已应用最优方案');
+              }}>
+                一键选用
+              </button>
+              {warehouseItems.map((item: WarehouseItem) => (
                 <button
                   className={selectedWarehouse.includes(item.id) ? styles.exchangeCardSelected : styles.exchangeCard}
                   type="button"
@@ -568,14 +754,15 @@ export default function ProductDetailPage() {
                     )
                   }
                 >
-                  <img src={item.warehouseType === 'virtual' ? demoProduct.img : demoProduct2.img} alt={item.productName} />
+                  <img src={item.productImg || product.img} alt={item.productName} />
                   <div className={styles.exchangeCardInfo}>
                     <div className={styles.exchangeCardName}>{item.productName}</div>
                     <div className={styles.exchangeCardMeta}>{item.sourceType}</div>
                   </div>
-                  <div className={styles.exchangeCardPrice}>¥{item.warehouseType === 'virtual' ? 49 : 59}</div>
+                  <div className={styles.exchangeCardPrice}>¥{Number(item.price ?? 0)}</div>
                 </button>
               ))}
+              {warehouseItems.length === 0 ? <div className={styles.directRow}>当前没有可用于换购的同款库存。</div> : null}
             </div>
             <div className={styles.exchangeFooter}>
               <div className={styles.exchangeSummary}>
@@ -585,20 +772,47 @@ export default function ProductDetailPage() {
                 </div>
                 <div>
                   <span>预计抵扣</span>
-                  <strong>¥108</strong>
+                  <strong>¥{selectedDeduct}</strong>
                 </div>
                 <div>
                   <span>需补差价</span>
-                  <strong>¥0</strong>
+                  <strong>¥{exchangeToPay}</strong>
                 </div>
               </div>
-              <button className={styles.exchangeConfirm} type="button" onClick={() => setExchangeOpen(false)}>
-                确认换购
+              <button
+                className={styles.exchangeConfirm}
+                disabled={selectedWarehouse.length === 0}
+                type="button"
+                onClick={() => {
+                  if (selectedWarehouse.length === 0) return;
+                  setExchangeOpen(false);
+                  router.push(
+                    `/payment?from=exchange&pid=${encodeURIComponent(product.id)}&name=${encodeURIComponent(product.name)}&price=${encodeURIComponent(String(exchangeToPay || 0.01))}&img=${encodeURIComponent(product.img)}`,
+                  );
+                }}
+                style={{
+                  background:
+                    selectedWarehouse.length === 0
+                      ? '#D9D9D9'
+                      : exchangeOverflow > 0
+                        ? 'linear-gradient(135deg,#FFA726,#FF7043)'
+                        : 'linear-gradient(135deg,#2DC88A,#00875A)',
+                }}
+              >
+                {selectedWarehouse.length === 0
+                  ? '请选择要抵扣的库存'
+                  : exchangeOverflow > 0
+                    ? `确认换购（超出 ¥${exchangeOverflow}）`
+                    : exchangeToPay > 0
+                      ? `确认换购 · 补差价 ¥${exchangeToPay}`
+                      : '确认换购（库存完全覆盖）'}
               </button>
             </div>
           </section>
         </div>
       ) : null}
+
+      {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>
   );
 }

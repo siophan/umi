@@ -31,9 +31,17 @@
   font-size: 15px;
 }
 
+.back:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .back i,
 .headerBtn i {
   font-size: 14px;
+}
+
+.headerBtn:active {
+  color: #ff5722;
 }
 
 .title {
@@ -94,6 +102,7 @@
   margin-top: 4px;
   font-size: 13px;
   opacity: 0.85;
+  padding-left: 40px;
 }
 
 .bannerBg {
@@ -194,6 +203,10 @@
   color: #333;
 }
 
+.timelineItem:not(.active):not(.done) .timelineText {
+  color: #ccc;
+}
+
 .timelineTime {
   margin-top: 2px;
   font-size: 11px;
@@ -218,6 +231,12 @@
   border: 0;
   background: transparent;
   text-align: left;
+}
+
+.shopRow:active,
+.guessInfo:active,
+.express:active {
+  opacity: 0.7;
 }
 
 .shopIcon {
@@ -256,8 +275,7 @@
 .product {
   display: flex;
   gap: 12px;
-  padding: 12px 0;
-  border-top: 0.5px solid #f5f5f5;
+  padding: 12px 0 0;
 }
 
 .product img {
@@ -313,6 +331,11 @@
   color: #ff5722;
 }
 
+.productPrice small {
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .free {
   color: #4caf50;
 }
@@ -335,10 +358,6 @@
 }
 
 .guessIcon {
-  font-size: 22px;
-}
-
-.guessIcon i {
   font-size: 22px;
 }
 
@@ -425,7 +444,7 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 12px 0 0;
+  padding: 0;
   border: 0;
   background: transparent;
   text-align: left;
@@ -456,6 +475,12 @@
   font-weight: 700;
 }
 
+.expressCompany span {
+  margin-left: 2px;
+  font-weight: 400;
+  color: #999;
+}
+
 .expressNo {
   margin-top: 2px;
   color: #999;
@@ -463,9 +488,16 @@
 }
 
 .expressStatus {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 3px;
   color: #2196f3;
   font-size: 12px;
+}
+
+.expressStatus i {
+  font-size: 5px;
 }
 
 .expressArrow {
@@ -479,6 +511,44 @@
   justify-content: space-between;
   padding: 8px 0;
   font-size: 13px;
+}
+
+.couponCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff6d00, #ff9800);
+  color: #fff;
+}
+
+.couponIcon {
+  font-size: 24px;
+}
+
+.couponInfo {
+  flex: 1;
+}
+
+.couponAmount {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.couponCond {
+  margin-top: 1px;
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.couponTag {
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 9px;
+  font-weight: 700;
 }
 
 .priceLabel {
@@ -519,10 +589,44 @@
   font-weight: 900;
 }
 
+.priceTotal .free {
+  color: #4caf50;
+}
+
 .infoRow {
   display: flex;
   padding: 8px 0;
   font-size: 12px;
+}
+
+.refundInfo {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid rgba(244, 67, 54, 0.08);
+  border-radius: 10px;
+  background: rgba(244, 67, 54, 0.04);
+}
+
+.refundRow {
+  display: flex;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.refundRow:last-child {
+  margin-bottom: 0;
+}
+
+.refundLabel {
+  width: 70px;
+  flex-shrink: 0;
+  color: #999;
+}
+
+.refundValue {
+  flex: 1;
+  color: #333;
+  font-weight: 500;
 }
 
 .infoLabel {
@@ -539,6 +643,13 @@
 
 .copy {
   color: #ff5722;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copy i {
+  font-size: 11px;
 }
 
 .bottom {
@@ -580,6 +691,10 @@
   font-size: 10px;
 }
 
+.bottomIcon:active {
+  color: #ff5722;
+}
+
 .btnOutline,
 .btnPrimary {
   min-width: 104px;
@@ -598,6 +713,188 @@
 .btnPrimary {
   background: linear-gradient(135deg, #ff5722, #ff9800);
   color: #fff;
+}
+
+.btnOutline:active,
+.btnPrimary:active {
+  transform: scale(0.96);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 70vh;
+  overflow-y: auto;
+  border-radius: 20px 20px 0 0;
+  background: #fff;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  animation: slideUp 0.3s ease;
+}
+
+.modalHandle {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 16px;
+  border-radius: 2px;
+  background: #ddd;
+}
+
+.modalTitle {
+  margin-bottom: 16px;
+  color: #1a1a1a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.logisticsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.logisticsCompany {
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.logisticsNo {
+  margin-top: 4px;
+  color: #999;
+  font-size: 12px;
+}
+
+.copyBtn {
+  border: 0;
+  background: transparent;
+  color: #2196f3;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 0 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.rating:active {
+  opacity: 0.7;
+}
+
+.ratingStars {
+  display: flex;
+  gap: 2px;
+}
+
+.ratingStars i {
+  font-size: 16px;
+  color: #e0e0e0;
+}
+
+.ratingText {
+  flex: 1;
+  color: #ff9800;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ratingArrow {
+  color: #ccc;
+  font-size: 12px;
+}
+
+.logisticsItem {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 0 0 16px 24px;
+}
+
+.logisticsItem::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 20px;
+  bottom: 0;
+  width: 1.5px;
+  background: #f0f0f0;
+}
+
+.logisticsItem:last-child::before {
+  display: none;
+}
+
+.logisticsDot {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+}
+
+.logisticsDot i {
+  font-size: 7px;
+  color: #bbb;
+}
+
+.logisticsActive {
+  background: #2196f3;
+  box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.12);
+}
+
+.logisticsDone {
+  background: #4caf50;
+}
+
+.logisticsActive i,
+.logisticsDone i {
+  color: #fff;
+}
+
+.logisticsText {
+  color: #333;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.logisticsTime {
+  margin-top: 2px;
+  color: #bbb;
+  font-size: 11px;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 .toast {

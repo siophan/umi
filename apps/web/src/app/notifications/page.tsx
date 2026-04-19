@@ -1,26 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+import { fetchNotifications, markAllNotificationsRead } from '../../lib/api';
 import styles from './page.module.css';
 
-type NotificationItem = {
-  id: string;
-  type: 'guess' | 'social' | 'system' | 'order';
-  read: boolean;
-  title: string;
-  content: string;
-  time: string;
-};
-
-const listData: NotificationItem[] = [
-  { id: '1', type: 'guess', read: false, title: '竞猜结果已公布', content: '你参与的「今天谁会赢」已结算，去看看有没有中奖。', time: '10 分钟前' },
-  { id: '2', type: 'social', read: false, title: '好友邀请你参加竞猜', content: '小米邀请你加入新一轮的商品竞猜。', time: '1 小时前' },
-  { id: '3', type: 'order', read: true, title: '订单已发货', content: '订单 20260417001 已进入物流运输中。', time: '昨天 12:48' },
-  { id: '4', type: 'system', read: true, title: '系统维护通知', content: '今晚 02:00-03:00 会进行短暂维护。', time: '昨天 09:00' },
-];
-
-const icons: Record<NotificationItem['type'], string> = {
+const icons: Record<'guess' | 'social' | 'system' | 'order', string> = {
   guess: '🎯',
   social: '👥',
   system: '🔔',
@@ -29,20 +15,67 @@ const icons: Record<NotificationItem['type'], string> = {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<'all' | NotificationItem['type']>('all');
-  const [items, setItems] = useState(listData);
+  const [tab, setTab] = useState<'all' | 'guess' | 'social' | 'system' | 'order'>('all');
+  const [items, setItems] = useState<Array<{
+    id: number;
+    type: 'guess' | 'social' | 'system' | 'order';
+    read: boolean;
+    title: string;
+    content: string;
+    createdAt: string;
+  }>>([]);
   const [toast, setToast] = useState('');
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function load() {
+      try {
+        const result = await fetchNotifications();
+        if (ignore) {
+          return;
+        }
+        setItems(result.items);
+        setReady(true);
+      } catch {
+        if (ignore) {
+          return;
+        }
+        setItems([]);
+        setReady(true);
+      }
+    }
+
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, [router]);
 
   const filtered = useMemo(
     () => (tab === 'all' ? items : items.filter((item) => item.type === tab)),
-    [tab, items],
+    [items, tab],
   );
 
-  const markAllRead = () => {
+  function handleMarkRead(id: number) {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, read: true } : item)));
+  }
+
+  async function handleMarkAllRead() {
+    try {
+      await markAllNotificationsRead();
+    } catch {
+      // Keep the old static-page behavior when the API is unavailable.
+    }
     setItems((prev) => prev.map((item) => ({ ...item, read: true })));
     setToast('全部已读');
     window.setTimeout(() => setToast(''), 1600);
-  };
+  }
+
+  if (!ready) {
+    return <main className={styles.page} />;
+  }
 
   return (
     <main className={styles.page}>
@@ -51,7 +84,7 @@ export default function NotificationsPage() {
           <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>通知中心</div>
-        <button className={styles.actionBtn} type="button" onClick={markAllRead}>
+        <button className={styles.actionBtn} type="button" onClick={() => void handleMarkAllRead()}>
           <i className="fa-solid fa-check-double" />
         </button>
       </header>
@@ -66,7 +99,7 @@ export default function NotificationsPage() {
         ].map((item) => (
           <button
             key={item.key}
-            className={`${styles.tab} ${tab === item.key ? styles.tabActive : ''}`}
+            className={tab === item.key ? styles.tabActive : styles.tab}
             type="button"
             onClick={() => setTab(item.key as typeof tab)}
           >
@@ -79,14 +112,8 @@ export default function NotificationsPage() {
         {filtered.map((item) => (
           <article
             key={item.id}
-            className={`${styles.item} ${item.read ? "" : styles.unread}`}
-            onClick={() =>
-              setItems((prev) =>
-                prev.map((entry) =>
-                  entry.id === item.id ? { ...entry, read: true } : entry,
-                ),
-              )
-            }
+            className={`${styles.item} ${item.read ? '' : styles.unread}`}
+            onClick={() => handleMarkRead(item.id)}
           >
             <div className={`${styles.icon} ${styles[item.type]}`}>
               <span>{icons[item.type]}</span>
@@ -94,10 +121,13 @@ export default function NotificationsPage() {
             <div className={styles.info}>
               <div className={styles.itemTitle}>{item.title}</div>
               <div className={styles.content}>{item.content}</div>
-              <div className={styles.time}>{item.time}</div>
+              <div className={styles.time}>{item.createdAt}</div>
             </div>
           </article>
         ))}
+        {filtered.length === 0 ? (
+          <div className={styles.empty}>暂无通知</div>
+        ) : null}
       </section>
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>

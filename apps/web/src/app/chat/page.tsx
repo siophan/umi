@@ -1,42 +1,77 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { fetchChats } from '../../lib/api';
 import styles from './page.module.css';
 
-const chats = [
-  {
-    id: 'chat-1',
-    friendId: '乐事官方旗舰店',
-    friend: '乐事官方旗舰店',
-    avatar: '/legacy/images/products/p001-lays.jpg',
-    unread: 3,
-    lastMsg: '今晚的新口味竞猜马上开始，记得来参与。',
-    time: '09:31',
-  },
-  {
-    id: 'chat-2',
-    friendId: '零食达人小王',
-    friend: '零食达人小王',
-    avatar: '/legacy/images/mascot/mouse-happy.png',
-    unread: 0,
-    lastMsg: '刚刚我押了会，你要不要一起？',
-    time: '昨天',
-  },
-  {
-    id: 'chat-3',
-    friendId: '德芙官方旗舰店',
-    friend: '德芙官方旗舰店',
-    avatar: '/legacy/images/products/p007-dove.jpg',
-    unread: 1,
-    lastMsg: '限定礼盒已经上架，欢迎查看。',
-    time: '周一',
-  },
-];
+function formatChatTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) {
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  const diffDays = Math.floor((new Date(now.toDateString()).getTime() - new Date(date.toDateString()).getTime()) / 86400000);
+  if (diffDays === 1) {
+    return '昨天';
+  }
+
+  if (diffDays > 1 && diffDays < 7) {
+    return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()] || '';
+  }
+
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
 
 export default function ChatListPage() {
   const router = useRouter();
+  const [items, setItems] = useState<Array<{
+    userId: string;
+    name: string;
+    avatar?: string | null;
+    unreadCount: number;
+    lastMessage: string;
+    lastMessageAt: string;
+  }>>([]);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function load() {
+      try {
+        const result = await fetchChats();
+        if (ignore) {
+          return;
+        }
+        setItems(result.items);
+      } catch {
+        if (ignore) {
+          return;
+        }
+        setItems([]);
+      }
+
+      if (!ignore) {
+        setReady(true);
+      }
+    }
+
+    void load();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
@@ -44,38 +79,39 @@ export default function ChatListPage() {
           <i className="fa-solid fa-arrow-left" />
         </button>
         <h1>消息</h1>
-        <button className={styles.plusBtn} type="button">
+        <button className={styles.plusBtn} type="button" aria-label="更多">
           <i className="fa-solid fa-plus" />
         </button>
       </header>
 
       <div className={styles.systemRow}>
-        <button className={styles.systemItem} type="button">
-          <div className={styles.systemIcon}><i className="fa-solid fa-bell" /></div>
+        <Link className={styles.systemItem} href="/notifications">
+          <div className={styles.systemIcon}>🔔</div>
           <span>通知</span>
-        </button>
+        </Link>
         <button className={styles.systemItem} type="button">
-          <div className={`${styles.systemIcon} ${styles.infoIcon}`}><i className="fa-solid fa-bullhorn" /></div>
+          <div className={`${styles.systemIcon} ${styles.infoIcon}`}>📢</div>
           <span>公告</span>
         </button>
         <button className={styles.systemItem} type="button">
-          <div className={`${styles.systemIcon} ${styles.successIcon}`}><i className="fa-solid fa-gift" /></div>
+          <div className={`${styles.systemIcon} ${styles.successIcon}`}>🎁</div>
           <span>活动</span>
         </button>
       </div>
 
       <div className={styles.chatList}>
-        {chats.map((chat) => (
-          <Link className={styles.chatItem} href={`/chat/${encodeURIComponent(chat.friendId)}`} key={chat.id}>
+        {ready && items.length === 0 ? <div className={styles.empty}>暂无聊天消息</div> : null}
+        {items.map((chat) => (
+          <Link className={styles.chatItem} href={`/chat/${encodeURIComponent(chat.userId)}`} key={chat.userId}>
             <div className={styles.avatarWrap}>
-              <img className={styles.avatar} src={chat.avatar} alt={chat.friend} />
-              {chat.unread > 0 ? <div className={styles.badge}>{chat.unread}</div> : null}
+              <img className={styles.avatar} src={chat.avatar || '/legacy/images/mascot/mouse-happy.png'} alt={chat.name} />
+              {chat.unreadCount > 0 ? <div className={styles.badge}>{chat.unreadCount}</div> : null}
             </div>
             <div className={styles.info}>
-              <div className={styles.name}>{chat.friend}</div>
-              <div className={styles.msg}>{chat.lastMsg}</div>
+              <div className={styles.name}>{chat.name}</div>
+              <div className={styles.msg}>{chat.lastMessage}</div>
             </div>
-            <div className={styles.time}>{chat.time}</div>
+            <div className={styles.time}>{formatChatTime(chat.lastMessageAt)}</div>
           </Link>
         ))}
       </div>

@@ -10,6 +10,7 @@ export type UserRole = 'user' | 'admin' | 'shop_owner';
 
 export interface UserSummary {
   id: string;
+  uid: string;
   phone: string;
   name: string;
   role: UserRole;
@@ -33,12 +34,14 @@ export interface UserSummary {
 
 export interface UserPublicProfile {
   id: string;
+  uid: string;
   name: string;
   avatar?: string | null;
   level?: number;
   title?: string | null;
   signature?: string | null;
   gender?: string | null;
+  birthday?: string | null;
   region?: string | null;
   followers?: number;
   following?: number;
@@ -86,6 +89,7 @@ export interface OrderItem {
   productId: string;
   productName: string;
   productImg: string;
+  skuText?: string | null;
   quantity: number;
   unitPrice: number;
   itemAmount: number;
@@ -94,7 +98,9 @@ export interface OrderItem {
 export interface OrderSummary {
   id: string;
   userId: string;
+  orderType?: string | null;
   guessId: string | null;
+  guessTitle?: string | null;
   amount: number;
   status: OrderStatus;
   createdAt: string;
@@ -118,9 +124,13 @@ export interface WarehouseItem {
   userId: string;
   productId: string;
   productName: string;
+  productImg?: string | null;
   quantity: number;
+  price?: number;
   status: WarehouseStatus;
   warehouseType: 'virtual' | 'physical';
   sourceType: string;
+  consignPrice?: number | null;
+  estimateDays?: number | null;
   createdAt: string;
 }

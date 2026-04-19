@@ -162,6 +162,11 @@
 
 .itemWrap {
   position: relative;
+  overflow: hidden;
+}
+
+.itemWrapSwiped .item {
+  transform: translateX(-72px);
 }
 
 .item {
@@ -169,6 +174,7 @@
   gap: 10px;
   padding: 12px 14px;
   align-items: flex-start;
+  transition: transform 0.25s ease;
 }
 
 .itemImg {
@@ -272,17 +278,29 @@
 }
 
 .deleteBtn {
-  width: 100%;
-  padding: 8px 14px 12px;
-  color: #ff3b30;
-  background: transparent;
-  text-align: right;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: #ff3b30;
+  color: #fff;
   font-size: 13px;
   font-weight: 700;
+  transform: translateX(72px);
+  transition: transform 0.25s ease;
+}
+
+.itemWrapSwiped .deleteBtn {
+  transform: translateX(0);
 }
 
 .deleteBtn i {
-  margin-right: 4px;
+  margin-right: 0;
 }
 
 .recommend {
@@ -462,6 +480,11 @@
   color: #fff;
   font-size: 14px;
   font-weight: 800;
+}
+
+.barBtnDisabled {
+  background: #ddd;
+  pointer-events: none;
 }
 
 .toast {

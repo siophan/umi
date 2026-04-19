@@ -5,9 +5,11 @@ build
 .next
 .cache
 coverage
+/tests
 .DS_Store
 *.log
 .env
 .env.local
 .env.*.local
 pnpm-lock.yaml
+.codexignore

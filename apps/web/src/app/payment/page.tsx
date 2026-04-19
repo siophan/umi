@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import styles from './page.module.css';
 
@@ -19,7 +19,7 @@ const addresses = [
   },
 ];
 
-const products = [
+const defaultProducts = [
   { name: '奥利奥原味夹心饼干 67g*3', price: 26.8, qty: 1, orig: 26.8, img: '/legacy/images/products/p002-oreo.jpg' },
   { name: '三只松鼠坚果礼盒 520g', price: 128, qty: 1, orig: 168, img: '/legacy/images/products/p003-squirrels.jpg' },
 ];
@@ -55,6 +55,7 @@ const services = ['假一赔十', '破损包赔', '极速退款', '7 天无理�
 
 export default function PaymentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [addressIndex, setAddressIndex] = useState(0);
   const [couponIndex, setCouponIndex] = useState(0);
   const [method, setMethod] = useState<'wechat' | 'alipay'>('wechat');
@@ -62,8 +63,27 @@ export default function PaymentPage() {
   const [couponOpen, setCouponOpen] = useState(false);
   const [pwdOpen, setPwdOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [invoiceOn, setInvoiceOn] = useState(false);
   const [pwd, setPwd] = useState('');
 
+  const products = useMemo(() => {
+    const pid = searchParams.get('pid');
+    const name = searchParams.get('name');
+    const price = searchParams.get('price');
+    const img = searchParams.get('img');
+    if (!pid || !price) {
+      return defaultProducts;
+    }
+    return [
+      {
+        name: name ? decodeURIComponent(name) : '商品',
+        price: Number(price) || 0,
+        qty: Number(searchParams.get('qty') || 1) || 1,
+        orig: Number(price) || 0,
+        img: img ? decodeURIComponent(img) : '/legacy/images/products/p001-lays.jpg',
+      },
+    ];
+  }, [searchParams]);
   const couponValue = couponIndex >= 0 ? coupons[couponIndex]?.value || 0 : 0;
   const total = useMemo(
     () =>
@@ -72,7 +92,7 @@ export default function PaymentPage() {
           couponValue,
         0,
       ),
-    [couponValue],
+    [couponValue, products],
   );
 
   return (
@@ -127,6 +147,12 @@ export default function PaymentPage() {
         <div className={styles.sectionTitle}>
           <i className="fa-solid fa-bag-shopping" /> 商品信息
         </div>
+        {products.length === 1 ? (
+          <div className={styles.productPoster}>
+            <img alt={products[0].name} src={products[0].img} />
+            <span className={styles.productPosterTag}>🔥 热销商品</span>
+          </div>
+        ) : null}
         {products.map((item, index) => (
           <div className={styles.productRow} key={item.name}>
             {index > 0 ? <div className={styles.divider} /> : null}
@@ -159,21 +185,25 @@ export default function PaymentPage() {
         <div className={styles.sectionTitle}>
           <i className="fa-solid fa-truck-fast" /> 配送信息
         </div>
-        <div className={styles.row}>
-          <span>配送方式</span>
-          <strong>顺丰速运</strong>
+        <div className={styles.detailRow}>
+          <i className="fa-solid fa-truck" />
+          <span className={styles.detailLabel}>配送方式</span>
+          <strong className={styles.detailValue}>顺丰速运</strong>
         </div>
-        <div className={styles.row}>
-          <span>预计送达</span>
-          <strong className={styles.green}>明天 12:00 前</strong>
+        <div className={styles.detailRow}>
+          <i className="fa-regular fa-clock" />
+          <span className={styles.detailLabel}>预计送达</span>
+          <strong className={`${styles.detailValue} ${styles.green}`}>明天 12:00 前</strong>
         </div>
-        <div className={styles.row}>
-          <span>运费</span>
-          <strong className={styles.green}>包邮</strong>
+        <div className={styles.detailRow}>
+          <i className="fa-solid fa-box-open" />
+          <span className={styles.detailLabel}>运费</span>
+          <strong className={`${styles.detailValue} ${styles.green}`}>包邮</strong>
         </div>
-        <div className={styles.row}>
-          <span>运费险</span>
-          <strong>已赠送</strong>
+        <div className={styles.detailRow}>
+          <i className="fa-solid fa-shield-halved" />
+          <span className={styles.detailLabel}>运费险</span>
+          <strong className={styles.detailValue}>已赠送</strong>
         </div>
       </section>
 
@@ -231,10 +261,64 @@ export default function PaymentPage() {
 
       <section className={styles.card}>
         <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-rotate-left" /> 退货权益
+        </div>
+        <div className={styles.detailRow}>
+          <i className={`fa-solid fa-circle-check ${styles.detailGreenIcon}`} />
+          <span className={styles.detailLabel}>7天无理由退货</span>
+          <button className={`${styles.detailValue} ${styles.detailLink}`} type="button">
+            查看详情
+          </button>
+        </div>
+        <div className={styles.detailRow}>
+          <i className={`fa-solid fa-circle-check ${styles.detailGreenIcon}`} />
+          <span className={styles.detailLabel}>破损包赔</span>
+          <strong className={styles.detailValue}>签收48小时内可申请</strong>
+        </div>
+        <div className={styles.detailRow}>
+          <i className={`fa-solid fa-circle-check ${styles.detailGreenIcon}`} />
+          <span className={styles.detailLabel}>运费险</span>
+          <strong className={styles.detailValue}>退货免运费</strong>
+        </div>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-file-invoice" /> 发票信息
+        </div>
+        <button
+          className={styles.detailRowButton}
+          type="button"
+          onClick={() => setInvoiceOn((value) => !value)}
+        >
+          <i className="fa-solid fa-receipt" />
+          <span className={styles.detailLabel}>发票类型</span>
+          <span className={`${styles.detailValue} ${styles.detailLink}`}>
+            {invoiceOn ? '电子发票（个人）' : '不开发票'}
+          </span>
+        </button>
+        {invoiceOn ? (
+          <>
+            <div className={styles.detailRow}>
+              <i className="fa-regular fa-building" />
+              <span className={styles.detailLabel}>发票抬头</span>
+              <strong className={styles.detailValue}>个人</strong>
+            </div>
+            <div className={styles.detailRow}>
+              <i className="fa-regular fa-envelope" />
+              <span className={styles.detailLabel}>接收邮箱</span>
+              <strong className={styles.detailValue}>user@example.com</strong>
+            </div>
+          </>
+        ) : null}
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
           <i className="fa-solid fa-award" /> 服务保障
         </div>
         <div className={styles.services}>
-          {services.map((item) => (
+          {[...services, '顺丰包邮', '安全支付'].map((item) => (
             <div className={styles.serviceTag} key={item}>
               <i className="fa-solid fa-circle-check" />
               {item}
@@ -245,7 +329,18 @@ export default function PaymentPage() {
 
       <section className={styles.card}>
         <div className={styles.sectionTitle}>
-          <i className="fa-solid fa-receipt" /> 费用明细
+          <i className="fa-regular fa-message" /> 订单备注
+        </div>
+        <textarea
+          className={styles.remarkInput}
+          rows={2}
+          placeholder="选填，备注特殊需求（如口味偏好等）"
+        />
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-receipt" /> 价格明细
         </div>
         <div className={styles.priceRow}>
           <span>商品金额</span>
@@ -274,7 +369,7 @@ export default function PaymentPage() {
 
       <footer className={styles.bottom}>
         <div>
-          <div className={styles.bottomLabel}>实付金额</div>
+          <div className={styles.bottomLabel}>合计</div>
           <div className={styles.bottomPrice}>
             <small>¥</small>
             {total.toFixed(2)}
@@ -402,7 +497,7 @@ export default function PaymentPage() {
               </button>
             </div>
             <div className={styles.payAmount}>
-              <div className={styles.payAmountLabel}>支付金额</div>
+              <div className={styles.payAmountLabel}>{method === 'wechat' ? '微信支付' : '支付宝'}</div>
               <div className={styles.payAmountValue}>¥ {total.toFixed(2)}</div>
             </div>
             <div className={styles.pwdDots}>
@@ -452,17 +547,17 @@ export default function PaymentPage() {
             onClick={() => setSuccessOpen(false)}
           />
           <div className={styles.successCard}>
-            <div className={styles.successIcon}>✅</div>
+            <div className={styles.successIcon}>🎉</div>
             <div className={styles.successTitle}>支付成功</div>
             <div className={styles.successDesc}>
-              订单已创建，等待开奖结果。猜中后将自动发货。
+              恭喜！订单已支付完成
             </div>
             <button
               type="button"
               className={styles.payBtn}
-              onClick={() => setSuccessOpen(false)}
+              onClick={() => router.push('/orders')}
             >
-              完成
+              查看订单
             </button>
           </div>
         </div>

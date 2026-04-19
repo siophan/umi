@@ -1,35 +1,136 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+
+import { fetchBrandAuthOverview, submitBrandAuthApplication } from '../../lib/api';
 import styles from './page.module.css';
 
-const mine = [
-  { name: '乐事', meta: '授权有效期至 2027-03-31', status: '✅ 已授权', cls: styles.ok, img: '/legacy/images/products/p001-lays.jpg' },
-  { name: '德芙', meta: '提交于 2026-04-10', status: '⏳ 审核中', cls: styles.pending, img: '/legacy/images/products/p007-dove.jpg' },
-];
+const brandLogoMap: Record<string, string> = {
+  乐事: '/legacy/images/products/p001-lays.jpg',
+  德芙: '/legacy/images/products/p007-dove.jpg',
+  旺旺: '/legacy/images/products/p006-wangwang.jpg',
+  卫龙: '/legacy/images/products/p008-weilong.jpg',
+  良品铺子: '/legacy/images/products/p005-liangpin.jpg',
+  元气森林: '/legacy/images/products/p009-genki.jpg',
+  海底捞: '/legacy/images/products/p011-haidilao.jpg',
+};
 
-const available = [
-  { name: '卫龙', category: '辣味零食', count: 234, deposit: 400, monthSales: '3.5万', img: '/legacy/images/products/p008-weilong.jpg' },
-  { name: '良品铺子', category: '综合零食', count: 178, deposit: 700, monthSales: '2.8万', img: '/legacy/images/products/p005-liangpin.jpg' },
-  { name: '旺旺', category: '膨化食品', count: 156, deposit: 600, monthSales: '2.1万', img: '/legacy/images/products/p016-wangzai.jpg' },
-];
+const brandMetaMap: Record<
+  string,
+  { deposit: number; authCount: number; monthSales: string; products: number; category: string }
+> = {
+  旺旺: { deposit: 600, authCount: 156, monthSales: '2.1万', products: 45, category: '膨化食品' },
+  德芙: { deposit: 800, authCount: 89, monthSales: '1.8万', products: 32, category: '巧克力糖果' },
+  卫龙: { deposit: 400, authCount: 234, monthSales: '3.5万', products: 28, category: '辣味零食' },
+  良品铺子: { deposit: 700, authCount: 178, monthSales: '2.8万', products: 56, category: '综合零食' },
+  元气森林: { deposit: 500, authCount: 67, monthSales: '1.5万', products: 18, category: '健康饮料' },
+  海底捞: { deposit: 900, authCount: 45, monthSales: '0.9万', products: 12, category: '自热食品' },
+  乐事: { deposit: 500, authCount: 126, monthSales: '2.4万', products: 52, category: '膨化食品' },
+};
 
 export default function BrandAuthPage() {
   const router = useRouter();
-  const [current, setCurrent] = useState<(typeof available)[number] | null>(null);
-  const [shopName, setShopName] = useState('');
+  const [overview, setOverview] = useState<Awaited<ReturnType<typeof fetchBrandAuthOverview>>>({
+    shopName: null,
+    mine: [],
+    available: [],
+  });
+  const [currentBrandId, setCurrentBrandId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
-  const [agreed, setAgreed] = useState(true);
+  const [agreed, setAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [toast, setToast] = useState('');
 
-  const closeModal = () => {
-    setCurrent(null);
-    setSuccess(false);
-    setShopName('');
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadData() {
+      try {
+        const data = await fetchBrandAuthOverview();
+        if (!ignore) {
+          setOverview(data);
+        }
+      } catch {
+        if (!ignore) {
+          setOverview({
+            shopName: null,
+            mine: [],
+            available: [],
+          });
+        }
+      }
+    }
+
+    void loadData();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => setToast(''), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const mineRows = useMemo(
+    () => overview.mine,
+    [overview.mine],
+  );
+
+  const availableRows = useMemo(() => overview.available, [overview.available]);
+
+  const currentBrand = useMemo(
+    () => availableRows.find((item) => item.id === currentBrandId) || null,
+    [availableRows, currentBrandId],
+  );
+
+  const closeApply = () => {
+    setCurrentBrandId(null);
     setReason('');
-    setAgreed(true);
+    setAgreed(false);
+    setSubmitting(false);
+    setSuccess(false);
   };
+
+  async function handleSubmit() {
+    if (!currentBrand || !agreed || submitting) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await submitBrandAuthApplication({
+        brandId: currentBrand.id,
+        reason: reason.trim(),
+      });
+
+      setOverview((current) => ({
+        ...current,
+        mine: [
+          ...current.mine,
+          {
+            id: `pending-${currentBrand.id}`,
+            brandId: currentBrand.id,
+            brandName: currentBrand.name,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      }));
+      setSuccess(true);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : '申请失败，请稍后重试');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <main className={styles.page}>
@@ -43,132 +144,223 @@ export default function BrandAuthPage() {
       <section className={styles.infoCard}>
         <h4>🔐 品牌授权说明</h4>
         <div className={styles.steps}>
-          <div className={styles.step}><div className={styles.dot}>1</div><div><strong>选择品牌</strong> → 选择你想授权的零食品牌</div></div>
-          <div className={styles.step}><div className={styles.dot}>2</div><div><strong>提交资料</strong> → 填写店铺信息并缴纳保证金</div></div>
-          <div className={styles.step}><div className={styles.dot}>3</div><div><strong>审核通过</strong> → 1-3个工作日审核，通过后可上架</div></div>
+          <div className={styles.step}>
+            <div className={styles.dot}>1</div>
+            <div className={styles.stepText}>
+              <strong>选择品牌</strong> → 选择你想授权的零食品牌
+            </div>
+          </div>
+          <div className={styles.step}>
+            <div className={styles.dot}>2</div>
+            <div className={styles.stepText}>
+              <strong>提交资料</strong> → 填写店铺信息并缴纳保证金
+            </div>
+          </div>
+          <div className={styles.step}>
+            <div className={styles.dot}>3</div>
+            <div className={styles.stepText}>
+              <strong>审核通过</strong> → 1-3个工作日审核，通过后可上架
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionTitle}>我的授权 <span>{mine.length}个品牌</span></div>
+      <section>
+        <div className={styles.sectionTitle}>
+          我的授权
+          <span>{mineRows.length}个品牌</span>
+        </div>
         <div className={styles.list}>
-          {mine.map((item) => (
-            <article className={styles.row} key={item.name}>
-              <img src={item.img} alt={item.name} />
-              <div className={styles.info}>
-                <div className={styles.name}>{item.name}</div>
-                <div className={styles.meta}>{item.meta}</div>
-              </div>
-              <span className={item.cls}>{item.status}</span>
-            </article>
-          ))}
+          {mineRows.length > 0 ? (
+            mineRows.map((item) => {
+              const meta = brandMetaMap[item.brandName];
+              const sinceText = item.createdAt ? ` · ${new Date(item.createdAt).toLocaleDateString()}起` : '';
+              return (
+                <article className={styles.mineItem} key={item.id}>
+                  <img src={brandLogoMap[item.brandName] || '/legacy/images/products/p001-lays.jpg'} alt={item.brandName} />
+                  <div className={styles.info}>
+                    <div className={styles.name}>{item.brandName}</div>
+                    <div className={styles.meta}>
+                      {(meta?.products || 0)}个商品 · 保证金¥{meta?.deposit || 0}{sinceText}
+                    </div>
+                  </div>
+                  <span
+                    className={`${styles.status} ${
+                      item.status === 'approved'
+                        ? styles.statusActive
+                        : item.status === 'pending'
+                          ? styles.statusPending
+                          : styles.statusRejected
+                    }`}
+                  >
+                    {item.status === 'approved'
+                      ? '✅ 已授权'
+                      : item.status === 'pending'
+                        ? '⏳ 审核中'
+                        : '❌ 已拒绝'}
+                  </span>
+                </article>
+              );
+            })
+          ) : (
+            <div className={styles.emptyText}>暂无授权品牌，请在下方申请</div>
+          )}
         </div>
       </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionTitle}>可申请品牌 <span>选择品牌点击申请</span></div>
+      <section>
+        <div className={styles.sectionTitle}>
+          可申请品牌
+          <span>选择品牌点击申请</span>
+        </div>
         <div className={styles.list}>
-          {available.map((item) => (
-            <article className={styles.availableRow} key={item.name} onClick={() => setCurrent(item)}>
-              <img src={item.img} alt={item.name} />
-              <div className={styles.info}>
-                <div className={styles.name}>{item.name}</div>
-                <div className={styles.meta}>{item.category} · 已有{item.count}家授权商 · 月均{item.monthSales}销量</div>
-              </div>
-              <div className={styles.right}>
-                <div className={styles.deposit}>¥{item.deposit}</div>
-                <button
-                  className={styles.apply}
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setCurrent(item);
-                  }}
-                >
-                  申请授权
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {current ? (
-        <div className={styles.overlay} onClick={(event) => {
-          if (event.target === event.currentTarget) closeModal();
-        }}>
-          <div className={styles.modal}>
-            {success ? (
-              <div className={styles.successState}>
-                <div className={styles.successIcon}>✅</div>
-                <div className={styles.successTitle}>申请已提交</div>
-                <div className={styles.successDesc}>我们会在 1-3 个工作日内完成审核，请留意系统通知。</div>
-                <div className={styles.modalFooter}>
-                  <button className={`${styles.modalBtn} ${styles.confirmBtn}`} type="button" onClick={closeModal}>
-                    我知道了
+          {availableRows.length > 0 ? (
+            availableRows.map((item) => (
+              (() => {
+                const meta = brandMetaMap[item.name];
+                return (
+              <article
+                className={styles.availableItem}
+                key={item.id}
+                onClick={() => setCurrentBrandId(item.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setCurrentBrandId(item.id);
+                  }
+                }}
+              >
+                <img src={item.logo || brandLogoMap[item.name] || '/legacy/images/products/p001-lays.jpg'} alt={item.name} />
+                <div className={styles.info}>
+                  <div className={styles.name}>{item.name}</div>
+                  <div className={styles.meta}>
+                    {(meta?.category || item.category || '未分类')} · 已有{meta?.authCount || 0}家授权商 · 月均{meta?.monthSales || '0'}销量
+                  </div>
+                </div>
+                <div className={styles.right}>
+                  <div className={styles.deposit}>¥{meta?.deposit || 0}</div>
+                  <button
+                    className={styles.applyBtn}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setCurrentBrandId(item.id);
+                    }}
+                    disabled={!overview.shopName || item.status === 'approved' || item.status === 'pending'}
+                  >
+                    {item.status === 'approved' ? '已授权' : item.status === 'pending' ? '审核中' : '申请授权'}
                   </button>
                 </div>
-              </div>
+              </article>
+                );
+              })()
+            ))
+          ) : (
+            <div className={styles.emptyText}>所有品牌均已申请</div>
+          )}
+        </div>
+      </section>
+
+      {currentBrand ? (
+        <div
+          className={styles.overlay}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closeApply();
+            }
+          }}
+        >
+          <div className={styles.modal}>
+            {success ? (
+              <>
+                <div className={styles.successState}>
+                  <div className={styles.successIcon}>🎉</div>
+                  <div className={styles.successTitle}>申请已提交！</div>
+                  <div className={styles.successDesc}>
+                    「{currentBrand.name}」品牌授权申请已提交
+                    <br />
+                    预计 1-3 个工作日内完成审核
+                  </div>
+                  <div className={styles.successRows}>
+                    <div className={styles.modalInfoRow}>
+                      <span className={styles.modalInfoKey}>申请品牌</span>
+                      <span className={styles.modalInfoVal}>{currentBrand.name}</span>
+                    </div>
+                    <div className={styles.modalInfoRow}>
+                      <span className={styles.modalInfoKey}>状态</span>
+                      <span className={`${styles.modalInfoVal} ${styles.pendingText}`}>⏳ 审核中</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.modalFooter}>
+                  <button className={`${styles.modalBtn} ${styles.confirmBtn}`} type="button" onClick={closeApply}>
+                    知道了
+                  </button>
+                </div>
+              </>
             ) : (
               <>
                 <div className={styles.modalHeader}>
                   <div className={styles.modalBrand}>
-                    <img src={current.img} alt={current.name} />
-                    <span className={styles.modalBrandName}>{current.name}</span>
+                    <img src={currentBrand.logo || brandLogoMap[currentBrand.name] || '/legacy/images/products/p001-lays.jpg'} alt={currentBrand.name} />
+                    <span className={styles.modalBrandName}>{currentBrand.name}</span>
                   </div>
                   <div className={styles.modalSubtitle}>品牌授权申请</div>
                 </div>
                 <div className={styles.modalBody}>
                   <div className={styles.modalSection}>
-                    <div className={styles.modalLabel}>品牌信息</div>
+                    <div className={styles.modalLabel}>📋 品牌信息</div>
                     <div className={styles.modalInfoRow}>
                       <span className={styles.modalInfoKey}>品牌类目</span>
-                      <span className={styles.modalInfoVal}>{current.category}</span>
+                      <span className={styles.modalInfoVal}>{brandMetaMap[currentBrand.name]?.category || currentBrand.category || '未分类'}</span>
+                    </div>
+                    <div className={styles.modalInfoRow}>
+                      <span className={styles.modalInfoKey}>可售商品数</span>
+                      <span className={styles.modalInfoVal}>{brandMetaMap[currentBrand.name]?.products || currentBrand.productCount}款</span>
                     </div>
                     <div className={styles.modalInfoRow}>
                       <span className={styles.modalInfoKey}>保证金</span>
-                      <span className={`${styles.modalInfoVal} ${styles.priceVal}`}>¥{current.deposit}</span>
+                      <span className={`${styles.modalInfoVal} ${styles.priceVal}`}>¥{brandMetaMap[currentBrand.name]?.deposit || 0}</span>
+                    </div>
+                    <div className={styles.modalInfoRow}>
+                      <span className={styles.modalInfoKey}>授权店铺</span>
+                      <span className={styles.modalInfoVal}>{brandMetaMap[currentBrand.name]?.authCount || 0}家</span>
                     </div>
                   </div>
-
                   <div className={styles.modalSection}>
-                    <div className={styles.modalLabel}>店铺信息</div>
-                    <input
-                      className={styles.modalInput}
-                      value={shopName}
-                      onChange={(event) => setShopName(event.target.value)}
-                      placeholder="请输入店铺名称"
-                    />
-                  </div>
-
-                  <div className={styles.modalSection}>
-                    <div className={styles.modalLabel}>申请说明</div>
+                    <div className={styles.modalLabel}>📝 申请说明（选填）</div>
                     <textarea
                       className={styles.modalTextarea}
                       value={reason}
+                      placeholder="简要说明你的经营计划和优势..."
                       onChange={(event) => setReason(event.target.value)}
-                      placeholder="请填写主营商品、运营经验等信息"
                     />
                   </div>
-
                   <div className={styles.checkboxRow}>
-                    <input id="brand-agree" type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
+                    <input
+                      id="brand-agree"
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={(event) => setAgreed(event.target.checked)}
+                    />
                     <label htmlFor="brand-agree">
-                      我已阅读并同意品牌授权协议及平台保证金规则
+                      我已阅读并同意《品牌授权协议》
                     </label>
                   </div>
                 </div>
                 <div className={styles.modalFooter}>
-                  <button className={`${styles.modalBtn} ${styles.cancelBtn}`} type="button" onClick={closeModal}>
+                  <button className={`${styles.modalBtn} ${styles.cancelBtn}`} type="button" onClick={closeApply}>
                     取消
                   </button>
                   <button
                     className={`${styles.modalBtn} ${styles.confirmBtn}`}
                     type="button"
-                    disabled={!shopName.trim() || !reason.trim() || !agreed}
-                    onClick={() => setSuccess(true)}
+                    disabled={!agreed || submitting}
+                    onClick={() => void handleSubmit()}
                   >
-                    提交申请
+                    {submitting ? '提交中...' : '提交申请'}
                   </button>
                 </div>
               </>
@@ -176,6 +368,8 @@ export default function BrandAuthPage() {
           </div>
         </div>
       ) : null}
+
+      <div className={`${styles.toast} ${toast ? styles.toastShow : ''}`}>{toast}</div>
     </main>
   );
 }

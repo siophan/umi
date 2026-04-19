@@ -22,8 +22,7 @@
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
 }
 
-.back,
-.headerSpacer {
+.back {
   width: 32px;
   height: 32px;
   display: inline-flex;
@@ -37,7 +36,11 @@
   border-radius: 50%;
   background: transparent;
   color: #333;
-  font-size: 18px;
+  font-size: 15px;
+}
+
+.back:active {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .title {
@@ -58,6 +61,10 @@
 .stat {
   flex: 1;
   text-align: center;
+}
+
+.stat:active {
+  opacity: 0.6;
 }
 
 .stat strong {
@@ -123,6 +130,10 @@
   color: #999;
   font-size: 13px;
   font-weight: 500;
+}
+
+.tab:active {
+  opacity: 0.6;
 }
 
 .active {
@@ -386,6 +397,10 @@
   font-weight: 700;
 }
 
+.btn:active {
+  transform: scale(0.96);
+}
+
 .primary {
   border-color: #ff5722;
   color: #ff5722;
@@ -439,6 +454,9 @@
   color: #fff;
   font-size: 13px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .toast {

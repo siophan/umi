@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import styles from './page.module.css';
 
@@ -9,11 +9,15 @@ const product = {
   brand: '奥利奥官方旗舰店',
   price: 26.8,
   stock: '库存充足 · 24小时内发货',
-  image: '/legacy/images/product/p001.jpg',
+  image: '/legacy/images/products/p002-oreo.jpg',
 };
 
 const predictionOptions = [
-  { name: '阿根廷卫冕', pct: 56, odds: '×1.8', trend: 'up', fill: '56%', votes: '5,632人' },
+  { name: '阿根廷卫冕', pct: 56, odds: '×1.8', trend: 'up', fill: '56%', votes: '5,632人', tone: 'color0' },
+  { name: '法国夺冠', pct: 28, odds: '×3.4', trend: 'down', fill: '28%', votes: '2,814人', tone: 'color1' },
+  { name: '比赛进加时', pct: 8, odds: '×8.6', trend: 'up', fill: '8%', votes: '812人', tone: 'color2' },
+  { name: '点球决胜', pct: 5, odds: '×12.0', trend: 'stable', fill: '5%', votes: '356人', tone: 'color3' },
+  { name: '冷门爆出', pct: 3, odds: '×22.5', trend: 'up', fill: '3%', votes: '121人', tone: 'color4' },
 ];
 
 const coupons = [
@@ -42,8 +46,14 @@ const friends = [
 
 export default function GuessOrderPage() {
   const router = useRouter();
-  const [selectedCoupon, setSelectedCoupon] = useState(1);
-  const [selectedFriend, setSelectedFriend] = useState(0);
+  const searchParams = useSearchParams();
+  const choice = Number(searchParams.get('choice') || 0);
+  const qty = Math.max(1, Number(searchParams.get('qty') || 1));
+  const [selectedPrediction, setSelectedPrediction] = useState(
+    Number.isNaN(choice) ? 0 : Math.min(Math.max(choice, 0), predictionOptions.length - 1),
+  );
+  const [selectedCoupon, setSelectedCoupon] = useState(-1);
+  const [selectedFriend, setSelectedFriend] = useState(-1);
   const [showPk, setShowPk] = useState(false);
   const [showResult, setShowResult] = useState(false);
 
@@ -92,11 +102,12 @@ export default function GuessOrderPage() {
         </h3>
         <p>赢方瓜分输方下注的商品 · 回报率实时变化</p>
         <div className={styles.options}>
-          {predictionOptions.map((item) => (
+          {predictionOptions.map((item, index) => (
             <button
               key={item.name}
               type="button"
-              className={`${styles.option} ${styles.optionSelected} ${styles.color0}`}
+              className={`${styles.option} ${selectedPrediction === index ? styles.optionSelected : ''} ${styles[item.tone]}`}
+              onClick={() => setSelectedPrediction(index)}
             >
               <div className={styles.optionFill} style={{ width: item.fill }} />
               <div className={styles.optionRadio} />
@@ -109,41 +120,17 @@ export default function GuessOrderPage() {
                   </span>
                 </div>
                 <div className={styles.qtyBadge}>
-                  <i className="fa-solid fa-box" /> 竞猜1件
+                  <i className="fa-solid fa-box" /> 竞猜{qty}件
                 </div>
               </div>
               <div className={styles.optionRight}>
                 <div className={styles.optionOdds}>{item.odds}</div>
                 <div
-                  className={`${styles.trend} ${styles[item.trend === 'up' ? 'up' : 'down']}`}
+                  className={`${styles.trend} ${styles[item.trend === 'stable' ? 'stable' : item.trend === 'up' ? 'up' : 'down']}`}
                 >
-                  {item.trend === 'up' ? '↑上升' : '↓下降'}
+                  {item.trend === 'stable' ? '→稳定' : item.trend === 'up' ? '↑上升' : '↓下降'}
                 </div>
               </div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.pkSection}>
-        <h3>
-          <i className="fa-solid fa-user-group" /> 邀请好友 PK <span>(可选)</span>
-        </h3>
-        <p>输的请客，赢的提货！选择对手开始 PK</p>
-        <div className={styles.friends}>
-          {friends.map((friend, index) => (
-            <button
-              key={friend.name}
-              type="button"
-              className={`${styles.friend} ${selectedFriend === index ? styles.friendSelected : ''}`}
-              onClick={() => {
-                setSelectedFriend(index);
-                setShowPk(true);
-              }}
-            >
-              <img alt={friend.name} src={friend.avatar} />
-              {friend.online ? <span className={styles.onlineDot} /> : null}
-              <span>{friend.name}</span>
             </button>
           ))}
         </div>
@@ -185,6 +172,30 @@ export default function GuessOrderPage() {
           >
             不使用优惠券
           </button>
+        </div>
+      </section>
+
+      <section className={styles.pkSection}>
+        <h3>
+          <i className="fa-solid fa-user-group" /> 邀请好友 PK <span>(可选)</span>
+        </h3>
+        <p>输的请客，赢的提货！选择对手开始 PK</p>
+        <div className={styles.friends}>
+          {friends.map((friend, index) => (
+            <button
+              key={friend.name}
+              type="button"
+              className={`${styles.friend} ${selectedFriend === index ? styles.friendSelected : ''}`}
+              onClick={() => {
+                setSelectedFriend(index);
+                setShowPk(true);
+              }}
+            >
+              <img alt={friend.name} src={friend.avatar} />
+              {friend.online ? <span className={styles.onlineDot} /> : null}
+              <span>{friend.name}</span>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -293,10 +304,10 @@ export default function GuessOrderPage() {
             </div>
             <button
               type="button"
-              className={styles.modalBtn}
-              onClick={() => setShowResult(false)}
-            >
-              我知道了
+            className={styles.modalBtn}
+            onClick={() => setShowResult(false)}
+          >
+              继续竞猜
             </button>
           </div>
         </div>

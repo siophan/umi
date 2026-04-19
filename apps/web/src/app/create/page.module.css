@@ -798,6 +798,73 @@
   border-top: 1px solid #f0f0f0;
 }
 
+.publishOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.publishCard {
+  width: 280px;
+  padding: 32px 24px;
+  border-radius: 20px;
+  background: #fff;
+  text-align: center;
+}
+
+.publishIcon {
+  margin-bottom: 12px;
+  font-size: 48px;
+}
+
+.publishTitle {
+  margin-bottom: 6px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.publishDesc {
+  margin-bottom: 16px;
+  color: #999;
+  font-size: 12px;
+}
+
+.publishBar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #f0f0f0;
+}
+
+.publishFill {
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ff5722, #ff9800);
+  transition: width 0.3s ease;
+}
+
+.publishSteps {
+  margin-top: 12px;
+  text-align: left;
+}
+
+.publishStep {
+  margin-bottom: 6px;
+  color: #bbb;
+  font-size: 12px;
+}
+
+.publishStepActive {
+  color: #333;
+  font-weight: 600;
+}
+
 .toast {
   position: fixed;
   left: 50%;

@@ -38,7 +38,13 @@
   border: 0;
   border-radius: 50%;
   font-size: 14px;
+  cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.back:active,
+.navBtn:active {
+  transform: scale(0.9);
 }
 
 .navTransparent .back,
@@ -144,6 +150,7 @@
   color: #fff;
   font-size: 19px;
   font-weight: 800;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
 }
 
 .heroVerified {
@@ -152,10 +159,21 @@
   gap: 3px;
   padding: 2px 8px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.18);
   color: #fff;
   font-size: 9px;
   font-weight: 700;
+}
+
+.gradeGold {
+  background: linear-gradient(135deg, #4a6cf7, #3b52b5);
+}
+
+.gradeCrown {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+}
+
+.gradeSupreme {
+  background: linear-gradient(135deg, #c5922e, #8b6914);
 }
 
 .heroDesc {
@@ -178,6 +196,13 @@
   color: #fff;
   font-size: 13px;
   font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.followBtn:active {
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .followed {
@@ -303,6 +328,10 @@
   font-weight: 800;
 }
 
+.scoreItemValHigh {
+  color: var(--c-green);
+}
+
 .scoreItemLbl {
   margin-top: 2px;
   color: #999;
@@ -343,6 +372,12 @@
   border: 0.5px solid rgba(255, 36, 66, 0.08);
   border-radius: 12px;
   background: linear-gradient(135deg, #fff5f5, #fff0f0);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.coupon:active {
+  transform: scale(0.97);
 }
 
 .couponAmt {
@@ -379,6 +414,12 @@
   font-weight: 700;
 }
 
+.couponBtnClaimed {
+  background: #ff2442;
+  color: #fff;
+  border-color: #ff2442;
+}
+
 .activityBanner {
   margin-bottom: 2px;
 }
@@ -393,6 +434,14 @@
   border: 0;
   border-radius: 14px;
   text-align: left;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+
+.activityCard:active {
+  transform: scale(0.98);
 }
 
 .activityIcon {
@@ -424,8 +473,32 @@
   background: linear-gradient(135deg, #fff3e0, #ffe0b2);
 }
 
+.activityTitleOrange {
+  color: #e65100;
+}
+
+.activityDescOrange {
+  color: #bf360c;
+}
+
+.activityArrowOrange {
+  color: #e65100;
+}
+
 .activityPurple {
   background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+}
+
+.activityTitlePurple {
+  color: #6a1b9a;
+}
+
+.activityDescPurple {
+  color: #7b1fa2;
+}
+
+.activityArrowPurple {
+  color: #6a1b9a;
 }
 
 .tabs {
@@ -473,25 +546,29 @@
 
 .filterBar {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 0;
   padding: 8px 14px;
   background: #fff;
   border-bottom: 0.5px solid #f0f0f0;
 }
 
 .filter {
-  padding: 4px 12px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 0;
   border: 0;
-  border-radius: 14px;
-  background: #f5f5f5;
-  color: #666;
+  background: transparent;
+  color: #555;
   font-size: 12px;
 }
 
 .filterOn {
-  background: #fff0e8;
-  color: #ff5722;
-  font-weight: 600;
+  color: #ff2442;
+  font-weight: 700;
 }
 
 .panel {
@@ -513,6 +590,12 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
   overflow: hidden;
   text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.productCard:active {
+  transform: scale(0.98);
 }
 
 .productImg {
@@ -525,6 +608,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.productCard:active .productImg img {
+  transform: scale(1.02);
 }
 
 .productBadge {
@@ -546,6 +634,10 @@
   background: linear-gradient(135deg, #7c3aed, #5b21b6);
 }
 
+.badgeGuess {
+  background: linear-gradient(135deg, #ff6b00, #e85500);
+}
+
 .badgeBrand {
   background: linear-gradient(135deg, #c5922e, #8b6914);
 }
@@ -556,6 +648,7 @@
   right: 8px;
   width: 28px;
   height: 28px;
+  border: 0;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.7);
   display: flex;
@@ -563,6 +656,12 @@
   justify-content: center;
   color: #ccc;
   font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.favLiked {
+  color: #ff2442;
 }
 
 .productBody {
@@ -633,6 +732,12 @@
   background: #fff;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
   text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.guessCard:active {
+  transform: scale(0.98);
 }
 
 .guessTop {
@@ -681,6 +786,12 @@
   border-radius: 10px;
   background: #f9f9fa;
   text-align: center;
+  transition: all 0.2s ease;
+}
+
+.guessOpt:active {
+  border-color: #ff2442;
+  background: #fff5f5;
 }
 
 .guessOptName {
@@ -706,6 +817,50 @@
   color: #ff2442;
   font-size: 13px;
   font-weight: 900;
+}
+
+.guessFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-top: 0.5px solid #f5f5f5;
+}
+
+.guessPeople {
+  color: #999;
+  font-size: 10px;
+}
+
+.guessPeople i {
+  margin-right: 3px;
+  font-size: 10px;
+}
+
+.guessBtn {
+  padding: 5px 18px;
+  border-radius: 14px;
+  background: #ff2442;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  padding: 60px 20px;
+  text-align: center;
+  color: #999;
+}
+
+.emptyIcon {
+  margin-bottom: 10px;
+  font-size: 40px;
+  opacity: 0.25;
+}
+
+.emptyText {
+  font-size: 13px;
 }
 
 .bottomBar {
@@ -734,9 +889,13 @@
   background: transparent;
   color: #999;
   font-size: 9px;
+  cursor: pointer;
 }
 
 .bottomIcon span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 19px;
 }
 
@@ -754,11 +913,22 @@
 .chatBtn,
 .primaryBtn {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   height: 42px;
   border: 0;
   border-radius: 21px;
   font-size: 13px;
   font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chatBtn:active,
+.primaryBtn:active {
+  transform: scale(0.97);
 }
 
 .chatBtn {

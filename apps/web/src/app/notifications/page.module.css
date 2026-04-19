@@ -6,14 +6,13 @@
 .header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   height: 48px;
   padding: 0 14px;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(20px);
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .backBtn,
@@ -36,41 +35,52 @@
 
 .tabs {
   display: flex;
-  gap: 6px;
-  padding: 10px 12px 0;
-  overflow-x: auto;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.tab {
-  flex: 0 0 auto;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 17px;
-  background: #fff;
-  color: #999;
-  font-size: 13px;
-  font-weight: 600;
+.tab,
+.tabActive {
+  position: relative;
+  flex: 1;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: #bbb;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .tabActive {
-  background: #1a1a1a;
-  color: #fff;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.tabActive::after {
+  content: '';
+  position: absolute;
+  inset: auto auto 0 50%;
+  width: 24px;
+  height: 3px;
+  border-radius: 1.5px;
+  background: linear-gradient(90deg, #ff5722, #ff9800);
+  transform: translateX(-50%);
 }
 
 .list {
-  padding-top: 8px;
+  background: #fff;
 }
 
 .item {
   display: flex;
   gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid #f0f0f2;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
 }
 
 .unread {
-  background: #fff8fa;
+  background: #fff7f2;
 }
 
 .icon {
@@ -88,15 +98,15 @@
 }
 
 .guess {
-  background: #ffefe9;
+  background: #fff0e9;
 }
 
 .social {
-  background: #e8f8ff;
+  background: #eaf7ff;
 }
 
 .system {
-  background: #fff3d9;
+  background: #fff6df;
 }
 
 .order {
@@ -120,9 +130,16 @@
 }
 
 .time {
-  margin-top: 6px;
-  color: #bdbdbd;
+  margin-top: 4px;
+  color: #c6c6c6;
   font-size: 11px;
+}
+
+.empty {
+  padding: 40px 16px;
+  color: #999;
+  font-size: 13px;
+  text-align: center;
 }
 
 .toast {

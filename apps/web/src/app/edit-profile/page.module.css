@@ -8,7 +8,7 @@
 .header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 100;
   height: 48px;
   padding: 0 14px;
   display: flex;
@@ -30,6 +30,7 @@
 
 .headerSave:disabled {
   opacity: 0.72;
+  cursor: not-allowed;
 }
 
 .headerBack {
@@ -37,6 +38,10 @@
   height: 32px;
   border-radius: 50%;
   color: #333;
+}
+
+.headerBack:active {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .headerBack i,
@@ -59,15 +64,29 @@
   font-weight: 700;
 }
 
+.headerSave:active {
+  opacity: 0.8;
+}
+
 .cover {
   position: relative;
   height: 140px;
   overflow: hidden;
 }
 
+.coverButton {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .coverPreview {
   width: 100%;
   height: 100%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
 }
 
 .coverOverlay {
@@ -85,7 +104,8 @@
   transition: opacity 0.2s ease;
 }
 
-.cover:hover .coverOverlay {
+.coverButton:hover .coverOverlay,
+.coverButton:active .coverOverlay {
   opacity: 1;
 }
 
@@ -94,7 +114,7 @@
   display: flex;
   justify-content: center;
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 .avatarWrap {
@@ -102,6 +122,7 @@
   background: transparent;
   position: relative;
   cursor: pointer;
+  padding: 0;
 }
 
 .avatarPreview {
@@ -159,6 +180,11 @@
   border-radius: 12px;
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: #fff;
+  cursor: pointer;
+}
+
+.levelCard:active {
+  opacity: 0.9;
 }
 
 .levelTop {
@@ -174,6 +200,10 @@
   gap: 8px;
 }
 
+.levelLeft > div {
+  line-height: 1;
+}
+
 .levelIcon {
   font-size: 20px;
 }
@@ -187,18 +217,12 @@
   margin-top: 2px;
   font-size: 11px;
   opacity: 0.6;
+  white-space: nowrap;
 }
 
 .levelRight {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   font-size: 11px;
   opacity: 0.5;
-}
-
-.levelRight i {
-  font-size: 12px;
 }
 
 .levelBar {
@@ -219,6 +243,8 @@
   text-align: right;
   font-size: 10px;
   opacity: 0.5;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .card {
@@ -232,14 +258,25 @@
   align-items: center;
   padding: 14px 16px;
   border-bottom: 0.5px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.rowTop {
+  align-items: flex-start;
+}
+
+.rowTop .label {
+  margin-top: 2px;
 }
 
 .row:last-child {
   border-bottom: none;
 }
 
-.rowTall {
-  align-items: flex-start;
+.row:active,
+.navRow:active {
+  background: #fafafa;
 }
 
 .label {
@@ -259,37 +296,55 @@
 }
 
 .row input,
-.rowTall textarea {
+.row textarea {
   flex: 1;
   border: 0;
   outline: none;
   background: transparent;
-  font: inherit;
+  font-family: inherit;
+  font-size: 14px;
   color: #1a1a1a;
   text-align: right;
 }
 
 .row input::placeholder,
-.rowTall textarea::placeholder {
+.row textarea::placeholder {
   color: #ccc;
 }
 
-.rowTall textarea {
+.row textarea {
   min-height: 60px;
   resize: none;
   line-height: 1.6;
+  padding-top: 0;
+  text-align: left;
 }
 
 .value {
   flex: 1;
   text-align: right;
-  color: #1a1a1a;
+  color: #999;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 12px;
+}
+
+.valueActive {
+  color: #1a1a1a;
 }
 
 .lock {
   margin-left: 8px;
   color: #ddd;
+}
+
+.arrow {
+  margin-left: 8px;
+  color: #ccc;
+  font-size: 12px;
+  flex: 0 0 auto;
 }
 
 .genderGroup {
@@ -307,6 +362,9 @@
   color: #999;
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+  gap: 4px;
+  transition: all 0.2s;
 }
 
 .genderActive {
@@ -315,41 +373,307 @@
   background: rgba(255, 87, 34, 0.05);
 }
 
-.avatarSectionBottom {
-  padding: 16px 16px 0;
+.navRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 0.5px solid #f5f5f5;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s;
 }
 
-.avatarPickerTitle {
-  margin-bottom: 10px;
-  color: #aaa;
+.navRow:last-child {
+  border-bottom: none;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  animation: sheetUp 0.25s ease;
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheetTitle {
+  padding: 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.sheetItem,
+.sheetCancel {
+  width: 100%;
+  padding: 14px 20px;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+
+.sheetItem:active,
+.sheetCancel:active {
+  background: #f5f5f5;
+}
+
+.sheetItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sheetItemPrimary {
+  color: #ff5722;
+  font-weight: 700;
+}
+
+.sheetCancel {
+  color: #999;
+  border-top: 6px solid #f5f5f5;
+}
+
+.birthSelectors {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.birthSelectors select {
+  flex: 1;
+  height: 40px;
+  padding: 0 8px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  outline: none;
+}
+
+.cityGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.cityItem {
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 20px;
+  background: #f5f5f5;
+  color: #555;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.levelOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.levelSheet {
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 16px 16px 0 0;
+  background: #fff;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.levelSheetHeader {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.levelSheetIcon {
+  font-size: 40px;
+  margin-bottom: 6px;
+}
+
+.levelSheetTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.levelSheetSub {
+  margin-top: 4px;
+  color: #999;
   font-size: 12px;
+}
+
+.levelBlockTitle {
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.levelRoute {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.levelRouteItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8f8fb;
+  opacity: 0.62;
+}
+
+.levelRouteDone {
+  opacity: 1;
+}
+
+.levelRouteCurrent {
+  border: 1.5px solid rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+  opacity: 1;
+}
+
+.levelRouteIcon {
+  font-size: 18px;
+}
+
+.levelRouteBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.levelRouteName {
+  font-size: 12px;
+  font-weight: 700;
+  color: #999;
+}
+
+.levelRouteXp {
+  margin-top: 1px;
+  color: #bbb;
+  font-size: 10px;
+}
+
+.levelRouteState {
+  color: #ddd;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.levelRouteDone .levelRouteName,
+.levelRouteDone .levelRouteState {
+  color: #4caf50;
+}
+
+.levelRouteCurrent .levelRouteName {
+  color: #5b21b6;
+}
+
+.levelRouteCurrent .levelRouteState {
+  color: #ff5722;
+}
+
+.perkCard {
+  margin-bottom: 20px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f9f9f9;
+}
+
+.perkItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  color: #555;
+  font-size: 13px;
+}
+
+.perkItem i {
+  color: #4caf50;
+  font-size: 12px;
+}
+
+.ruleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.ruleItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ruleIcon {
+  font-size: 18px;
+}
+
+.ruleName {
+  color: #333;
+  font-size: 11px;
   font-weight: 600;
 }
 
-.avatarPicker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.ruleXp {
+  color: #ff5722;
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.avatarPick {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 2px solid #ececee;
-  overflow: hidden;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-}
-
-.avatarPick img {
+.levelCloseBtn {
   width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.avatarPickActive {
-  border-color: #ff5722;
-  transform: scale(1.08);
+  height: 40px;
+  border: 0;
+  border-radius: 20px;
+  background: #f0f0f0;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .toast {

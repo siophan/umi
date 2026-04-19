@@ -2,399 +2,469 @@
 
 ## 概览
 
-当前数据库已经完成第一阶段结构改造，整体特征如下：
+当前文档对应 `joy-dev` 在 2026-04-19 的最新结构。
 
-- 表名统一为小写下划线
-- 字段名统一为小写下划线
-- 已移除外键约束
-- 已补齐表注释和字段注释
-- 核心业务表已经完成第一轮拆表
+## TL;DR
 
-当前数据库更接近“重构后的新结构”，而不是旧版原型结构。
+- 当前主工作区是 `umi/`
+- 数据库枚举字段已经统一成数字编码
+- 主业务金额默认单位是“分”
+- 当前数据库事实来源只看 `umi/docs/`
 
-## 当前设计原则
+阅读这份文档时，先记住 4 个全局原则：
 
-### 1. 命名统一
+1. 主键和主链路关联 ID 已去掉字符串方案，核心主键以 `BIGINT` 为主。
+2. 主业务金额统一按“分”存储，除非字段明确是比例或概率。
+3. 高频枚举字段统一使用数字编码，编码表见 [status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)。
+4. 数据库不依赖外键，关系由应用层维护，但关键唯一约束和索引已经补齐。
 
-- 表名：`snake_case`
-- 字段名：`snake_case`
-- 索引名：`snake_case`
+这一版数据库已经完成这些收口：
 
-### 2. 不依赖数据库外键
+- 删除快照字段、冗余字段、缓存统计字段
+- 删除重复或空壳表：`guess_history`、`ranking`、`user_shop_profile`、`user_stats`、`brand_auth`
+- 增加业务编号：`order_sn`、`refund_no`、`auth_no`、`fulfillment_sn`、`coupon_no`、`apply_no`
+- 补齐履约、优惠券模板、分类、仓库冻结等结构
+- 恢复排行榜结果承载表：`leaderboard_entry`
+- 补齐寄售成交事实表：`consign_trade`
+- 补齐发券动作层：`coupon_grant_batch`
 
-当前库中已移除外键约束，表之间关系由应用层维护。
+## 全局约定
 
-### 3. 关键业务拆分
+### ID
 
-已经完成以下方向的拆分：
+- 主表主键：`BIGINT`
+- 轻量关系表：`INT` 或 `BIGINT`
+- 关联字段：与被引用主键保持整型一致
 
-- 竞猜主表与竞猜选项拆分
-- 订单主表与订单项拆分
-- 订单状态日志独立
-- 退款记录独立
-- 余额流水独立
-- 仓库操作日志独立
+### 金额
+
+- 金额字段默认单位为“分”
+- 典型字段：`price`、`amount`、`discount_amount`、`refund_amount`、`shipping_fee`
+- 以下不是金额字段：
+  - `discount_rate`
+  - `odds`
+  - `confidence`
+
+### 分类
+
+- 分类统一通过 `category.id` 关联，不再继续使用自由文本 `category`
+- `category` 已按 `biz_type` 区分不同业务域，不再共用一套无边界分类池
+- 当前已经接入 `category_id` 的主表包括：
+  - `brand`
+  - `brand_apply`
+  - `brand_product`
+  - `guess`
+  - `shop`
+  - `shop_apply`
+- 分类名称、图标、排序、状态统一从 `category` 表维护
+- `category.parent_id / level / path` 用于表达分类树
+
+### 编码
+
+- `status/type/scope/interaction_type/...` 默认使用 `TINYINT UNSIGNED`
+- `source_type/sub_type` 默认使用 `SMALLINT UNSIGNED`
+- 具体映射以 [status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md) 为准
+
+### JSON
+
+以下字段使用原生 `JSON`：
+
+- `brand_product.images`
+- `guess.tags`
+- `guess_oracle_evidence.query_payload`
+- `guess_oracle_evidence.response_payload`
+- `post.images`
+- `product.images`
+- `product.tags`
+- `user.achievements`
+- `warehouse_item_log.meta_json`
 
 ## 表清单
 
-当前库主要表如下：
-
 ### 用户与关系
 
-| 表名 | 表注释 |
+| 表名 | 用途 |
 | --- | --- |
 | `user` | 用户主表 |
+| `user_profile` | 用户资料表 |
 | `auth_session` | 登录会话表 |
 | `sms_verification_code` | 短信验证码记录表 |
 | `user_follow` | 用户关注关系表 |
 | `friendship` | 好友关系及申请表 |
 | `address` | 用户收货地址表 |
+| `admin_user` | 后台管理员账号表 |
+| `admin_role` | 后台角色表 |
+| `admin_permission` | 后台权限表 |
+| `admin_user_role` | 管理员角色关联表 |
+| `admin_role_permission` | 角色权限关联表 |
 
-### 商品与店铺
+### 商品、品牌、店铺
 
-| 表名 | 表注释 |
+| 表名 | 用途 |
 | --- | --- |
-| `product` | 商品主表 |
 | `brand` | 品牌主表 |
 | `brand_apply` | 品牌入驻申请表 |
-| `brand_auth` | 用户品牌授权记录表 |
+| `brand_product` | 平台品牌商品库 |
+| `category` | 分类表 |
+| `product` | 商品主表 |
 | `shop` | 店铺主表 |
 | `shop_apply` | 开店申请表 |
+| `shop_brand_auth` | 店铺品牌授权表 |
 | `shop_brand_auth_apply` | 店铺品牌授权申请表 |
 | `banner` | 运营 Banner 配置表 |
 
 ### 竞猜
 
-| 表名 | 表注释 |
+| 表名 | 用途 |
 | --- | --- |
 | `guess` | 竞猜主表 |
 | `guess_option` | 竞猜选项表 |
 | `guess_bet` | 竞猜下注记录表 |
-| `guess_comment` | 竞猜评论表 |
-| `guess_history` | 竞猜历史记录表 |
 | `guess_product` | 竞猜与商品关联表 |
 | `guess_review_log` | 竞猜审核日志表 |
 | `guess_oracle_evidence` | 竞猜 Oracle 证据表 |
 | `guess_invitation` | 竞猜邀请关系表 |
 | `friend_guess_confirm` | 好友竞猜结果确认表 |
 | `pk_record` | 好友 PK 对战记录表 |
+| `comment_item` | 通用评论表 |
 
-### 订单与交易
+### 订单、履约、资金
 
-| 表名 | 表注释 |
+| 表名 | 用途 |
 | --- | --- |
 | `order` | 订单主表 |
 | `order_item` | 订单项表 |
 | `order_status_log` | 订单状态流转日志表 |
 | `order_refund` | 订单退款表 |
+| `fulfillment_order` | 履约单表 |
+| `fulfillment_order_item` | 履约单明细表 |
 | `coin_ledger` | 余额流水表 |
+| `leaderboard_entry` | 排行榜结果表 |
+| `consign_trade` | 寄售成交表 |
 
-### 权益与优惠
+### 优惠与权益
 
-| 表名 | 表注释 |
+| 表名 | 用途 |
 | --- | --- |
+| `coupon_template` | 优惠券模板表 |
+| `coupon_grant_batch` | 发券批次表 |
 | `coupon` | 用户优惠券表 |
 | `equity_account` | 权益金账户表 |
 | `equity_log` | 权益金流水表 |
 
 ### 仓库
 
-| 表名 | 表注释 |
+| 表名 | 用途 |
 | --- | --- |
 | `virtual_warehouse` | 虚拟仓库表 |
 | `physical_warehouse` | 实体仓库表 |
 | `warehouse_item_log` | 仓库物品操作日志表 |
 
-### 社交与内容
+### 内容与社交
 
-| 表名 | 表注释 |
+| 表名 | 用途 |
 | --- | --- |
 | `post` | 社区动态主表 |
-| `post_comment` | 动态评论表 |
-| `post_like` | 动态点赞表 |
-| `post_bookmark` | 动态收藏表 |
+| `post_interaction` | 帖子互动关系表 |
+| `report_item` | 举报记录表 |
 | `notification` | 用户通知表 |
+| `chat_conversation` | 用户私聊会话表 |
 | `chat_message` | 用户私聊消息表 |
 | `live` | 直播场次表 |
-| `ranking` | 排行榜快照表 |
 | `ai_chat_message` | AI 对话消息记录表 |
+| `achievement_config` | 成就配置表 |
+| `checkin_reward_config` | 签到奖励配置表 |
 | `checkin` | 用户签到记录表 |
 | `cart_item` | 购物车明细表 |
 
-## 核心表说明
+## 主链路关系
 
-## 1. 用户体系
+### 用户主链路
+
+- `user` 作为账户主表
+- `user_profile` 作为资料扩展
+- `auth_session` 作为登录态
+- `address` 作为收货地址
+- `user_follow`、`friendship` 作为用户关系
+
+### 后台权限主链路
+
+- `admin_user` 是后台独立账号表
+- `admin_role` 是后台角色定义
+- `admin_permission` 是后台权限定义
+- `admin_user_role` 负责管理员与角色多对多关系
+- `admin_role_permission` 负责角色与权限多对多关系
+
+说明：
+
+- 新系统后台不再把 `user.role='admin'` 当作长期权限模型
+- 用户端账号与后台管理员账号分离，避免普通用户体系和后台权限体系耦合
+
+### 商品和店铺主链路
+
+- `brand` 维护品牌
+- `brand_product` 维护平台标准商品
+- `shop` 维护店铺
+- `product` 维护店铺在售商品
+- `shop_brand_auth` 表示店铺对品牌的授权关系
+
+### 竞猜主链路
+
+- `guess` 是竞猜主表
+- `guess_option` 是选项表
+- `guess_product` 负责竞猜与商品关系
+- `guess_bet` 负责用户下注
+- `guess_review_log`、`guess_oracle_evidence` 分别负责审核和证据
+- `guess_invitation`、`friend_guess_confirm`、`pk_record` 负责好友对战链路
+
+### 订单主链路
+
+- `order` 是订单主表
+- `order_item` 是订单明细
+- `order_status_log` 记录状态流转
+- `order_refund` 记录退款
+- `fulfillment_order` / `fulfillment_order_item` 负责实物履约
+
+### 优惠和仓库主链路
+
+- `coupon_template` 定义模板
+- `coupon_grant_batch` 记录一次发券动作
+- `coupon` 是用户持有券实例
+- `virtual_warehouse` / `physical_warehouse` 负责用户仓库资产
+- `consign_trade` 承接寄售上架、成交、取消这条交易事实链
+- `warehouse_item_log` 记录仓库物品操作
+
+## 核心表速查
 
 ### `user`
 
 用途：
 
-- 存储用户主账户信息
-- 存储基础画像和部分统计数据
+- 账户主表，承载认证、等级、风险、优米号和邀请码
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
 | `id` | 用户主键 |
-| `phone` | 手机号，唯一 |
-| `name` | 用户昵称 |
-| `coins` | 当前余额快照 |
-| `role` | 用户角色 |
-| `shop_verified` | 是否通过店铺认证 |
-| `is_shop_owner` | 是否店主 |
-| `win_rate` | 竞猜胜率 |
-| `total_guess` | 累计竞猜次数 |
-| `wins` | 累计获胜次数 |
-| `risk_level` | 风险等级 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `uid_code` | 优米号，8 位随机大小写字母，唯一 |
+| `phone_number` | 手机号，唯一 |
+| `password` | 密码哈希 |
+| `banned` | 是否封禁 |
+| `level` | 等级 |
+| `title` | 头衔 |
+| `achievements` | 成就 JSON |
+| `risk_level` | 风险等级编码 |
+| `invite_code` | 邀请码 |
+| `invited_by` | 邀请人 |
 
-说明：
+补充约定：
 
-- 当前 `user` 仍然保留余额快照字段 `coins`
-- 余额流水已拆到 `coin_ledger`
+- `uid_code` 用于前端展示“优米号”，不是主键，也不参与业务关联
+- `uid_code` 规则为 8 位随机大小写字母，例如 `aZkLmNqP`
+- `uid_code` 必须全局唯一，靠 `uk_user_uid_code` 约束保证
+- `uid_code` 生成后应保持稳定，不随昵称、手机号变化而变化
+- `invite_code` 只用于邀请注册链路，不用于个人主页展示
 
-### `sms_verification_code`
-
-用途：
-
-- 存储短信验证码发送与校验记录
-- 支撑注册、验证码登录、找回密码等手机号验证场景
-- 支撑验证码过期、使用状态、频控和审计
-
-建议字段：
-
-| 字段 | 说明 |
-| --- | --- |
-| `id` | 主键 |
-| `phone` | 手机号 |
-| `biz_type` | 业务类型，如 `register` / `login` / `reset_password` |
-| `code` | 验证码 |
-| `status` | 状态，如 `pending` / `used` / `expired` / `invalidated` |
-| `expires_at` | 过期时间 |
-| `used_at` | 使用时间 |
-| `request_ip` | 请求 IP |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-说明：
-
-- 当前阶段为了尽快联调，可以直接存验证码明文
-- 后续进入正式环境时，建议改成只存验证码哈希，避免明文落库
-- 应至少保证同手机号同业务类型下，查询“最近一条未使用且未过期验证码”足够快
-- 校验成功后应更新 `status` 为 `used` 并记录 `used_at`
-
-### `auth_session`
+### `admin_user`
 
 用途：
 
-- 存储用户登录态
-- 支撑 `Bearer token` 鉴权
-- 保证服务重启后会话不丢失
+- 新系统后台管理员独立账号表
 
-建议字段：
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 主键 |
-| `token` | 登录态 token |
+| `id` | 管理员主键 |
+| `username` | 登录用户名，唯一 |
+| `password_hash` | 密码哈希 |
+| `display_name` | 展示名称 |
+| `phone_number` | 联系手机号，唯一，可空 |
+| `email` | 邮箱，可空 |
+| `status` | 状态编码 |
+| `last_login_at` | 最后登录时间 |
+| `last_login_ip` | 最后登录 IP |
+
+### `admin_role`
+
+用途：
+
+- 后台角色定义表
+
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 角色主键 |
+| `code` | 角色编码，唯一 |
+| `name` | 角色名称 |
+| `description` | 角色说明 |
+| `status` | 状态编码 |
+| `is_system` | 是否系统内置角色 |
+| `sort` | 排序 |
+
+### `admin_permission`
+
+用途：
+
+- 后台权限定义表
+
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 权限主键 |
+| `code` | 权限编码，唯一 |
+| `name` | 权限名称 |
+| `module` | 所属模块 |
+| `action` | 动作编码 |
+| `parent_id` | 父权限 ID，可空 |
+| `status` | 状态编码 |
+| `sort` | 排序 |
+
+### `admin_user_role` / `admin_role_permission`
+
+用途：
+
+- 后台 RBAC 两张关联表
+
+关键约束：
+
+- `admin_user_role(admin_user_id, role_id)` 唯一
+- `admin_role_permission(role_id, permission_id)` 唯一
+
+### `user_profile`
+
+用途：
+
+- 用户资料扩展表
+
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
 | `user_id` | 用户 ID |
-| `expires_at` | 过期时间 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-说明：
-
-- 当前阶段 token 可以先直接明文存储，后续如有安全要求可改为哈希存储
-- `token` 应保证唯一
-- `user_id` 应保证唯一，表示同一用户同一时间只保留一个有效登录态
-- 每次鉴权都应校验 `expires_at`
-- 过期 session 可以在读请求时清理，也可以后续补定时清理任务
-- 用户重新登录时，应使旧 token 立即失效
-
-### `user_follow`
-
-用途：
-
-- 存储用户关注关系
-
-| 字段 | 说明 |
-| --- | --- |
-| `id` | 关注关系主键 |
-| `follower_id` | 发起关注的用户 ID |
-| `following_id` | 被关注的用户 ID |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-### `friendship`
-
-用途：
-
-- 存储好友申请与好友关系
-
-| 字段 | 说明 |
-| --- | --- |
-| `id` | 好友关系主键 |
-| `user_id` | 申请用户 ID |
-| `friend_id` | 目标用户 ID |
-| `status` | 好友关系状态 |
-| `message` | 申请留言 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-### `address`
-
-用途：
-
-- 存储用户收货地址
-
-| 字段 | 说明 |
-| --- | --- |
-| `id` | 地址主键 |
-| `user_id` | 用户 ID |
-| `name` | 收货人姓名 |
-| `phone` | 收货手机号 |
-| `province` | 省份 |
-| `city` | 城市 |
-| `district` | 区县 |
-| `detail` | 详细地址 |
-| `is_default` | 是否默认地址 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-## 2. 商品与店铺体系
+| `name` | 昵称 |
+| `avatar_url` | 头像 |
+| `signature` | 个性签名 |
+| `gender` | 性别编码 |
+| `birthday` | 生日 |
+| `region` | 地区 |
 
 ### `product`
 
 用途：
 
-- 商品主数据表
+- 店铺在售商品
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
 | `id` | 商品主键 |
+| `shop_id` | 店铺 ID |
+| `brand_product_id` | 平台标准商品 ID |
 | `name` | 商品名称 |
-| `brand` | 品牌名称 |
-| `price` | 销售价格 |
-| `original_price` | 原价 |
-| `img` | 主图 |
-| `images` | 图片列表 JSON |
-| `category` | 商品分类 |
-| `stock` | 库存 |
-| `guess_price` | 竞猜价 |
-| `status` | 商品状态 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `price` | 销售价，单位分 |
+| `original_price` | 原价，单位分 |
+| `guess_price` | 竞猜价，单位分 |
+| `image_url` | 主图 |
+| `images` | 图片 JSON |
+| `stock` | 可用库存 |
+| `frozen_stock` | 冻结库存 |
+| `tags` | 标签 JSON |
+| `status` | 状态编码 |
 
-### `brand`
+### `brand_product`
 
 用途：
 
-- 品牌主表
+- 平台标准商品库
 
-### `brand_apply`
-
-用途：
-
-- 品牌入驻申请
-
-### `brand_auth`
-
-用途：
-
-- 用户品牌授权记录
-
-### `shop`
-
-用途：
-
-- 店铺主表
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 店铺主键 |
-| `user_id` | 店主用户 ID |
-| `name` | 店铺名称 |
-| `category` | 店铺类目 |
-| `status` | 店铺状态 |
-| `revenue` | 累计营收 |
-| `product_count` | 商品数量 |
-| `order_count` | 订单数量 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `brand_id` | 品牌 ID |
+| `name` | 标准商品名称 |
+| `category_id` | 商品分类 ID |
+| `guide_price` | 建议零售价，单位分 |
+| `supply_price` | 供货价，单位分 |
+| `default_img` | 默认图 |
+| `images` | 图片 JSON |
+| `status` | 状态编码 |
 
-### `shop_apply`
+### `shop_brand_auth`
 
 用途：
 
-- 开店申请
+- 店铺和品牌之间的有效授权关系
 
-### `shop_brand_auth_apply`
+关键字段：
 
-用途：
+| 字段 | 说明 |
+| --- | --- |
+| `auth_no` | 授权编号，唯一 |
+| `shop_id` | 店铺 ID |
+| `brand_id` | 品牌 ID |
+| `auth_type` | 授权类型编码 |
+| `auth_scope` | 授权范围编码 |
+| `scope_value` | 授权范围扩展值 JSON |
+| `status` | 授权状态编码 |
+| `granted_at` | 授权通过时间 |
+| `expire_at` | 到期时间 |
+| `expired_at` | 实际过期时间 |
 
-- 店铺申请品牌授权
+说明：
 
-### `banner`
-
-用途：
-
-- 运营 Banner 配置
-
-## 3. 竞猜体系
+- `auth_type` 用于区分普通 / 独家 / 试用授权
+- `auth_scope` 用于区分全品牌 / 指定类目 / 指定商品
+- `scope_value` 只在非全品牌范围时使用
 
 ### `guess`
 
 用途：
 
-- 竞猜主表
-- 存储竞猜基础信息、审核状态、结算状态
+- 竞猜主实体
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
 | `id` | 竞猜主键 |
-| `title` | 竞猜标题 |
-| `type` | 竞猜类型 |
-| `source` | 竞猜来源 |
-| `status` | 竞猜状态 |
-| `review_status` | 审核状态 |
-| `scope` | 可见范围 |
-| `settlement_mode` | 结算方式 |
-| `result_idx` | 开奖结果索引 |
-| `participants` | 参与人数 |
-| `pool` | 奖池金额 |
+| `title` | 标题 |
+| `type` | 类型编码 |
+| `source_type` | 来源类型编码 |
+| `status` | 状态编码 |
+| `review_status` | 审核状态编码 |
+| `scope` | 可见范围编码 |
+| `settlement_mode` | 结算模式编码 |
+| `stake_type` | 下注类型编码 |
+| `creator_id` | 创建人 |
 | `end_time` | 截止时间 |
-| `creator_id` | 创建人 ID |
-| `category` | 竞猜分类 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `tags` | 标签 JSON |
 
 说明：
 
-- 旧的 `options / odds / votes / trend` 已从主表移除
-- Oracle 与审核日志已拆到独立表
+- 商品关系通过 `guess_product` 维护
+- 结果通过 `guess_option` 表达
+- 用户参与通过 `guess_bet` 表达
 
 ### `guess_option`
 
 用途：
 
-- 存储竞猜选项
+- 竞猜选项表
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 竞猜选项主键 |
 | `guess_id` | 竞猜 ID |
-| `option_index` | 选项序号 |
-| `option_text` | 选项文本 |
-| `odds` | 当前赔率 |
-| `vote_count` | 投票数 |
-| `trend` | 赔率趋势 |
-| `is_result` | 是否为开奖结果 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-说明：
-
-- 这是竞猜拆表后的核心子表
+| `idx` | 选项索引 |
+| `text` | 选项内容 |
+| `odds` | 赔率 |
 
 ### `guess_bet`
 
@@ -402,270 +472,266 @@
 
 - 用户下注记录
 
+关键字段：
+
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 下注记录主键 |
-| `user_id` | 下注用户 ID |
+| `user_id` | 用户 ID |
 | `guess_id` | 竞猜 ID |
 | `choice_idx` | 下注选项索引 |
-| `amount` | 下注金额 |
-| `status` | 下注状态 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `amount` | 下注金额，单位分 |
+| `product_id` | 关联商品 |
+| `coupon_id` | 使用优惠券 |
+| `status` | 状态编码 |
+| `reward_type` | 奖励类型编码 |
 
-### `guess_comment`
+说明：
 
-用途：
-
-- 竞猜评论
-
-### `guess_history`
-
-用途：
-
-- 竞猜历史记录
-
-### `guess_product`
-
-用途：
-
-- 竞猜与商品的关联关系
-
-### `guess_review_log`
-
-用途：
-
-- 存储竞猜审核日志
-
-### `guess_oracle_evidence`
-
-用途：
-
-- 存储 Oracle 外部数据证据
-
-### `guess_invitation`
-
-用途：
-
-- 存储好友竞猜邀请关系
-
-### `friend_guess_confirm`
-
-用途：
-
-- 记录好友竞猜双方确认结果
-
-### `pk_record`
-
-用途：
-
-- 存储好友 PK 对战记录
-
-## 4. 订单体系
+- 唯一约束：`(user_id, guess_id)`
 
 ### `order`
 
 用途：
 
 - 订单主表
-- 存储订单主体信息
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
 | `id` | 订单主键 |
-| `user_id` | 下单用户 ID |
-| `order_type` | 订单类型 |
-| `guess_id` | 关联竞猜 ID |
-| `amount` | 实付金额 |
-| `original_amount` | 原始金额 |
-| `coupon_discount` | 优惠金额 |
-| `address_id` | 收货地址 ID |
-| `status` | 订单状态 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `order_sn` | 订单编号，唯一 |
+| `user_id` | 下单用户 |
+| `type` | 订单类型编码 |
+| `guess_id` | 关联竞猜 |
+| `amount` | 实付金额，单位分 |
+| `original_amount` | 原始金额，单位分 |
+| `coupon_discount` | 优惠金额，单位分 |
+| `address_id` | 收货地址 |
+| `status` | 订单状态编码 |
 
 说明：
 
-- 商品快照、物流信息等已从主表迁出
+- `type` 当前用于区分竞猜奖励单与普通店铺订单
+- 用户端订单列表在读取时优先以 `guess_id` 判断是否为竞猜奖励单，`type` 作为显式补充编码
+- 订单的物流中间态不直接落在 `order.status`，而是通过 `fulfillment_order.status` 派生
 
 ### `order_item`
 
 用途：
 
-- 订单项表
+- 订单明细
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 订单项主键 |
 | `order_id` | 订单 ID |
 | `product_id` | 商品 ID |
-| `product_name` | 商品名称快照 |
-| `product_img` | 商品图片快照 |
-| `sku_text` | 规格快照 |
-| `quantity` | 购买数量 |
-| `unit_price` | 成交单价 |
-| `item_amount` | 订单项金额 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-### `order_status_log`
-
-用途：
-
-- 订单状态流转日志
+| `quantity` | 数量 |
+| `unit_price` | 成交单价，单位分 |
+| `original_unit_price` | 原始单价，单位分 |
+| `item_amount` | 行金额，单位分 |
+| `coupon_discount` | 优惠分摊金额，单位分 |
 
 ### `order_refund`
 
 用途：
 
-- 订单退款记录
+- 订单退款申请与处理记录
 
-## 5. 余额与权益体系
-
-### `coin_ledger`
-
-用途：
-
-- 用户余额流水表
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 流水主键 |
+| `refund_no` | 退款单号，唯一 |
+| `order_id` | 订单 ID |
 | `user_id` | 用户 ID |
-| `type` | 流水类型 |
-| `amount` | 变动金额 |
-| `balance_after` | 变动后余额 |
-| `source_type` | 来源业务类型 |
-| `source_id` | 来源业务 ID |
-| `operator_id` | 操作人 ID |
-| `operator_role` | 操作人角色 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `status` | 退款状态编码 |
+| `refund_amount` | 退款金额，单位分 |
+| `reviewer_id` | 审核人 |
+| `requested_at` | 申请时间 |
+| `reviewed_at` | 审核时间 |
+| `completed_at` | 完成时间 |
+
+### `fulfillment_order`
+
+用途：
+
+- 实物履约 / 发货 / 提货单
+
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `fulfillment_sn` | 履约单号，唯一 |
+| `type` | 履约类型编码 |
+| `status` | 履约状态编码 |
+| `user_id` | 用户 ID |
+| `order_id` | 订单 ID |
+| `shop_id` | 店铺 ID |
+| `address_id` | 地址 ID |
+| `receiver_name` | 收货人 |
+| `phone_number` | 收货手机号 |
+| `shipping_type` | 配送类型编码 |
+| `shipping_fee` | 运费，单位分 |
+| `total_amount` | 总金额，单位分 |
+| `tracking_no` | 物流单号 |
 
 说明：
 
-- 这是新引入的余额审计表
-- 后续所有 `coins` 变动都应写入该表
+- 实物履约链路正式从订单主表拆出
+- 履约明细通过 `fulfillment_order_item` 维护
+- 用户端“待发货 / 运输中 / 已签收”主要依赖这张表派生：
+  - `status = 10/20` 视为待发货或处理中
+  - `status = 30` 视为运输中
+  - `status = 40` 视为已签收 / 已完成
 
-### `equity_account`
+### 仓库页展示约定
 
-用途：
+- 用户端仓库页不再假设单表能覆盖全部状态
+- “虚拟仓”来自 `virtual_warehouse`
+- “运输中”来自 `fulfillment_order.status = 30`
+- “已签收 / 在仓 / 寄售中”来自 `physical_warehouse`
+- 因此用户端仓库聚合是跨 `virtual_warehouse + fulfillment_order + physical_warehouse` 的组合视图
 
-- 用户权益金账户
-
-| 字段 | 说明 |
-| --- | --- |
-| `id` | 权益账户主键 |
-| `user_id` | 用户 ID |
-| `category_amount` | 类目权益余额 |
-| `exchange_amount` | 换购权益余额 |
-| `general_amount` | 通兑权益余额 |
-| `total_granted` | 累计发放权益 |
-| `total_used` | 累计使用权益 |
-| `total_expired` | 累计过期权益 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-### `equity_log`
+### `coupon_template`
 
 用途：
 
-- 权益金流水表
+- 优惠券模板定义
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 权益流水主键 |
-| `account_id` | 权益账户 ID |
-| `user_id` | 用户 ID |
-| `type` | 流水类型 |
-| `sub_type` | 流水子类型 |
-| `amount` | 变动金额 |
-| `balance` | 变动后余额 |
-| `source` | 来源业务 |
-| `ref_id` | 来源业务 ID |
-| `expire_at` | 过期时间 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `code` | 模板编码，唯一 |
+| `type` | 类型编码 |
+| `status` | 状态编码 |
+| `scope_type` | 适用范围编码 |
+| `source_type` | 来源类型编码 |
+| `validity_type` | 有效期类型编码 |
+| `shop_id` | 指定店铺 |
+| `min_amount` | 门槛金额，单位分 |
+| `discount_amount` | 优惠金额，单位分 |
+| `discount_rate` | 折扣率 |
+| `max_discount_amount` | 最大优惠金额，单位分 |
 
 ### `coupon`
 
 用途：
 
-- 用户优惠券表
+- 用户持有的优惠券实例
 
-## 6. 仓库体系
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `coupon_no` | 券号，唯一 |
+| `user_id` | 用户 ID |
+| `template_id` | 模板 ID |
+| `amount` | 面额，单位分 |
+| `type` | 类型编码 |
+| `source_type` | 来源类型编码 |
+| `status` | 状态编码 |
+
+### `coupon_grant_batch`
+
+用途：
+
+- 记录一次批量发券或运营发券动作
+
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `batch_no` | 发券批次号，唯一 |
+| `template_id` | 优惠券模板 ID |
+| `source_type` | 来源类型编码 |
+| `operator_id` | 操作人 ID |
+| `target_user_count` | 目标用户数 |
+| `granted_count` | 实际发放数量 |
+| `status` | 批次状态编码 |
+| `note` | 备注 |
+
+说明：
+
+- `coupon_template` 定义券规则
+- `coupon_grant_batch` 记录发券动作
+- `coupon` 记录用户最终拿到的券实例
 
 ### `virtual_warehouse`
 
 用途：
 
-- 虚拟仓库
-- 存储竞猜奖励、碎片、待转换资产等
+- 用户虚拟仓资产
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 虚拟仓记录主键 |
 | `user_id` | 用户 ID |
 | `product_id` | 商品 ID |
-| `source` | 来源类型 |
+| `quantity` | 数量 |
+| `frozen_quantity` | 冻结数量 |
+| `price` | 价值金额，单位分 |
+| `fragment_value` | 碎片价值，单位分 |
+| `source_type` | 来源类型编码 |
 | `source_id` | 来源业务 ID |
-| `status` | 仓库状态 |
-| `type` | 物品类型 |
-| `fragment_value` | 碎片价值 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `status` | 状态编码 |
+| `type` | 物品类型编码 |
 
 ### `physical_warehouse`
 
 用途：
 
-- 实体仓库
-- 存储真实商品与寄售相关信息
+- 用户实体仓资产
+
+关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `id` | 实体仓记录主键 |
 | `user_id` | 用户 ID |
 | `product_id` | 商品 ID |
-| `product_name` | 商品名称 |
-| `source_virtual_id` | 来源虚拟仓 ID |
-| `status` | 仓库状态 |
-| `consign_price` | 寄售价格 |
-| `consign_date` | 寄售时间 |
-| `estimate_days` | 预计天数 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
-
-### `warehouse_item_log`
-
-用途：
-
-- 统一记录仓库物品操作日志
-
-| 字段 | 说明 |
-| --- | --- |
-| `id` | 日志主键 |
-| `warehouse_type` | 仓库类型，`virtual` 或 `physical` |
-| `item_id` | 仓库物品记录 ID |
-| `user_id` | 用户 ID |
-| `product_id` | 商品 ID |
-| `action` | 操作类型 |
-| `from_status` | 变更前状态 |
-| `to_status` | 变更后状态 |
-| `quantity` | 变动数量 |
-| `source_type` | 来源业务类型 |
-| `source_id` | 来源业务 ID |
-| `operator_id` | 操作人 ID |
-| `operator_role` | 操作人角色 |
-| `created_at` | 创建时间 |
-| `updated_at` | 更新时间 |
+| `quantity` | 数量 |
+| `frozen_quantity` | 冻结数量 |
+| `price` | 价值金额，单位分 |
+| `source_virtual_id` | 来源虚拟仓记录 |
+| `status` | 状态编码 |
+| `consign_price` | 寄售价，单位分 |
 
 说明：
 
-- 当前仓库表不合并
-- 通过统一日志表实现操作层统一
+- 仓库表只表达货物状态
+- 寄售成交行为单独落在 `consign_trade`
 
-## 7. 社交与内容体系
+### `consign_trade`
+
+用途：
+
+- 承载寄售上架、成交、取消这条交易事实链
+
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `trade_no` | 寄售成交单号，唯一 |
+| `physical_item_id` | 实体仓物品 ID |
+| `seller_user_id` | 卖家用户 ID |
+| `buyer_user_id` | 买家用户 ID |
+| `order_id` | 关联订单 ID |
+| `status` | 成交状态编码 |
+| `sale_amount` | 成交金额，单位分 |
+| `commission_amount` | 平台抽成，单位分 |
+| `seller_amount` | 卖家实收金额，单位分 |
+| `listed_at` | 上架时间 |
+| `traded_at` | 成交时间 |
+| `canceled_at` | 取消时间 |
+
+说明：
+
+- 仓库表不再承担成交事实本身
+- `consign_trade` 负责承接寄售市场这条交易链
 
 ### `post`
 
@@ -673,23 +739,52 @@
 
 - 社区动态主表
 
-### `post_comment`
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `user_id` | 发布用户 |
+| `guess_id` | 关联竞猜 |
+| `repost_id` | 转发源动态 |
+| `type` | 类型编码 |
+| `scope` | 可见范围编码 |
+| `content` | 内容 |
+| `images` | 图片 JSON |
+
+### `post_interaction`
 
 用途：
 
-- 动态评论
+- 帖子互动关系
 
-### `post_like`
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `user_id` | 用户 ID |
+| `post_id` | 帖子 ID |
+| `interaction_type` | 互动类型编码 |
+
+说明：
+
+- 当前只承载 `post` 的点赞和收藏
+- 唯一约束：`(user_id, post_id, interaction_type)`
+
+### `comment_item`
 
 用途：
 
-- 动态点赞
+- 通用评论表
 
-### `post_bookmark`
+关键字段：
 
-用途：
-
-- 动态收藏
+| 字段 | 说明 |
+| --- | --- |
+| `target_type` | 目标类型编码 |
+| `target_id` | 目标 ID |
+| `user_id` | 评论用户 |
+| `parent_id` | 父评论 |
+| `content` | 评论内容 |
 
 ### `notification`
 
@@ -697,323 +792,81 @@
 
 - 用户通知
 
-### `chat_message`
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `user_id` | 用户 ID |
+| `type` | 通知类型编码 |
+| `target_type` | 目标类型编码 |
+| `target_id` | 目标 ID |
+| `action_url` | 跳转链接 |
+| `is_read` | 是否已读 |
+
+### `leaderboard_entry`
 
 用途：
 
-- 私聊消息
+- 承载排行榜刷新后的结果条目
 
-### `live`
+关键字段：
 
-用途：
-
-- 直播场次
-
-### `ranking`
-
-用途：
-
-- 排行榜快照
-
-### `ai_chat_message`
-
-用途：
-
-- AI 对话消息记录
-
-### `checkin`
-
-用途：
-
-- 用户签到记录
-
-### `cart_item`
-
-用途：
-
-- 购物车明细
-
-## 当前结构状态
-
-### 已完成
-
-- 命名统一
-- 注释落库
-- 外键移除
-- `guess` 拆表
-- `order` 拆表
-- `coin_ledger` 新增
-- `warehouse_item_log` 新增
-- `transaction` 删除
-
-### 未完成
-
-- 业务代码全面接入 `coin_ledger`
-- 业务代码全面接入 `warehouse_item_log`
-- 第二轮更细的业务拆表
-- 基于真实查询继续补索引
-
-## 当前建议
-
-下一步不建议继续做格式类修改，应该转向：
-
-1. 把余额变动接入 `coin_ledger`
-2. 把仓库操作接入 `warehouse_item_log`
-3. 把订单状态流转接入 `order_status_log`
-4. 逐步清理兼容字段
-
-## 表之间关系图（文字版）
-
-以下关系图不依赖数据库外键，而是描述当前业务上的主关系。
-
-## 1. 用户主链路
-
-`user`
-
-- 1 对多 `address`
-- 1 对多 `user_follow`（作为关注人）
-- 1 对多 `user_follow`（作为被关注人）
-- 1 对多 `friendship`
-- 1 对多 `guess`
-- 1 对多 `guess_bet`
-- 1 对多 `guess_comment`
-- 1 对多 `guess_history`
-- 1 对多 `order`
-- 1 对 1 `equity_account`
-- 1 对多 `equity_log`
-- 1 对多 `coin_ledger`
-- 1 对多 `virtual_warehouse`
-- 1 对多 `physical_warehouse`
-- 1 对多 `warehouse_item_log`
-- 1 对多 `post`
-- 1 对多 `post_comment`
-- 1 对多 `post_like`
-- 1 对多 `post_bookmark`
-- 1 对多 `notification`
-- 1 对多 `chat_message`
-- 1 对多 `coupon`
-- 1 对多 `checkin`
-
-## 2. 竞猜主链路
-
-`guess`
-
-- 1 对多 `guess_option`
-- 1 对多 `guess_bet`
-- 1 对多 `guess_comment`
-- 1 对多 `guess_history`
-- 1 对多 `guess_product`
-- 1 对多 `guess_review_log`
-- 1 对多 `guess_oracle_evidence`
-- 1 对多 `guess_invitation`
-- 1 对多 `friend_guess_confirm`
-- 1 对多 `pk_record`
-- 1 对多 `order`（竞猜相关订单）
-
-典型路径：
-
-`user` → `guess` → `guess_option`
-
-`user` → `guess_bet` → `guess`
-
-`guess` → `guess_review_log`
-
-`guess` → `guess_oracle_evidence`
-
-`guess` → `guess_invitation` → `user`
-
-## 3. 竞猜与商品关系
-
-`guess`
-
-- 通过 `guess_product` 关联 `product`
-
-`guess_product`
-
-- 多对一 `guess`
-- 多对一 `product`
+| 字段 | 说明 |
+| --- | --- |
+| `board_type` | 榜单类型编码 |
+| `period_type` | 周期类型编码 |
+| `period_value` | 周期值，如日/周/月/总榜编码值 |
+| `user_id` | 用户 ID |
+| `rank_no` | 排名 |
+| `score` | 榜单分值 |
+| `extra_json` | 扩展指标 JSON |
 
 说明：
 
-- 竞猜和商品已经不是简单单字段关系
-- `guess_product` 是当前竞猜商品关系的主连接表
-
-## 4. 订单主链路
-
-`order`
-
-- 1 对多 `order_item`
-- 1 对多 `order_status_log`
-- 1 对多 `order_refund`
-- 多对一 `user`
-- 可选关联 `guess`
-- 可选关联 `address`
-
-典型路径：
-
-`user` → `order` → `order_item`
-
-`order` → `order_status_log`
-
-`order` → `order_refund`
-
-## 5. 余额与权益主链路
-
-### 余额
-
-`user.coins`
-
-- 表示当前余额快照
-
-`coin_ledger`
-
-- 记录余额变动流水
-- 通过 `user_id` 关联 `user`
-- 通过 `source_type + source_id` 关联具体业务来源
-
-典型路径：
-
-`user` → `coin_ledger`
-
-来源可能包括：
-
-- `guess_bet`
-- `order_refund`
-- `pk_record`
-- `admin_adjust`
-
-### 权益金
-
-`equity_account`
-
-- 1 对 1 `user`
-
-`equity_log`
-
-- 多对一 `equity_account`
-- 多对一 `user`
-
-典型路径：
-
-`user` → `equity_account` → `equity_log`
-
-## 6. 仓库主链路
-
-### 虚拟仓
-
-`virtual_warehouse`
-
-- 多对一 `user`
-- 可选关联 `product`
-- 可通过 `source + source_id` 追溯来源业务
-
-### 实体仓
-
-`physical_warehouse`
-
-- 多对一 `user`
-- 可选关联 `product`
-- 可通过 `source_virtual_id` 追溯来源虚拟仓记录
-
-### 仓库日志
-
-`warehouse_item_log`
-
-- 通过 `warehouse_type + item_id` 指向 `virtual_warehouse` 或 `physical_warehouse`
-- 通过 `user_id` 指向归属用户
-- 通过 `source_type + source_id` 指向来源业务
-
-典型路径：
-
-`guess` → `virtual_warehouse`
-
-`virtual_warehouse` → `physical_warehouse`
-
-`virtual_warehouse / physical_warehouse` → `warehouse_item_log`
-
-说明：
-
-- 当前仓库不做主表合并
-- 通过统一日志表建立跨仓库操作追踪
-
-## 7. 社交主链路
-
-`post`
-
-- 1 对多 `post_comment`
-- 1 对多 `post_like`
-- 1 对多 `post_bookmark`
-- 可选关联 `guess`
-
-典型路径：
-
-`user` → `post`
-
-`post` → `post_comment`
-
-`post` → `post_like`
-
-`post` → `post_bookmark`
-
-## 8. 通知与消息主链路
-
-`notification`
-
-- 多对一 `user`
-
-`chat_message`
-
-- 发送方对应 `user`
-- 接收方对应 `user`
-
-`ai_chat_message`
-
-- 多对一 `user`
-- 可选关联 `guess`
-
-## 9. 店铺与品牌主链路
-
-`shop`
-
-- 多对一 `user`
-
-`shop_apply`
-
-- 多对一 `user`
-
-`brand_auth`
-
-- 多对一 `user`
-
-`brand_apply`
-
-- 可选关联 `brand`
-
-`shop_brand_auth_apply`
-
-- 业务上连接 `shop` 与 `brand`
-
-## 10. 当前关系设计特点
-
-当前数据库关系有三个明显特征：
-
-### 1. 主表瘦身
-
-- `guess` 只保留主信息和状态
-- `order` 只保留主体信息
-
-### 2. 明细表承载复杂业务
-
-- `guess_option`
-- `order_item`
-- `order_status_log`
-- `order_refund`
-- `coin_ledger`
-- `warehouse_item_log`
-
-### 3. 应用层负责关系约束
-
-由于已去掉数据库外键：
-
-- 关系由业务代码维护
-- 日志与流水表承担更多审计职责
+- 只承载榜单结果，不存用户名、头像等快照字段
+- 支持多榜单、多周期
+
+## 关键约束与索引
+
+### 关键唯一约束
+
+- `order.order_sn`
+- `order_refund.refund_no`
+- `coupon.coupon_no`
+- `coupon_template.code`
+- `coupon_grant_batch.batch_no`
+- `fulfillment_order.fulfillment_sn`
+- `consign_trade.trade_no`
+- `shop_brand_auth.auth_no`
+- `brand_apply.apply_no`
+- `shop_apply.apply_no`
+- `shop_brand_auth_apply.apply_no`
+- `post_interaction(user_id, post_id, interaction_type)`
+- `guess_bet(user_id, guess_id)`
+- `shop_brand_auth(shop_id, brand_id)`
+- `leaderboard_entry(board_type, period_type, period_value, user_id)`
+
+### 关键索引
+
+- `notification(user_id, is_read, created_at)`
+- `banner(position, status, sort)`
+- `comment_item(target_type, target_id, parent_id, created_at)`
+- `fulfillment_order(user_id, status)`
+- `fulfillment_order(shop_id, status)`
+- `fulfillment_order(status, created_at)`
+- `consign_trade(status, listed_at)`
+- `consign_trade(seller_user_id, status)`
+- `consign_trade(buyer_user_id, status)`
+- `shop_brand_auth(status, expire_at)`
+- `post.guess_id`
+- `post.repost_id`
+- `shop_apply.user_id`
+- `leaderboard_entry(board_type, period_type, period_value, rank_no)`
+
+## 快速判断
+
+- 看库里有哪些表：先看“表清单”
+- 看表之间主关系：看“主链路关系”
+- 看一张核心表长什么样：看“核心表速查”
+- 看编码含义：看 [status-codes.md](/Users/ezreal/Downloads/joy/umi/docs/status-codes.md)
+- 看金额口径：默认按“分”理解，除非字段明确是比例或概率

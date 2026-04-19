@@ -1,6 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { UserSummary } from '@joy/shared';
+
+import { fetchMe, fetchNotifications } from '../../lib/api';
 import styles from './page.module.css';
 
 const myServices = [
@@ -49,6 +53,73 @@ const moreServices = [
 
 export default function FeaturesPage() {
   const router = useRouter();
+  const [user, setUser] = useState({
+    name: '用户',
+    avatar: '/legacy/images/mascot/mouse-main.png',
+    level: 1,
+    warehouseCount: 0,
+  });
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadData() {
+      try {
+        const me = await fetchMe();
+        if (!ignore) {
+          const rawUser = me as UserSummary & { warehouse?: number; warehouseCount?: number };
+          setUser({
+            name: rawUser.name || '用户',
+            avatar: rawUser.avatar || '/legacy/images/mascot/mouse-main.png',
+            level: rawUser.level || 1,
+            warehouseCount: rawUser.warehouseCount || rawUser.warehouse || 0,
+          });
+        }
+      } catch {
+        if (!ignore) {
+          setUser({
+            name: '用户',
+            avatar: '/legacy/images/mascot/mouse-main.png',
+            level: 1,
+            warehouseCount: 0,
+          });
+        }
+      }
+
+      try {
+        const result = await fetchNotifications();
+        if (!ignore) {
+          setUnreadCount(result.items.filter((item) => !item.read).length);
+        }
+      } catch {
+        if (!ignore) {
+          setUnreadCount(0);
+        }
+      }
+    }
+
+    void loadData();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const myServicesWithData = myServices.map((item) =>
+    item.label === '我的仓库'
+      ? { ...item, badge: user.warehouseCount > 0 ? String(user.warehouseCount) : '' }
+      : item,
+  );
+
+  const moreServicesWithData = moreServices.map((item) =>
+    item.title === '消息中心'
+      ? {
+          ...item,
+          tag: unreadCount > 0 ? `${unreadCount}条新` : '',
+        }
+      : item,
+  );
 
   return (
     <main className={styles.page}>
@@ -60,11 +131,11 @@ export default function FeaturesPage() {
       </header>
 
       <button className={styles.userCard} type="button" onClick={() => router.push('/me')}>
-        <img className={styles.avatar} src="/legacy/images/mascot/mouse-main.png" alt="零食猎人" />
+        <img className={styles.avatar} src={user.avatar} alt={user.name} />
         <div className={styles.userInfo}>
           <div className={styles.userName}>
-            <span>零食猎人</span>
-            <span className={styles.level}>Lv.8</span>
+            <span>{user.name}</span>
+            <span className={styles.level}>Lv.{user.level}</span>
           </div>
           <div className={styles.userDesc}>查看并编辑个人主页</div>
         </div>
@@ -74,7 +145,7 @@ export default function FeaturesPage() {
       <div className={styles.sectionTitle}>我的服务</div>
       <section className={styles.gridCard}>
         <div className={styles.grid}>
-          {myServices.map((item) => (
+          {myServicesWithData.map((item) => (
             <button className={styles.gridItem} key={item.label} type="button" onClick={() => router.push(item.href)}>
               <div className={`${styles.iconWrap} ${item.cls}`}>
                 <i className={item.icon} />
@@ -102,7 +173,7 @@ export default function FeaturesPage() {
 
       <div className={styles.sectionTitle}>更多服务</div>
       <section className={styles.listCard}>
-        {moreServices.map((item) => (
+        {moreServicesWithData.map((item) => (
           <button className={styles.listItem} key={item.title} type="button" onClick={() => router.push(item.href)}>
             <div className={`${styles.listIco} ${item.cls}`}>
               <i className={item.icon} />

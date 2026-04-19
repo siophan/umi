@@ -1,14 +1,31 @@
 import type {
+  AddShopProductsPayload,
+  AddShopProductsResult,
   ApiEnvelope,
+  BrandAuthOverviewResult,
+  BrandProductListResult,
+  ChatConversationListResult,
+  ChatDetailResult,
+  GuessHistoryResult,
   GuessListResult,
   GuessSummary,
   LoginPayload,
   LoginResult,
+  MeActivityResult,
+  MyShopResult,
   LogoutResult,
+  NotificationListResult,
   OrderListResult,
+  ProductDetailResult,
+  ProductListResult,
+  PublicShopDetailResult,
   RegisterPayload,
   SendCodePayload,
   SendCodeResult,
+  SendChatMessagePayload,
+  SocialOverviewResult,
+  SubmitBrandAuthApplicationPayload,
+  SubmitBrandAuthApplicationResult,
   UpdateMePayload,
   UserPublicProfile,
   WalletLedgerResult,
@@ -120,12 +137,53 @@ export function fetchGuess(id: string) {
   return getJson<GuessSummary>(`/api/guesses/${id}`);
 }
 
+export function fetchGuessHistory() {
+  return getJson<GuessHistoryResult>('/api/guesses/user/history');
+}
+
+export function fetchProductDetail(id: string) {
+  return getJson<ProductDetailResult>(`/api/products/${id}`);
+}
+
+export function fetchProductList(limit?: number) {
+  const query = typeof limit === 'number' ? `?limit=${encodeURIComponent(String(limit))}` : '';
+  return getJson<ProductListResult>(`/api/products${query}`);
+}
+
 export function fetchOrders() {
   return getJson<OrderListResult>('/api/orders');
 }
 
-export function fetchWarehouse() {
+export function fetchVirtualWarehouse() {
   return getJson<WarehouseListResult>('/api/warehouse/virtual');
+}
+
+export function fetchPhysicalWarehouse() {
+  return getJson<WarehouseListResult>('/api/warehouse/physical');
+}
+
+export function fetchMyShop() {
+  return getJson<MyShopResult>('/api/shops/me');
+}
+
+export function fetchShopDetail(id: string) {
+  return getJson<PublicShopDetailResult>(`/api/shops/${id}`);
+}
+
+export function fetchBrandAuthOverview() {
+  return getJson<BrandAuthOverviewResult>('/api/shops/brand-auth');
+}
+
+export function submitBrandAuthApplication(payload: SubmitBrandAuthApplicationPayload) {
+  return postJson<SubmitBrandAuthApplicationResult, SubmitBrandAuthApplicationPayload>('/api/shops/brand-auth', payload);
+}
+
+export function fetchBrandProducts(brandId: string) {
+  return getJson<BrandProductListResult>(`/api/shops/brand-products?brandId=${encodeURIComponent(brandId)}`);
+}
+
+export function addShopProducts(payload: AddShopProductsPayload) {
+  return postJson<AddShopProductsResult, AddShopProductsPayload>('/api/shops/products', payload);
 }
 
 export function fetchWalletLedger() {
@@ -158,4 +216,32 @@ export async function updateMe(payload: UpdateMePayload) {
 
 export async function fetchUserProfile(userId: string) {
   return getJson<UserPublicProfile>(`/api/auth/users/${userId}`);
+}
+
+export async function fetchMeActivity() {
+  return getJson<MeActivityResult>('/api/auth/me/activity');
+}
+
+export async function fetchNotifications() {
+  return getJson<NotificationListResult>('/api/auth/notifications');
+}
+
+export async function markAllNotificationsRead() {
+  return postJson<{ success: true }, Record<string, never>>('/api/auth/notifications/read-all', {});
+}
+
+export async function fetchSocialOverview() {
+  return getJson<SocialOverviewResult>('/api/auth/social');
+}
+
+export async function fetchChats() {
+  return getJson<ChatConversationListResult>('/api/auth/chats');
+}
+
+export async function fetchChatDetail(userId: string) {
+  return getJson<ChatDetailResult>(`/api/auth/chats/${userId}`);
+}
+
+export async function sendChatMessage(userId: string, payload: SendChatMessagePayload) {
+  return postJson<ChatDetailResult['items'][number], SendChatMessagePayload>(`/api/auth/chats/${userId}`, payload);
 }

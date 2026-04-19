@@ -2,7 +2,7 @@ CREATE TABLE `sms_verification_code` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
   `phone` VARCHAR(20) NOT NULL COMMENT '手机号',
   `biz_type` VARCHAR(32) NOT NULL COMMENT '业务类型：register/login/reset_password',
-  `code` VARCHAR(10) NOT NULL COMMENT '短信验证码',
+  `code_hash` CHAR(64) NOT NULL COMMENT '短信验证码哈希',
   `status` VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT '状态：pending/used/expired/invalidated',
   `expires_at` DATETIME NOT NULL COMMENT '过期时间',
   `used_at` DATETIME NULL COMMENT '使用时间',

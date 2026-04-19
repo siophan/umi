@@ -1,116 +1,106 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+import { fetchGuessHistory } from '../../lib/api';
 import styles from './page.module.css';
 
 type TabKey = 'all' | 'active' | 'won' | 'lost' | 'pk';
-
-const stats = [
-  { value: 28, label: '总竞猜', accent: false },
-  { value: 19, label: '猜中', accent: true },
-  { value: 9, label: '未中', accent: false },
-  { value: '67.9%', label: '胜率', accent: false },
-];
-
-const activeGuesses = [
-  {
-    title: '2026世界杯冠军会是阿根廷还是法国？',
-    meta: '1.28万 · 6天后截止',
-    choice: '我选：阿根廷卫冕',
-    countdown: ['06', '时', '18', '分'],
-    progress: [56, 44],
-  },
-  {
-    title: '新 iPhone 会不会在今年 9 月发布会上推出折叠屏？',
-    meta: '9,340 · 2小时后截止',
-    choice: '我选：会发布',
-    countdown: ['02', '时', '31', '分'],
-    progress: [62, 38],
-  },
-];
-
-const historyCards = [
-  {
-    type: 'won',
-    title: '德芙情人节礼盒销量竞猜',
-    date: '2026-04-12',
-    choice: '会爆单',
-    result: '猜中！香氛礼盒已入仓库',
-    reward: '🎉 猜中',
-    rewardClass: styles.rewardWon,
-  },
-  {
-    type: 'lost',
-    title: '泡泡玛特联名盲盒热度竞猜',
-    date: '2026-04-08',
-    choice: '热度破万',
-    result: '未中，已补偿 8 元优惠券',
-    reward: '🎫 8 元券',
-    rewardClass: styles.rewardLost,
-  },
-  {
-    type: 'won',
-    title: '苹果折叠屏发布时间竞猜',
-    date: '2026-04-03',
-    choice: '会发布',
-    result: '猜中！已补发权益金',
-    reward: '🎉 猜中',
-    rewardClass: styles.rewardWon,
-  },
-];
-
-const pkCards = [
-  {
-    title: '球迷小张 vs 零食猎人',
-    result: '赢了',
-    mode: 'won',
-    left: '球迷小张\n阿根廷卫冕',
-    right: '零食猎人\n法国夺冠',
-    footer: '1.28万人围观 · 2026-04-14',
-  },
-  {
-    title: '阿森纳球迷 vs 预测家',
-    result: '输了',
-    mode: 'lost',
-    left: '阿森纳球迷\n会进前四',
-    right: '预测家\n不会进前四',
-    footer: '9,812 人围观 · 2026-04-10',
-  },
-];
 
 export default function GuessHistoryPage() {
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>('all');
   const [toast, setToast] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [historyData, setHistoryData] = useState({
+    stats: {
+      total: 0,
+      active: 0,
+      won: 0,
+      lost: 0,
+      pk: 0,
+      winRate: 0,
+    },
+    active: [] as Awaited<ReturnType<typeof fetchGuessHistory>>['active'],
+    history: [] as Awaited<ReturnType<typeof fetchGuessHistory>>['history'],
+    pk: [] as Awaited<ReturnType<typeof fetchGuessHistory>>['pk'],
+  });
 
-  const showToast = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(''), 1800);
-  };
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => setToast(''), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadHistory() {
+      try {
+        const data = await fetchGuessHistory();
+        if (!ignore) {
+          setHistoryData(data);
+        }
+      } catch {
+        if (ignore) {
+          return;
+        }
+        setHistoryData({
+          stats: {
+            total: 0,
+            active: 0,
+            won: 0,
+            lost: 0,
+            pk: 0,
+            winRate: 0,
+          },
+          active: [],
+          history: [],
+          pk: [],
+        });
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadHistory();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const filteredHistory = useMemo(
-    () => historyCards.filter((card) => tab === 'all' || card.type === tab),
-    [tab],
+    () => historyData.history.filter((card) => tab === 'all' || card.outcome === tab),
+    [historyData.history, tab],
+  );
+
+  const ringOffset = useMemo(() => {
+    const circumference = 138.2;
+    return circumference - (Math.max(0, Math.min(100, historyData.stats.winRate)) / 100) * circumference;
+  }, [historyData.stats.winRate]);
+
+  const canShowEmpty = !loading && (
+    (tab === 'active' && historyData.active.length === 0) ||
+    ((tab === 'all' || tab === 'won' || tab === 'lost') && filteredHistory.length === 0 && historyData.active.length === 0) ||
+    (tab === 'pk' && historyData.pk.length === 0)
   );
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button
-          className={styles.back}
-          type="button"
-          onClick={() => router.back()}
-        >
+        <button className={styles.back} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.title}>我的竞猜</div>
-        <button
-          className={styles.action}
-          type="button"
-          onClick={() => showToast('分享功能开发中')}
-        >
-          <i className="fa-solid fa-arrow-up-right-from-square" />
+        <button className={styles.action} type="button" onClick={() => setToast('链接已复制')}>
+          <i className="fa-solid fa-share-nodes" />
         </button>
       </header>
 
@@ -120,13 +110,14 @@ export default function GuessHistoryPage() {
           我的竞猜数据
         </div>
         <div className={styles.statsGrid}>
-          {stats.map((item) => (
+          {[
+            { value: historyData.stats.total, label: '总竞猜', accent: false },
+            { value: historyData.stats.won, label: '猜中', accent: true },
+            { value: historyData.stats.lost, label: '未中', accent: false },
+            { value: `${historyData.stats.winRate}%`, label: '胜率', accent: false },
+          ].map((item) => (
             <div key={item.label} className={styles.statItem}>
-              <div
-                className={`${styles.statVal} ${item.accent ? styles.accentGreen : ''}`}
-              >
-                {item.value}
-              </div>
+              <div className={`${styles.statVal} ${item.accent ? styles.accentGreen : ''}`}>{item.value}</div>
               <div className={styles.statLabel}>{item.label}</div>
             </div>
           ))}
@@ -147,14 +138,14 @@ export default function GuessHistoryPage() {
               cy="28"
               r="22"
               strokeDasharray="138.2"
-              strokeDashoffset="45.8"
+              strokeDashoffset={ringOffset}
             />
           </svg>
           <div className={styles.ringInfo}>
-            <div className={styles.ringPct}>67.9%</div>
-            <div className={styles.ringDetail}>胜率较上周 +8.4%</div>
+            <div className={styles.ringPct}>{historyData.stats.winRate}%</div>
+            <div className={styles.ringDetail}>已结算竞猜胜率</div>
             <div className={styles.ringBar}>
-              <div className={styles.ringBarWin} style={{ width: '67.9%' }} />
+              <div className={styles.ringBarWin} style={{ width: `${historyData.stats.winRate}%` }} />
               <div className={styles.ringBarLoss} />
             </div>
           </div>
@@ -163,11 +154,11 @@ export default function GuessHistoryPage() {
 
       <nav className={styles.tabs}>
         {[
-          ['all', '全部', '28'],
-          ['active', '进行中', '2'],
-          ['won', '猜中', '19'],
-          ['lost', '未中', '9'],
-          ['pk', 'PK', '2'],
+          ['all', '全部', historyData.stats.total],
+          ['active', '进行中', historyData.stats.active],
+          ['won', '猜中', historyData.stats.won],
+          ['lost', '未中', historyData.stats.lost],
+          ['pk', 'PK', historyData.stats.pk],
         ].map(([key, label, count]) => (
           <button
             key={key}
@@ -183,12 +174,8 @@ export default function GuessHistoryPage() {
 
       <main className={styles.records}>
         {(tab === 'all' || tab === 'active') &&
-          activeGuesses.map((item, index) => (
-            <article
-              className={styles.activeCard}
-              key={item.title}
-              style={{ animationDelay: `${index * 0.06}s` }}
-            >
+          historyData.active.map((item, index) => (
+            <article className={styles.activeCard} key={item.betId} style={{ animationDelay: `${index * 0.06}s` }}>
               <div className={styles.liveBadge}>
                 <span className={styles.liveDot} />
                 LIVE
@@ -196,28 +183,25 @@ export default function GuessHistoryPage() {
               <img
                 alt={item.title}
                 className={styles.activeImg}
-                src={`/legacy/images/guess/g20${index + 1}.jpg`}
+                src={`/legacy/images/guess/g20${(index % 3) + 1}.jpg`}
               />
               <div className={styles.activeBody}>
                 <div className={styles.activeTitle}>{item.title}</div>
-                <div className={styles.activeMeta}>{item.meta}</div>
-                <div className={styles.activeChoice}>{item.choice}</div>
+                <div className={styles.activeMeta}>{item.participants}人参与 · {item.endTime.slice(0, 10)}截止</div>
+                <div className={styles.activeChoice}>我选：{item.choiceText}</div>
                 <div className={styles.activeCountdown}>
-                  <span className={styles.cdBox}>{item.countdown[0]}</span>
-                  <span className={styles.cdSep}>时</span>
-                  <span className={styles.cdBox}>{item.countdown[2]}</span>
-                  <span className={styles.cdSep}>分</span>
+                  <span className={styles.cdBox}>{item.endTime.slice(5, 7)}</span>
+                  <span className={styles.cdSep}>月</span>
+                  <span className={styles.cdBox}>{item.endTime.slice(8, 10)}</span>
+                  <span className={styles.cdSep}>日</span>
                 </div>
                 <div className={styles.activeProgress}>
                   <div className={styles.activeOpts}>
-                    <span>选项一</span>
-                    <span>选项二</span>
+                    <span>{item.options[0] || '选项一'}</span>
+                    <span>{item.options[1] || '选项二'}</span>
                   </div>
                   <div className={styles.progressBar}>
-                    <div
-                      className={styles.progressLeft}
-                      style={{ width: `${item.progress[0]}%` }}
-                    />
+                    <div className={styles.progressLeft} style={{ width: `${item.optionProgress[0] || 0}%` }} />
                   </div>
                 </div>
               </div>
@@ -227,15 +211,13 @@ export default function GuessHistoryPage() {
         {(tab === 'all' || tab === 'won' || tab === 'lost') &&
           filteredHistory.map((item, index) => (
             <article
-              className={`${styles.card} ${item.type === 'won' ? styles.cardWon : styles.cardLost}`}
-              key={item.title}
+              className={`${styles.card} ${item.outcome === 'won' ? styles.cardWon : styles.cardLost}`}
+              key={item.betId}
               style={{ animationDelay: `${index * 0.06}s` }}
             >
               <div className={styles.cardHeader}>
-                <span
-                  className={`${styles.resultBadge} ${item.type === 'won' ? styles.resultWon : styles.resultLost}`}
-                >
-                  {item.reward}
+                <span className={`${styles.resultBadge} ${item.outcome === 'won' ? styles.resultWon : styles.resultLost}`}>
+                  {item.rewardText}
                 </span>
                 <div className={styles.cardTitle}>{item.title}</div>
                 <div className={styles.cardDate}>{item.date}</div>
@@ -243,80 +225,56 @@ export default function GuessHistoryPage() {
               <div className={styles.cardBody}>
                 <div className={styles.cardRow}>
                   <span>我的选择</span>
-                  <strong>{item.choice}</strong>
+                  <strong>{item.choiceText}</strong>
                 </div>
                 <div className={styles.cardRow}>
                   <span>最终结果</span>
-                  <strong
-                    className={item.type === 'won' ? styles.good : styles.bad}
-                  >
-                    {item.result}
-                  </strong>
+                  <strong className={item.outcome === 'won' ? styles.good : styles.bad}>{item.resultText}</strong>
                 </div>
-                <div className={`${styles.rewardBox} ${item.rewardClass}`}>
-                  {item.reward}
+                <div className={`${styles.rewardBox} ${item.outcome === 'won' ? styles.rewardWon : styles.rewardLost}`}>
+                  {item.rewardText}
                 </div>
               </div>
             </article>
           ))}
 
         {tab === 'pk' &&
-          pkCards.map((item) => (
-            <article className={styles.pkCard} key={item.title}>
+          historyData.pk.map((item) => (
+            <article className={styles.pkCard} key={item.betId}>
               <div className={styles.pkHeader}>
                 <div className={styles.pkTitle}>{item.title}</div>
-                <div
-                  className={`${styles.pkResult} ${item.mode === 'won' ? styles.pkWon : styles.pkLost}`}
-                >
-                  {item.result}
+                <div className={`${styles.pkResult} ${item.outcome === 'won' ? styles.pkWon : styles.pkLost}`}>
+                  {item.outcome === 'won' ? '赢了' : '输了'}
                 </div>
               </div>
               <div className={styles.pkVs}>
                 <div className={styles.pkPlayer}>
-                  <img
-                    alt="player-a"
-                    src="/legacy/images/mascot/mouse-main.png"
-                  />
-                  <div className={styles.pkName}>
-                    {item.left.split('\n')[0]}
-                  </div>
-                  <div className={styles.pkChoice}>
-                    {item.left.split('\n')[1]}
-                  </div>
+                  <img alt="player-a" src="/legacy/images/mascot/mouse-main.png" />
+                  <div className={styles.pkName}>{item.leftName}</div>
+                  <div className={styles.pkChoice}>{item.leftChoice}</div>
                 </div>
                 <div className={styles.pkIcon}>VS</div>
                 <div className={styles.pkPlayer}>
-                  <img
-                    alt="player-b"
-                    src="/legacy/images/mascot/mouse-happy.png"
-                  />
-                  <div className={styles.pkName}>
-                    {item.right.split('\n')[0]}
-                  </div>
-                  <div className={styles.pkChoice}>
-                    {item.right.split('\n')[1]}
-                  </div>
+                  <img alt="player-b" src="/legacy/images/mascot/mouse-happy.png" />
+                  <div className={styles.pkName}>{item.rightName}</div>
+                  <div className={styles.pkChoice}>{item.rightChoice}</div>
                 </div>
               </div>
               <div className={styles.pkFooter}>{item.footer}</div>
             </article>
           ))}
 
-        {tab !== 'pk' &&
-        tab !== 'active' &&
-        tab !== 'all' &&
-        filteredHistory.length === 0 ? (
+        {canShowEmpty ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>
               <i className="fa-solid fa-bullseye" />
             </div>
             <div className={styles.emptyText}>暂无记录</div>
-            <div className={styles.emptyTip}>
-              去参与一场竞猜，记录就会出现在这里。
-            </div>
+            <div className={styles.emptyTip}>快去参与一场竞猜试试吧。</div>
           </div>
         ) : null}
       </main>
+
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </div>
   );

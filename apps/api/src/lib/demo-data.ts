@@ -22,6 +22,7 @@ const demoProduct: ProductSummary = {
 
 export const demoUser: UserSummary = {
   id: 'user-1',
+  uid: 'aZkLmNqP',
   phone: '13800000000',
   name: 'Joy User',
   role: 'user',
@@ -30,6 +31,7 @@ export const demoUser: UserSummary = {
 
 export const demoAdmin: UserSummary = {
   id: 'admin-1',
+  uid: 'QwErTyUi',
   phone: '13900000000',
   name: 'Ops Admin',
   role: 'admin',
