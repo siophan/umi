@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
-import { Card, Descriptions, Drawer, Form, Input, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
+import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { cloneElement, useMemo, useState } from 'react';
+import { cloneElement, useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type {
@@ -9,13 +9,25 @@ import type {
   AdminBrandAuthApplyItem,
   AdminBrandAuthRecordItem,
   AdminBrandItem,
+  AdminCategoryItem,
   AdminProductAuthItem,
   AdminProductAuthRecordItem,
   AdminShopApplyItem,
   AdminShopItem,
   AdminShopProductItem,
 } from '../lib/admin-data';
-import type { AdminPageData } from '../lib/admin-page-data';
+import {
+  fetchAdminBrandApplies,
+  fetchAdminBrandAuthApplies,
+  fetchAdminBrandAuthRecords,
+  fetchAdminBrands,
+  fetchAdminProductAuthRecords,
+  fetchAdminProductAuthRows,
+  fetchAdminShopApplies,
+  fetchAdminShopProducts,
+  fetchAdminShops,
+} from '../lib/api/merchant';
+import { fetchAdminCategories } from '../lib/api/system';
 import { formatAmount, formatDateTime, formatNumber, productStatusMeta } from '../lib/format';
 
 type UserMerchantPath =
@@ -30,10 +42,35 @@ type UserMerchantPath =
   | '/product-auth/records';
 
 interface UserMerchantPageProps {
-  data: AdminPageData;
-  loading: boolean;
   path: UserMerchantPath;
+  refreshToken?: number;
 }
+
+interface UserMerchantPageData {
+  shops: AdminShopItem[];
+  shopApplies: AdminShopApplyItem[];
+  brands: AdminBrandItem[];
+  brandApplies: AdminBrandApplyItem[];
+  brandAuthApplies: AdminBrandAuthApplyItem[];
+  brandAuthRecords: AdminBrandAuthRecordItem[];
+  shopProducts: AdminShopProductItem[];
+  productAuthRows: AdminProductAuthItem[];
+  productAuthRecords: AdminProductAuthRecordItem[];
+  categories: AdminCategoryItem[];
+}
+
+const emptyPageData: UserMerchantPageData = {
+  shops: [],
+  shopApplies: [],
+  brands: [],
+  brandApplies: [],
+  brandAuthApplies: [],
+  brandAuthRecords: [],
+  shopProducts: [],
+  productAuthRows: [],
+  productAuthRecords: [],
+  categories: [],
+};
 
 type DetailRecord =
   | AdminShopItem
@@ -80,8 +117,14 @@ function authTag(status: 'active' | 'expired' | 'revoked', label: string) {
   );
 }
 
-export function UserMerchantPage({ data, loading, path }: UserMerchantPageProps) {
+export function UserMerchantPage({
+  path,
+  refreshToken = 0,
+}: UserMerchantPageProps) {
   const [selected, setSelected] = useState<DetailRecord | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [data, setData] = useState<UserMerchantPageData>(emptyPageData);
   const [filters, setFilters] = useState<{
     keyword?: string;
     second?: string;
@@ -89,6 +132,88 @@ export function UserMerchantPage({ data, loading, path }: UserMerchantPageProps)
   }>({});
   const [status, setStatus] = useState('all');
   const [form] = Form.useForm<{ keyword?: string; second?: string; third?: string }>();
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        if (path === '/shops/list') {
+          const [shops, categories] = await Promise.all([
+            fetchAdminShops().then((result) => result.items),
+            fetchAdminCategories().then((result) => result.items),
+          ]);
+          if (alive) setData({ ...emptyPageData, shops, categories });
+          return;
+        }
+        if (path === '/shops/apply') {
+          const [shopApplies, categories] = await Promise.all([
+            fetchAdminShopApplies().then((result) => result.items),
+            fetchAdminCategories().then((result) => result.items),
+          ]);
+          if (alive) setData({ ...emptyPageData, shopApplies, categories });
+          return;
+        }
+        if (path === '/brands/list') {
+          const [brands, categories] = await Promise.all([
+            fetchAdminBrands().then((result) => result.items),
+            fetchAdminCategories().then((result) => result.items),
+          ]);
+          if (alive) setData({ ...emptyPageData, brands, categories });
+          return;
+        }
+        if (path === '/brands/apply') {
+          const [brandApplies, categories] = await Promise.all([
+            fetchAdminBrandApplies().then((result) => result.items),
+            fetchAdminCategories().then((result) => result.items),
+          ]);
+          if (alive) setData({ ...emptyPageData, brandApplies, categories });
+          return;
+        }
+        if (path === '/shops/brand-auth') {
+          const brandAuthApplies = await fetchAdminBrandAuthApplies().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, brandAuthApplies });
+          return;
+        }
+        if (path === '/shops/brand-auth/records') {
+          const brandAuthRecords = await fetchAdminBrandAuthRecords().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, brandAuthRecords });
+          return;
+        }
+        if (path === '/shops/products') {
+          const shopProducts = await fetchAdminShopProducts().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, shopProducts });
+          return;
+        }
+        if (path === '/product-auth/list') {
+          const productAuthRows = await fetchAdminProductAuthRows().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, productAuthRows });
+          return;
+        }
+
+        const productAuthRecords = await fetchAdminProductAuthRecords().then((result) => result.items);
+        if (alive) setData({ ...emptyPageData, productAuthRecords });
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setData(emptyPageData);
+        setIssue(error instanceof Error ? error.message : '页面数据加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [path, refreshToken]);
 
   const sourceRows = useMemo<DetailRecord[]>(() => {
     switch (path) {
@@ -620,6 +745,7 @@ export function UserMerchantPage({ data, loading, path }: UserMerchantPageProps)
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
         onSearch={() => {

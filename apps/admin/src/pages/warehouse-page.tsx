@@ -1,23 +1,33 @@
 import type { WarehouseItem } from '@joy/shared';
 import type { TableColumnsType } from 'antd';
 
-import { Card, Descriptions, Drawer, Form, Input, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
-import { useMemo, useState } from 'react';
+import { Alert, Card, Descriptions, Drawer, Form, Input, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminWarehouseStats } from '../lib/admin-data';
+import { fetchAdminWarehouseItems, fetchWarehouseStats } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, warehouseStatusMeta } from '../lib/format';
 
 interface WarehousePageProps {
-  items: WarehouseItem[];
-  loading: boolean;
-  stats: AdminWarehouseStats;
+  refreshToken?: number;
+  warehouseType: 'virtual' | 'physical';
 }
 
 type WarehouseFilter = 'all' | 'virtual' | 'physical';
 
-export function WarehousePage({ items, loading, stats }: WarehousePageProps) {
+export function WarehousePage({
+  refreshToken = 0,
+  warehouseType,
+}: WarehousePageProps) {
   const [selected, setSelected] = useState<WarehouseItem | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [items, setItems] = useState<WarehouseItem[]>([]);
+  const [stats, setStats] = useState<AdminWarehouseStats>({
+    totalVirtual: 0,
+    totalPhysical: 0,
+  });
   const [filters, setFilters] = useState<{
     productName?: string;
     sourceType?: string;
@@ -26,6 +36,43 @@ export function WarehousePage({ items, loading, stats }: WarehousePageProps) {
   const [scope, setScope] = useState<WarehouseFilter>('all');
   const [status, setStatus] = useState<'all' | WarehouseItem['status']>('all');
   const [form] = Form.useForm<{ productName?: string; sourceType?: string; userId?: string }>();
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const [statsResult, itemsResult] = await Promise.all([
+          fetchWarehouseStats(),
+          fetchAdminWarehouseItems(warehouseType),
+        ]);
+        if (!alive) {
+          return;
+        }
+        setStats(statsResult);
+        setItems(itemsResult.items);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setStats({ totalVirtual: 0, totalPhysical: 0 });
+        setItems([]);
+        setIssue(error instanceof Error ? error.message : '仓库列表加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken, warehouseType]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -109,6 +156,7 @@ export function WarehousePage({ items, loading, stats }: WarehousePageProps) {
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
         onSearch={() => {

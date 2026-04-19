@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
-import { Card, Descriptions, Drawer, Form, Input, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
+import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { cloneElement, useMemo, useState } from 'react';
+import { cloneElement, useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type {
@@ -9,7 +9,11 @@ import type {
   AdminLogisticsRow,
   AdminTransactionRow,
 } from '../lib/admin-data';
-import type { AdminPageData } from '../lib/admin-page-data';
+import {
+  fetchAdminConsignRows,
+  fetchAdminLogistics,
+  fetchAdminTransactions,
+} from '../lib/api/orders';
 import { formatAmount, formatDateTime, formatNumber } from '../lib/format';
 
 type OrderFulfillmentPath =
@@ -18,10 +22,21 @@ type OrderFulfillmentPath =
   | '/warehouse/consign';
 
 interface OrderFulfillmentPageProps {
-  data: AdminPageData;
-  loading: boolean;
   path: OrderFulfillmentPath;
+  refreshToken?: number;
 }
+
+interface OrderFulfillmentPageData {
+  transactions: AdminTransactionRow[];
+  logistics: AdminLogisticsRow[];
+  consignRows: AdminConsignRow[];
+}
+
+const emptyPageData: OrderFulfillmentPageData = {
+  transactions: [],
+  logistics: [],
+  consignRows: [],
+};
 
 type DetailRecord = AdminTransactionRow | AdminLogisticsRow | AdminConsignRow;
 
@@ -36,11 +51,13 @@ function directionTag(direction: 'payment' | 'refund') {
 }
 
 export function OrderFulfillmentPage({
-  data,
-  loading,
   path,
+  refreshToken = 0,
 }: OrderFulfillmentPageProps) {
   const [selected, setSelected] = useState<DetailRecord | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [data, setData] = useState<OrderFulfillmentPageData>(emptyPageData);
   const [filters, setFilters] = useState<{
     keyword?: string;
     second?: string;
@@ -48,6 +65,53 @@ export function OrderFulfillmentPage({
   }>({});
   const [status, setStatus] = useState('all');
   const [form] = Form.useForm<{ keyword?: string; second?: string; third?: string }>();
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        if (path === '/orders/transactions') {
+          const transactions = await fetchAdminTransactions().then((result) => result.items);
+          if (alive) {
+            setData({ ...emptyPageData, transactions });
+          }
+          return;
+        }
+
+        if (path === '/orders/logistics') {
+          const logistics = await fetchAdminLogistics().then((result) => result.items);
+          if (alive) {
+            setData({ ...emptyPageData, logistics });
+          }
+          return;
+        }
+
+        const consignRows = await fetchAdminConsignRows().then((result) => result.items);
+        if (alive) {
+          setData({ ...emptyPageData, consignRows });
+        }
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setData(emptyPageData);
+        setIssue(error instanceof Error ? error.message : '页面数据加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [path, refreshToken]);
 
   const sourceRows = useMemo<DetailRecord[]>(() => {
     switch (path) {
@@ -420,6 +484,7 @@ export function OrderFulfillmentPage({
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
         onSearch={() => {

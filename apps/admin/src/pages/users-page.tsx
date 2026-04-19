@@ -26,37 +26,30 @@ import {
   fetchAdminUserGuesses,
   fetchAdminUserOrders,
   updateAdminUserBan,
-} from '../lib/api';
+} from '../lib/api/users';
 
 interface UsersPageProps {
-  issue?: string | null;
-  loading: boolean;
-  onReload?: () => Promise<void> | void;
-  users?: UserSummary[];
+  refreshToken?: number;
 }
 
-export function UsersPage({
-  issue = null,
-  loading,
-  users = [],
-}: UsersPageProps) {
+export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
   const [messageApi, contextHolder] = message.useMessage();
   const [keyword, setKeyword] = useState('');
   const [role, setRole] = useState<AdminUserFilter>('all');
   const [listLoading, setListLoading] = useState(false);
-  const [listIssue, setListIssue] = useState<string | null>(issue);
-  const [listData, setListData] = useState<UserSummary[]>(users);
+  const [listIssue, setListIssue] = useState<string | null>(null);
+  const [listData, setListData] = useState<UserSummary[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [total, setTotal] = useState(users.length);
+  const [total, setTotal] = useState(0);
   const [extraFilters, setExtraFilters] = useState<{
     phone?: string;
     shopName?: string;
   }>({});
   const [summary, setSummary] = useState({
-    totalUsers: users.length,
-    verifiedUsers: users.filter((user) => user.shopVerified).length,
-    bannedUsers: users.filter((user) => user.banned).length,
+    totalUsers: 0,
+    verifiedUsers: 0,
+    bannedUsers: 0,
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState('info');
@@ -77,10 +70,6 @@ export function UsersPage({
   const [guessPageSize, setGuessPageSize] = useState(10);
   const [guessTotal, setGuessTotal] = useState(0);
   const [searchForm] = Form.useForm<{ keyword?: string; phone?: string; shopName?: string }>();
-
-  useEffect(() => {
-    setListIssue(issue ?? null);
-  }, [issue]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -297,7 +286,7 @@ export function UsersPage({
     return () => {
       alive = false;
     };
-  }, [keyword, page, pageSize, role]);
+  }, [keyword, page, pageSize, refreshToken, role]);
 
   async function handleToggleBan() {
     if (!selected) {
@@ -550,7 +539,7 @@ export function UsersPage({
           rowKey="id"
           columns={columns}
           dataSource={visibleUsers}
-          loading={loading || listLoading}
+          loading={listLoading}
           pagination={{
             current: page,
             pageSize,

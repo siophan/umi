@@ -1,21 +1,24 @@
 import type { GuessSummary } from '@joy/shared';
 import type { TableColumnsType } from 'antd';
 
-import { Card, Descriptions, Drawer, Form, Input, List, Progress, Select, Space, Table, Tag, Typography } from 'antd';
-import { useMemo, useState } from 'react';
+import { Alert, Card, Descriptions, Drawer, Form, Input, List, Progress, Select, Space, Table, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminCategoryItem } from '../lib/admin-data';
+import { fetchAdminCategories, fetchAdminGuesses } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, guessReviewStatusMeta, guessStatusMeta } from '../lib/format';
 
 interface GuessesPageProps {
-  guesses: GuessSummary[];
-  loading: boolean;
-  categories?: AdminCategoryItem[];
+  refreshToken?: number;
 }
 
-export function GuessesPage({ guesses, loading, categories = [] }: GuessesPageProps) {
+export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
   const [selected, setSelected] = useState<GuessSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [guesses, setGuesses] = useState<GuessSummary[]>([]);
+  const [categories, setCategories] = useState<AdminCategoryItem[]>([]);
   const [filters, setFilters] = useState<{
     title?: string;
     category?: string;
@@ -23,6 +26,43 @@ export function GuessesPage({ guesses, loading, categories = [] }: GuessesPagePr
   }>({});
   const [status, setStatus] = useState<'all' | 'pending_review' | GuessSummary['status']>('all');
   const [form] = Form.useForm<{ title?: string; category?: string; brand?: string }>();
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const [guessesResult, categoriesResult] = await Promise.all([
+          fetchAdminGuesses(),
+          fetchAdminCategories(),
+        ]);
+        if (!alive) {
+          return;
+        }
+        setGuesses(guessesResult.items);
+        setCategories(categoriesResult.items);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setGuesses([]);
+        setCategories([]);
+        setIssue(error instanceof Error ? error.message : '竞猜列表加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
 
   const filteredGuesses = useMemo(() => {
     return guesses.filter((guess) => {
@@ -125,6 +165,7 @@ export function GuessesPage({ guesses, loading, categories = [] }: GuessesPagePr
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
         onSearch={() => {

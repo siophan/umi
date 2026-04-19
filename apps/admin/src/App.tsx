@@ -13,7 +13,6 @@ import {
 import type { MenuProps } from 'antd';
 import { useEffect, useState } from 'react';
 
-import { AdminContentLoading } from './components/admin-content-loading';
 import { AdminShellHeader } from './components/admin-shell-header';
 import {
   changePassword,
@@ -23,12 +22,7 @@ import {
   login as loginRequest,
   logout as logoutRequest,
   setAuthToken,
-} from './lib/api';
-import {
-  emptyAdminPageData,
-  loadAdminPageData,
-  type AdminPageData,
-} from './lib/admin-page-data';
+} from './lib/api/auth';
 import { LoginScreen } from './components/login-screen';
 import {
   findAdminPageMeta,
@@ -201,8 +195,6 @@ function sameKeys(left: string[], right: string[]) {
   return left.every((key, index) => key === right[index]);
 }
 
-const initialData: AdminPageData = emptyAdminPageData;
-
 export function App() {
   const [messageApi, contextHolder] = message.useMessage();
   const [passwordForm] = Form.useForm<
@@ -213,7 +205,6 @@ export function App() {
   );
   const [authChecking, setAuthChecking] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -223,8 +214,6 @@ export function App() {
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AdminProfile | null>(null);
-  const [data, setData] = useState<AdminPageData>(initialData);
-  const [bootstrapped, setBootstrapped] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   useEffect(() => {
@@ -284,43 +273,6 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!authenticated) {
-      return;
-    }
-
-    let alive = true;
-
-    async function bootstrap() {
-      setLoading(true);
-      try {
-        const nextData = await loadAdminPageData(activePath);
-        if (alive) {
-          setData(nextData);
-        }
-      } finally {
-        if (alive) {
-          setLoading(false);
-          setBootstrapped(true);
-        }
-      }
-    }
-
-    void bootstrap();
-
-    return () => {
-      alive = false;
-    };
-  }, [activePath, authenticated, refreshNonce]);
-
-  useEffect(() => {
-    if (!authenticated || data.issues.length === 0) {
-      return;
-    }
-
-    messageApi.warning(data.issues[0]);
-  }, [authenticated, data.issues, messageApi]);
-
-  useEffect(() => {
     const nextKeys = findMenuOpenKeys(MENU_TREE, activePath);
     setMenuOpenKeys((currentKeys) =>
       sameKeys(currentKeys, nextKeys) ? currentKeys : nextKeys,
@@ -340,7 +292,6 @@ export function App() {
       setAuthToken(result.token);
       setCurrentUser(result.user);
       setAuthenticated(true);
-      setBootstrapped(false);
       setLoginError(null);
       window.location.hash = normalizePath(window.location.hash || DASHBOARD_PATH);
       messageApi.success('登录成功');
@@ -348,7 +299,6 @@ export function App() {
       clearAuthToken();
       setAuthenticated(false);
       setCurrentUser(null);
-      setBootstrapped(false);
       setLoginError(error instanceof Error ? error.message : '登录失败');
     } finally {
       setLoginLoading(false);
@@ -400,8 +350,6 @@ export function App() {
       clearAuthToken();
       setAuthenticated(false);
       setCurrentUser(null);
-      setData(initialData);
-      setBootstrapped(false);
       messageApi.success('已退出登录');
     }
   }
@@ -436,7 +384,7 @@ export function App() {
     ...(activeMeta.parentName ? [{ title: activeMeta.parentName }] : []),
     { title: activeMeta.name },
   ];
-  const showPageLoading = loading && !bootstrapped;
+  const pageRefreshToken = refreshNonce;
 
   return (
     <ConfigProvider theme={ADMIN_THEME}>
@@ -487,7 +435,7 @@ export function App() {
             breadcrumbItems={breadcrumbItems}
             collapsed={collapsed}
             currentUser={currentUser}
-            loading={loading}
+            loading={false}
             onCollapse={setCollapsed}
             onLogout={() => void handleLogout()}
             onOpenDocs={() => window.open('http://localhost:4000/docs', '_blank', 'noopener,noreferrer')}
@@ -496,41 +444,26 @@ export function App() {
           />
 
           <div className="joy-admin-page">
-            {showPageLoading ? (
-              <AdminContentLoading />
-            ) : activePath === DASHBOARD_PATH ? (
-              <DashboardPage
-                generatedAt={data.dashboard.generatedAt || data.lastUpdatedAt}
-                dashboardIssue={data.dashboardIssue}
-                loading={loading}
-                stats={data.dashboard}
-              />
+            {activePath === DASHBOARD_PATH ? (
+              <DashboardPage refreshToken={pageRefreshToken} />
             ) : activePath === USERS_LIST_PATH ? (
-              <UsersPage
-                issue={data.usersIssue}
-                loading={loading}
-                onReload={() => void handleRefresh()}
-                users={data.users}
-              />
+              <UsersPage refreshToken={pageRefreshToken} />
             ) : activePath === PRODUCTS_LIST_PATH ? (
-              <ProductsPage loading={loading} products={data.products} categories={data.categories} />
+              <ProductsPage refreshToken={pageRefreshToken} />
             ) : activePath === GUESSES_LIST_PATH ? (
-              <GuessesPage guesses={data.guesses} loading={loading} categories={data.categories} />
+              <GuessesPage refreshToken={pageRefreshToken} />
             ) : activePath === ORDERS_LIST_PATH ? (
-              <OrdersPage loading={loading} orders={data.orders} />
+              <OrdersPage refreshToken={pageRefreshToken} />
             ) : activePath === '/warehouse/virtual' ||
               activePath === '/warehouse/physical' ? (
               <WarehousePage
-                items={data.warehouseItems}
-                loading={loading}
-                stats={data.warehouseStats}
+                refreshToken={pageRefreshToken}
+                warehouseType={activePath === '/warehouse/virtual' ? 'virtual' : 'physical'}
               />
             ) : USER_MERCHANT_PATHS.has(
                 activePath as (typeof USER_MERCHANT_PATHS extends Set<infer T> ? T : never),
               ) ? (
               <UserMerchantPage
-                data={data}
-                loading={loading}
                 path={
                   activePath as
                     | '/shops/list'
@@ -543,13 +476,12 @@ export function App() {
                     | '/product-auth/list'
                     | '/product-auth/records'
                 }
+                refreshToken={pageRefreshToken}
               />
             ) : PRODUCT_GUESS_PATHS.has(
                 activePath as (typeof PRODUCT_GUESS_PATHS extends Set<infer T> ? T : never),
               ) ? (
               <ProductGuessPage
-                data={data}
-                loading={loading}
                 path={
                   activePath as
                     | '/products/brands'
@@ -557,26 +489,24 @@ export function App() {
                     | '/guesses/friends'
                     | '/pk'
                 }
+                refreshToken={pageRefreshToken}
               />
             ) : ORDER_FULFILLMENT_PATHS.has(
                 activePath as (typeof ORDER_FULFILLMENT_PATHS extends Set<infer T> ? T : never),
               ) ? (
               <OrderFulfillmentPage
-                data={data}
-                loading={loading}
                 path={
                   activePath as
                     | '/orders/transactions'
                     | '/orders/logistics'
                     | '/warehouse/consign'
                 }
+                refreshToken={pageRefreshToken}
               />
             ) : MARKETING_PATHS.has(
                 activePath as (typeof MARKETING_PATHS extends Set<infer T> ? T : never),
               ) ? (
               <MarketingPage
-                data={data}
-                loading={loading}
                 path={
                   activePath as
                     | '/equity'
@@ -586,13 +516,12 @@ export function App() {
                     | '/marketing/invite'
                     | '/system/rankings'
                 }
+                refreshToken={pageRefreshToken}
               />
             ) : CONTENT_SYSTEM_PATHS.has(
                 activePath as (typeof CONTENT_SYSTEM_PATHS extends Set<infer T> ? T : never),
               ) ? (
               <ContentSystemPage
-                data={data}
-                loading={loading}
                 path={
                   activePath as
                     | '/community/posts'
@@ -607,6 +536,7 @@ export function App() {
                     | '/system/categories'
                     | '/system/notifications'
                 }
+                refreshToken={pageRefreshToken}
               />
             ) : (
               <Result status="404" title="页面未配置" subTitle={activePath} />

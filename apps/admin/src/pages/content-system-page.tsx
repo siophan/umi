@@ -1,17 +1,25 @@
 import type { ReactNode } from 'react';
-import { Card, Descriptions, Drawer, Form, Input, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
+import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type {
   AdminCategoryItem,
   AdminChatItem,
   AdminNotificationItem,
+  AdminPermissionMatrixData,
   AdminRoleListItem,
   AdminSystemUserItem,
 } from '../lib/admin-data';
-import type { AdminPageData } from '../lib/admin-page-data';
+import {
+  fetchAdminCategories,
+  fetchAdminChats,
+  fetchAdminNotifications,
+  fetchAdminPermissionsMatrix,
+  fetchAdminRoles,
+  fetchAdminSystemUsers,
+} from '../lib/api/system';
 import { formatDateTime, formatNumber, formatPercent } from '../lib/format';
 
 type ContentSystemPath =
@@ -28,10 +36,27 @@ type ContentSystemPath =
   | '/system/notifications';
 
 interface ContentSystemPageProps {
-  data: AdminPageData;
-  loading: boolean;
   path: ContentSystemPath;
+  refreshToken?: number;
 }
+
+interface ContentSystemPageData {
+  chats: AdminChatItem[];
+  systemUsers: AdminSystemUserItem[];
+  roles: AdminRoleListItem[];
+  permissionsMatrix: AdminPermissionMatrixData | null;
+  categories: AdminCategoryItem[];
+  notifications: AdminNotificationItem[];
+}
+
+const emptyPageData: ContentSystemPageData = {
+  chats: [],
+  systemUsers: [],
+  roles: [],
+  permissionsMatrix: null,
+  categories: [],
+  notifications: [],
+};
 
 type StaticRow = Record<string, string | number>;
 type DetailRecord =
@@ -54,11 +79,13 @@ function statusTag(label: string, color: string) {
 }
 
 export function ContentSystemPage({
-  data,
-  loading,
   path,
+  refreshToken = 0,
 }: ContentSystemPageProps) {
   const [selected, setSelected] = useState<DetailRecord | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [data, setData] = useState<ContentSystemPageData>(emptyPageData);
   const [filters, setFilters] = useState<{
     keyword?: string;
     second?: string;
@@ -66,6 +93,66 @@ export function ContentSystemPage({
   }>({});
   const [status, setStatus] = useState('all');
   const [form] = Form.useForm<{ keyword?: string; second?: string; third?: string }>();
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        if (path === '/system/chats') {
+          const chats = await fetchAdminChats().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, chats });
+          return;
+        }
+        if (path === '/system/users') {
+          const systemUsers = await fetchAdminSystemUsers().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, systemUsers });
+          return;
+        }
+        if (path === '/system/roles') {
+          const roles = await fetchAdminRoles().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, roles });
+          return;
+        }
+        if (path === '/users/permissions') {
+          const permissionsMatrix = await fetchAdminPermissionsMatrix();
+          if (alive) setData({ ...emptyPageData, permissionsMatrix });
+          return;
+        }
+        if (path === '/system/categories') {
+          const categories = await fetchAdminCategories().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, categories });
+          return;
+        }
+        if (path === '/system/notifications') {
+          const notifications = await fetchAdminNotifications().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, notifications });
+          return;
+        }
+        if (alive) {
+          setData(emptyPageData);
+        }
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setData(emptyPageData);
+        setIssue(error instanceof Error ? error.message : '页面数据加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [path, refreshToken]);
 
   const postRows: StaticRow[] = [
     { id: 'post-1', title: 'Panda 竞猜晒单', author: '用户 1001', likes: 128, comments: 24, status: '已发布' },
@@ -661,6 +748,7 @@ export function ContentSystemPage({
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
         onSearch={() => {

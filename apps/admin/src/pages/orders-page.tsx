@@ -1,19 +1,22 @@
 import type { OrderSummary } from '@joy/shared';
 import type { TableColumnsType } from 'antd';
 
-import { Card, Descriptions, Drawer, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
-import { useMemo, useState } from 'react';
+import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { fetchAdminOrders } from '../lib/api/orders';
 import { formatAmount, formatDateTime, orderStatusMeta } from '../lib/format';
 
 interface OrdersPageProps {
-  loading: boolean;
-  orders: OrderSummary[];
+  refreshToken?: number;
 }
 
-export function OrdersPage({ loading, orders }: OrdersPageProps) {
+export function OrdersPage({ refreshToken = 0 }: OrdersPageProps) {
   const [selected, setSelected] = useState<OrderSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [filters, setFilters] = useState<{
     orderId?: string;
     userId?: string;
@@ -21,6 +24,38 @@ export function OrdersPage({ loading, orders }: OrdersPageProps) {
   }>({});
   const [status, setStatus] = useState<'all' | OrderSummary['status']>('all');
   const [form] = Form.useForm<{ orderId?: string; userId?: string; orderType?: string }>();
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const result = await fetchAdminOrders();
+        if (!alive) {
+          return;
+        }
+        setOrders(result.items);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setOrders([]);
+        setIssue(error instanceof Error ? error.message : '订单列表加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
@@ -95,6 +130,7 @@ export function OrdersPage({ loading, orders }: OrdersPageProps) {
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
         onSearch={() => {

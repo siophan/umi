@@ -1,20 +1,23 @@
 import type { TableColumnsType } from 'antd';
 
-import { Card, Descriptions, Drawer, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
-import { useMemo, useState } from 'react';
+import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminCategoryItem, AdminProduct } from '../lib/admin-data';
+import { fetchAdminCategories, fetchAdminProducts } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, productStatusMeta } from '../lib/format';
 
 interface ProductsPageProps {
-  loading: boolean;
-  products: AdminProduct[];
-  categories?: AdminCategoryItem[];
+  refreshToken?: number;
 }
 
-export function ProductsPage({ loading, products, categories = [] }: ProductsPageProps) {
+export function ProductsPage({ refreshToken = 0 }: ProductsPageProps) {
   const [selected, setSelected] = useState<AdminProduct | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [categories, setCategories] = useState<AdminCategoryItem[]>([]);
   const [filters, setFilters] = useState<{
     name?: string;
     category?: string;
@@ -22,6 +25,43 @@ export function ProductsPage({ loading, products, categories = [] }: ProductsPag
   }>({});
   const [status, setStatus] = useState<'all' | AdminProduct['status']>('all');
   const [form] = Form.useForm<{ name?: string; category?: string; shopName?: string }>();
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const [productsResult, categoriesResult] = await Promise.all([
+          fetchAdminProducts({ page: 1, pageSize: 100 }),
+          fetchAdminCategories(),
+        ]);
+        if (!alive) {
+          return;
+        }
+        setProducts(productsResult.items);
+        setCategories(categoriesResult.items);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setProducts([]);
+        setCategories([]);
+        setIssue(error instanceof Error ? error.message : '商品列表加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -118,6 +158,7 @@ export function ProductsPage({ loading, products, categories = [] }: ProductsPag
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
         onSearch={() => {

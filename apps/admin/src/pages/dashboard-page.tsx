@@ -1,15 +1,32 @@
 import { Alert, Card, Col, Empty, List, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { AdminDashboardStats } from '../lib/admin-data';
+import { fetchAdminDashboard } from '../lib/api/dashboard';
 import { formatAmount, formatDateTime, formatNumber, productStatusMeta } from '../lib/format';
 
 interface DashboardPageProps {
-  generatedAt: string;
-  dashboardIssue?: string | null;
-  loading: boolean;
-  stats: AdminDashboardStats;
+  refreshToken?: number;
 }
+
+const emptyDashboardStats: AdminDashboardStats = {
+  generatedAt: '',
+  users: 0,
+  products: 0,
+  activeGuesses: 0,
+  orders: 0,
+  todayUsers: 0,
+  todayBets: 0,
+  todayOrders: 0,
+  todayGmv: 0,
+  trend: [],
+  orderDistribution: [],
+  guessCategories: [],
+  hotGuesses: [],
+  hotProducts: [],
+  pendingQueues: [],
+};
 
 function ratio(value: number, total: number) {
   if (total <= 0) {
@@ -19,12 +36,46 @@ function ratio(value: number, total: number) {
   return Math.round((value / total) * 100);
 }
 
-export function DashboardPage({
-  generatedAt,
-  dashboardIssue,
-  loading,
-  stats,
-}: DashboardPageProps) {
+export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
+  const [loading, setLoading] = useState(false);
+  const [dashboardIssue, setDashboardIssue] = useState<string | null>(null);
+  const [stats, setStats] = useState<AdminDashboardStats>(emptyDashboardStats);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setDashboardIssue(null);
+      try {
+        const result = await fetchAdminDashboard();
+        if (!alive) {
+          return;
+        }
+        setStats(result);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setStats(emptyDashboardStats);
+        setDashboardIssue(
+          error instanceof Error ? error.message : '仪表盘数据加载失败',
+        );
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
+
+  const generatedAt = stats.generatedAt;
   const dashboardUnavailable = Boolean(dashboardIssue);
   const maxTrendBets = Math.max(...stats.trend.map((item) => item.bets), 1);
   const maxTrendOrders = Math.max(...stats.trend.map((item) => item.orders), 1);

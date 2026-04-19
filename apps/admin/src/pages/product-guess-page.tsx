@@ -1,16 +1,25 @@
 import type { ReactElement, ReactNode } from 'react';
 import type { GuessSummary } from '@joy/shared';
-import { Card, Descriptions, Drawer, Form, Input, List, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
+import { Alert, Card, Descriptions, Drawer, Form, Input, List, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { cloneElement, useMemo, useState } from 'react';
+import { cloneElement, useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type {
   AdminBrandLibraryItem,
+  AdminCategoryItem,
   AdminFriendGuessItem,
+  AdminProduct,
   AdminPkMatchItem,
 } from '../lib/admin-data';
-import type { AdminPageData } from '../lib/admin-page-data';
+import {
+  fetchAdminBrandLibrary,
+  fetchAdminCategories,
+  fetchAdminFriendGuesses,
+  fetchAdminGuesses,
+  fetchAdminPkMatches,
+  fetchAdminProducts,
+} from '../lib/api/catalog';
 import {
   formatAmount,
   formatDateTime,
@@ -26,10 +35,27 @@ type ProductGuessPath =
   | '/pk';
 
 interface ProductGuessPageProps {
-  data: AdminPageData;
-  loading: boolean;
   path: ProductGuessPath;
+  refreshToken?: number;
 }
+
+interface ProductGuessPageData {
+  brandLibrary: AdminBrandLibraryItem[];
+  friendGuesses: AdminFriendGuessItem[];
+  pkMatches: AdminPkMatchItem[];
+  categories: AdminCategoryItem[];
+  guesses: GuessSummary[];
+  products: AdminProduct[];
+}
+
+const emptyPageData: ProductGuessPageData = {
+  brandLibrary: [],
+  friendGuesses: [],
+  pkMatches: [],
+  categories: [],
+  guesses: [],
+  products: [],
+};
 
 type DetailRecord = AdminBrandLibraryItem | AdminFriendGuessItem | AdminPkMatchItem;
 
@@ -63,11 +89,13 @@ function pkStatusTag(record: AdminPkMatchItem) {
 }
 
 export function ProductGuessPage({
-  data,
-  loading,
   path,
+  refreshToken = 0,
 }: ProductGuessPageProps) {
   const [selected, setSelected] = useState<DetailRecord | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [data, setData] = useState<ProductGuessPageData>(emptyPageData);
   const [filters, setFilters] = useState<{
     keyword?: string;
     second?: string;
@@ -75,6 +103,67 @@ export function ProductGuessPage({
   }>({});
   const [status, setStatus] = useState('all');
   const [form] = Form.useForm<{ keyword?: string; second?: string; third?: string }>();
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        if (path === '/products/brands') {
+          const [brandLibrary, categories] = await Promise.all([
+            fetchAdminBrandLibrary({ page: 1, pageSize: 100 }).then((result) => result.items),
+            fetchAdminCategories().then((result) => result.items),
+          ]);
+          if (alive) setData({ ...emptyPageData, brandLibrary, categories });
+          return;
+        }
+        if (path === '/guesses/friends') {
+          const friendGuesses = await fetchAdminFriendGuesses().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, friendGuesses });
+          return;
+        }
+        if (path === '/pk') {
+          const pkMatches = await fetchAdminPkMatches().then((result) => result.items);
+          if (alive) setData({ ...emptyPageData, pkMatches });
+          return;
+        }
+
+        const [guesses, products, categories, friendGuesses] = await Promise.all([
+          fetchAdminGuesses().then((result) => result.items),
+          fetchAdminProducts({ page: 1, pageSize: 100 }).then((result) => result.items),
+          fetchAdminCategories().then((result) => result.items),
+          fetchAdminFriendGuesses().then((result) => result.items),
+        ]);
+        if (alive) {
+          setData({
+            ...emptyPageData,
+            guesses,
+            products,
+            categories,
+            friendGuesses,
+          });
+        }
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setData(emptyPageData);
+        setIssue(error instanceof Error ? error.message : '页面数据加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [path, refreshToken]);
 
   const sourceRows = useMemo<DetailRecord[]>(() => {
     switch (path) {
@@ -553,6 +642,7 @@ export function ProductGuessPage({
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       {path !== '/guesses/create' ? (
         <>
           <AdminSearchPanel

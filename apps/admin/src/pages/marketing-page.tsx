@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { Card, Descriptions, Drawer, Form, Input, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
+import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Statistic, Table, Tag, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type { AdminPageData } from '../lib/admin-page-data';
+import { fetchAdminUsers } from '../lib/api/users';
 import { formatAmount, formatDateTime, formatNumber, formatPercent } from '../lib/format';
+import type { UserSummary } from '@joy/shared';
 
 type MarketingPath =
   | '/equity'
@@ -16,9 +17,8 @@ type MarketingPath =
   | '/system/rankings';
 
 interface MarketingPageProps {
-  data: AdminPageData;
-  loading: boolean;
   path: MarketingPath;
+  refreshToken?: number;
 }
 
 type EquityRow = {
@@ -107,8 +107,12 @@ function statusColor(status: string) {
   return 'default';
 }
 
-export function MarketingPage({ data, loading, path }: MarketingPageProps) {
+export function MarketingPage({ path, refreshToken = 0 }: MarketingPageProps) {
   const [selected, setSelected] = useState<DetailRecord | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(() => new Date().toISOString());
   const [filters, setFilters] = useState<{
     keyword?: string;
     second?: string;
@@ -117,9 +121,50 @@ export function MarketingPage({ data, loading, path }: MarketingPageProps) {
   const [status, setStatus] = useState('all');
   const [form] = Form.useForm<{ keyword?: string; second?: string; third?: string }>();
 
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPage() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        if (path === '/equity') {
+          const result = await fetchAdminUsers();
+          if (!alive) {
+            return;
+          }
+          setUsers(result.items);
+          setLastUpdatedAt(new Date().toISOString());
+          return;
+        }
+
+        if (alive) {
+          setUsers([]);
+          setLastUpdatedAt(new Date().toISOString());
+        }
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setUsers([]);
+        setIssue(error instanceof Error ? error.message : '页面数据加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPage();
+
+    return () => {
+      alive = false;
+    };
+  }, [path, refreshToken]);
+
   const equityRows = useMemo<EquityRow[]>(
     () =>
-      data.users.map((user, index) => {
+      users.map((user, index) => {
         const balance = Math.round(user.coins * 0.55);
         const frozen = Math.round(user.coins * (user.role === 'shop_owner' ? 0.22 : 0.12));
         return {
@@ -132,7 +177,7 @@ export function MarketingPage({ data, loading, path }: MarketingPageProps) {
           note: frozen > balance * 0.3 ? '冻结占比偏高' : '余额结构正常',
         };
       }),
-    [data.users],
+    [users],
   );
 
   const bannerRows: BannerRow[] = [
@@ -143,7 +188,7 @@ export function MarketingPage({ data, loading, path }: MarketingPageProps) {
       audience: '全体用户',
       status: '投放中',
       clickRate: 8.4,
-      updatedAt: data.lastUpdatedAt,
+      updatedAt: lastUpdatedAt,
     },
     {
       id: 'banner-2',
@@ -152,7 +197,7 @@ export function MarketingPage({ data, loading, path }: MarketingPageProps) {
       audience: '新注册店主',
       status: '待排期',
       clickRate: 4.1,
-      updatedAt: data.lastUpdatedAt,
+      updatedAt: lastUpdatedAt,
     },
   ];
 
@@ -229,7 +274,7 @@ export function MarketingPage({ data, loading, path }: MarketingPageProps) {
       refreshRule: '每小时刷新',
       publishScope: '首页 / 竞猜频道',
       status: '启用中',
-      lastGeneratedAt: data.lastUpdatedAt,
+      lastGeneratedAt: lastUpdatedAt,
     },
     {
       id: 'ranking-2',
@@ -238,7 +283,7 @@ export function MarketingPage({ data, loading, path }: MarketingPageProps) {
       refreshRule: '每日 00:10',
       publishScope: '商城首页',
       status: '待灰度',
-      lastGeneratedAt: data.lastUpdatedAt,
+      lastGeneratedAt: lastUpdatedAt,
     },
   ];
 
@@ -569,6 +614,7 @@ export function MarketingPage({ data, loading, path }: MarketingPageProps) {
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
         onSearch={() => {
