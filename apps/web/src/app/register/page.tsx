@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchMe, register, sendCode } from "../../lib/api/auth";
@@ -337,13 +338,9 @@ function RegisterPageInner() {
           <label>
             <input type="checkbox" checked={agree} onChange={(event) => setAgree(event.target.checked)} />
             我已阅读并同意
-            <button type="button" className={styles.inlineLink} onClick={() => showToast("用户协议")}>
-              《用户协议》
-            </button>
+            <Link href="/terms" className={styles.inlineLink}>《用户协议》</Link>
             和
-            <button type="button" className={styles.inlineLink} onClick={() => showToast("隐私政策")}>
-              《隐私政策》
-            </button>
+            <Link href="/privacy" className={styles.inlineLink}>《隐私政策》</Link>
           </label>
         </div>
 

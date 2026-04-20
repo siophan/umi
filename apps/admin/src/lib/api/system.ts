@@ -2,6 +2,8 @@ import type {
   AdminPermissionMutationResult,
   EntityId,
   CreateAdminPermissionPayload,
+  CreateAdminRolePayload,
+  CreateAdminRoleResult,
   AdminSystemUserMutationResult,
   CreateAdminSystemUserPayload,
   ResetAdminSystemUserPasswordPayload,
@@ -232,6 +234,10 @@ export function updateAdminSystemUserStatus(
 
 export function fetchAdminRoles() {
   return getJson<AdminRoleListResult>('/api/admin/roles');
+}
+
+export function createAdminRole(payload: CreateAdminRolePayload) {
+  return postJson<CreateAdminRoleResult, CreateAdminRolePayload>('/api/admin/roles', payload);
 }
 
 export function updateAdminRoleStatus(

@@ -10,8 +10,10 @@ import {
   Drawer,
   Form,
   Input,
+  InputNumber,
   Modal,
   Popconfirm,
+  Select,
   Tag,
   Typography,
   message,
@@ -24,6 +26,7 @@ import {
   SEARCH_THEME,
 } from '../components/admin-list-controls';
 import {
+  createAdminRole,
   fetchAdminPermissionsMatrix,
   fetchAdminRoles,
   updateAdminRolePermissions,
@@ -60,6 +63,9 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
   const [permissionSubmitting, setPermissionSubmitting] = useState(false);
   const [editingPermissionsRole, setEditingPermissionsRole] = useState<AdminRoleListItem | null>(null);
   const [checkedPermissionIds, setCheckedPermissionIds] = useState<EntityId[]>([]);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createForm] = Form.useForm<{ code: string; name: string; description?: string; sort?: number; status: 'active' | 'disabled' }>();
 
   useEffect(() => {
     let alive = true;
@@ -241,6 +247,30 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
     }
   }
 
+  async function handleCreateRole() {
+    try {
+      const values = await createForm.validateFields();
+      setCreateSubmitting(true);
+      await createAdminRole({
+        code: values.code.trim(),
+        name: values.name.trim(),
+        description: values.description?.trim() || undefined,
+        sort: Number(values.sort ?? 0),
+        status: values.status,
+      });
+      messageApi.success('角色已创建');
+      setCreateModalOpen(false);
+      createForm.resetFields();
+      await reloadRoles();
+    } catch (error) {
+      if (error instanceof Error) {
+        messageApi.error(error.message);
+      }
+    } finally {
+      setCreateSubmitting(false);
+    }
+  }
+
   async function handleToggleStatus(record: AdminRoleListItem) {
     try {
       await updateAdminRoleStatus(record.id, {
@@ -301,7 +331,13 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
           options={{ reload: true, density: true, fullScreen: false, setting: true }}
           pagination={{ defaultPageSize: 10, showSizeChanger: true }}
           search={false}
-          toolBarRender={() => []}
+          toolBarRender={() => [
+            <Button key="create" type="primary" onClick={() => {
+              createForm.resetFields();
+              createForm.setFieldsValue({ status: 'active', sort: 0 });
+              setCreateModalOpen(true);
+            }}>新增角色</Button>,
+          ]}
         />
       </ConfigProvider>
 
@@ -345,6 +381,37 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
         ) : null}
       </Drawer>
 
+      <ConfigProvider theme={SEARCH_THEME}>
+        <Modal
+          destroyOnHidden
+          open={createModalOpen}
+          title="新增角色"
+          okText="创建"
+          cancelText="取消"
+          confirmLoading={createSubmitting}
+          onOk={() => void handleCreateRole()}
+          onCancel={() => { setCreateModalOpen(false); createForm.resetFields(); }}
+        >
+          <Form form={createForm} layout="vertical">
+            <Form.Item label="角色编码" name="code" rules={[{ required: true, message: '请输入角色编码' }]}>
+              <Input allowClear placeholder="例如：operator" />
+            </Form.Item>
+            <Form.Item label="角色名称" name="name" rules={[{ required: true, message: '请输入角色名称' }]}>
+              <Input allowClear placeholder="例如：运营" />
+            </Form.Item>
+            <Form.Item label="说明" name="description">
+              <Input.TextArea allowClear placeholder="可选" rows={2} />
+            </Form.Item>
+            <Form.Item label="排序" name="sort">
+              <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label="状态" name="status">
+              <Select options={[{ label: '启用', value: 'active' }, { label: '停用', value: 'disabled' }]} />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </ConfigProvider>
+
       <Modal
         destroyOnHidden
         open={editingPermissionsRole != null}
@@ -378,7 +445,7 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
                   <div style={{ marginTop: 12 }}>
                     <Checkbox.Group
                       options={module.permissions.map((permission) => ({
-                        label: permission.name,
+                        label: `${permission.name}（${{ view: '查看', create: '新建', edit: '编辑', manage: '管理' }[permission.action] ?? permission.action}）`,
                         value: permission.id,
                       }))}
                       value={checkedPermissionIds}

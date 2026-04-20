@@ -333,34 +333,15 @@ function LoginPageInner() {
         </form>
         </section>
 
-        <div className={styles.divider}>
-          <span>其他方式登录</span>
-        </div>
-
-        <section className={styles.socialRow} aria-label="社交登录">
-          <button className={styles.socialBtn} type="button" style={{ background: "#07C160" }} onClick={() => handleSocialLogin("微信")}>
-            <i className="fa-brands fa-weixin" />
-          </button>
-          <button className={styles.socialBtn} type="button" style={{ background: "#12B7F5" }} onClick={() => handleSocialLogin("QQ")}>
-            <i className="fa-brands fa-qq" />
-          </button>
-          <button className={styles.socialBtn} type="button" style={{ background: "#1A1A1A" }} onClick={() => handleSocialLogin("Apple")}>
-            <i className="fa-brands fa-apple" />
-          </button>
-        </section>
 
         <div className={styles.agree}>
           <label className={styles.agreeLabel}>
             <input type="checkbox" checked={agree} onChange={(event) => setAgree(event.target.checked)} />
             <span>
               我已阅读并同意
-              <button type="button" className={styles.agreeLink} onClick={() => openToast("用户协议")}>
-                《用户协议》
-              </button>
+              <Link href="/terms" className={styles.agreeLink}>《用户协议》</Link>
               和
-              <button type="button" className={styles.agreeLink} onClick={() => openToast("隐私政策")}>
-                《隐私政策》
-              </button>
+              <Link href="/privacy" className={styles.agreeLink}>《隐私政策》</Link>
             </span>
           </label>
         </div>

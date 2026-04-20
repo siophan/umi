@@ -631,26 +631,10 @@ export default function MePage() {
                     <span className={styles.settingsItemVal}>未接入</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
-                  <button className={styles.settingsItem} type="button" onClick={() => setToast('语言切换开发中')}>
-                    <span className={`${styles.settingsItemIcon} ${styles.iconAmber}`}><i className="fa-solid fa-globe" /></span>
-                    <span className={styles.settingsItemText}>语言</span>
-                    <span className={styles.settingsItemVal}>简体中文</span>
-                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
-                  </button>
                 </div>
 
                 <div className={styles.settingsGroup}>
                   <div className={styles.settingsGroupTitle}>支持与帮助</div>
-                  <button className={styles.settingsItem} type="button" onClick={() => setToast('帮助中心开发中')}>
-                    <span className={`${styles.settingsItemIcon} ${styles.iconLime}`}><i className="fa-solid fa-circle-question" /></span>
-                    <span className={styles.settingsItemText}>帮助中心</span>
-                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
-                  </button>
-                  <button className={styles.settingsItem} type="button" onClick={() => setToast('意见反馈开发中')}>
-                    <span className={`${styles.settingsItemIcon} ${styles.iconOrange}`}><i className="fa-solid fa-comment-medical" /></span>
-                    <span className={styles.settingsItemText}>意见反馈</span>
-                    <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
-                  </button>
                   <button className={styles.settingsItem} type="button" onClick={() => setToast('关于Umi v2.6.0')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconSlate}`}><i className="fa-solid fa-circle-info" /></span>
                     <span className={styles.settingsItemText}>关于Umi</span>

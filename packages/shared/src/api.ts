@@ -213,6 +213,18 @@ export interface CreateAdminPermissionPayload {
   status?: 'active' | 'disabled';
 }
 
+export interface CreateAdminRolePayload {
+  code: string;
+  name: string;
+  description?: string;
+  sort?: number;
+  status?: 'active' | 'disabled';
+}
+
+export interface CreateAdminRoleResult {
+  id: EntityId;
+}
+
 export interface UpdateAdminPermissionPayload {
   code: string;
   name: string;
@@ -634,6 +646,7 @@ export interface CartItem {
 
 export interface CartListResult {
   items: CartItem[];
+  promoThreshold: number;
 }
 
 export interface AddCartItemPayload {

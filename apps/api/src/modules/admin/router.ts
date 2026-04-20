@@ -7,6 +7,7 @@ import type {
   ChangePasswordPayload,
   CreateAdminPermissionPayload,
   CreateAdminCategoryPayload,
+  CreateAdminRolePayload,
   CreateAdminSystemUserPayload,
   ResetAdminSystemUserPasswordPayload,
   UpdateAdminCategoryPayload,
@@ -60,6 +61,7 @@ import {
   getAdminRoles,
   getAdminSystemUsers,
   createAdminPermission,
+  createAdminRole,
   createAdminSystemUser,
   resetAdminSystemUserPassword,
   updateAdminPermission,
@@ -712,6 +714,20 @@ adminRouter.get(
   '/roles',
   asyncHandler(async (_request, response) => {
     ok(response, await getAdminRoles());
+  }),
+);
+
+adminRouter.post(
+  '/roles',
+  asyncHandler(async (request, response) => {
+    try {
+      ok(response, await createAdminRole(request.body as CreateAdminRolePayload));
+    } catch (error) {
+      throw toRouteHttpError(
+        error,
+        { status: 400, code: 'ADMIN_ROLE_CREATE_FAILED', message: '创建角色失败' },
+      );
+    }
   }),
 );
 

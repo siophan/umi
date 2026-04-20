@@ -4,6 +4,8 @@ import type {
   AdminPermissionMutationResult,
   AdminSystemUserMutationResult,
   CreateAdminPermissionPayload,
+  CreateAdminRolePayload,
+  CreateAdminRoleResult,
   CreateAdminSystemUserPayload,
   ResetAdminSystemUserPasswordPayload,
   UpdateAdminPermissionPayload,
@@ -1470,6 +1472,32 @@ export async function updateAdminRolePermissions(
   } finally {
     connection.release();
   }
+}
+
+export async function createAdminRole(payload: CreateAdminRolePayload): Promise<CreateAdminRoleResult> {
+  const code = payload.code.trim();
+  const name = payload.name.trim();
+  if (!code) throw new Error('角色编码不能为空');
+  if (!name) throw new Error('角色名称不能为空');
+
+  const db = getDbPool();
+  const [existing] = await db.execute<mysql.RowDataPacket[]>(
+    `SELECT id FROM admin_role WHERE code = ? LIMIT 1`,
+    [code],
+  );
+  if ((existing as mysql.RowDataPacket[]).length > 0) {
+    throw new Error('角色编码已存在');
+  }
+
+  const status = payload.status === 'disabled' ? ADMIN_STATUS_DISABLED : ADMIN_STATUS_ACTIVE;
+  const sort = Math.max(0, Math.trunc(Number(payload.sort ?? 0) || 0));
+  const [result] = await db.execute<mysql.ResultSetHeader>(
+    `INSERT INTO admin_role (code, name, description, status, is_system, sort, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 0, ?, NOW(), NOW())`,
+    [code, name, payload.description?.trim() || null, status, sort],
+  );
+
+  return { id: toEntityId(result.insertId) };
 }
 
 export async function getAdminRoles(): Promise<AdminRoleListResult> {

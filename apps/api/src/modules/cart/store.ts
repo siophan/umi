@@ -163,6 +163,7 @@ export async function getCart(userId: string): Promise<CartListResult> {
 
   return {
     items: (rows as CartRow[]).map((row) => sanitizeCartItem(row)),
+    promoThreshold: 200,
   };
 }
 

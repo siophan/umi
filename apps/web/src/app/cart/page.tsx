@@ -27,6 +27,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [swipedId, setSwipedId] = useState<string | null>(null);
+  const [promoThreshold, setPromoThreshold] = useState(0);
   const [toast, setToast] = useState('');
   const touchStartX = useRef(0);
   const toastTimerRef = useRef<number | null>(null);
@@ -43,6 +44,7 @@ export default function CartPage() {
         ]);
         if (!ignore) {
           setItems(cartResult.status === 'fulfilled' ? cartResult.value.items : []);
+          setPromoThreshold(cartResult.status === 'fulfilled' ? cartResult.value.promoThreshold : 0);
           setDiscoverItems(productResult.status === 'fulfilled' ? productResult.value.items : []);
         }
       } catch (error) {
@@ -97,7 +99,7 @@ export default function CartPage() {
   );
   const totalCount = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
   const allChecked = items.length > 0 && items.every((item) => item.checked);
-  const promoGap = Math.max(0, 200 - total);
+  const promoGap = promoThreshold > 0 ? Math.max(0, promoThreshold - total) : 0;
   const recommendItems = useMemo(
     () => discoverItems.filter((item) => !items.some((cartItem) => cartItem.productId === item.id)).slice(0, 8),
     [discoverItems, items],
