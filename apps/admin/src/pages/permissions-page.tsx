@@ -30,7 +30,7 @@ import {
   updateAdminPermissionStatus,
   type AdminPermissionItem,
 } from '../lib/api/system';
-import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
 interface PermissionsPageProps {
   refreshToken?: number;

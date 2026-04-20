@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getRequestUser, requireUser } from '../../lib/auth';
 import { HttpError, asyncHandler, withErrorBoundary } from '../../lib/errors';
 import { ok } from '../../lib/http';
-import { bookmarkCommunityPost, createCommunityComment, createCommunityPost, getCommunityDiscovery, getCommunityFeed, getCommunityPostDetail, likeCommunityComment, likeCommunityPost, repostCommunityPost, searchCommunity, unlikeCommunityComment, unlikeCommunityPost, unbookmarkCommunityPost, } from './store';
+import { bookmarkCommunityPost, createCommunityComment, createCommunityPost, reportCommunityPost, getCommunityDiscovery, getCommunityFeed, getCommunityPostDetail, likeCommunityComment, likeCommunityPost, repostCommunityPost, searchCommunity, unlikeCommunityComment, unlikeCommunityPost, unbookmarkCommunityPost, } from './store';
 export const communityRouter = Router();
 communityRouter.get('/feed', requireUser, asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
@@ -36,11 +36,20 @@ communityRouter.post('/posts/:id/repost', requireUser, withErrorBoundary({
 }));
 communityRouter.get('/posts/:id', requireUser, asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
-    const post = await getCommunityPostDetail(user.id, String(request.params.id));
+    const sort = request.query.sort === 'newest' ? 'newest' : 'hot';
+    const post = await getCommunityPostDetail(user.id, String(request.params.id), sort);
     if (!post) {
         throw new HttpError(404, 'COMMUNITY_POST_NOT_FOUND', '动态不存在或不可见');
     }
     ok(response, post);
+}));
+communityRouter.post('/posts/:id/report', requireUser, withErrorBoundary({
+    status: 400,
+    code: 'COMMUNITY_POST_REPORT_FAILED',
+    message: '举报失败',
+}, async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await reportCommunityPost(user.id, String(request.params.id), request.body));
 }));
 communityRouter.post('/posts/:id/comments', requireUser, withErrorBoundary({
     status: 400,

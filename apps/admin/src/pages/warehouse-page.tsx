@@ -2,7 +2,7 @@ import type { WarehouseItem } from '@umi/shared';
 import type { TableColumnsType } from 'antd';
 import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, ConfigProvider, Descriptions, Drawer, Form, Input, Segmented, Select, Tag, Typography } from 'antd';
+import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Segmented, Select, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
@@ -12,7 +12,7 @@ import {
   type AdminWarehouseStats,
 } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, warehouseStatusMeta } from '../lib/format';
-import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
 interface WarehousePageProps {
   refreshToken?: number;
@@ -157,6 +157,17 @@ export function WarehousePage({
       dataIndex: 'createdAt',
       render: (value) => formatDateTime(value),
     },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 100,
+      fixed: 'right',
+      render: (_, record) => (
+        <Button size="small" type="link" onClick={() => setSelected(record)}>
+          查看
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -214,14 +225,11 @@ export function WarehousePage({
           columnsState={{}}
           dataSource={filteredItems}
           loading={loading}
-          options={{ reload: true, density: true, fullScreen: false, setting: true }}
-          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
-          search={false}
-          toolBarRender={() => []}
-          onRow={(record) => ({
-            onClick: () => setSelected(record),
-          })}
-        />
+        options={{ reload: true, density: true, fullScreen: false, setting: true }}
+        pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+        search={false}
+        toolBarRender={() => []}
+      />
       </ConfigProvider>
 
       <Drawer

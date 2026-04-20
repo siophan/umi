@@ -4,6 +4,7 @@ import { toEntityId } from '@umi/shared';
 import { env } from '../../env';
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
+import { ensureAdminPermissionCatalogSynced } from './permission-catalog';
 const ADMIN_STATUS_ACTIVE = 10;
 const ADMIN_STATUS_DISABLED = 90;
 const ROLE_STATUS_ACTIVE = 10;
@@ -104,7 +105,7 @@ async function fetchAdminRoles(adminUserId) {
 async function fetchAdminPermissions(adminUserId) {
     const db = getDbPool();
     const [rows] = await db.execute(`
-      SELECT DISTINCT ap.code
+      SELECT DISTINCT ap.code, ap.module
       FROM admin_user_role aur
       INNER JOIN admin_role ar ON ar.id = aur.role_id
       INNER JOIN admin_role_permission arp ON arp.role_id = ar.id
@@ -114,9 +115,10 @@ async function fetchAdminPermissions(adminUserId) {
         AND ap.status = ?
       ORDER BY ap.code ASC
     `, [adminUserId, ROLE_STATUS_ACTIVE, PERMISSION_STATUS_ACTIVE]);
-    return rows.map((row) => row.code);
+    return rows;
 }
 async function sanitizeAdminUser(row) {
+    await ensureAdminPermissionCatalogSynced();
     const adminUserId = toEntityId(row.id);
     const roles = await fetchAdminRoles(adminUserId);
     const permissions = await fetchAdminPermissions(adminUserId);
@@ -128,7 +130,10 @@ async function sanitizeAdminUser(row) {
         email: row.email,
         status: mapAdminStatus(Number(row.status ?? 0)),
         roles,
-        permissions,
+        permissions: permissions.map((item) => item.code),
+        permissionModules: Array.from(new Set(permissions
+            .map((item) => item.module?.trim() || '')
+            .filter(Boolean))),
     };
 }
 async function requireValidAdminUser(row) {

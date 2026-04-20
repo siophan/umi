@@ -12,6 +12,10 @@ function getAuthToken() {
   return window.localStorage.getItem(AUTH_TOKEN_KEY) ?? '';
 }
 
+export function hasAuthToken() {
+  return Boolean(getAuthToken());
+}
+
 function getAuthHeaders(headers?: Record<string, string>) {
   const token = getAuthToken();
 

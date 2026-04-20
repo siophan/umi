@@ -48,6 +48,10 @@ function getCouponDiscount(coupon: CouponListItem | null, subtotal: number) {
   return 0;
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function PaymentPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,29 +70,51 @@ function PaymentPageInner() {
   const [remark, setRemark] = useState('');
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(true);
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
 
     async function load() {
       setLoading(true);
+      setAddressError(null);
+      setCouponError(null);
       try {
         const from = searchParams.get('from');
         const [addressResult, couponResult] = await Promise.all([
-          fetchAddresses().catch(() => []),
-          fetchCoupons().catch(() => []),
+          fetchAddresses()
+            .then((result) => ({ ok: true as const, result }))
+            .catch((error) => ({ ok: false as const, error })),
+          fetchCoupons()
+            .then((result) => ({ ok: true as const, result }))
+            .catch((error) => ({ ok: false as const, error })),
         ]);
 
         if (ignore) {
           return;
         }
 
-        setAddresses(addressResult);
-        const defaultIndex = addressResult.findIndex((item) => item.isDefault);
-        setAddressIndex(defaultIndex >= 0 ? defaultIndex : 0);
-        setCoupons(couponResult.filter((item) => item.status === 'unused'));
+        if (addressResult.ok) {
+          setAddresses(addressResult.result);
+          const defaultIndex = addressResult.result.findIndex((item) => item.isDefault);
+          setAddressIndex(defaultIndex >= 0 ? defaultIndex : 0);
+        } else {
+          setAddresses([]);
+          setAddressIndex(0);
+          setAddressError(getErrorMessage(addressResult.error, '收货地址读取失败'));
+        }
+
+        if (couponResult.ok) {
+          setCoupons(couponResult.result.filter((item) => item.status === 'unused'));
+        } else {
+          setCoupons([]);
+          setCouponId(null);
+          setCouponError(getErrorMessage(couponResult.error, '优惠券读取失败'));
+        }
 
         if (from === 'cart') {
           const idsParam = searchParams.get('cartItemIds');
@@ -153,7 +179,7 @@ function PaymentPageInner() {
     return () => {
       ignore = true;
     };
-  }, [searchParams]);
+  }, [searchParams, reloadToken]);
 
   useEffect(() => {
     if (!toast) {
@@ -249,7 +275,15 @@ function PaymentPageInner() {
         </div>
       </header>
 
-      {!selectedAddress ? (
+      {addressError ? (
+        <section className={`${styles.card} ${styles.errorCard}`}>
+          <div className={styles.errorTitle}>收货地址加载失败</div>
+          <div className={styles.errorDesc}>{addressError}</div>
+          <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+            重新加载
+          </button>
+        </section>
+      ) : !selectedAddress ? (
         <section className={`${styles.card} ${styles.addressCard}`}>
           <div className={styles.addrBar} />
           <button type="button" className={styles.addrRow} onClick={() => router.push('/address')}>
@@ -348,17 +382,29 @@ function PaymentPageInner() {
       </section>
 
       <section className={styles.card}>
-        <button className={styles.couponRow} type="button" onClick={() => setCouponOpen(true)}>
-          <div className={styles.couponLeft}>
-            <i className="fa-solid fa-ticket" />
-            优惠券
-            <span className={styles.couponBadge}>{availableCoupons.length}张可用</span>
+        {couponError ? (
+          <div className={styles.inlineError}>
+            <div>
+              <div className={styles.inlineErrorTitle}>优惠券加载失败</div>
+              <div className={styles.inlineErrorDesc}>{couponError}</div>
+            </div>
+            <button className={styles.inlineErrorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+              重试
+            </button>
           </div>
-          <div className={styles.couponRight}>
-            <span>{selectedCoupon ? `-¥ ${couponValue.toFixed(2)}` : '不使用'}</span>
-            <i className="fa-solid fa-chevron-right" />
-          </div>
-        </button>
+        ) : (
+          <button className={styles.couponRow} type="button" onClick={() => setCouponOpen(true)}>
+            <div className={styles.couponLeft}>
+              <i className="fa-solid fa-ticket" />
+              优惠券
+              <span className={styles.couponBadge}>{availableCoupons.length}张可用</span>
+            </div>
+            <div className={styles.couponRight}>
+              <span>{selectedCoupon ? `-¥ ${couponValue.toFixed(2)}` : '不使用'}</span>
+              <i className="fa-solid fa-chevron-right" />
+            </div>
+          </button>
+        )}
       </section>
 
       <section className={styles.card}>
@@ -455,7 +501,12 @@ function PaymentPageInner() {
             {total.toFixed(2)}
           </div>
         </div>
-        <button className={styles.payBtn} type="button" onClick={() => setPwdOpen(true)} disabled={!products.length || !selectedAddress || submitting}>
+        <button
+          className={styles.payBtn}
+          type="button"
+          onClick={() => setPwdOpen(true)}
+          disabled={!products.length || !selectedAddress || Boolean(addressError) || submitting}
+        >
           {submitting ? '提交中...' : '立即支付'}
         </button>
       </footer>

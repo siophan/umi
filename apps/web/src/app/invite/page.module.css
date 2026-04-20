@@ -95,6 +95,43 @@
   text-align: center;
 }
 
+.noticeCard {
+  position: relative;
+  z-index: 1;
+  margin: -16px 16px 0;
+  padding: 16px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+}
+
+.noticeTitle {
+  color: #1a1a1a;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.noticeList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.noticeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.noticeItem i {
+  margin-top: 2px;
+  color: #ff6b35;
+}
+
 .codeLabel {
   color: #999;
   font-size: 13px;
@@ -229,6 +266,30 @@
   color: #bdbdbd;
   font-size: 13px;
   text-align: center;
+}
+
+.placeholderList {
+  padding: 0 16px;
+}
+
+.placeholderItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f0f2;
+}
+
+.placeholderLabel {
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.placeholderValue {
+  color: #999;
+  font-size: 12px;
+  text-align: right;
 }
 
 .toast {

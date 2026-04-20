@@ -151,10 +151,19 @@ export const commercePaths = {
                   shopId: { type: 'string', nullable: true, example: '12' },
                   brand: { type: 'string', example: '乐事' },
                   shop: { type: 'string', example: '乐事官方旗舰店' },
-                  shopLogo: { type: 'string', example: 'https://example.com/shop.png' },
-                  name: { type: 'string', example: '乐事薯片春日限定大礼包 组合装' },
+                  shopLogo: {
+                    type: 'string',
+                    example: 'https://example.com/shop.png',
+                  },
+                  name: {
+                    type: 'string',
+                    example: '乐事薯片春日限定大礼包 组合装',
+                  },
                   specs: { type: 'string', example: '混合口味 / 6 包' },
-                  img: { type: 'string', example: 'https://example.com/product.png' },
+                  img: {
+                    type: 'string',
+                    example: 'https://example.com/product.png',
+                  },
                   price: { type: 'number', example: 39.9 },
                   originalPrice: { type: 'number', example: 49.9 },
                   quantity: { type: 'integer', example: 2 },
@@ -279,7 +288,14 @@ export const commercePaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['name', 'phone', 'province', 'city', 'district', 'detail'],
+              required: [
+                'name',
+                'phone',
+                'province',
+                'city',
+                'district',
+                'detail',
+              ],
               properties: {
                 name: { type: 'string', example: '张三' },
                 phone: { type: 'string', example: '13800000000' },
@@ -312,7 +328,14 @@ export const commercePaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['name', 'phone', 'province', 'city', 'district', 'detail'],
+              required: [
+                'name',
+                'phone',
+                'province',
+                'city',
+                'district',
+                'detail',
+              ],
               properties: {
                 name: { type: 'string', example: '张三' },
                 phone: { type: 'string', example: '13800000000' },
@@ -403,7 +426,11 @@ export const commercePaths = {
                 properties: {
                   id: { type: 'string', example: '101' },
                   name: { type: 'string', example: '乐事薯片原味分享装' },
-                  categoryId: { type: 'string', nullable: true, example: '301' },
+                  categoryId: {
+                    type: 'string',
+                    nullable: true,
+                    example: '301',
+                  },
                   category: { type: 'string', example: '食品饮料' },
                   price: { type: 'number', example: 19.9 },
                   originalPrice: { type: 'number', example: 29.9 },
@@ -411,20 +438,32 @@ export const commercePaths = {
                   sales: { type: 'integer', example: 1860 },
                   rating: { type: 'number', example: 4.8 },
                   stock: { type: 'integer', example: 240 },
-                  img: { type: 'string', nullable: true, example: 'https://example.com/lays.jpg' },
+                  img: {
+                    type: 'string',
+                    nullable: true,
+                    example: 'https://example.com/lays.jpg',
+                  },
                   tag: { type: 'string', example: '特惠' },
                   miniTag: { type: 'string', example: 'mt-sale' },
                   height: { type: 'integer', example: 192 },
                   brand: { type: 'string', example: '乐事' },
                   guessPrice: { type: 'number', example: 9.9 },
                   status: { type: 'string', example: 'active' },
-                  shopName: { type: 'string', nullable: true, example: '乐事优选店' },
+                  shopName: {
+                    type: 'string',
+                    nullable: true,
+                    example: '乐事优选店',
+                  },
                   tags: {
                     type: 'array',
                     items: { type: 'string' },
                     example: ['限时特惠', '零食必买'],
                   },
-                  collab: { type: 'string', nullable: true, example: '乐事 × 优米精选' },
+                  collab: {
+                    type: 'string',
+                    nullable: true,
+                    example: '乐事 × 优米精选',
+                  },
                   isNew: { type: 'boolean', example: true },
                   favorited: { type: 'boolean', example: false },
                 },
@@ -437,7 +476,11 @@ export const commercePaths = {
                 properties: {
                   id: { type: 'string', example: '301' },
                   name: { type: 'string', example: '食品饮料' },
-                  iconUrl: { type: 'string', nullable: true, example: 'https://example.com/cat-food.png' },
+                  iconUrl: {
+                    type: 'string',
+                    nullable: true,
+                    example: 'https://example.com/cat-food.png',
+                  },
                   parentId: { type: 'string', nullable: true, example: '300' },
                   level: { type: 'integer', example: 2 },
                   sort: { type: 'integer', example: 10 },
@@ -626,6 +669,72 @@ export const commercePaths = {
       },
     },
   },
+  '/api/orders/{id}/urge': {
+    post: {
+      tags: ['Order'],
+      summary: '催发货',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '订单 ID')],
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+          },
+        }),
+        400: errorResponse(400, '催发货失败'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '订单不存在'),
+      },
+    },
+  },
+  '/api/orders/{id}/review': {
+    post: {
+      tags: ['Order'],
+      summary: '提交订单评价',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '订单 ID')],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['productId', 'rating'],
+              properties: {
+                productId: {
+                  type: 'string',
+                  example: '101',
+                },
+                rating: {
+                  type: 'integer',
+                  minimum: 1,
+                  maximum: 5,
+                  example: 5,
+                },
+                content: {
+                  type: 'string',
+                  nullable: true,
+                  example: '包装完整，发货很快。',
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+          },
+        }),
+        400: errorResponse(400, '提交评价失败'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '订单不存在'),
+      },
+    },
+  },
   '/api/wallet/ledger': {
     get: {
       tags: ['Wallet'],
@@ -681,6 +790,87 @@ export const commercePaths = {
           },
         }),
         401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
+  '/api/warehouse/physical/{id}/consign': {
+    post: {
+      tags: ['Warehouse'],
+      summary: '发起实体仓库商品寄售',
+      security: bearerSecurity,
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          description: '实体仓库商品 ID，需传 `pw-` 前缀值',
+          schema: {
+            type: 'string',
+            pattern: '^pw-[0-9]+$',
+            example: 'pw-1001',
+          },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['price'],
+              properties: {
+                price: {
+                  type: 'number',
+                  example: 199,
+                  description: '寄售价，单位元',
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            estimateDays: { type: 'integer', example: 3 },
+          },
+        }),
+        400: errorResponse(400, '只有实体仓库商品可以寄售'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '商品不存在'),
+      },
+    },
+  },
+  '/api/warehouse/physical/{id}/cancel-consign': {
+    post: {
+      tags: ['Warehouse'],
+      summary: '取消实体仓库商品寄售',
+      security: bearerSecurity,
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          description: '实体仓库商品 ID，需传 `pw-` 前缀值',
+          schema: {
+            type: 'string',
+            pattern: '^pw-[0-9]+$',
+            example: 'pw-1001',
+          },
+        },
+      ],
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+          },
+        }),
+        400: errorResponse(400, '无效的商品 ID'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '商品不存在'),
       },
     },
   },

@@ -29,7 +29,6 @@ type CategoryRow = {
   updated_at: Date | string;
   parent_name: string | null;
   brand_count: number | string | null;
-  brand_apply_count: number | string | null;
   brand_product_count: number | string | null;
   shop_count: number | string | null;
   shop_apply_count: number | string | null;
@@ -68,7 +67,6 @@ export interface AdminCategoryItem {
   usageCount: number;
   usageBreakdown: {
     brands: number;
-    brandApplies: number;
     brandProducts: number;
     shops: number;
     shopApplies: number;
@@ -229,7 +227,6 @@ export async function getAdminCategories(): Promise<AdminCategoryListResult> {
         c.updated_at,
         p.name AS parent_name,
         COALESCE(bc.brand_count, 0) AS brand_count,
-        COALESCE(bac.brand_apply_count, 0) AS brand_apply_count,
         COALESCE(bpc.brand_product_count, 0) AS brand_product_count,
         COALESCE(sc.shop_count, 0) AS shop_count,
         COALESCE(sac.shop_apply_count, 0) AS shop_apply_count,
@@ -241,11 +238,6 @@ export async function getAdminCategories(): Promise<AdminCategoryListResult> {
         FROM brand
         GROUP BY category_id
       ) bc ON bc.category_id = c.id
-      LEFT JOIN (
-        SELECT category_id, COUNT(*) AS brand_apply_count
-        FROM brand_apply
-        GROUP BY category_id
-      ) bac ON bac.category_id = c.id
       LEFT JOIN (
         SELECT category_id, COUNT(*) AS brand_product_count
         FROM brand_product
@@ -275,7 +267,6 @@ export async function getAdminCategories(): Promise<AdminCategoryListResult> {
     const status = mapStatus(row.status);
     const usageBreakdown = {
       brands: toNumber(row.brand_count),
-      brandApplies: toNumber(row.brand_apply_count),
       brandProducts: toNumber(row.brand_product_count),
       shops: toNumber(row.shop_count),
       shopApplies: toNumber(row.shop_apply_count),

@@ -75,9 +75,10 @@ function getFeaturedLabel(status: string) {
 
 type LivesPageClientProps = {
   initialItems: LiveListItem[];
+  initialError: string | null;
 };
 
-export default function LivesPageClient({ initialItems }: LivesPageClientProps) {
+export default function LivesPageClient({ initialItems, initialError }: LivesPageClientProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<LiveFilter>('all');
   const items = initialItems;
@@ -116,7 +117,17 @@ export default function LivesPageClient({ initialItems }: LivesPageClientProps) 
         <div className={styles.sectionTitle}>🔥 热门直播</div>
       </div>
 
-      {featured ? (
+      {initialError ? (
+        <div className={styles.errorCard} role="alert">
+          <div className={styles.errorTitle}>直播列表加载失败</div>
+          <div className={styles.errorMessage}>{initialError}</div>
+          <button className={styles.retryBtn} type="button" onClick={() => router.refresh()}>
+            重试
+          </button>
+        </div>
+      ) : null}
+
+      {initialError ? null : featured ? (
         <div className={styles.featuredWrap}>
           <button className={styles.liveCard} type="button" onClick={() => router.push(`/live/${featured.id}`)}>
             <img src={featured.imageUrl || fallbackCover} alt={featured.title} />
@@ -149,21 +160,23 @@ export default function LivesPageClient({ initialItems }: LivesPageClientProps) 
         <div className={styles.sectionTitle}>更多直播</div>
       </div>
 
-      {!moreLives.length ? <div className={styles.state}>暂无更多直播</div> : null}
+      {initialError ? null : !moreLives.length ? <div className={styles.state}>暂无更多直播</div> : null}
 
-      <div className={styles.liveGrid}>
-        {moreLives.map((item) => (
-          <button className={styles.liveMini} key={item.id} type="button" onClick={() => router.push(`/live/${item.id}`)}>
-            <img src={item.imageUrl || fallbackCover} alt={item.title} />
-            <div className={styles.liveMiniInfo}>
-              <div className={styles.liveMiniTitle}>{item.currentGuess?.title || item.title}</div>
-              <div className={styles.liveMiniViewers}>
-                {getStatus(item) === 'live' ? '🔴' : getStatus(item) === 'upcoming' ? '⏰' : '🎬'} {formatNum(item.viewers)}人 · {item.guessCount}场竞猜
+      {initialError ? null : (
+        <div className={styles.liveGrid}>
+          {moreLives.map((item) => (
+            <button className={styles.liveMini} key={item.id} type="button" onClick={() => router.push(`/live/${item.id}`)}>
+              <img src={item.imageUrl || fallbackCover} alt={item.title} />
+              <div className={styles.liveMiniInfo}>
+                <div className={styles.liveMiniTitle}>{item.currentGuess?.title || item.title}</div>
+                <div className={styles.liveMiniViewers}>
+                  {getStatus(item) === 'live' ? '🔴' : getStatus(item) === 'upcoming' ? '⏰' : '🎬'} {formatNum(item.viewers)}人 · {item.guessCount}场竞猜
+                </div>
               </div>
-            </div>
-          </button>
-        ))}
-      </div>
+            </button>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

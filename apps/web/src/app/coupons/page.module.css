@@ -202,6 +202,17 @@
   font-size: 14px;
 }
 
+.retryBtn {
+  margin-top: 16px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .toast {
   position: fixed;
   left: 50%;

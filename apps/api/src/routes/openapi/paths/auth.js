@@ -108,4 +108,22 @@ export const authPaths = {
             },
         },
     },
+    '/api/auth/reset-password': {
+        post: {
+            tags: ['Auth'],
+            summary: '重置密码',
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/ResetPasswordPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    properties: {
+                        success: { type: 'boolean', example: true },
+                    },
+                }),
+                400: errorResponse(400, '重置密码失败'),
+            },
+        },
+    },
 };

@@ -112,9 +112,10 @@ function buildGuessSummary(row, options, voteRows) {
         })),
     };
 }
-async function getGuessRows(whereSql = '', params = []) {
+async function getGuessRows(whereSql = '', params = [], limit) {
     const db = getDbPool();
-    const [rows] = await db.execute(`
+    const sqlParams = typeof limit === 'number' ? [...params, limit] : params;
+    const [rows] = await db.query(`
       SELECT
         g.id,
         g.title,
@@ -137,7 +138,8 @@ async function getGuessRows(whereSql = '', params = []) {
       LEFT JOIN category c ON c.id = bp.category_id
       ${whereSql}
       ORDER BY g.created_at DESC, g.id DESC
-    `, params);
+      ${typeof limit === 'number' ? 'LIMIT ?' : ''}
+    `, sqlParams);
     return rows;
 }
 function getChoiceText(row, options) {
@@ -285,13 +287,25 @@ guessRouter.get('/my-bets', requireUser, asyncHandler(async (request, response) 
     const user = getRequestUser(request);
     ok(response, await getUserHistoryResult(user.id, user.name));
 }));
-guessRouter.get('/', async (_request, response) => {
-    const rows = await getGuessRows('WHERE g.review_status = ? AND g.status IN (?, ?, ?)', [
+guessRouter.get('/', async (request, response) => {
+    const query = typeof request.query.q === 'string' ? request.query.q.trim() : '';
+    const requestedLimit = typeof request.query.limit === 'string' ? Number.parseInt(request.query.limit, 10) : NaN;
+    const limit = Number.isFinite(requestedLimit)
+        ? Math.min(Math.max(requestedLimit, 1), 100)
+        : undefined;
+    const whereClauses = ['g.review_status = ?', 'g.status IN (?, ?, ?)'];
+    const params = [
         REVIEW_APPROVED,
         GUESS_PENDING_REVIEW,
         GUESS_ACTIVE,
         GUESS_SETTLED,
-    ]);
+    ];
+    if (query) {
+        const like = `%${query}%`;
+        whereClauses.push('(g.title LIKE ? OR p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)');
+        params.push(like, like, like, like);
+    }
+    const rows = await getGuessRows(`WHERE ${whereClauses.join(' AND ')}`, params, limit);
     const guessIds = rows.map((row) => String(row.id));
     const [options, votes] = await Promise.all([getGuessOptionRows(guessIds), getGuessVoteRows(guessIds)]);
     const optionsByGuess = new Map();

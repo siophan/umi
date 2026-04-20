@@ -16,7 +16,7 @@
 - 用 monorepo 承载 `web / admin / api / shared / db`
 - 先打通登录、竞猜、订单、仓库闭环
 - 在此基础上继续把社区、社交、店铺等高频页面接成真实链路
-- 暂缓 AI、直播、营销等非核心模块
+- 暂缓 AI 等非核心模块，直播与首页高频读链路已开始接真实接口
 
 ## 目录
 
@@ -42,8 +42,12 @@
 
 - workspace 已完成初始化并通过 `pnpm typecheck`
 - `apps/api` 已从最小骨架推进到多模块真实读写，Swagger 入口为 `/docs`
-- `apps/web` 已覆盖旧静态页主要用户路径，`mall / cart / me / community / user / friends / notifications / chat / shop / guess / product` 等高频页已多轮收口
+- `apps/web` 已覆盖旧静态页主要用户路径，`/`、`/ranking`、`/lives`、`mall / cart / me / community / user / friends / notifications / chat / shop / guess / product` 等高频页已多轮收口
+- `/search` 已切到独立搜索域，统一走 `/api/search`、`/api/search/hot`、`/api/search/suggest`，不再由页面自行拼商品和竞猜接口
 - `apps/admin` 已完成路由拆分、单页单文件收口和按业务 API 拆分，具备 `dashboard / users / products / guesses / orders / warehouse / system / marketing` 等页面骨架
+- `apps/admin` 当前菜单权限已按真实 `admin_permission.code` 做页面级控制，不再使用登录后整后台预加载或模块级粗粒度权限猜测
+- 后台权限目录当前采用“模块根权限 + 菜单叶子页权限”模型，叶子页权限与实际后台菜单页一一对应
+- 共享权限目录由 `packages/shared/src/admin-permissions.ts` 维护，应用层会同步到 `admin_permission`
 - `packages/shared` 已抽出领域类型、状态枚举和 API 契约
 
 ## 已落地模块
@@ -56,6 +60,7 @@
 - `POST /api/auth/send-code`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/reset-password`
 - `POST /api/auth/change-password`
 - `POST /api/auth/logout`
 - `GET /api/users/me`
@@ -89,10 +94,17 @@
 - `DELETE /api/community/posts/:id/like`
 - `POST /api/community/posts/:id/bookmark`
 - `DELETE /api/community/posts/:id/bookmark`
+- `GET /api/search`
+- `GET /api/search/hot`
+- `GET /api/search/suggest`
+- `GET /api/banners`
 - `GET /api/guesses`
 - `GET /api/guesses/:id`
 - `GET /api/guesses/user/history`
 - `GET /api/guesses/:id/stats`
+- `GET /api/rankings`
+- `GET /api/lives`
+- `GET /api/lives/:id`
 - `GET /api/products`
 - `GET /api/products/:id`
 - `POST /api/products/:id/favorite`
@@ -101,8 +113,17 @@
 - `POST /api/cart/items`
 - `PUT /api/cart/items/:id`
 - `DELETE /api/cart/items/:id`
+- `GET /api/addresses`
+- `POST /api/addresses`
+- `PUT /api/addresses/:id`
+- `DELETE /api/addresses/:id`
+- `GET /api/coupons`
 - `GET /api/orders`
+- `POST /api/orders`
 - `GET /api/orders/:id`
+- `POST /api/orders/:id/confirm`
+- `POST /api/orders/:id/urge`
+- `POST /api/orders/:id/review`
 - `GET /api/shops/me`
 - `GET /api/shops/me/status`
 - `POST /api/shops/apply`
@@ -113,6 +134,8 @@
 - `GET /api/wallet/ledger`
 - `GET /api/warehouse/virtual`
 - `GET /api/warehouse/physical`
+- `POST /api/warehouse/physical/:id/consign`
+- `POST /api/warehouse/physical/:id/cancel-consign`
 - `GET /api/warehouse/admin/stats`
 - `GET /api/admin/dashboard/stats`
 - `POST /api/admin/auth/login`
@@ -122,8 +145,10 @@
 - `GET /api/admin/users`
 - `GET /api/admin/guesses`
 - `GET /api/admin/orders`
+- `GET /api/admin/roles`
+- `POST /api/admin/roles`
 
-当前状态不是“接口全是 demo”。用户端高频链路里，认证、个人资料、通知、聊天、社交、社区、竞猜列表/详情、商品列表/搜索/详情、商品收藏、购物车、订单列表、仓库、店铺申请与品牌授权都已经有真实接口承接；仍然偏 demo 的主要是 Admin、订单详情和部分次级业务页。
+当前状态不是“接口全是 demo”。用户端高频链路里，认证、找回密码、首页 Banner/榜单/直播列表、个人资料、通知、聊天、社交、社区、竞猜列表/详情、商品列表/搜索/详情、商品收藏、购物车、地址、优惠券、支付下单、订单列表/详情、催发货、商品评价、仓库寄售、店铺申请与品牌授权都已经有真实接口承接；仍然偏 demo 的主要是 Admin 和部分次级业务页。
 
 ## API 契约约定
 
@@ -138,8 +163,11 @@
 - `/`
 - `/mall`
 - `/login`
+- `/reset-password`
 - `/me`
 - `/edit-profile`
+- `/terms`
+- `/privacy`
 - `/user/[uid]`
 - `/friends`
 - `/notifications`
@@ -155,6 +183,7 @@
 - `/shop/[id]`
 - `/my-shop`
 - `/orders`
+- `/review`
 - `/warehouse`
 
 ### Admin
@@ -165,6 +194,17 @@
 - Guesses
 - Orders
 - Warehouse
+- System Users
+- Roles
+- Permissions
+- Categories
+
+当前权限模型：
+
+- 后台登录账号基于独立 `admin_user / admin_role / admin_permission` RBAC 体系
+- 模块根权限通常使用 `*.manage`
+- 菜单叶子页权限通常使用 `*.view`
+- 前端菜单显示和页面访问以权限码为主；仅拥有父权限时，菜单对子页面做兼容显示
 
 ## 开发命令
 
@@ -195,6 +235,6 @@ pnpm --filter @umi/admin dev
 
 1. 继续把剩余次级页面从 demo / fallback 收到真实接口
 2. 在 `apps/api` 继续补事务、权限、状态校验和写操作闭环
-3. 清理社区、商城活动位、订单详情等页面的残留占位交互或前端派生展示，继续把 `mall` 的活动位/标签派生收口成更稳定的数据源
+3. 清理社区、商城活动位等页面的残留占位交互或前端派生展示，继续把 `mall` 的活动位/标签派生收口成更稳定的数据源
 4. 在 `apps/admin` 接竞猜审核、开奖、订单履约
 5. 继续补文档，保证新线程不按旧状态误判

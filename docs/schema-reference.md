@@ -86,7 +86,7 @@
 
 当前主要对应关系：
 
-- `brand.category_id` / `brand_apply.category_id` -> `biz_type = 10`
+- `brand.category_id` -> `biz_type = 10`
 - `shop.category_id` / `shop_apply.category_id` -> `biz_type = 20`
 - `brand_product.category_id` -> `biz_type = 30`
 - `guess.category_id` -> `biz_type = 40`
@@ -99,10 +99,6 @@
 ### `brand`
 
 `id`, `name`, `logo_url`, `category_id`, `contact_name`, `contact_phone`, `description`, `status`, `created_at`, `updated_at`
-
-### `brand_apply`
-
-`id`, `apply_no`, `brand_name`, `category_id`, `contact_name`, `contact_phone`, `license`, `deposit`, `reason`, `status`, `reject_reason`, `reviewed_at`, `brand_id`, `created_at`, `updated_at`
 
 ### `brand_product`
 

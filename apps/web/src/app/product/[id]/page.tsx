@@ -108,7 +108,6 @@ export default function ProductDetailPage() {
 
   const guessPrice = useMemo(() => product?.guessPrice ?? 0, [product]);
   const directPrice = useMemo(() => product?.price ?? 0, [product]);
-  const invPrice = useMemo(() => Math.max(0, directPrice - 120), [directPrice]);
   const selectedDeduct = selectedWarehouse.reduce((sum, id) => {
     const item = warehouseItems.find((entry: WarehouseItem) => entry.id === id);
     return sum + (item ? Number(item.price ?? 0) : 0);
@@ -131,7 +130,7 @@ export default function ProductDetailPage() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const activePrice = currentTab === 'guess' ? guessPrice : currentTab === 'inv' ? invPrice : directPrice;
+  const activePrice = currentTab === 'guess' ? guessPrice : directPrice;
 
   async function sharePage() {
     if (!product) {
@@ -231,15 +230,11 @@ export default function ProductDetailPage() {
             {activePrice}
           </div>
           <div className={styles.priceOrig}>¥{product.originalPrice}</div>
-          <div className={styles.priceTags}>
-            <span className={`${styles.priceTag} ${styles.tagHot}`}>热门</span>
-            <span className={`${styles.priceTag} ${styles.tagOff}`}>低价</span>
-          </div>
         </div>
         <div className={styles.titleArea}>
-          <span className={`${styles.titleBadge} ${styles.selfBadge}`}>自营</span>
-          <span className={`${styles.titleBadge} ${styles.authBadge}`}>认证</span>
-          <span className={`${styles.titleBadge} ${styles.guessBadge}`}>竞猜</span>
+          {product.tags.slice(0, 3).map((tag) => (
+            <span className={styles.titleBadge} key={tag}>{tag}</span>
+          ))}
           <span className={styles.productTitle}>{product.name}</span>
         </div>
         <div className={styles.productSub}>
@@ -283,7 +278,7 @@ export default function ProductDetailPage() {
             type="button"
             onClick={() => setCurrentTab('inv')}
           >
-            <span className={styles.modeIcon}>💰</span> 换购 <span className={styles.modePrice}>¥{invPrice}</span>
+            <span className={styles.modeIcon}>💰</span> 换购 <span className={styles.modePrice}>按库存抵扣</span>
           </button>
         </div>
       </section>
@@ -292,12 +287,12 @@ export default function ProductDetailPage() {
         <div className={styles.specRow}>
           <div className={styles.specLabel}>标签</div>
           <div className={styles.specScroll}>
-            {(product.tags.length ? product.tags : ['Umi精选', product.brand, product.category]).map((item) => (
+            {product.tags.length ? product.tags.map((item) => (
               <span className={styles.specChipOn} key={item}>
                 <span className={styles.specDot} />
                 {item}
               </span>
-            ))}
+            )) : <span className={styles.specChip}>暂无标签</span>}
           </div>
         </div>
         <div className={styles.specRow}>
@@ -456,12 +451,12 @@ export default function ProductDetailPage() {
                     <strong>{product.shopName || '优米平台'}</strong>
                     <div>
                       <span>发货店铺</span>
-                      <em>{product.tags[0] || '正品保证'}</em>
+                      <em>{product.tags[0] || '以订单展示为准'}</em>
                     </div>
                   </div>
                 </div>
                 <div className={styles.serviceGrid}>
-                  {['正品保证', '24h发货', '7天退换', `${product.brand} 品牌商品`, `${product.category} 类目`, `库存 ${product.stock}`].map((item) => (
+                  {[`${product.brand} 品牌商品`, `${product.category} 类目`, `库存 ${product.stock}`, `店铺 ${product.shopName || '优米平台'}`].map((item) => (
                     <div className={styles.serviceItem} key={item}>
                       <span><i className="fa-solid fa-check" /></span>
                       <em>{item}</em>
@@ -475,8 +470,8 @@ export default function ProductDetailPage() {
                     <em>去竞猜 <i className="fa-solid fa-arrow-right" /></em>
                   </button>
                   <button className={styles.compareCardGreen} type="button" onClick={() => setCurrentTab('inv')}>
-                    <span>换购价</span>
-                    <strong>¥{invPrice}</strong>
+                    <span>库存抵扣</span>
+                    <strong>按实际抵扣结算</strong>
                     <em>去换购 <i className="fa-solid fa-arrow-right" /></em>
                   </button>
                 </div>
@@ -484,12 +479,12 @@ export default function ProductDetailPage() {
             ) : (
               <>
                 <div className={styles.invHero}>
-                  <div className={styles.invLabel}>库存换购</div>
+                  <div className={styles.invLabel}>库存抵扣</div>
                   <div className={styles.invPrice}>
                     <small>¥</small>
-                    {invPrice}
+                    {directPrice}
                   </div>
-                  <div className={styles.invRow}>用仓库库存商品抵扣商品价值</div>
+                  <div className={styles.invRow}>商品售价，实际补差价按所选库存实时计算</div>
                 </div>
                 <div className={styles.panelHead}>
                   <div className={styles.panelTitle}>换购计算</div>
@@ -509,8 +504,8 @@ export default function ProductDetailPage() {
                   </div>
                   <div className={styles.exchangeArrow}>=</div>
                   <div className={styles.exchangeBlock}>
-                    <div className={styles.exchangeValueGreen}>¥0</div>
-                    <div className={styles.exchangeLabel}>免费换购</div>
+                    <div className={styles.exchangeValueGreen}>¥{exchangeToPay}</div>
+                    <div className={styles.exchangeLabel}>预计补差价</div>
                   </div>
                 </div>
                 <div className={styles.inventoryList}>
@@ -551,8 +546,8 @@ export default function ProductDetailPage() {
 • 分类：${product.category}
 • 店铺：${product.shopName || '优米平台'}
 • 库存：${product.stock}
-• 发货：24小时内发货
-• 保障：7天无理由退换，正品保证
+• 标签：${product.tags.length ? product.tags.join(' / ') : '暂无标签'}
+• 发货与售后：以真实订单和店铺说明为准
 
 优米独家渠道商品，支持直购、竞猜、库存换购三种方式。`}
             </div>
@@ -668,7 +663,7 @@ export default function ProductDetailPage() {
               else setExchangeOpen(true);
             }}
           >
-            {currentTab === 'guess' ? `参与竞猜 ¥${guessPrice}` : currentTab === 'inv' ? `换购 ¥${invPrice}` : `立即购买 ¥${directPrice}`}
+            {currentTab === 'guess' ? `参与竞猜 ¥${guessPrice}` : currentTab === 'inv' ? '去换购' : `立即购买 ¥${directPrice}`}
           </button>
         </div>
       </div>
@@ -688,7 +683,7 @@ export default function ProductDetailPage() {
               <div>
                 <h3>{product.name}</h3>
                 <strong>¥{product.price}</strong>
-                <p>当前可用库存合计足以抵扣这件商品的绝大部分价格。</p>
+                <p>实际补差价以当前选中的库存抵扣结果为准。</p>
               </div>
             </div>
             <div className={styles.exchangeBody}>

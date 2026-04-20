@@ -22,6 +22,7 @@ import { fetchSocialOverview } from '../../lib/api/friends';
 import styles from './page.module.css';
 
 type Scope = 'public' | 'friends' | 'fans' | 'followers' | 'private';
+type PublishScope = 'public' | 'followers' | 'private';
 
 type FeedItem = {
   id: string;
@@ -56,14 +57,6 @@ type FollowUser = {
   name: string;
   avatar: string;
   hasNew: boolean;
-};
-
-type GuessActivity = {
-  id: NonNullable<CommunityFeedApiItem['guessInfo']>['id'];
-  title: string;
-  participants: number;
-  options: [string, string];
-  pcts: [number, number];
 };
 
 const TAG_CLS_MAP: Record<string, string> = {
@@ -126,21 +119,6 @@ const defaultFollowedUsers: FollowUser[] = [
 ];
 
 const topicOptions = ['🎯 竞猜心得', '🍿 零食测评', '🤝 PK战报', '🔥 热门话题', '📊 数据分析', '💡 攻略分享'];
-
-const locationData = [
-  { name: '📍 当前位置', address: '北京·朝阳区' },
-  { name: '🏬 三里屯太古里', address: '北京市朝阳区三里屯路19号' },
-  { name: '🏢 国贸CBD', address: '北京市朝阳区建国门外大街' },
-  { name: '🛍️ 王府井步行街', address: '北京市东城区王府井大街' },
-  { name: '🌃 外滩', address: '上海市黄浦区中山东一路' },
-  { name: '🏞️ 西湖风景区', address: '杭州市西湖区龙井路1号' },
-];
-
-const guessActivities: GuessActivity[] = [
-  { id: '1001', title: '乐事薯片新口味大竞猜', participants: 1234, options: ['番茄味', '黄瓜味'], pcts: [55, 45] },
-  { id: '1002', title: '德芙vs费列罗情人节对决', participants: 3890, options: ['德芙', '费列罗'], pcts: [58, 42] },
-  { id: '1003', title: '三只松鼠马年年货销量王', participants: 2567, options: ['坚果礼盒', '糕点系列'], pcts: [62, 38] },
-];
 
 const emojiCategories = {
   '😀 表情': ['😀', '😃', '😄', '😁', '😆', '😂', '🙂', '😊', '🥰', '😍', '😎', '🤔', '😮', '😢', '😭', '🥳'],
@@ -243,12 +221,8 @@ function shouldRenderStandaloneTitle(title: string | null | undefined, desc: str
   return normalizedTitle !== normalizedDesc;
 }
 
-function getScopeLabel(scopes: Scope[]) {
-  return scopes.map((item) => SCOPE_META[item].label).join('、');
-}
-
-function getPrimaryScope(scopes: Scope[]) {
-  return scopes[0] ?? 'public';
+function getScopeLabel(scope: PublishScope) {
+  return SCOPE_META[scope].label;
 }
 
 export default function CommunityPage() {
@@ -258,27 +232,17 @@ export default function CommunityPage() {
   const [tab, setTab] = useState<'recommend' | 'follow'>('recommend');
   const [publishOpen, setPublishOpen] = useState(false);
   const [scopeOpen, setScopeOpen] = useState(false);
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [mentionOpen, setMentionOpen] = useState(false);
-  const [guessOpen, setGuessOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [publishText, setPublishText] = useState('');
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [recommendFeed, setRecommendFeed] = useState<FeedItem[]>([]);
   const [followFeed, setFollowFeed] = useState<FeedItem[]>([]);
   const [toast, setToast] = useState('');
-  const [publishScopes, setPublishScopes] = useState<Scope[]>(['public']);
-  const [scopeDraft, setScopeDraft] = useState<Scope[]>(['public']);
-  const [location, setLocation] = useState<string | null>(null);
-  const [mentions, setMentions] = useState<string[]>([]);
-  const [guessLink, setGuessLink] = useState<GuessActivity | null>(null);
-  const [locationQuery, setLocationQuery] = useState('');
-  const [mentionQuery, setMentionQuery] = useState('');
-  const [guessQuery, setGuessQuery] = useState('');
+  const [publishScope, setPublishScope] = useState<PublishScope>('public');
+  const [scopeDraft, setScopeDraft] = useState<PublishScope>('public');
   const [emojiCategory, setEmojiCategory] = useState<keyof typeof emojiCategories>('😀 表情');
   const [bookmarkAnimating, setBookmarkAnimating] = useState<string | null>(null);
   const [followedUsers, setFollowedUsers] = useState<FollowUser[]>([]);
-  const [mentionUsers, setMentionUsers] = useState<FollowUser[]>([]);
   const [socialReady, setSocialReady] = useState(false);
   const [feedReady, setFeedReady] = useState(false);
   const [feedError, setFeedError] = useState('');
@@ -330,13 +294,11 @@ export default function CommunityPage() {
         }, []);
 
         setFollowedUsers(deduped.filter((_, index) => index < 10));
-        setMentionUsers(deduped.filter((_, index) => index < 12));
       } catch {
         if (ignore) {
           return;
         }
         setFollowedUsers([]);
-        setMentionUsers([]);
       } finally {
         if (!ignore) {
           setSocialReady(true);
@@ -391,30 +353,6 @@ export default function CommunityPage() {
     };
   }, []);
 
-  const locationList = useMemo(() => {
-    if (!locationQuery.trim()) {
-      return locationData;
-    }
-    const keyword = locationQuery.trim().toLowerCase();
-    return locationData.filter((item) => item.name.toLowerCase().includes(keyword) || item.address.toLowerCase().includes(keyword));
-  }, [locationQuery]);
-
-  const mentionList = useMemo(() => {
-    if (!mentionQuery.trim()) {
-      return mentionUsers;
-    }
-    const keyword = mentionQuery.trim().toLowerCase();
-    return mentionUsers.filter((item) => item.name.toLowerCase().includes(keyword));
-  }, [mentionQuery]);
-
-  const guessList = useMemo(() => {
-    if (!guessQuery.trim()) {
-      return guessActivities;
-    }
-    const keyword = guessQuery.trim().toLowerCase();
-    return guessActivities.filter((item) => item.title.toLowerCase().includes(keyword));
-  }, [guessQuery]);
-
   function showToast(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(''), 1800);
@@ -422,21 +360,12 @@ export default function CommunityPage() {
 
   function resetPublish() {
     setPublishText('');
-    setSelectedTopics([]);
-    setPublishScopes(['public']);
-    setScopeDraft(['public']);
-    setLocation(null);
-    setMentions([]);
-    setGuessLink(null);
-    setLocationQuery('');
-    setMentionQuery('');
-    setGuessQuery('');
+    setSelectedTopic(null);
+    setPublishScope('public');
+    setScopeDraft('public');
     setEmojiCategory('😀 表情');
     setSelectedImages([]);
     setScopeOpen(false);
-    setLocationOpen(false);
-    setMentionOpen(false);
-    setGuessOpen(false);
     setEmojiOpen(false);
   }
 
@@ -564,39 +493,22 @@ export default function CommunityPage() {
   }
 
   function openScopePanel() {
-    setScopeDraft(publishScopes);
+    setScopeDraft(publishScope);
     setScopeOpen(true);
   }
 
-  function toggleScopeDraft(scope: Scope) {
-    setScopeDraft((current) => {
-      if (scope === 'public' || scope === 'private') {
-        return [scope];
-      }
-
-      const next = current.filter((item) => item !== 'public' && item !== 'private');
-      if (next.includes(scope)) {
-        const filtered = next.filter((item) => item !== scope);
-        return filtered.length ? filtered : ['public'];
-      }
-
-      return [...next, scope];
-    });
+  function toggleScopeDraft(scope: PublishScope) {
+    setScopeDraft(scope);
   }
 
   function confirmScopes() {
-    const next: Scope[] = scopeDraft.length ? scopeDraft : ['public'];
-    setPublishScopes(next);
+    setPublishScope(scopeDraft);
     setScopeOpen(false);
-    showToast(`可见范围：${getScopeLabel(next)}`);
+    showToast(`可见范围：${getScopeLabel(scopeDraft)}`);
   }
 
   function toggleTopic(topic: string) {
-    setSelectedTopics((current) => (current.includes(topic) ? current.filter((item) => item !== topic) : [...current, topic]));
-  }
-
-  function toggleMention(name: string) {
-    setMentions((current) => (current.includes(name) ? current.filter((item) => item !== name) : [...current, name]));
+    setSelectedTopic((current) => (current === topic ? null : topic));
   }
 
   function insertEmoji(emoji: string) {
@@ -668,19 +580,14 @@ export default function CommunityPage() {
       return;
     }
 
-    const tagText = selectedTopics[0]?.replace(/^.\s*/u, '') || '猜友动态';
-    const rawScope = getPrimaryScope(publishScopes);
-    const primaryScope: 'public' | 'followers' | 'private' =
-      rawScope === 'fans' ? 'followers' : rawScope === 'private' ? 'private' : 'public';
+    const tagText = selectedTopic?.replace(/^.\s*/u, '') || '猜友动态';
 
     try {
       setPublishing(true);
       const created = await createCommunityPost({
         content: text,
         tag: tagText,
-        scope: primaryScope,
-        guessId: guessLink?.id ?? null,
-        location,
+        scope: publishScope,
         images: selectedImages,
       });
       const mapped = mapCommunityFeedItem(created);
@@ -689,7 +596,7 @@ export default function CommunityPage() {
         setFollowFeed((current) => [mapped, ...current]);
       }
       setPublishOpen(false);
-      showToast(`✅ 动态已发布 · ${getScopeLabel(publishScopes)}可见`);
+      showToast(`✅ 动态已发布 · ${getScopeLabel(publishScope)}可见`);
       resetPublish();
       setTab('recommend');
     } catch (error) {
@@ -985,14 +892,12 @@ export default function CommunityPage() {
                 <img src={myProfile.avatar} alt={myProfile.name} />
                 <div className={styles.publishUserName}>{myProfile.name}</div>
                 <button
-                  className={`${styles.publishScope} ${
-                    publishScopes.length === 1 && publishScopes[0] === 'public' ? '' : styles.publishScopeChanged
-                  }`}
+                  className={`${styles.publishScope} ${publishScope === 'public' ? '' : styles.publishScopeChanged}`}
                   type="button"
                   onClick={openScopePanel}
                 >
-                  <i className={`fa-solid ${SCOPE_META[getPrimaryScope(publishScopes)].icon}`} />
-                  {getScopeLabel(publishScopes)}
+                  <i className={`fa-solid ${SCOPE_META[publishScope].icon}`} />
+                  {getScopeLabel(publishScope)}
                   <i className="fa-solid fa-chevron-down" />
                 </button>
               </div>
@@ -1038,39 +943,12 @@ export default function CommunityPage() {
                 </div>
               ) : null}
 
-              {selectedImages.length || location || mentions.length || guessLink ? (
+              {selectedImages.length ? (
                 <div className={styles.attachments}>
                   {selectedImages.length ? (
                     <span className={styles.attachmentTag}>
                       <i className="fa-solid fa-image" />
                       已添加 {selectedImages.length} 张图片
-                    </span>
-                  ) : null}
-                  {location ? (
-                    <span className={`${styles.attachmentTag} ${styles.attachmentLocation}`}>
-                      <i className="fa-solid fa-location-dot" />
-                      {location}
-                      <button className={styles.attachmentRemove} type="button" onClick={() => setLocation(null)}>
-                        <i className="fa-solid fa-xmark" />
-                      </button>
-                    </span>
-                  ) : null}
-                  {mentions.map((name) => (
-                    <span className={`${styles.attachmentTag} ${styles.attachmentMention}`} key={name}>
-                      <i className="fa-solid fa-at" />
-                      {name}
-                      <button className={styles.attachmentRemove} type="button" onClick={() => toggleMention(name)}>
-                        <i className="fa-solid fa-xmark" />
-                      </button>
-                    </span>
-                  ))}
-                  {guessLink ? (
-                    <span className={`${styles.attachmentTag} ${styles.attachmentGuess}`}>
-                      <i className="fa-solid fa-link" />
-                      {guessLink.title}
-                      <button className={styles.attachmentRemove} type="button" onClick={() => setGuessLink(null)}>
-                        <i className="fa-solid fa-xmark" />
-                      </button>
                     </span>
                   ) : null}
                 </div>
@@ -1079,7 +957,7 @@ export default function CommunityPage() {
               <div className={styles.topics}>
                 {topicOptions.map((item) => (
                   <button
-                    className={`${styles.topicTag} ${selectedTopics.includes(item) ? styles.topicSelected : ''}`}
+                    className={`${styles.topicTag} ${selectedTopic === item ? styles.topicSelected : ''}`}
                     type="button"
                     key={item}
                     onClick={() => toggleTopic(item)}
@@ -1090,18 +968,6 @@ export default function CommunityPage() {
               </div>
 
               <div className={styles.toolbar}>
-                <button className={styles.toolbarItem} type="button" onClick={() => setLocationOpen(true)}>
-                  <i className="fa-solid fa-location-dot" />
-                  <span>位置</span>
-                </button>
-                <button className={styles.toolbarItem} type="button" onClick={() => setMentionOpen(true)}>
-                  <i className="fa-solid fa-at" />
-                  <span>@好友</span>
-                </button>
-                <button className={styles.toolbarItem} type="button" onClick={() => setGuessOpen(true)}>
-                  <i className="fa-solid fa-link" />
-                  <span>竞猜</span>
-                </button>
                 <button className={styles.toolbarItem} type="button" onClick={() => setEmojiOpen(true)}>
                   <i className="fa-regular fa-face-smile" />
                   <span>表情</span>
@@ -1184,10 +1050,10 @@ export default function CommunityPage() {
                 </button>
               </div>
 
-              {(['public', 'friends', 'fans', 'private'] as Scope[]).map((item) => (
+              {(['public', 'followers', 'private'] as PublishScope[]).map((item) => (
                 <button
                   key={item}
-                  className={`${styles.scopeOption} ${scopeDraft.includes(item) ? styles.scopeSelected : ''}`}
+                  className={`${styles.scopeOption} ${scopeDraft === item ? styles.scopeSelected : ''}`}
                   type="button"
                   onClick={() => toggleScopeDraft(item)}
                 >
@@ -1205,191 +1071,6 @@ export default function CommunityPage() {
               <button className={styles.scopeConfirm} type="button" onClick={confirmScopes}>
                 确定
               </button>
-            </section>
-          </div>
-        ) : null}
-
-        {locationOpen ? (
-          <div className={styles.subOverlay} onClick={() => setLocationOpen(false)} role="presentation">
-            <section className={styles.subPanel} onClick={(event) => event.stopPropagation()} role="presentation">
-              <div className={styles.scopeHandle} />
-              <div className={styles.scopeHeader}>
-                <h3>选择位置</h3>
-                <button className={styles.closeBtn} type="button" onClick={() => setLocationOpen(false)}>
-                  <i className="fa-solid fa-xmark" />
-                </button>
-              </div>
-
-              <label className={styles.searchRow}>
-                <i className="fa-solid fa-magnifying-glass" />
-                <input
-                  type="text"
-                  placeholder="搜索地点..."
-                  value={locationQuery}
-                  onChange={(event) => setLocationQuery(event.target.value)}
-                />
-              </label>
-
-              <div className={styles.locationList}>
-                <button
-                  className={`${styles.locationItem} ${styles.locationCurrent}`}
-                  type="button"
-                  onClick={() => {
-                    setLocation('📍 当前位置');
-                    setLocationOpen(false);
-                    showToast('📍 已选择：📍 当前位置');
-                  }}
-                >
-                  <span className={`${styles.locationIcon} ${styles.locationIconCurrent}`}>
-                    <i className="fa-solid fa-crosshairs" />
-                  </span>
-                  <span className={styles.locationMeta}>
-                    <span className={styles.locationName}>使用当前位置</span>
-                    <span className={styles.locationAddress}>北京·朝阳区</span>
-                  </span>
-                </button>
-                <button
-                  className={styles.locationItem}
-                  type="button"
-                  onClick={() => {
-                    setLocation(null);
-                    setLocationOpen(false);
-                    showToast('已取消位置');
-                  }}
-                >
-                  <span className={`${styles.locationIcon} ${styles.locationIconMuted}`}>
-                    <i className="fa-solid fa-xmark" />
-                  </span>
-                  <span className={styles.locationMeta}>
-                    <span className={styles.locationName}>不显示位置</span>
-                  </span>
-                </button>
-                {locationList.map((item) => (
-                  <button
-                    className={styles.locationItem}
-                    key={`${item.name}-${item.address}`}
-                    type="button"
-                    onClick={() => {
-                      setLocation(item.name);
-                      setLocationOpen(false);
-                      showToast(`📍 已选择：${item.name}`);
-                    }}
-                  >
-                    <span className={styles.locationIcon}>
-                      <i className="fa-solid fa-location-dot" />
-                    </span>
-                    <span className={styles.locationMeta}>
-                      <span className={styles.locationName}>{item.name}</span>
-                      <span className={styles.locationAddress}>{item.address}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
-        ) : null}
-
-        {mentionOpen ? (
-          <div className={styles.subOverlay} onClick={() => setMentionOpen(false)} role="presentation">
-            <section className={styles.subPanel} onClick={(event) => event.stopPropagation()} role="presentation">
-              <div className={styles.scopeHandle} />
-              <div className={styles.scopeHeader}>
-                <h3>@ 好友</h3>
-                <button className={styles.closeBtn} type="button" onClick={() => setMentionOpen(false)}>
-                  <i className="fa-solid fa-xmark" />
-                </button>
-              </div>
-
-              <label className={styles.searchRow}>
-                <i className="fa-solid fa-magnifying-glass" />
-                <input
-                  type="text"
-                  placeholder="搜索好友..."
-                  value={mentionQuery}
-                  onChange={(event) => setMentionQuery(event.target.value)}
-                />
-              </label>
-
-              {mentions.length ? (
-                <div className={styles.mentionChips}>
-                  {mentions.map((name) => (
-                    <span className={styles.mentionChip} key={name}>
-                      @{name}
-                      <button className={styles.mentionChipRemove} type="button" onClick={() => toggleMention(name)}>
-                        <i className="fa-solid fa-xmark" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-
-              <div className={styles.mentionList}>
-                {mentionList.map((item) => (
-                  <button className={styles.mentionItem} key={item.name} type="button" onClick={() => toggleMention(item.name)}>
-                    <img src={item.avatar} alt={item.name} />
-                    <span className={styles.mentionName}>{item.name}</span>
-                    <span className={`${styles.mentionCheck} ${mentions.includes(item.name) ? styles.mentionChecked : ''}`}>
-                      <i className="fa-solid fa-circle-check" />
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </div>
-        ) : null}
-
-        {guessOpen ? (
-          <div className={styles.subOverlay} onClick={() => setGuessOpen(false)} role="presentation">
-            <section className={styles.subPanel} onClick={(event) => event.stopPropagation()} role="presentation">
-              <div className={styles.scopeHandle} />
-              <div className={styles.scopeHeader}>
-                <h3>关联竞猜</h3>
-                <button className={styles.closeBtn} type="button" onClick={() => setGuessOpen(false)}>
-                  <i className="fa-solid fa-xmark" />
-                </button>
-              </div>
-
-              <label className={styles.searchRow}>
-                <i className="fa-solid fa-magnifying-glass" />
-                <input
-                  type="text"
-                  placeholder="搜索竞猜活动..."
-                  value={guessQuery}
-                  onChange={(event) => setGuessQuery(event.target.value)}
-                />
-              </label>
-
-              <div className={styles.guessList}>
-                {guessList.map((item) => {
-                  const selected = guessLink?.id === item.id;
-                  return (
-                    <button
-                      className={`${styles.guessItem} ${selected ? styles.guessItemSelected : ''}`}
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        const next = selected ? null : item;
-                        setGuessLink(next);
-                        if (next) {
-                          setGuessOpen(false);
-                          showToast(`🎯 已关联：${next.title}`);
-                        }
-                      }}
-                    >
-                      <span className={styles.guessItemIcon}>🎯</span>
-                      <span className={styles.guessItemInfo}>
-                        <span className={styles.guessItemTitle}>{item.title}</span>
-                        <span className={styles.guessItemMeta}>
-                          {item.participants}人参与 · {item.options.join(' vs ')}
-                        </span>
-                      </span>
-                      <span className={`${styles.guessItemCheck} ${selected ? styles.guessItemCheckSelected : ''}`}>
-                        <i className="fa-solid fa-circle-check" />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
             </section>
           </div>
         ) : null}

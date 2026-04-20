@@ -3,7 +3,9 @@ import { authPaths } from './openapi/paths/auth';
 import { chatPaths } from './openapi/paths/chats';
 import { commercePaths } from './openapi/paths/commerce';
 import { communityPaths } from './openapi/paths/community';
+import { homePaths } from './openapi/paths/home';
 import { notificationPaths } from './openapi/paths/notifications';
+import { searchPaths } from './openapi/paths/search';
 import { shopPaths } from './openapi/paths/shop';
 import { socialPaths } from './openapi/paths/social';
 import { userPaths } from './openapi/paths/users';
@@ -44,10 +46,12 @@ const openApiDocument = {
     },
     paths: {
         ...authPaths,
+        ...homePaths,
         ...userPaths,
         ...socialPaths,
         ...notificationPaths,
         ...communityPaths,
+        ...searchPaths,
         ...chatPaths,
         ...commercePaths,
         ...adminPaths,

@@ -62,7 +62,7 @@ export default function EditProfilePage() {
   const [worksPrivacy, setWorksPrivacy] = useState<"all" | "friends" | "me">("all");
   const [favPrivacy, setFavPrivacy] = useState<"all" | "me">("all");
   const [levelOpen, setLevelOpen] = useState(false);
-  const [sheetType, setSheetType] = useState<"avatar" | "cover" | "birthday" | "location" | null>(null);
+  const [sheetType, setSheetType] = useState<"avatar" | "birthday" | "location" | null>(null);
   const [birthYear, setBirthYear] = useState("1998");
   const [birthMonth, setBirthMonth] = useState("1");
   const [birthDay, setBirthDay] = useState("1");
@@ -222,7 +222,7 @@ export default function EditProfilePage() {
   const birthdayLabel = birthday ? `${birthYear}年${birthMonth}月${birthDay}日` : "未设置";
   const locationLabel = trimmedLocation || "未设置";
 
-  function openSheet(type: "avatar" | "cover" | "birthday" | "location") {
+  function openSheet(type: "avatar" | "birthday" | "location") {
     setSheetType(type);
   }
 
@@ -265,16 +265,6 @@ export default function EditProfilePage() {
           {saving ? "保存中" : "保存"}
         </button>
       </header>
-
-      <section className={styles.cover}>
-        <button className={styles.coverButton} type="button" onClick={() => openSheet("cover")}>
-          <div className={styles.coverPreview} />
-          <div className={styles.coverOverlay}>
-            <i className="fa-solid fa-camera" />
-            更换封面
-          </div>
-        </button>
-      </section>
 
       <section className={styles.avatarSection}>
         <div>
@@ -415,7 +405,7 @@ export default function EditProfilePage() {
       {sheetType ? (
         <div className={styles.overlay} onClick={closeSheet} role="presentation">
           <div className={styles.sheet} onClick={(event) => event.stopPropagation()} role="presentation">
-            {sheetType === "avatar" || sheetType === "cover" ? (
+            {sheetType === "avatar" ? (
               <>
                 <button className={styles.sheetItem} type="button" onClick={rotateAvatar}>
                   <i className="fa-solid fa-image" /> 从相册选择
@@ -423,11 +413,9 @@ export default function EditProfilePage() {
                 <button className={styles.sheetItem} type="button" onClick={rotateAvatar}>
                   <i className="fa-solid fa-camera" /> 拍照
                 </button>
-                {sheetType === "avatar" ? (
-                  <button className={styles.sheetItem} type="button" onClick={closeSheet}>
-                    <i className="fa-solid fa-eye" /> 查看头像
-                  </button>
-                ) : null}
+                <button className={styles.sheetItem} type="button" onClick={closeSheet}>
+                  <i className="fa-solid fa-eye" /> 查看头像
+                </button>
                 <button className={styles.sheetCancel} type="button" onClick={closeSheet}>
                   取消
                 </button>

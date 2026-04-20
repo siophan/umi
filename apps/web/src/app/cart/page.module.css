@@ -104,6 +104,42 @@
   filter: brightness(0.9);
 }
 
+.errorCard {
+  margin: 10px 12px 0;
+  padding: 14px;
+  border: 1px solid #ffd8ca;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff8f4, #fff4ee);
+}
+
+.errorTitle {
+  color: #c7461a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.errorDesc {
+  margin-top: 6px;
+  color: #9b5d46;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.errorBtn {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.errorBtn:active {
+  transform: scale(0.97);
+  filter: brightness(0.92);
+}
+
 .list {
   padding-top: 8px;
 }
@@ -348,6 +384,14 @@
   margin: 16px 12px 0;
 }
 
+.recommendState {
+  margin: 16px 12px 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
 .recommendTitle {
   display: flex;
   align-items: center;
@@ -360,6 +404,26 @@
 .recommendTitle i {
   color: #ff6b35;
   font-size: 13px;
+}
+
+.recommendError {
+  color: #8a5a43;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.recommendRetry {
+  margin-top: 10px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #fff0e8;
+  color: #e65100;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recommendRetry:active {
+  transform: scale(0.97);
 }
 
 .recommendScroll {

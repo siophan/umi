@@ -147,3 +147,35 @@
   color: #999;
   font-size: 13px;
 }
+
+.errorState {
+  padding: 40px 16px 32px;
+  text-align: center;
+}
+
+.errorIcon {
+  margin-bottom: 10px;
+  font-size: 34px;
+}
+
+.errorTitle {
+  color: #1a1a1a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.errorDesc {
+  margin-top: 6px;
+  color: #999;
+  font-size: 12px;
+}
+
+.errorBtn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}

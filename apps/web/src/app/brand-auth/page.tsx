@@ -42,23 +42,35 @@ export default function BrandAuthPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [toast, setToast] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadData() {
+      if (!ignore) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const data = await fetchBrandAuthOverview();
         if (!ignore) {
           setOverview(data);
         }
-      } catch {
+      } catch (fetchError) {
         if (!ignore) {
           setOverview({
             shopName: null,
             mine: [],
             available: [],
           });
+          setError(fetchError instanceof Error ? fetchError.message : '品牌授权概览读取失败');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
         }
       }
     }
@@ -68,7 +80,7 @@ export default function BrandAuthPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   useEffect(() => {
     if (!toast) {
@@ -165,13 +177,25 @@ export default function BrandAuthPage() {
         </div>
       </section>
 
+      {!loading && error ? (
+        <section className={styles.errorCard}>
+          <div className={styles.errorTitle}>授权概览加载失败</div>
+          <div className={styles.errorDesc}>{error}</div>
+          <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+            重新加载
+          </button>
+        </section>
+      ) : null}
+
       <section>
         <div className={styles.sectionTitle}>
           我的授权
           <span>{mineRows.length}个品牌</span>
         </div>
         <div className={styles.list}>
-          {mineRows.length > 0 ? (
+          {loading ? (
+            <div className={styles.emptyText}>正在读取授权概览...</div>
+          ) : mineRows.length > 0 ? (
             mineRows.map((item) => {
               const meta = brandMetaMap[item.brandName];
               const sinceText = item.createdAt ? ` · ${new Date(item.createdAt).toLocaleDateString()}起` : '';
@@ -202,9 +226,9 @@ export default function BrandAuthPage() {
                 </article>
               );
             })
-          ) : (
+          ) : !error ? (
             <div className={styles.emptyText}>暂无授权品牌，请在下方申请</div>
-          )}
+          ) : null}
         </div>
       </section>
 
@@ -214,7 +238,9 @@ export default function BrandAuthPage() {
           <span>选择品牌点击申请</span>
         </div>
         <div className={styles.list}>
-          {availableRows.length > 0 ? (
+          {loading ? (
+            <div className={styles.emptyText}>正在同步可申请品牌...</div>
+          ) : availableRows.length > 0 ? (
             availableRows.map((item) => (
               (() => {
                 const meta = brandMetaMap[item.name];
@@ -257,9 +283,9 @@ export default function BrandAuthPage() {
                 );
               })()
             ))
-          ) : (
+          ) : !error ? (
             <div className={styles.emptyText}>所有品牌均已申请</div>
-          )}
+          ) : null}
         </div>
       </section>
 

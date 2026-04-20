@@ -6,6 +6,10 @@ import type { RankingItem } from '@umi/shared';
 import styles from './page.module.css';
 
 type RankTab = 'winRate' | 'earnings' | 'active';
+type RankTabState = {
+  items: RankingItem[];
+  error: string | null;
+};
 
 const tabs: Array<{
   key: RankTab;
@@ -19,13 +23,14 @@ const tabs: Array<{
 const fallbackAvatar = '/legacy/images/mascot/mouse-main.png';
 
 type RankingPageClientProps = {
-  initialDataMap: Record<RankTab, RankingItem[]>;
+  initialStateMap: Record<RankTab, RankTabState>;
 };
 
-export default function RankingPageClient({ initialDataMap }: RankingPageClientProps) {
+export default function RankingPageClient({ initialStateMap }: RankingPageClientProps) {
   const router = useRouter();
   const [tab, setTab] = useState<RankTab>('winRate');
-  const data = initialDataMap[tab];
+  const current = initialStateMap[tab];
+  const data = current.items;
   const podium = useMemo(() => [data[1] ?? null, data[0] ?? null, data[2] ?? null], [data]);
   const rest = data.slice(3);
   const myRank = data[3] ?? null;
@@ -78,7 +83,16 @@ export default function RankingPageClient({ initialDataMap }: RankingPageClientP
           );
         })}
       </section>
-      {!data.length ? <div className={styles.state}>暂无榜单结果</div> : null}
+      {current.error ? (
+        <div className={styles.stateCard} role="alert">
+          <div className={styles.stateTitle}>榜单加载失败</div>
+          <div className={styles.stateMessage}>{current.error}</div>
+          <button className={styles.retryBtn} type="button" onClick={() => router.refresh()}>
+            重试
+          </button>
+        </div>
+      ) : null}
+      {!current.error && !data.length ? <div className={styles.state}>暂无榜单结果</div> : null}
       {rest.length ? (
         <div>
           {rest.map((item) => (

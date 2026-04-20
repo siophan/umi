@@ -61,13 +61,25 @@
   text-align: center;
 }
 
+.errorState {
+  padding: 80px 20px 40px;
+  text-align: center;
+}
+
 .emptyIcon {
   margin-bottom: 16px;
   opacity: 0.2;
 }
 
-.emptyIcon i {
+.emptyIcon i,
+.errorIcon i {
   font-size: 56px;
+}
+
+.errorIcon {
+  margin-bottom: 16px;
+  color: #ff6b35;
+  opacity: 0.5;
 }
 
 .emptyText {
@@ -77,7 +89,21 @@
   line-height: 1.6;
 }
 
+.errorTitle {
+  color: #d84315;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.errorText {
+  margin: 8px 0 20px;
+  color: #8d6e63;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .emptyBtn,
+.errorBtn,
 .addBtn {
   width: 100%;
   display: flex;
@@ -95,6 +121,14 @@
 
 .emptyBtn {
   width: auto;
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 13px;
+}
+
+.errorBtn {
+  width: auto;
+  margin: 0 auto;
   padding: 10px 24px;
   border-radius: 24px;
   font-size: 13px;

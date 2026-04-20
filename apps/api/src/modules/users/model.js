@@ -6,7 +6,7 @@ const PROFILE_PRIVACY_PUBLIC = 10;
 const PROFILE_PRIVACY_FRIENDS = 20;
 const PROFILE_PRIVACY_PRIVATE = 90;
 function resolveUserRole(row) {
-    if (Number(row.shop_verified ?? 0) > 0 || (row.shop_name ?? '').trim()) {
+    if (Number(row.shop_verified ?? 0) > 0) {
         return 'shop_owner';
     }
     return 'user';

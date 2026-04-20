@@ -332,7 +332,7 @@ function OrderDetailPageInner() {
               return;
             }
             if (order.status === 'completed' && firstItem?.productId) {
-              router.push(`/product/${encodeURIComponent(firstItem.productId)}`);
+              router.push(`/review?orderId=${encodeURIComponent(order.id)}&productId=${encodeURIComponent(firstItem.productId)}`);
               return;
             }
             setToast('订单处理中');

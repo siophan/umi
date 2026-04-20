@@ -68,49 +68,8 @@
   opacity: 0.8;
 }
 
-.cover {
-  position: relative;
-  height: 140px;
-  overflow: hidden;
-}
-
-.coverButton {
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.coverPreview {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-}
-
-.coverOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.coverButton:hover .coverOverlay,
-.coverButton:active .coverOverlay {
-  opacity: 1;
-}
-
 .avatarSection {
-  margin-top: -40px;
+  margin-top: 28px;
   display: flex;
   justify-content: center;
   position: relative;

@@ -1,20 +1,24 @@
-import { Tag, Typography } from 'antd';
-import type { TableColumnsType } from 'antd';
-import { useMemo } from 'react';
+import type { ProColumns } from '@ant-design/pro-components';
+import { ProTable } from '@ant-design/pro-components';
+import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminTransactionRow } from '../lib/api/orders';
 import { fetchAdminTransactions } from '../lib/api/orders';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
+import { buildOptions } from '../lib/admin-filter-options';
 import { formatAmount, formatDateTime } from '../lib/format';
-import {
-  AdminDataTablePage,
-  buildOptions,
-  buildStatusItems,
-  useAsyncPageData,
-} from './shared/admin-page-tools';
 
 interface OrderTransactionsPageProps {
   refreshToken?: number;
 }
+
+type TransactionFilters = {
+  orderSn?: string;
+  channel?: string;
+  direction?: string;
+};
 
 const emptyRows: AdminTransactionRow[] = [];
 
@@ -23,33 +27,56 @@ function directionTag(direction: 'payment' | 'refund') {
 }
 
 export function OrderTransactionsPage({ refreshToken = 0 }: OrderTransactionsPageProps) {
-  const { data, issue, loading } = useAsyncPageData({
-    deps: [refreshToken],
-    errorMessage: '交易流水加载失败',
-    initialData: emptyRows,
-    load: async () => fetchAdminTransactions().then((result) => result.items),
-  });
+  const [searchForm] = Form.useForm<TransactionFilters>();
+  const [rows, setRows] = useState<AdminTransactionRow[]>(emptyRows);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [filters, setFilters] = useState<TransactionFilters>({});
+  const [status, setStatus] = useState<'all' | AdminTransactionRow['direction']>('all');
+  const [selected, setSelected] = useState<AdminTransactionRow | null>(null);
 
-  const channelOptions = useMemo(
-    () => buildOptions(data, 'channel'),
-    [data],
-  );
-  const directionOptions = useMemo(
-    () => buildOptions(data, 'direction'),
-    [data],
-  );
-  const statusItems = useMemo(
+  useEffect(() => {
+    let alive = true;
+    async function loadPageData() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const items = await fetchAdminTransactions().then((result) => result.items);
+        if (!alive) return;
+        setRows(items);
+      } catch (error) {
+        if (!alive) return;
+        setRows(emptyRows);
+        setIssue(error instanceof Error ? error.message : '交易流水加载失败');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }
+    void loadPageData();
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
+
+  const channelOptions = useMemo(() => buildOptions(rows, 'channel'), [rows]);
+  const directionOptions = useMemo(() => buildOptions(rows, 'direction'), [rows]);
+  const filteredRows = useMemo(
     () =>
-      buildStatusItems(data, (row) => row.direction, {
-        payment: '支付',
-        refund: '退款',
+      rows.filter((record) => {
+        const orderRef = String(record.orderSn || record.orderId || '').toLowerCase();
+        if (status !== 'all' && record.direction !== status) return false;
+        if (filters.orderSn && !orderRef.includes(filters.orderSn.trim().toLowerCase())) return false;
+        if (filters.channel && record.channel !== filters.channel) return false;
+        if (filters.direction && record.direction !== filters.direction) return false;
+        return true;
       }),
-    [data],
+    [filters.channel, filters.direction, filters.orderSn, rows, status],
   );
 
-  const columns: TableColumnsType<AdminTransactionRow> = [
+  const columns: ProColumns<AdminTransactionRow>[] = [
     {
       title: '流水',
+      width: 240,
       render: (_, record) => (
         <div>
           <Typography.Text strong>{record.orderSn || record.orderId}</Typography.Text>
@@ -57,45 +84,79 @@ export function OrderTransactionsPage({ refreshToken = 0 }: OrderTransactionsPag
         </div>
       ),
     },
-    { title: '渠道', dataIndex: 'channel' },
-    { title: '方向', render: (_, record) => directionTag(record.direction) },
-    { title: '金额', dataIndex: 'amount', render: (value: number) => formatAmount(value) },
-    { title: '状态', dataIndex: 'statusLabel' },
-    { title: '时间', dataIndex: 'createdAt', render: (value) => formatDateTime(value) },
+    { title: '渠道', dataIndex: 'channel', width: 140 },
+    { title: '方向', width: 120, render: (_, record) => directionTag(record.direction) },
+    { title: '金额', dataIndex: 'amount', width: 120, render: (_, record) => formatAmount(record.amount) },
+    { title: '状态', dataIndex: 'statusLabel', width: 120 },
+    { title: '时间', dataIndex: 'createdAt', width: 180, render: (_, record) => formatDateTime(record.createdAt) },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 100,
+      fixed: 'right',
+      valueType: 'option',
+      render: (_, record) => <Button size="small" type="link" onClick={() => setSelected(record)}>查看</Button>,
+    },
   ];
 
   return (
-    <>
-      <AdminDataTablePage
-        columns={columns}
-        drawerTitle="交易流水"
-        filterRows={(rows, filters, status) =>
-          rows.filter((record) => {
-            const orderRef = String(record.orderSn || record.orderId || '').toLowerCase();
-            if (status !== 'all' && record.direction !== status) {
-              return false;
-            }
-            if (filters.keyword && !orderRef.includes(filters.keyword.trim().toLowerCase())) {
-              return false;
-            }
-            if (filters.second && record.channel !== filters.second) {
-              return false;
-            }
-            if (filters.third && record.direction !== filters.third) {
-              return false;
-            }
-            return true;
-          })
-        }
-        issue={issue}
-        loading={loading}
-        refreshSeed={refreshToken}
-        rows={data}
-        searchPlaceholder="订单号"
-        secondField={{ options: channelOptions, placeholder: '渠道' }}
-        statusItems={statusItems}
-        thirdField={{ options: directionOptions, placeholder: '方向' }}
+    <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
+      <AdminSearchPanel
+        form={searchForm}
+        onSearch={() => setFilters(searchForm.getFieldsValue())}
+        onReset={() => {
+          searchForm.resetFields();
+          setFilters({});
+          setStatus('all');
+        }}
+      >
+        <Form.Item name="orderSn">
+          <Input allowClear placeholder="订单号" />
+        </Form.Item>
+        <Form.Item name="channel">
+          <Select allowClear options={channelOptions} placeholder="渠道" />
+        </Form.Item>
+        <Form.Item name="direction">
+          <Select allowClear options={directionOptions} placeholder="方向" />
+        </Form.Item>
+      </AdminSearchPanel>
+      <AdminStatusTabs
+        activeKey={status}
+        items={[
+          { key: 'all', label: '全部', count: rows.length },
+          { key: 'payment', label: '支付', count: rows.filter((item) => item.direction === 'payment').length },
+          { key: 'refund', label: '退款', count: rows.filter((item) => item.direction === 'refund').length },
+        ]}
+        onChange={(key) => setStatus(key as typeof status)}
       />
-    </>
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<AdminTransactionRow>
+          cardBordered={false}
+          rowKey="id"
+          columns={columns}
+          columnsState={{}}
+          dataSource={filteredRows}
+          loading={loading}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => []}
+        />
+      </ConfigProvider>
+      <Drawer open={selected != null} title="交易流水" width={460} onClose={() => setSelected(null)}>
+        {selected ? (
+          <Descriptions column={1} size="small">
+            <Descriptions.Item label="订单号">{selected.orderSn || selected.orderId}</Descriptions.Item>
+            <Descriptions.Item label="用户">{selected.userName || selected.userId}</Descriptions.Item>
+            <Descriptions.Item label="渠道">{selected.channel}</Descriptions.Item>
+            <Descriptions.Item label="方向">{selected.direction === 'payment' ? '支付' : '退款'}</Descriptions.Item>
+            <Descriptions.Item label="金额">{formatAmount(selected.amount)}</Descriptions.Item>
+            <Descriptions.Item label="状态">{selected.statusLabel}</Descriptions.Item>
+            <Descriptions.Item label="时间">{formatDateTime(selected.createdAt)}</Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Drawer>
+    </div>
   );
 }

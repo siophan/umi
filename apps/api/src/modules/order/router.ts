@@ -374,13 +374,13 @@ function mapOrderDetail(rows: OrderRow[], logs: OrderLogRow[]): OrderDetailResul
     ? sanitizeAddress({
         id: row.address_id,
         user_id: row.user_id,
-        name: row.address_name || row.fulfillment_receiver_name || null,
-        phone_number: row.address_phone_number || row.fulfillment_phone_number || null,
-        province: row.address_province || row.fulfillment_province || null,
-        city: row.address_city || row.fulfillment_city || null,
-        district: row.address_district || row.fulfillment_district || null,
-        detail: row.address_detail || row.fulfillment_detail_address || null,
-        tag: row.address_tag || null,
+        name: row.address_name ?? row.fulfillment_receiver_name ?? null,
+        phone_number: row.address_phone_number ?? row.fulfillment_phone_number ?? null,
+        province: row.address_province ?? row.fulfillment_province ?? null,
+        city: row.address_city ?? row.fulfillment_city ?? null,
+        district: row.address_district ?? row.fulfillment_district ?? null,
+        detail: row.address_detail ?? row.fulfillment_detail_address ?? null,
+        tag: row.address_tag ?? null,
         is_default: row.address_is_default ?? 0,
       })
     : null;
@@ -690,9 +690,13 @@ async function createOrder(userId: string, payload: CreateOrderPayload): Promise
     await connection.beginTransaction();
 
     const address = await getAddressForUser(connection, userId, String(payload.addressId));
-    const purchaseItems = payload.source === 'cart'
+    const cartPurchaseItems = payload.source === 'cart'
       ? await getCartPurchaseRows(connection, userId, payload)
-      : await getProductPurchaseRows(connection, payload);
+      : null;
+    const productPurchaseItems = payload.source === 'product'
+      ? await getProductPurchaseRows(connection, payload)
+      : null;
+    const purchaseItems = cartPurchaseItems ?? productPurchaseItems ?? [];
 
     const originalAmountCents = purchaseItems.reduce(
       (sum, item) => sum + Number(item.row.price ?? 0) * item.quantity,
@@ -811,15 +815,14 @@ async function createOrder(userId: string, payload: CreateOrderPayload): Promise
       );
     }
 
-    if (payload.source === 'cart') {
-      const cartItems = purchaseItems as unknown as Array<{ cartItemId: string }>;
+    if (cartPurchaseItems?.length) {
       await connection.execute(
         `
           DELETE FROM cart_item
           WHERE user_id = ?
-            AND id IN (${cartItems.map(() => '?').join(', ')})
+            AND id IN (${cartPurchaseItems.map(() => '?').join(', ')})
         `,
-        [userId, ...cartItems.map((item) => item.cartItemId)],
+        [userId, ...cartPurchaseItems.map((item) => item.cartItemId)],
       );
     }
 

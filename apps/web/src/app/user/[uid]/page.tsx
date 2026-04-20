@@ -53,165 +53,6 @@ type ProfileViewModel = {
   chatSeed: ChatMessage[];
 };
 
-const fallbackProfiles: Record<string, ProfileViewModel> = {
-  'friend-1': {
-    id: 'friend-1',
-    uid: 'Friend_001',
-    name: '零食侦探社',
-    verified: false,
-    level: 'Lv.12 猜圈达人',
-    bio: '最擅长研究新品零食和竞猜节奏，偶尔发一点开箱和战报。',
-    tags: ['零食达人', '竞猜预测'],
-    location: '上海',
-    gender: '男',
-    age: '26岁',
-    cover: '/legacy/images/profile-banner.jpg',
-    avatar: '/legacy/images/mascot/mouse-main.png',
-    followers: 1256,
-    following: 89,
-    wins: 2034,
-    works: [
-      {
-        id: 'work-1',
-        tag: { text: '竞猜预测', cls: 'tagGuess' },
-        title: '乐事马年限定口味这轮我更看好番茄味',
-        desc: '从评论区反馈和以往联名销量看，番茄味更容易破圈，竞猜这边我先站番茄。',
-        images: ['/legacy/images/products/p001-lays.jpg'],
-        likes: 326,
-        comments: 48,
-        time: '15分钟前',
-      },
-      {
-        id: 'work-2',
-        tag: { text: '零食开箱', cls: 'tagHot' },
-        title: '这周到手的三份竞猜奖品，一次性开箱',
-        desc: '奥利奥礼盒、德芙巧克力和元气森林都到了，包装完整度比上个月明显好。',
-        images: [
-          '/legacy/images/products/p002-oreo.jpg',
-          '/legacy/images/products/p007-dove.jpg',
-          '/legacy/images/products/p009-genki.jpg',
-        ],
-        likes: 518,
-        comments: 92,
-        time: '2小时前',
-      },
-    ],
-    liked: [
-      {
-        id: 'liked-1',
-        tag: { text: '品牌竞猜', cls: 'tagBrand' },
-        title: '三只松鼠周年直播场值得冲吗？',
-        desc: '直播转化和福袋机制都在线，偏保守的也可以蹲第二轮补仓。',
-        images: ['/legacy/images/products/p003-squirrels.jpg'],
-        likes: 641,
-        comments: 75,
-        time: '昨天',
-        author: {
-          name: '三只松鼠官方店',
-          avatar: '/legacy/images/products/p003-squirrels.jpg',
-          verified: true,
-        },
-      },
-    ],
-    chatSeed: [
-      { id: 'c-1', side: 'other', text: '哈喽，看你也在蹲这轮乐事竞猜。' },
-      { id: 'c-2', side: 'me', text: '对，这轮热度很高，你更看好哪个选项？' },
-      { id: 'c-3', side: 'other', text: '我先押番茄味，感觉品牌也会推这个。' },
-    ],
-  },
-  'brand-1': {
-    id: 'brand-1',
-    uid: 'Brand_001',
-    name: '乐事官方旗舰店',
-    verified: true,
-    level: 'Lv.9 品牌认证',
-    bio: '乐事中国官方账号，分享新品、竞猜活动和福利信息。',
-    tags: ['品牌认证', '食品饮料'],
-    location: '上海',
-    gender: '',
-    age: '',
-    cover: '/legacy/images/profile-banner.jpg',
-    avatar: '/legacy/images/products/p001-lays.jpg',
-    followers: 125600,
-    following: 38,
-    wins: 892000,
-    works: [
-      {
-        id: 'brand-work-1',
-        tag: { text: '品牌竞猜', cls: 'tagBrand' },
-        title: '乐事2026马年限定口味投票开启',
-        desc: '参与竞猜赢正品零食大礼包，猜中直接发货到家，当前已有3890人参与。',
-        images: ['/legacy/images/products/p001-lays.jpg'],
-        likes: 2341,
-        comments: 456,
-        time: '15分钟前',
-      },
-      {
-        id: 'brand-work-2',
-        tag: { text: '新品预告', cls: 'tagBrand' },
-        title: '春季限定新口味预告：黄瓜味 vs 烧烤味',
-        desc: '下一轮竞猜即将开启，参与即可抢先获得新品试吃资格。',
-        images: [
-          '/legacy/images/products/p001-lays.jpg',
-          '/legacy/images/products/p006-wangwang.jpg',
-          '/legacy/images/products/p005-liangpin.jpg',
-        ],
-        likes: 1890,
-        comments: 320,
-        time: '3小时前',
-      },
-    ],
-    liked: [
-      {
-        id: 'brand-liked-1',
-        tag: { text: '零食测评', cls: 'tagHot' },
-        title: '一周内最值得复购的三款经典零食',
-        desc: '从口味、性价比和囤货指数三个维度来讲，这三款很稳。',
-        images: ['/legacy/images/products/p005-liangpin.jpg'],
-        likes: 732,
-        comments: 61,
-        time: '昨天',
-        author: {
-          name: '零食测评官',
-          avatar: '/legacy/images/mascot/mouse-casual.png',
-          verified: false,
-        },
-      },
-    ],
-    chatSeed: [
-      { id: 'bc-1', side: 'other', text: '你好，这里是乐事官方账号。' },
-      { id: 'bc-2', side: 'other', text: '如果想了解活动规则，可以直接问我。' },
-    ],
-  },
-};
-
-function buildDefaultProfile(id: string): ProfileViewModel {
-  return {
-    id,
-    uid: id || 'Guest_001',
-    name: '优米用户',
-    verified: false,
-    level: 'Lv.1 新人',
-    bio: '这个人很神秘，还没有留下个性签名。',
-    tags: ['普通用户'],
-    location: '',
-    gender: '',
-    age: '',
-    cover: '/legacy/images/profile-banner.jpg',
-    avatar: '/legacy/images/mascot/mouse-casual.png',
-    followers: 0,
-    following: 0,
-    wins: 0,
-    works: [],
-    liked: [],
-    chatSeed: [{ id: 'd-1', side: 'other', text: '你好呀，很高兴认识你。' }],
-  };
-}
-
-function getFallbackProfile(id: string) {
-  return fallbackProfiles[id] ?? buildDefaultProfile(id);
-}
-
 function formatTimeLabel(value: string) {
   if (!value) {
     return '';
@@ -274,29 +115,30 @@ export default function UserProfilePage() {
   const router = useRouter();
   const params = useParams<{ uid: string }>();
   const profileUid = typeof params?.uid === 'string' ? params.uid : '';
-  const fallbackProfile = useMemo(() => getFallbackProfile(profileUid), [profileUid]);
-  const [profile, setProfile] = useState<ProfileViewModel>(fallbackProfile);
+  const [profile, setProfile] = useState<ProfileViewModel | null>(null);
   const [tab, setTab] = useState<'works' | 'liked'>('works');
   const [following, setFollowing] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(fallbackProfile.chatSeed);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [typing, setTyping] = useState(false);
   const [visibility, setVisibility] = useState({ works: true, liked: true });
   const [chatLoading, setChatLoading] = useState(false);
   const [followSaving, setFollowSaving] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   const statItems = useMemo(
     () => [
-      { value: profile.wins ?? 0, label: '获赞' },
-      { value: profile.following ?? 0, label: '关注' },
-      { value: profile.followers ?? 0, label: '粉丝' },
+      { value: profile?.wins ?? 0, label: '获赞' },
+      { value: profile?.following ?? 0, label: '关注' },
+      { value: profile?.followers ?? 0, label: '粉丝' },
     ],
-    [profile.followers, profile.following, profile.wins],
+    [profile?.followers, profile?.following, profile?.wins],
   );
 
   useEffect(() => {
@@ -318,9 +160,10 @@ export default function UserProfilePage() {
   useEffect(() => {
     let ignore = false;
 
-    setProfile(fallbackProfile);
-    setChatMessages(fallbackProfile.chatSeed);
+    setProfile(null);
+    setChatMessages([]);
     setVisibility({ works: true, liked: true });
+    setError('');
     setLoading(true);
 
     async function loadProfile() {
@@ -333,29 +176,29 @@ export default function UserProfilePage() {
           return;
         }
         setProfile({
-          ...fallbackProfile,
           id: user.id,
-          uid: user.uid || fallbackProfile.uid,
-          name: user.name || fallbackProfile.name,
+          uid: user.uid || profileUid,
+          name: user.name || '优米用户',
           verified: Boolean(user.shopVerified),
           level: `Lv.${user.level || 1}${user.title ? ` ${user.title}` : ''}`,
-          bio: user.signature || fallbackProfile.bio,
+          bio: user.signature || '这个人很神秘，还没有留下个性签名。',
           tags: [
             user.shopVerified ? '店铺用户' : '普通用户',
             user.title || `Lv.${user.level || 1}`,
-            ...fallbackProfile.tags.slice(1),
-          ].filter(Boolean),
-          location: user.region || fallbackProfile.location,
-          gender: user.gender || fallbackProfile.gender,
+          ].filter(Boolean) as string[],
+          location: user.region || '',
+          gender: user.gender || '',
           age: user.birthday
             ? `${Math.max(1, new Date().getFullYear() - new Date(user.birthday).getFullYear())}岁`
-            : fallbackProfile.age,
-          avatar: user.avatar || fallbackProfile.avatar,
-          followers: user.followers || fallbackProfile.followers,
-          following: user.following || fallbackProfile.following,
-          wins: user.wins || fallbackProfile.wins,
+            : '',
+          cover: '/legacy/images/profile-banner.jpg',
+          avatar: user.avatar || '/legacy/images/mascot/mouse-casual.png',
+          followers: user.followers || 0,
+          following: user.following || 0,
+          wins: user.wins || 0,
           works: activity.works.map((item) => mapProfilePost(item)),
           liked: activity.likes.map((item) => mapProfilePost(item)),
+          chatSeed: [],
         });
         setVisibility({
           works: activity.worksVisible,
@@ -364,10 +207,11 @@ export default function UserProfilePage() {
         setFollowing(user.relation === 'friend' || user.relation === 'following');
       } catch {
         if (!ignore) {
-          setProfile(fallbackProfile);
+          setProfile(null);
+          setChatMessages([]);
           setVisibility({ works: true, liked: true });
           setFollowing(false);
-          setToast('已显示默认主页');
+          setError('用户主页加载失败');
         }
       } finally {
         if (!ignore) {
@@ -379,15 +223,19 @@ export default function UserProfilePage() {
     if (profileUid) {
       void loadProfile();
     } else {
+      setError('缺少用户标识');
       setLoading(false);
     }
 
     return () => {
       ignore = true;
     };
-  }, [fallbackProfile, profileUid]);
+  }, [profileUid, reloadToken]);
 
   async function handleCopyUid() {
+    if (!profile) {
+      return;
+    }
     try {
       await navigator.clipboard.writeText(profile.uid || profile.id);
     } catch {
@@ -397,7 +245,7 @@ export default function UserProfilePage() {
   }
 
   async function handleToggleFollow() {
-    if (!profile.id || followSaving) {
+    if (!profile || !profile.id || followSaving) {
       return;
     }
 
@@ -420,7 +268,7 @@ export default function UserProfilePage() {
   }
 
   async function openChat() {
-    if (!profile.id) {
+    if (!profile || !profile.id) {
       return;
     }
 
@@ -445,7 +293,7 @@ export default function UserProfilePage() {
 
   async function sendMessage() {
     const text = chatInput.trim();
-    if (!text || !profile.id) {
+    if (!text || !profile || !profile.id) {
       return;
     }
 
@@ -462,6 +310,9 @@ export default function UserProfilePage() {
   }
 
   const renderPostCard = (post: ProfilePost, liked: boolean) => {
+    if (!profile) {
+      return null;
+    }
     const author = post.author ?? {
       name: profile.name,
       avatar: profile.avatar,
@@ -524,13 +375,35 @@ export default function UserProfilePage() {
     return <main className={styles.page} />;
   }
 
+  if (!profile) {
+    return (
+      <main className={styles.page}>
+        <header className={`${styles.topbar} ${styles.topbarScrolled}`}>
+          <button className={styles.backBtn} type="button" onClick={() => router.back()}>
+            <i className="fa-solid fa-arrow-left" />
+          </button>
+        </header>
+        <section className={styles.errorState}>
+          <div className={styles.errorIcon}>⚠️</div>
+          <div className={styles.errorTitle}>{error || '用户主页加载失败'}</div>
+          <div className={styles.errorDesc}>请稍后重试，当前页不再回退为默认演示主页。</div>
+          <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+            重新加载
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  const profileData = profile;
+
   return (
     <main className={styles.page}>
       <header className={`${styles.topbar} ${scrolled ? styles.topbarScrolled : ''}`}>
         <button className={styles.backBtn} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-arrow-left" />
         </button>
-        <div className={styles.topName}>{profile.name}</div>
+        <div className={styles.topName}>{profileData.name}</div>
         <div className={styles.topRight}>
           <button type="button" aria-label="分享主页" onClick={() => setToast('分享主页')}>
             <i className="fa-solid fa-share-nodes" />
@@ -542,21 +415,21 @@ export default function UserProfilePage() {
       </header>
 
       <section className={styles.cover}>
-        <img src={profile.cover} alt={profile.name} />
+        <img src={profileData.cover} alt={profileData.name} />
       </section>
 
       <section className={styles.info}>
-        <img className={styles.avatar} src={profile.avatar} alt={profile.name} />
+        <img className={styles.avatar} src={profileData.avatar} alt={profileData.name} />
         <div className={styles.nameRow}>
-          <span className={styles.name}>{profile.name}</span>
-          {profile.verified ? <span className={styles.verified}><i className="fa-solid fa-circle-check" /></span> : null}
-          <span className={styles.level}>{profile.level}</span>
+          <span className={styles.name}>{profileData.name}</span>
+          {profileData.verified ? <span className={styles.verified}><i className="fa-solid fa-circle-check" /></span> : null}
+          <span className={styles.level}>{profileData.level}</span>
         </div>
         <div className={styles.uid}>
-          优米号：{profile.uid || '--'}
-          {profile.location ? <> · IP: {profile.location}</> : null}
-          {profile.gender ? <> · {profile.gender}</> : null}
-          {profile.age ? <> · {profile.age}</> : null}
+          优米号：{profileData.uid || '--'}
+          {profileData.location ? <> · IP: {profileData.location}</> : null}
+          {profileData.gender ? <> · {profileData.gender}</> : null}
+          {profileData.age ? <> · {profileData.age}</> : null}
           <button className={styles.uidCopy} type="button" onClick={() => void handleCopyUid()}>
             <i className="fa-regular fa-copy" />
           </button>
@@ -593,23 +466,23 @@ export default function UserProfilePage() {
           </button>
         </div>
 
-        <p className={styles.bio}>{profile.bio}</p>
+        <p className={styles.bio}>{profileData.bio}</p>
         <div className={styles.tags}>
-          {profile.tags.filter(Boolean).map((item) => (
+          {profileData.tags.filter(Boolean).map((item) => (
             <span className={styles.tag} key={item}>
               {item}
             </span>
           ))}
-          {profile.location ? (
+          {profileData.location ? (
             <span className={`${styles.tag} ${styles.tagLoc}`}>
               <i className="fa-solid fa-location-dot" />
-              {profile.location}
+              {profileData.location}
             </span>
           ) : null}
-          {profile.gender ? (
+          {profileData.gender ? (
             <span className={`${styles.tag} ${styles.tagGender}`}>
-              {profile.gender}
-              {profile.age ? ` · ${profile.age}` : ''}
+              {profileData.gender}
+              {profileData.age ? ` · ${profileData.age}` : ''}
             </span>
           ) : null}
         </div>
@@ -629,8 +502,8 @@ export default function UserProfilePage() {
           <span><i className="fa-solid fa-pen-to-square" /></span> TA发布的猜友圈
         </div>
         <div className={styles.postList}>
-          {profile.works.length > 0 ? (
-            profile.works.map((post) => renderPostCard(post, false))
+          {profileData.works.length > 0 ? (
+            profileData.works.map((post) => renderPostCard(post, false))
           ) : (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>📝</div>
@@ -648,8 +521,8 @@ export default function UserProfilePage() {
           <span><i className="fa-solid fa-heart" /></span> TA点赞的猜友圈
         </div>
         <div className={styles.postList}>
-          {profile.liked.length > 0 ? (
-            profile.liked.map((post) => renderPostCard(post, true))
+          {profileData.liked.length > 0 ? (
+            profileData.liked.map((post) => renderPostCard(post, true))
           ) : (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>💗</div>
@@ -670,8 +543,8 @@ export default function UserProfilePage() {
               <button className={styles.chatBack} type="button" onClick={() => setChatOpen(false)}>
                 <i className="fa-solid fa-arrow-left" />
               </button>
-              <img className={styles.chatAvatar} src={profile.avatar} alt={profile.name} />
-              <div className={styles.chatName}>{profile.name}</div>
+              <img className={styles.chatAvatar} src={profileData.avatar} alt={profileData.name} />
+              <div className={styles.chatName}>{profileData.name}</div>
               <button className={styles.chatMore} type="button" onClick={() => setToast('更多设置')}>
                 <i className="fa-solid fa-ellipsis" />
               </button>
@@ -680,13 +553,13 @@ export default function UserProfilePage() {
               {chatLoading ? <div className={styles.timeLabel}>正在读取聊天记录…</div> : <div className={styles.timeLabel}>聊天记录</div>}
               {chatMessages.map((message) => (
                 <div key={message.id} className={`${styles.msgRow} ${styles[message.side]}`}>
-                  <img src={message.side === 'me' ? '/legacy/images/mascot/mouse-main.png' : profile.avatar} alt="" />
+                  <img src={message.side === 'me' ? '/legacy/images/mascot/mouse-main.png' : profileData.avatar} alt="" />
                   <div className={styles.bubble}>{message.text}</div>
                 </div>
               ))}
               {typing ? (
                 <div className={`${styles.msgRow} ${styles.other} ${styles.typing}`}>
-                  <img src={profile.avatar} alt="" />
+                  <img src={profileData.avatar} alt="" />
                   <div className={styles.typingDots}>
                     <span />
                     <span />

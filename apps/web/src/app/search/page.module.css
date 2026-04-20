@@ -516,6 +516,11 @@
   font-size: 11px;
 }
 
+.productRatingEmpty {
+  color: #bbb;
+  font-size: 11px;
+}
+
 .productTag {
   display: inline-block;
   margin-top: 6px;

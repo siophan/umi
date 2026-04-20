@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getBearerToken, getRequestUser, requireUser } from '../../lib/auth';
 import { withErrorBoundary } from '../../lib/errors';
 import { ok } from '../../lib/http';
-import { changePassword, login, logoutByToken, register, sendCode, } from './store';
+import { changePassword, login, logoutByToken, register, resetPassword, sendCode, } from './store';
 export const authRouter = Router();
 authRouter.post('/login', withErrorBoundary({
     status: 400,
@@ -35,6 +35,13 @@ authRouter.post('/change-password', requireUser, withErrorBoundary({
 }, async (request, response) => {
     const user = getRequestUser(request);
     ok(response, await changePassword(user.id, request.body));
+}));
+authRouter.post('/reset-password', withErrorBoundary({
+    status: 400,
+    code: 'AUTH_RESET_PASSWORD_FAILED',
+    message: '重置密码失败',
+}, async (request, response) => {
+    ok(response, await resetPassword(request.body));
 }));
 authRouter.post('/logout', withErrorBoundary({
     status: 400,

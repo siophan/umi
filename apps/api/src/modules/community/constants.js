@@ -1,5 +1,8 @@
 export const COMMENT_TARGET_POST = 20;
 export const COMMENT_INTERACTION_LIKE = 10;
+export const REPORT_TARGET_POST = 10;
+export const REPORT_STATUS_PENDING = 10;
+export const REPORT_STATUS_REVIEWING = 20;
 export const POST_INTERACTION_LIKE = 10;
 export const POST_INTERACTION_BOOKMARK = 20;
 export const POST_SCOPE_PUBLIC = 10;

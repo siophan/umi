@@ -1,4 +1,18 @@
-import { getJson } from './shared';
+import type {
+  AdminShopDetailResult,
+  CreateAdminBrandPayload,
+  CreateAdminBrandResult,
+  ReviewAdminBrandAuthApplyPayload,
+  ReviewAdminBrandAuthApplyResult,
+  ReviewAdminShopApplyPayload,
+  ReviewAdminShopApplyResult,
+  UpdateAdminBrandPayload,
+  UpdateAdminBrandResult,
+  UpdateAdminShopStatusPayload,
+  UpdateAdminShopStatusResult,
+} from '@umi/shared';
+
+import { getJson, postJson, putJson } from './shared';
 
 export interface AdminShopItem {
   id: string;
@@ -37,6 +51,7 @@ export interface AdminBrandItem {
   id: string;
   name: string;
   logoUrl: string | null;
+  categoryId: string | null;
   category: string | null;
   contactName: string | null;
   contactPhone: string | null;
@@ -47,24 +62,6 @@ export interface AdminBrandItem {
   goodsCount: number;
   createdAt: string | null;
   updatedAt: string | null;
-}
-
-export interface AdminBrandApplyItem {
-  id: string;
-  applyNo: string;
-  name: string;
-  category: string | null;
-  applicant: string | null;
-  contactPhone: string | null;
-  license: string | null;
-  deposit: number;
-  reason: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  statusLabel: '待审核' | '已通过' | '已拒绝';
-  rejectReason: string | null;
-  reviewedAt: string | null;
-  submittedAt: string | null;
-  brandId: string | null;
 }
 
 export interface AdminBrandAuthApplyItem {
@@ -133,35 +130,6 @@ export interface AdminShopProductItem {
   updatedAt: string | null;
 }
 
-export interface AdminProductAuthItem {
-  id: string;
-  authId: string;
-  authNo: string | null;
-  brandId: string;
-  brandName: string;
-  shopId: string;
-  shopName: string;
-  ownerName: string;
-  ownerPhone: string | null;
-  subject: string;
-  scopeValue: unknown;
-  status: 'active' | 'expired' | 'revoked';
-  statusLabel: '生效中' | '已过期' | '已撤销';
-  grantedAt: string | null;
-  expireAt: string | null;
-  createdAt: string | null;
-}
-
-export interface AdminProductAuthRecordItem {
-  id: string;
-  subject: string;
-  mode: string;
-  operatorName: string | null;
-  status: 'active' | 'expired' | 'revoked';
-  statusLabel: '生效中' | '已过期' | '已撤销';
-  createdAt: string | null;
-}
-
 type SummaryListResult<TItem, TSummary> = {
   items: TItem[];
   summary: TSummary;
@@ -173,10 +141,28 @@ export function fetchAdminShops() {
   >('/api/admin/shops');
 }
 
+export function fetchAdminShopDetail(id: string) {
+  return getJson<AdminShopDetailResult>(`/api/admin/shops/${id}`);
+}
+
+export function updateAdminShopStatus(id: string, payload: UpdateAdminShopStatusPayload) {
+  return putJson<UpdateAdminShopStatusResult, UpdateAdminShopStatusPayload>(
+    `/api/admin/shops/${id}/status`,
+    payload,
+  );
+}
+
 export function fetchAdminShopApplies() {
   return getJson<
     SummaryListResult<AdminShopApplyItem, { total: number; byStatus: Record<string, number> }>
   >('/api/admin/shops/applies');
+}
+
+export function reviewAdminShopApply(id: string, payload: ReviewAdminShopApplyPayload) {
+  return putJson<ReviewAdminShopApplyResult, ReviewAdminShopApplyPayload>(
+    `/api/admin/shops/applies/${id}/review`,
+    payload,
+  );
 }
 
 export function fetchAdminBrands() {
@@ -185,10 +171,18 @@ export function fetchAdminBrands() {
   >('/api/admin/brands');
 }
 
-export function fetchAdminBrandApplies() {
-  return getJson<
-    SummaryListResult<AdminBrandApplyItem, { total: number; byStatus: Record<string, number> }>
-  >('/api/admin/brands/applies');
+export function createAdminBrand(payload: CreateAdminBrandPayload) {
+  return postJson<CreateAdminBrandResult, CreateAdminBrandPayload>(
+    '/api/admin/brands',
+    payload,
+  );
+}
+
+export function updateAdminBrand(id: string, payload: UpdateAdminBrandPayload) {
+  return putJson<UpdateAdminBrandResult, UpdateAdminBrandPayload>(
+    `/api/admin/brands/${id}`,
+    payload,
+  );
 }
 
 export function fetchAdminBrandAuthApplies() {
@@ -198,6 +192,16 @@ export function fetchAdminBrandAuthApplies() {
       { total: number; byStatus: Record<string, number> }
     >
   >('/api/admin/brands/auth-applies');
+}
+
+export function reviewAdminBrandAuthApply(
+  id: string,
+  payload: ReviewAdminBrandAuthApplyPayload,
+) {
+  return putJson<
+    ReviewAdminBrandAuthApplyResult,
+    ReviewAdminBrandAuthApplyPayload
+  >(`/api/admin/brands/auth-applies/${id}/review`, payload);
 }
 
 export function fetchAdminBrandAuthRecords() {
@@ -216,22 +220,4 @@ export function fetchAdminShopProducts() {
       { total: number; byStatus: Record<string, number> }
     >
   >('/api/admin/shops/products');
-}
-
-export function fetchAdminProductAuthRows() {
-  return getJson<
-    SummaryListResult<
-      AdminProductAuthItem,
-      { total: number; byStatus: Record<string, number> }
-    >
-  >('/api/admin/product-auth');
-}
-
-export function fetchAdminProductAuthRecords() {
-  return getJson<
-    SummaryListResult<
-      AdminProductAuthRecordItem,
-      { total: number; byStatus: Record<string, number> }
-    >
-  >('/api/admin/product-auth/records');
 }

@@ -54,13 +54,16 @@ const moreServices = [
 
 export default function FeaturesPage() {
   const router = useRouter();
-  const [user, setUser] = useState({
-    name: '用户',
-    avatar: '/legacy/images/mascot/mouse-main.png',
-    level: 1,
-    warehouseCount: 0,
-  });
+  const [user, setUser] = useState<{
+    name: string;
+    avatar: string;
+    level: number;
+    warehouseCount: number;
+  } | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [userError, setUserError] = useState('');
+  const [notificationError, setNotificationError] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -76,15 +79,12 @@ export default function FeaturesPage() {
             level: rawUser.level || 1,
             warehouseCount: rawUser.warehouseCount || rawUser.warehouse || 0,
           });
+          setUserError('');
         }
-      } catch {
+      } catch (error) {
         if (!ignore) {
-          setUser({
-            name: '用户',
-            avatar: '/legacy/images/mascot/mouse-main.png',
-            level: 1,
-            warehouseCount: 0,
-          });
+          setUser(null);
+          setUserError(error instanceof Error ? error.message : '用户信息加载失败');
         }
       }
 
@@ -92,10 +92,12 @@ export default function FeaturesPage() {
         const result = await fetchNotifications();
         if (!ignore) {
           setUnreadCount(result.items.filter((item) => !item.read).length);
+          setNotificationError('');
         }
-      } catch {
+      } catch (error) {
         if (!ignore) {
           setUnreadCount(0);
+          setNotificationError(error instanceof Error ? error.message : '通知加载失败');
         }
       }
     }
@@ -105,11 +107,11 @@ export default function FeaturesPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   const myServicesWithData = myServices.map((item) =>
     item.label === '我的仓库'
-      ? { ...item, badge: user.warehouseCount > 0 ? String(user.warehouseCount) : '' }
+      ? { ...item, badge: user && user.warehouseCount > 0 ? String(user.warehouseCount) : '' }
       : item,
   );
 
@@ -131,14 +133,24 @@ export default function FeaturesPage() {
         <div className={styles.headerTitle}>全部功能</div>
       </header>
 
-      <button className={styles.userCard} type="button" onClick={() => router.push('/me')}>
-        <img className={styles.avatar} src={user.avatar} alt={user.name} />
+      {(userError || notificationError) ? (
+        <section className={styles.issueCard}>
+          <div className={styles.issueTitle}>页面信息加载不完整</div>
+          <div className={styles.issueDesc}>{userError || notificationError}</div>
+          <button className={styles.issueBtn} type="button" onClick={() => setReloadToken((value) => value + 1)}>
+            重试
+          </button>
+        </section>
+      ) : null}
+
+      <button className={styles.userCard} type="button" onClick={() => user ? router.push('/me') : undefined} disabled={!user}>
+        <img className={styles.avatar} src={user?.avatar || '/legacy/images/mascot/mouse-main.png'} alt={user?.name || '用户'} />
         <div className={styles.userInfo}>
           <div className={styles.userName}>
-            <span>{user.name}</span>
-            <span className={styles.level}>Lv.{user.level}</span>
+            <span>{user?.name || '用户信息加载中'}</span>
+            {user ? <span className={styles.level}>Lv.{user.level}</span> : null}
           </div>
-          <div className={styles.userDesc}>查看并编辑个人主页</div>
+          <div className={styles.userDesc}>{user ? '查看并编辑个人主页' : '等待用户信息加载完成'}</div>
         </div>
         <i className={`fa-solid fa-chevron-right ${styles.userArrow}`} />
       </button>
@@ -162,9 +174,20 @@ export default function FeaturesPage() {
       <section className={styles.gridCard}>
         <div className={styles.grid}>
           {welfare.map((item) => (
-            <button className={styles.gridItem} key={item.label} type="button" onClick={() => router.push(item.href)}>
+            <button
+              className={`${styles.gridItem} ${item.href === '/invite' || item.href === '/checkin' ? styles.gridItemDisabled : ''}`}
+              key={item.label}
+              type="button"
+              onClick={() => {
+                if (item.href === '/invite' || item.href === '/checkin') {
+                  return;
+                }
+                router.push(item.href);
+              }}
+            >
               <div className={`${styles.iconWrap} ${item.cls}`}>
                 <i className={item.icon} />
+                {(item.href === '/invite' || item.href === '/checkin') ? <span className={styles.badgeMuted}>建设中</span> : null}
               </div>
               <span>{item.label}</span>
             </button>

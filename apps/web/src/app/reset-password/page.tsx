@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
     if (!phoneValid || countdown > 0) return;
     try {
       setLoading(true);
-      const result = await sendCode({ phone, bizType: "reset" });
+      const result = await sendCode({ phone, bizType: "reset_password" });
       if (result.devCode) setCode(result.devCode);
       setCountdown(60);
       setStep("code");
@@ -58,6 +58,7 @@ export default function ResetPasswordPage() {
   async function handleVerifyCode() {
     if (!codeReady) return;
     setStep("password");
+    setToast("验证码将在确认重置时一起校验");
   }
 
   async function handleReset() {
@@ -137,6 +138,7 @@ export default function ResetPasswordPage() {
 
           {step === "code" && (
             <div>
+              <div className={styles.helperText}>验证码不会在这一步单独校验，提交重置时会和新密码一起验证。</div>
               <div className={styles.field}>
                 <span className={styles.fieldIcon}><i className="fa-solid fa-shield-halved" /></span>
                 <input
@@ -161,7 +163,7 @@ export default function ResetPasswordPage() {
                 disabled={!codeReady}
                 onClick={handleVerifyCode}
               >
-                <span>下一步</span>
+                <span>继续设置密码</span>
                 <i className="fa-solid fa-arrow-right" />
               </button>
             </div>

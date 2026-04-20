@@ -1,5 +1,7 @@
 import type {
   AdminPermissionMutationResult,
+  CreateAdminNotificationPayload,
+  CreateAdminNotificationResult,
   EntityId,
   CreateAdminPermissionPayload,
   CreateAdminRolePayload,
@@ -10,6 +12,8 @@ import type {
   UpdateAdminPermissionPayload,
   UpdateAdminPermissionStatusPayload,
   UpdateAdminPermissionStatusResult,
+  UpdateAdminRolePayload,
+  UpdateAdminRoleResult,
   UpdateAdminRolePermissionsPayload,
   UpdateAdminRolePermissionsResult,
   UpdateAdminRoleStatusPayload,
@@ -187,6 +191,13 @@ export function fetchAdminNotifications() {
   return getJson<AdminNotificationListResult>('/api/admin/notifications');
 }
 
+export function createAdminNotification(payload: CreateAdminNotificationPayload) {
+  return postJson<CreateAdminNotificationResult, CreateAdminNotificationPayload>(
+    '/api/admin/notifications',
+    payload,
+  );
+}
+
 export function fetchAdminChats() {
   return getJson<AdminChatListResult>('/api/admin/chats');
 }
@@ -238,6 +249,13 @@ export function fetchAdminRoles() {
 
 export function createAdminRole(payload: CreateAdminRolePayload) {
   return postJson<CreateAdminRoleResult, CreateAdminRolePayload>('/api/admin/roles', payload);
+}
+
+export function updateAdminRole(id: string, payload: UpdateAdminRolePayload) {
+  return putJson<UpdateAdminRoleResult, UpdateAdminRolePayload>(
+    `/api/admin/roles/${id}`,
+    payload,
+  );
 }
 
 export function updateAdminRoleStatus(

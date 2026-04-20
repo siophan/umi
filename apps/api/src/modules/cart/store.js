@@ -106,6 +106,7 @@ export async function getCart(userId) {
     `, [userId]);
     return {
         items: rows.map((row) => sanitizeCartItem(row)),
+        promoThreshold: 200,
     };
 }
 export async function addCartItem(userId, payload) {

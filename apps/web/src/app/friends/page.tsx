@@ -84,6 +84,10 @@ const quickActions = [
   { label: '社区', icon: '💬', tone: 'green' as const },
 ];
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function formatFans(value: number) {
   if (value >= 10000) {
     return `${(value / 10000).toFixed(1)}万`;
@@ -202,18 +206,23 @@ export default function FriendsPage() {
   const [following, setFollowing] = useState<FollowingItem[]>([]);
   const [fans, setFans] = useState<FanItem[]>([]);
   const [requests, setRequests] = useState<RequestItem[]>([]);
-  const [pkCount, setPkCount] = useState(0);
+  const [pkCount, setPkCount] = useState<number | null>(null);
   const [hotGuesses, setHotGuesses] = useState<HotGuessItem[]>([]);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const [guessError, setGuessError] = useState<string | null>(null);
   const [followSavingId, setFollowSavingId] = useState('');
   const [requestSavingId, setRequestSavingId] = useState('');
   const [pkOpen, setPkOpen] = useState(false);
   const [pkTarget, setPkTarget] = useState<FriendItem | null>(null);
   const [selectedGuessId, setSelectedGuessId] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
 
     async function load() {
+      setSocialError(null);
+      setGuessError(null);
       const [socialResult, guessListResult, guessHistoryResult] = await Promise.allSettled([
         fetchSocialOverview(),
         fetchGuessList(),
@@ -238,14 +247,22 @@ export default function FriendsPage() {
         setFollowing([]);
         setFans([]);
         setRequests([]);
+        setSocialError(getErrorMessage(socialResult.reason, '社交关系读取失败'));
       }
 
-      setHotGuesses(
-        guessListResult.status === 'fulfilled'
-          ? guessListResult.value.items.slice(0, 5).map(normalizeHotGuess)
-          : [],
-      );
-      setPkCount(guessHistoryResult.status === 'fulfilled' ? guessHistoryResult.value.stats.pk : 0);
+      if (guessListResult.status === 'fulfilled') {
+        setHotGuesses(guessListResult.value.items.slice(0, 5).map(normalizeHotGuess));
+      } else {
+        setHotGuesses([]);
+        setGuessError(getErrorMessage(guessListResult.reason, '竞猜列表读取失败'));
+      }
+
+      if (guessHistoryResult.status === 'fulfilled') {
+        setPkCount(guessHistoryResult.value.stats.pk);
+      } else {
+        setPkCount(null);
+        setGuessError((current) => current || getErrorMessage(guessHistoryResult.reason, '竞猜历史读取失败'));
+      }
 
       if (!ignore) {
         setReady(true);
@@ -259,7 +276,7 @@ export default function FriendsPage() {
         window.clearTimeout(toastTimer.current);
       }
     };
-  }, []);
+  }, [reloadToken]);
 
   const pendingRequests = useMemo(
     () => requests.filter((item) => item.status === 'pending'),
@@ -299,6 +316,21 @@ export default function FriendsPage() {
   }, [pendingRequests, query]);
 
   const currentGuess = hotGuesses.find((item) => item.id === selectedGuessId) || hotGuesses[0] || null;
+  const socialCountsMissing = Boolean(socialError);
+  const guessCountsMissing = Boolean(guessError);
+
+  function renderSocialError() {
+    return (
+      <div className={styles.errorState}>
+        <div className={styles.errorIcon}>⚠️</div>
+        <div className={styles.errorTitle}>社交关系加载失败</div>
+        <div className={styles.errorDesc}>{socialError}</div>
+        <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+          重新加载
+        </button>
+      </div>
+    );
+  }
 
   function showToast(message: string) {
     setToast(message);
@@ -484,19 +516,19 @@ export default function FriendsPage() {
       <section className={styles.heroCard}>
         <div className={styles.heroStats}>
           <button className={styles.heroStat} type="button" onClick={() => setTab('friends')}>
-            <div className={styles.heroNum}>{friends.length}</div>
+            <div className={styles.heroNum}>{socialCountsMissing ? '--' : friends.length}</div>
             <div className={styles.heroLabel}>好友</div>
           </button>
           <button className={styles.heroStat} type="button" onClick={() => setTab('following')}>
-            <div className={styles.heroNum}>{following.length}</div>
+            <div className={styles.heroNum}>{socialCountsMissing ? '--' : following.length}</div>
             <div className={styles.heroLabel}>关注</div>
           </button>
           <button className={styles.heroStat} type="button" onClick={() => setTab('fans')}>
-            <div className={styles.heroNum}>{fans.length}</div>
+            <div className={styles.heroNum}>{socialCountsMissing ? '--' : fans.length}</div>
             <div className={styles.heroLabel}>粉丝</div>
           </button>
           <div className={styles.heroStat}>
-            <div className={styles.heroNum}>{pkCount}</div>
+            <div className={styles.heroNum}>{guessCountsMissing ? '--' : pkCount ?? 0}</div>
             <div className={styles.heroLabel}>PK场</div>
           </div>
         </div>
@@ -540,7 +572,7 @@ export default function FriendsPage() {
           <button type="button" onClick={() => router.push('/guess-history')}>查看更多</button>
         </div>
         <div className={styles.hotScroll}>
-          {hotGuesses.map((item) => (
+          {!guessError ? hotGuesses.map((item) => (
             <button className={styles.hotChip} key={item.id} type="button" onClick={() => router.push(`/guess/${encodeURIComponent(item.id)}`)}>
               <div className={styles.hotChipIcon}>{item.icon}</div>
               <div className={styles.hotChipTitle}>{item.title}</div>
@@ -549,8 +581,17 @@ export default function FriendsPage() {
                 <span>人参与</span>
               </div>
             </button>
-          ))}
-          {!hotGuesses.length ? <div className={styles.hotEmpty}>暂无热门竞猜</div> : null}
+          )) : null}
+          {guessError ? (
+            <div className={styles.hotError}>
+              <div className={styles.hotErrorTitle}>竞猜链加载失败</div>
+              <div className={styles.hotErrorDesc}>{guessError}</div>
+              <button className={styles.hotErrorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+                重试
+              </button>
+            </div>
+          ) : null}
+          {!guessError && !hotGuesses.length ? <div className={styles.hotEmpty}>暂无热门竞猜</div> : null}
         </div>
       </section>
 
@@ -588,7 +629,7 @@ export default function FriendsPage() {
               <i className="fa-solid fa-arrow-down-short-wide" /> 排序
             </button>
           </div>
-          {filteredFriends.length ? filteredFriends.map((item) => (
+          {socialError ? renderSocialError() : filteredFriends.length ? filteredFriends.map((item) => (
             <article className={styles.card} key={item.id}>
               <button className={styles.avatarButton} type="button" onClick={() => openProfile(item.uid)}>
                 <img className={styles.avatar} src={item.avatar} alt={item.name} />
@@ -637,7 +678,7 @@ export default function FriendsPage() {
           <div className={styles.sectionHeader}>
             <span>我的关注 ({filteredFollowing.length})</span>
           </div>
-          {filteredFollowing.length ? filteredFollowing.map((item) => (
+          {socialError ? renderSocialError() : filteredFollowing.length ? filteredFollowing.map((item) => (
             <article className={styles.card} key={item.id}>
               <button className={styles.avatarButton} type="button" onClick={() => openProfile(item.uid)}>
                 <img className={styles.avatar} src={item.avatar} alt={item.name} />
@@ -682,7 +723,7 @@ export default function FriendsPage() {
           <div className={styles.sectionHeader}>
             <span>我的粉丝 ({filteredFans.length})</span>
           </div>
-          {filteredFans.length ? filteredFans.map((item) => (
+          {socialError ? renderSocialError() : filteredFans.length ? filteredFans.map((item) => (
             <article className={styles.card} key={item.id}>
               <button className={styles.avatarButton} type="button" onClick={() => openProfile(item.uid)}>
                 <img className={styles.avatar} src={item.avatar} alt={item.name} />
@@ -728,7 +769,7 @@ export default function FriendsPage() {
           <div className={styles.sectionHeader}>
             <span>好友申请 ({filteredRequests.length})</span>
           </div>
-          {filteredRequests.length ? filteredRequests.map((item) => (
+          {socialError ? renderSocialError() : filteredRequests.length ? filteredRequests.map((item) => (
             <article className={styles.requestCard} key={item.id}>
               <button className={styles.avatarButton} type="button" onClick={() => openProfile(item.uid)}>
                 <img className={styles.avatar} src={item.avatar} alt={item.name} />

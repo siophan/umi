@@ -1,92 +1,189 @@
-import { Tag } from 'antd';
-import type { TableColumnsType } from 'antd';
-import { useMemo } from 'react';
+import type { ProColumns } from '@ant-design/pro-components';
+import { ProTable } from '@ant-design/pro-components';
+import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminShopProductItem } from '../lib/api/merchant';
 import { fetchAdminShopProducts } from '../lib/api/merchant';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
+import { buildOptions } from '../lib/admin-filter-options';
 import { formatAmount, formatNumber, productStatusMeta } from '../lib/format';
-import { AdminDataTablePage, buildOptions, buildStatusItems, useAsyncPageData } from './shared/admin-page-tools';
 
 interface ShopProductsPageProps {
   refreshToken?: number;
 }
 
+type ShopProductFilters = {
+  shopName?: string;
+  productName?: string;
+  brandName?: string;
+};
+
 const emptyRows: AdminShopProductItem[] = [];
 
-export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
-  const { data, issue, loading } = useAsyncPageData({
-    deps: [refreshToken],
-    errorMessage: '店铺授权商品加载失败',
-    initialData: emptyRows,
-    load: async () => fetchAdminShopProducts().then((result) => result.items),
-  });
+function renderStock(value: number) {
+  return Number.isFinite(value) ? formatNumber(value) : '-';
+}
 
-  const brandOptions = useMemo(() => buildOptions(data, 'brandName'), [data]);
+export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
+  const [searchForm] = Form.useForm<ShopProductFilters>();
+  const [rows, setRows] = useState<AdminShopProductItem[]>(emptyRows);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ShopProductFilters>({});
+  const [status, setStatus] = useState<'all' | AdminShopProductItem['status']>('all');
+  const [selected, setSelected] = useState<AdminShopProductItem | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPageData() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const items = await fetchAdminShopProducts().then((result) => result.items);
+        if (!alive) {
+          return;
+        }
+        setRows(items);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setRows(emptyRows);
+        setIssue(error instanceof Error ? error.message : '店铺商品加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPageData();
+
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
+
+  const brandOptions = useMemo(() => buildOptions(rows, 'brandName'), [rows]);
   const statusItems = useMemo(
-    () =>
-      buildStatusItems(data, (row) => row.status, {
-        active: '在售',
-        disabled: '不可售',
-        low_stock: '低库存',
-        off_shelf: '已下架',
-      }),
-    [data],
+    () => [
+      { key: 'all', label: '全部', count: rows.length },
+      { key: 'active', label: '在售', count: rows.filter((item) => item.status === 'active').length },
+      { key: 'disabled', label: '不可售', count: rows.filter((item) => item.status === 'disabled').length },
+      { key: 'off_shelf', label: '已下架', count: rows.filter((item) => item.status === 'off_shelf').length },
+    ],
+    [rows],
   );
 
-  const columns: TableColumnsType<AdminShopProductItem> = [
-    { title: '店铺', dataIndex: 'shopName' },
-    { title: '商品', dataIndex: 'productName' },
-    { title: '品牌', dataIndex: 'brandName', render: (value) => value || '-' },
-    { title: '售价', dataIndex: 'price', render: (value: number) => formatAmount(value) },
-    { title: '可用库存', dataIndex: 'availableStock', render: formatNumber },
-    { title: '销量', dataIndex: 'sales', render: formatNumber },
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((record) => {
+        if (status !== 'all' && record.status !== status) {
+          return false;
+        }
+        if (filters.shopName && !record.shopName.toLowerCase().includes(filters.shopName.trim().toLowerCase())) {
+          return false;
+        }
+        if (
+          filters.productName &&
+          !record.productName.toLowerCase().includes(filters.productName.trim().toLowerCase())
+        ) {
+          return false;
+        }
+        if (filters.brandName && record.brandName !== filters.brandName) {
+          return false;
+        }
+        return true;
+      }),
+    [filters.brandName, filters.productName, filters.shopName, rows, status],
+  );
+
+  const columns: ProColumns<AdminShopProductItem>[] = [
+    { title: '店铺', dataIndex: 'shopName', width: 200 },
+    { title: '商品', dataIndex: 'productName', width: 220 },
+    { title: '品牌', dataIndex: 'brandName', width: 180, render: (_, record) => record.brandName || '-' },
+    { title: '售价', dataIndex: 'price', width: 120, render: (_, record) => formatAmount(record.price) },
+    { title: '可用库存', dataIndex: 'availableStock', width: 120, render: (_, record) => renderStock(record.availableStock) },
+    { title: '销量', dataIndex: 'sales', width: 120, render: (_, record) => formatNumber(record.sales) },
     {
       title: '状态',
+      dataIndex: 'status',
+      width: 120,
+      render: (_, record) => <Tag color={productStatusMeta[record.status].color}>{record.statusLabel}</Tag>,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 100,
+      fixed: 'right',
+      valueType: 'option',
       render: (_, record) => (
-        <Tag color={productStatusMeta[record.status].color}>{record.statusLabel}</Tag>
+        <Button size="small" type="link" onClick={() => setSelected(record)}>
+          查看
+        </Button>
       ),
     },
   ];
 
   return (
-    <>
-      <AdminDataTablePage
-        columns={columns}
-        drawerTitle="店铺授权商品"
-        filterRows={(rows, filters, status) =>
-          rows.filter((record) => {
-            if (status !== 'all' && record.status !== status) {
-              return false;
-            }
-            if (filters.keyword && !record.productName.toLowerCase().includes(filters.keyword.trim().toLowerCase())) {
-              return false;
-            }
-            if (filters.second && record.brandName !== filters.second) {
-              return false;
-            }
-            if (filters.third && record.statusLabel !== filters.third) {
-              return false;
-            }
-            return true;
-          })
-        }
-        issue={issue}
-        loading={loading}
-        refreshSeed={refreshToken}
-        rows={data}
-        searchPlaceholder="商品名称"
-        secondField={{ options: brandOptions, placeholder: '品牌' }}
-        statusItems={statusItems}
-        thirdField={{
-          options: [
-            { label: '在售', value: '在售' },
-            { label: '低库存', value: '低库存' },
-            { label: '已下架', value: '已下架' },
-            { label: '不可售', value: '不可售' },
-          ],
-          placeholder: '状态',
+    <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
+
+      <AdminSearchPanel
+        form={searchForm}
+        onSearch={() => setFilters(searchForm.getFieldsValue())}
+        onReset={() => {
+          searchForm.resetFields();
+          setFilters({});
+          setStatus('all');
         }}
-      />
-    </>
+      >
+        <Form.Item name="shopName">
+          <Input allowClear placeholder="店铺" />
+        </Form.Item>
+        <Form.Item name="productName">
+          <Input allowClear placeholder="商品名称" />
+        </Form.Item>
+        <Form.Item name="brandName">
+          <Select allowClear options={brandOptions} placeholder="品牌" />
+        </Form.Item>
+      </AdminSearchPanel>
+
+      <AdminStatusTabs activeKey={status} items={statusItems} onChange={(key) => setStatus(key as typeof status)} />
+
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<AdminShopProductItem>
+          cardBordered={false}
+          rowKey="id"
+          columns={columns}
+          columnsState={{}}
+          dataSource={filteredRows}
+          loading={loading}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => []}
+        />
+      </ConfigProvider>
+
+      <Drawer open={selected != null} title="店铺商品详情" width={460} onClose={() => setSelected(null)}>
+        {selected ? (
+          <Descriptions column={1} size="small">
+            <Descriptions.Item label="店铺">{selected.shopName}</Descriptions.Item>
+            <Descriptions.Item label="商品">{selected.productName}</Descriptions.Item>
+            <Descriptions.Item label="品牌">{selected.brandName || '-'}</Descriptions.Item>
+            <Descriptions.Item label="售价">{formatAmount(selected.price)}</Descriptions.Item>
+            <Descriptions.Item label="可用库存">{renderStock(selected.availableStock)}</Descriptions.Item>
+            <Descriptions.Item label="销量">{formatNumber(selected.sales)}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={productStatusMeta[selected.status].color}>{selected.statusLabel}</Tag>
+            </Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Drawer>
+    </div>
   );
 }

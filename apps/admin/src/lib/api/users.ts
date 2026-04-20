@@ -25,6 +25,12 @@ export function fetchAdminUsersPage(query: AdminUserListQuery = {}) {
   if (query.keyword?.trim()) {
     search.set('keyword', query.keyword.trim());
   }
+  if (query.phone?.trim()) {
+    search.set('phone', query.phone.trim());
+  }
+  if (query.shopName?.trim()) {
+    search.set('shopName', query.shopName.trim());
+  }
   if (query.role && query.role !== 'all') {
     search.set('role', query.role);
   }

@@ -96,6 +96,8 @@ export default function AddressPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -116,10 +118,12 @@ export default function AddressPage() {
         if (!ignore) {
           const items = Array.isArray(result) ? result : [];
           setAddresses(items.map(normalizeAddress));
+          setLoadError('');
         }
-      } catch {
+      } catch (error) {
         if (!ignore) {
           setAddresses([]);
+          setLoadError(error instanceof Error ? error.message : '地址加载失败，请稍后重试');
         }
       }
     }
@@ -128,7 +132,7 @@ export default function AddressPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   useEffect(() => {
     if (!toast) {
@@ -138,7 +142,7 @@ export default function AddressPage() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const empty = addresses.length === 0;
+  const empty = !loadError && addresses.length === 0;
   const provinces = useMemo(() => Object.keys(REGIONS), []);
   const cities = useMemo(() => (form.province ? Object.keys(REGIONS[form.province] || {}) : []), [form.province]);
   const districts = useMemo(() => {
@@ -297,7 +301,16 @@ export default function AddressPage() {
         )}
       </header>
 
-      {empty ? (
+      {loadError ? (
+        <section className={styles.errorState}>
+          <div className={styles.errorIcon}><i className="fa-solid fa-circle-exclamation" /></div>
+          <div className={styles.errorTitle}>收货地址加载失败</div>
+          <div className={styles.errorText}>{loadError}</div>
+          <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((value) => value + 1)}>
+            重试
+          </button>
+        </section>
+      ) : empty ? (
         <section className={styles.empty}>
           <div className={styles.emptyIcon}><i className="fa-solid fa-location-dot" /></div>
           <div className={styles.emptyText}>还没有收货地址<br />添加一个地址，购物更方便</div>

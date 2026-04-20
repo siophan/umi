@@ -19,7 +19,6 @@ import {
   InboxOutlined,
   MessageOutlined,
   PictureOutlined,
-  PlusCircleOutlined,
   SafetyOutlined,
   SettingOutlined,
   ShareAltOutlined,
@@ -67,9 +66,9 @@ const adminMenuTree: AdminMenuNode[] = [
     access: menuAccess('/dashboard'),
   },
   {
-    key: 'user-merchant-group',
+    key: 'user-management-group',
     icon: <UserOutlined />,
-    name: '用户与商家',
+    name: '用户管理',
     children: [
       {
         key: '/users/list',
@@ -86,81 +85,60 @@ const adminMenuTree: AdminMenuNode[] = [
         access: menuAccess('/shops/list'),
       },
       {
+        key: '/shops/products',
+        path: '/shops/products',
+        icon: <ShoppingOutlined />,
+        name: '店铺商品',
+        access: menuAccess('/shops/products'),
+      },
+      {
         key: '/shops/apply',
         path: '/shops/apply',
         icon: <FileTextOutlined />,
         name: '开店审核',
         access: menuAccess('/shops/apply'),
       },
+    ],
+  },
+  {
+    key: 'brand-management-group',
+    icon: <TrademarkOutlined />,
+    name: '品牌管理',
+    children: [
       {
         key: '/brands/list',
         path: '/brands/list',
         icon: <TrademarkOutlined />,
-        name: '品牌方列表',
+        name: '品牌列表',
         access: menuAccess('/brands/list'),
       },
       {
-        key: '/brands/apply',
-        path: '/brands/apply',
-        icon: <FileTextOutlined />,
-        name: '入驻审核',
-        access: menuAccess('/brands/apply'),
+        key: '/products/brands',
+        path: '/products/brands',
+        icon: <TrademarkOutlined />,
+        name: '品牌商品',
+        access: menuAccess('/products/brands'),
       },
       {
-        key: '/product-auth/list',
-        path: '/product-auth/list',
+        key: '/shops/brand-auth',
+        path: '/shops/brand-auth',
         icon: <SafetyOutlined />,
-        name: '商品授权',
-        access: menuAccess('/product-auth/list'),
-      },
-      {
-        key: '/product-auth/records',
-        path: '/product-auth/records',
-        icon: <FileTextOutlined />,
-        name: '授权记录',
-        access: menuAccess('/product-auth/records'),
-      },
-      {
-        key: '/shops/products',
-        path: '/shops/products',
-        icon: <ShoppingOutlined />,
-        name: '店铺授权商品',
-        access: menuAccess('/shops/products'),
+        name: '品牌授权',
+        access: menuAccess('/shops/brand-auth'),
       },
     ],
   },
   {
     key: 'products-guesses-group',
     icon: <ShoppingOutlined />,
-    name: '商品与竞猜',
+    name: '竞猜管理',
     children: [
-      {
-        key: '/products/list',
-        path: '/products/list',
-        icon: <ShoppingOutlined />,
-        name: '商品列表',
-        access: menuAccess('/products/list'),
-      },
-      {
-        key: '/products/brands',
-        path: '/products/brands',
-        icon: <TrademarkOutlined />,
-        name: '品牌商品库',
-        access: menuAccess('/products/brands'),
-      },
       {
         key: '/guesses/list',
         path: '/guesses/list',
         icon: <AimOutlined />,
         name: '竞猜列表',
         access: menuAccess('/guesses/list'),
-      },
-      {
-        key: '/guesses/create',
-        path: '/guesses/create',
-        icon: <PlusCircleOutlined />,
-        name: '创建竞猜',
-        access: menuAccess('/guesses/create'),
       },
       {
         key: '/guesses/friends',
@@ -179,9 +157,9 @@ const adminMenuTree: AdminMenuNode[] = [
     ],
   },
   {
-    key: 'orders-fulfillment-group',
+    key: 'orders-group',
     icon: <ShoppingCartOutlined />,
-    name: '订单与履约',
+    name: '订单管理',
     children: [
       {
         key: '/orders/list',
@@ -197,6 +175,13 @@ const adminMenuTree: AdminMenuNode[] = [
         name: '交易流水',
         access: menuAccess('/orders/transactions'),
       },
+    ],
+  },
+  {
+    key: 'fulfillment-group',
+    icon: <CarOutlined />,
+    name: '履约管理',
+    children: [
       {
         key: '/orders/logistics',
         path: '/orders/logistics',
@@ -328,7 +313,7 @@ const adminMenuTree: AdminMenuNode[] = [
   {
     key: 'system-group',
     icon: <SettingOutlined />,
-    name: '权限与系统',
+    name: '系统设置',
     children: [
       {
         key: '/system/users',

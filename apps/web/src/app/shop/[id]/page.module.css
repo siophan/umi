@@ -7,6 +7,76 @@
   -webkit-font-smoothing: antialiased;
 }
 
+.issueWrap {
+  min-height: 100vh;
+  padding: 92px 16px 24px;
+}
+
+.issueCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 22px;
+  border: 1px solid #f0d9d3;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fff9f7 0%, #ffffff 100%);
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(15, 15, 15, 0.06);
+}
+
+.issueIcon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 107, 74, 0.12);
+  color: #ff6b4a;
+  font-size: 20px;
+}
+
+.issueTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f0f0f;
+}
+
+.issueDesc {
+  max-width: 280px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #7f7f84;
+}
+
+.issueActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.issueGhostBtn,
+.issuePrimaryBtn {
+  min-width: 110px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.issueGhostBtn {
+  border: 1px solid #e7d7d1;
+  background: #fff;
+  color: #595962;
+}
+
+.issuePrimaryBtn {
+  border: 0;
+  background: linear-gradient(135deg, #ff845f, #ff6b4a);
+  color: #fff;
+}
+
 .nav {
   position: fixed;
   top: 0;
@@ -262,93 +332,6 @@
   color: rgba(255, 255, 255, 0.9);
   font-size: 10px;
   font-weight: 600;
-}
-
-.scoreCard {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin: 12px 12px 0;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-}
-
-.scoreRing {
-  position: relative;
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-}
-
-.scoreRing svg {
-  width: 52px;
-  height: 52px;
-  transform: rotate(-90deg);
-}
-
-.scoreRingBg {
-  fill: none;
-  stroke: #f0f0f2;
-  stroke-width: 4;
-}
-
-.scoreRingFill {
-  fill: none;
-  stroke: #ff5722;
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-
-.scoreVal {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #0f0f0f;
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.scoreItems {
-  display: flex;
-  flex: 1;
-}
-
-.scoreItem {
-  flex: 1;
-  text-align: center;
-}
-
-.scoreItemVal {
-  color: #0f0f0f;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.scoreItemValHigh {
-  color: var(--c-green);
-}
-
-.scoreItemLbl {
-  margin-top: 2px;
-  color: #999;
-  font-size: 9px;
-}
-
-.scoreBar {
-  height: 3px;
-  margin: 4px 8px 0;
-  overflow: hidden;
-  border-radius: 2px;
-  background: #f0f0f2;
-}
-
-.scoreFill {
-  height: 100%;
-  border-radius: 2px;
 }
 
 .couponBar {

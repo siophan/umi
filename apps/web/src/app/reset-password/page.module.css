@@ -172,6 +172,13 @@
   padding: 16px 24px 4px;
 }
 
+.helperText {
+  margin: 0 2px 10px;
+  color: #8a8a92;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .field {
   display: flex;
   align-items: center;

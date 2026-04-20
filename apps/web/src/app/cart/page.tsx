@@ -8,6 +8,10 @@ import { fetchCart, removeCartItem, updateCartItem } from '../../lib/api/cart';
 import { fetchProductList } from '../../lib/api/products';
 import styles from './page.module.css';
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function getGroupKey(item: CartLineItem) {
   return item.brand?.trim() || item.shop?.trim() || '其他';
 }
@@ -25,10 +29,13 @@ export default function CartPage() {
   const [items, setItems] = useState<CartLineItem[]>([]);
   const [discoverItems, setDiscoverItems] = useState<ProductFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cartError, setCartError] = useState<string | null>(null);
+  const [discoverError, setDiscoverError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [promoThreshold, setPromoThreshold] = useState(0);
   const [toast, setToast] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
   const touchStartX = useRef(0);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -37,20 +44,32 @@ export default function CartPage() {
 
     async function load() {
       setLoading(true);
+      setCartError(null);
+      setDiscoverError(null);
       try {
         const [cartResult, productResult] = await Promise.allSettled([
           fetchCart(),
           fetchProductList(12),
         ]);
         if (!ignore) {
-          setItems(cartResult.status === 'fulfilled' ? cartResult.value.items : []);
-          setPromoThreshold(cartResult.status === 'fulfilled' ? cartResult.value.promoThreshold : 0);
-          setDiscoverItems(productResult.status === 'fulfilled' ? productResult.value.items : []);
+          if (cartResult.status === 'fulfilled') {
+            setItems(cartResult.value.items);
+            setPromoThreshold(cartResult.value.promoThreshold);
+          } else {
+            setCartError(getErrorMessage(cartResult.reason, '购物车读取失败'));
+          }
+
+          if (productResult.status === 'fulfilled') {
+            setDiscoverItems(productResult.value.items);
+          } else {
+            setDiscoverError(getErrorMessage(productResult.reason, '推荐商品读取失败'));
+          }
         }
       } catch (error) {
         if (!ignore) {
-          setItems([]);
-          setDiscoverItems([]);
+          const message = getErrorMessage(error, '购物车页面读取失败');
+          setCartError(message);
+          setDiscoverError(message);
         }
       } finally {
         if (!ignore) {
@@ -67,7 +86,7 @@ export default function CartPage() {
         window.clearTimeout(toastTimerRef.current);
       }
     };
-  }, []);
+  }, [reloadToken]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -263,7 +282,17 @@ export default function CartPage() {
       {loading ? <section className={styles.empty}><div className={styles.emptyText}>正在加载购物车...</div></section> : null}
       {!loading ? (
         <>
-          {promoGap > 0 ? (
+          {cartError ? (
+            <section className={styles.errorCard}>
+              <div className={styles.errorTitle}>购物车加载失败</div>
+              <div className={styles.errorDesc}>{cartError}</div>
+              <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+                重新加载
+              </button>
+            </section>
+          ) : null}
+
+          {!cartError && promoGap > 0 ? (
             <section className={`${styles.promo} ${styles.fadeIn}`} style={{ animationDelay: '0.05s' }}>
               <div className={styles.promoIcon}>🎁</div>
               <div className={styles.promoText}>
@@ -275,7 +304,7 @@ export default function CartPage() {
             </section>
           ) : null}
 
-          {items.length ? (
+          {!cartError && items.length ? (
             <>
               <section className={styles.list}>
                 {groupedItems.map(([shop, shopItems]) => {
@@ -377,7 +406,9 @@ export default function CartPage() {
               </section>
 
             </>
-          ) : (
+          ) : null}
+
+          {!cartError && !items.length ? (
             <section className={styles.empty}>
               <i className="fa-solid fa-cart-shopping" />
               <div className={styles.emptyText}>购物车是空的</div>
@@ -386,9 +417,22 @@ export default function CartPage() {
                 <i className="fa-solid fa-store" /> 逛商城
               </button>
             </section>
-          )}
+          ) : null}
 
-          {recommendItems.length ? (
+          {!cartError && discoverError ? (
+            <section className={styles.recommendState}>
+              <div className={styles.recommendTitle}>
+                <i className="fa-solid fa-wand-magic-sparkles" />
+                你可能还喜欢
+              </div>
+              <div className={styles.recommendError}>推荐流加载失败：{discoverError}</div>
+              <button className={styles.recommendRetry} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+                重试
+              </button>
+            </section>
+          ) : null}
+
+          {!cartError && !discoverError && recommendItems.length ? (
             <section className={styles.recommend}>
               <div className={styles.recommendTitle}>
                 <i className="fa-solid fa-wand-magic-sparkles" />
@@ -417,7 +461,7 @@ export default function CartPage() {
         </>
       ) : null}
 
-      {!loading ? (
+      {!loading && !cartError ? (
         <footer className={styles.bar}>
           <div className={styles.barLeft}>
             <button className={styles.barAll} type="button" onClick={() => void toggleAll()}>

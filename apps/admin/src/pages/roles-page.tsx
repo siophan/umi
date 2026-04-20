@@ -29,13 +29,14 @@ import {
   createAdminRole,
   fetchAdminPermissionsMatrix,
   fetchAdminRoles,
+  updateAdminRole,
   updateAdminRolePermissions,
   updateAdminRoleStatus,
   type AdminPermissionMatrixData,
   type AdminRoleListItem,
 } from '../lib/api/system';
 import { formatDateTime, formatNumber } from '../lib/format';
-import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
 interface RolesPageProps {
   refreshToken?: number;
@@ -43,6 +44,13 @@ interface RolesPageProps {
 
 type RoleFilters = {
   name?: string;
+};
+
+type RoleFormValues = {
+  code: string;
+  name: string;
+  description?: string;
+  sort?: number;
 };
 
 function getRoleStatusColor(status: AdminRoleListItem['status']) {
@@ -66,6 +74,9 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createForm] = Form.useForm<{ code: string; name: string; description?: string; sort?: number; status: 'active' | 'disabled' }>();
+  const [editingRole, setEditingRole] = useState<AdminRoleListItem | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editForm] = Form.useForm<RoleFormValues>();
 
   useEffect(() => {
     let alive = true;
@@ -151,6 +162,22 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
         <div style={{ display: 'flex', gap: 8 }}>
           <Button size="small" type="link" onClick={() => setSelected(record)}>
             查看
+          </Button>
+          <Button
+            disabled={record.isSystem}
+            size="small"
+            type="link"
+            onClick={() => {
+              editForm.setFieldsValue({
+                code: record.code,
+                name: record.name,
+                description: record.description ?? undefined,
+                sort: record.sort,
+              });
+              setEditingRole(record);
+            }}
+          >
+            编辑
           </Button>
           <Button
             disabled={record.status !== 'active'}
@@ -268,6 +295,33 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
       }
     } finally {
       setCreateSubmitting(false);
+    }
+  }
+
+  async function handleUpdateRole() {
+    if (!editingRole) {
+      return;
+    }
+
+    try {
+      const values = await editForm.validateFields();
+      setEditSubmitting(true);
+      await updateAdminRole(editingRole.id, {
+        code: values.code.trim(),
+        name: values.name.trim(),
+        description: values.description?.trim() || undefined,
+        sort: Number(values.sort ?? 0),
+      });
+      messageApi.success('角色已更新');
+      setEditingRole(null);
+      editForm.resetFields();
+      await reloadRoles();
+    } catch (error) {
+      if (error instanceof Error) {
+        messageApi.error(error.message);
+      }
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -412,6 +466,37 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
         </Modal>
       </ConfigProvider>
 
+      <ConfigProvider theme={SEARCH_THEME}>
+        <Modal
+          destroyOnHidden
+          open={editingRole != null}
+          title={editingRole ? `编辑角色 · ${editingRole.name}` : '编辑角色'}
+          okText="保存"
+          cancelText="取消"
+          confirmLoading={editSubmitting}
+          onOk={() => void handleUpdateRole()}
+          onCancel={() => {
+            setEditingRole(null);
+            editForm.resetFields();
+          }}
+        >
+          <Form form={editForm} layout="vertical">
+            <Form.Item label="角色编码" name="code" rules={[{ required: true, message: '请输入角色编码' }]}>
+              <Input allowClear placeholder="例如：operator" />
+            </Form.Item>
+            <Form.Item label="角色名称" name="name" rules={[{ required: true, message: '请输入角色名称' }]}>
+              <Input allowClear placeholder="例如：运营" />
+            </Form.Item>
+            <Form.Item label="说明" name="description">
+              <Input.TextArea allowClear placeholder="可选" rows={2} />
+            </Form.Item>
+            <Form.Item label="排序" name="sort">
+              <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </ConfigProvider>
+
       <Modal
         destroyOnHidden
         open={editingPermissionsRole != null}
@@ -443,11 +528,11 @@ export function RolesPage({ refreshToken = 0 }: RolesPageProps) {
                 >
                   <Typography.Text strong>{module.module}</Typography.Text>
                   <div style={{ marginTop: 12 }}>
-                    <Checkbox.Group
-                      options={module.permissions.map((permission) => ({
-                        label: `${permission.name}（${{ view: '查看', create: '新建', edit: '编辑', manage: '管理' }[permission.action] ?? permission.action}）`,
-                        value: permission.id,
-                      }))}
+	                    <Checkbox.Group
+	                      options={module.permissions.map((permission) => ({
+	                        label: `${permission.name}（${{ view: '查看', create: '新建', edit: '编辑', manage: '管理', unknown: '未知' }[permission.action] ?? permission.action}）`,
+	                        value: permission.id,
+	                      }))}
                       value={checkedPermissionIds}
                       onChange={(values) => {
                         const currentIds = module.permissions.map((permission) => permission.id as EntityId);

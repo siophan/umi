@@ -26,7 +26,6 @@ export interface AdminCategoryItem {
   usageCount: number;
   usageBreakdown: {
     brands: number;
-    brandApplies: number;
     brandProducts: number;
     shops: number;
     shopApplies: number;

@@ -7,6 +7,7 @@ import type {
   LoginPayload,
   LoginResult,
   RegisterPayload,
+  ResetPasswordPayload,
   SendCodeResult,
   SmsBizType,
   UserSummary,
@@ -109,11 +110,16 @@ async function updateUserPassword(userId: string, password: string) {
   );
 }
 
+async function clearUserSessions(userId: string) {
+  const db = getDbPool();
+  await db.execute(`DELETE FROM auth_session WHERE user_id = ?`, [userId]);
+}
+
 async function createUserProfile(userId: number, name: string, avatar?: string) {
   const db = getDbPool();
   await db.execute(
     `
-      INSERT INTO user_profile (user_id, name, avatar, created_at, updated_at)
+      INSERT INTO user_profile (user_id, name, avatar_url, created_at, updated_at)
       VALUES (?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
     `,
     [userId, name, avatar ?? null],
@@ -318,7 +324,7 @@ export async function register(payload: RegisterPayload): Promise<LoginResult> {
   return createSession(user);
 }
 
-export async function resetPassword(payload: { phone: string; code: string; newPassword: string }) {
+export async function resetPassword(payload: ResetPasswordPayload) {
   requireValidPhone(payload.phone);
   if (!payload.newPassword || payload.newPassword.length < 6) {
     throw new Error('新密码长度至少6位');
@@ -327,9 +333,10 @@ export async function resetPassword(payload: { phone: string; code: string; newP
   if (!user) {
     throw new Error('用户不存在');
   }
-  await requireCode(payload.phone, payload.code, 'reset');
+  await requireCode(payload.phone, payload.code, 'reset_password');
   const hashedPassword = await bcrypt.hash(payload.newPassword, 10);
   await updateUserPassword(String(user.id), hashedPassword);
+  await clearUserSessions(String(user.id));
   return { success: true as const };
 }
 

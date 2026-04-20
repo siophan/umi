@@ -17,11 +17,6 @@ type BrandMeta = {
   deposit: number;
 };
 
-type ProductMetrics = {
-  sales: string;
-  rating: string;
-};
-
 const brandMetaMap: Record<string, BrandMeta> = {
   旺旺: { name: '旺旺', logo: '/legacy/images/products/p006-wangwang.jpg', deposit: 600 },
   德芙: { name: '德芙', logo: '/legacy/images/products/p007-dove.jpg', deposit: 800 },
@@ -44,14 +39,6 @@ export default function AddProductPage() {
   const [selectedBrandId, setSelectedBrandId] = useState<BrandId | ''>('');
   const [products, setProducts] = useState<BrandProduct[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<BrandProduct['id'][]>([]);
-  const [guessPrice, setGuessPrice] = useState('9.9');
-  const [optionCount, setOptionCount] = useState('2');
-  const [couponVal, setCouponVal] = useState('10');
-  const [couponCond, setCouponCond] = useState('满30可用');
-  const [couponDays, setCouponDays] = useState('30');
-  const [supportPk, setSupportPk] = useState(true);
-  const [expressFree, setExpressFree] = useState(true);
-  const [autoRestock, setAutoRestock] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState('');
 
@@ -220,10 +207,10 @@ export default function AddProductPage() {
       <div className={styles.steps}>
         {[1, 2, 3].map((item) => (
           <div className={styles.stepWrap} key={item}>
-            <div className={`${styles.step} ${item === step ? styles.stepActive : ''} ${item < step ? styles.stepDone : ''}`}>
-              <div className={styles.stepDot}>{item}</div>
-              <span className={styles.stepLabel}>{item === 1 ? '选择品牌' : item === 2 ? '选择商品' : '竞猜设置'}</span>
-            </div>
+              <div className={`${styles.step} ${item === step ? styles.stepActive : ''} ${item < step ? styles.stepDone : ''}`}>
+                <div className={styles.stepDot}>{item}</div>
+                <span className={styles.stepLabel}>{item === 1 ? '选择品牌' : item === 2 ? '选择商品' : '确认上架'}</span>
+              </div>
             {item < 3 ? <div className={`${styles.stepLine} ${item < step ? styles.stepLineDone : ''}`} /> : null}
           </div>
         ))}
@@ -319,8 +306,8 @@ export default function AddProductPage() {
 
       {step === 3 ? (
         <section className={styles.panel}>
-          <div className={styles.section}>已选商品</div>
-          <div className={styles.configWrap}>
+          <div className={styles.section}>确认上架</div>
+          <div className={styles.confirmWrap}>
             <div className={styles.previewList}>
               {selectedProductRows.map((product) => (
                 <div className={styles.previewItem} key={product.id}>
@@ -333,79 +320,20 @@ export default function AddProductPage() {
               ))}
             </div>
 
-            <div className={styles.configCard}>
-              <div className={styles.configTitle}>🎯 竞猜设置</div>
-              <div className={styles.inputRow}>
-                <span className={styles.inputLabel}>竞猜价格</span>
-                <div className={styles.inputVal}>
-                  <input type="number" min="0.1" step="0.1" value={guessPrice} onChange={(event) => setGuessPrice(event.target.value)} />
-                  <span>币</span>
+            <div className={styles.confirmCard}>
+              <div className={styles.confirmTitle}>本次上架将真实提交以下内容</div>
+              <div className={styles.confirmList}>
+                <div className={styles.confirmRow}>
+                  <span>授权品牌</span>
+                  <strong>{selectedBrand?.name || '-'}</strong>
+                </div>
+                <div className={styles.confirmRow}>
+                  <span>上架商品数</span>
+                  <strong>{selectedProductRows.length} 件</strong>
                 </div>
               </div>
-              <div className={styles.inputRow}>
-                <span className={styles.inputLabel}>选项数量</span>
-                <div className={styles.inputVal}>
-                  <select value={optionCount} onChange={(event) => setOptionCount(event.target.value)}>
-                    <option value="2">2个选项 (二选一)</option>
-                    <option value="3">3个选项</option>
-                    <option value="4">4个选项</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.configCard}>
-              <div className={styles.configTitle}>🎫 补偿券设置</div>
-              <div className={styles.inputRow}>
-                <span className={styles.inputLabel}>补偿券面额</span>
-                <div className={styles.inputVal}>
-                  <input type="number" min="1" value={couponVal} onChange={(event) => setCouponVal(event.target.value)} />
-                  <span>元</span>
-                </div>
-              </div>
-              <div className={styles.inputRow}>
-                <span className={styles.inputLabel}>使用条件</span>
-                <div className={styles.inputVal}>
-                  <input className={styles.textInput} type="text" value={couponCond} onChange={(event) => setCouponCond(event.target.value)} />
-                </div>
-              </div>
-              <div className={styles.inputRow}>
-                <span className={styles.inputLabel}>有效期</span>
-                <div className={styles.inputVal}>
-                  <input type="number" min="1" value={couponDays} onChange={(event) => setCouponDays(event.target.value)} />
-                  <span>天</span>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.configCard}>
-              <div className={styles.configTitle}>⚙️ 其他设置</div>
-              <div className={styles.toggleRow}>
-                <div className={styles.toggleInfo}>
-                  <div className={styles.toggleLabel}>支持好友PK</div>
-                  <div className={styles.toggleDesc}>允许用户邀请好友对战</div>
-                </div>
-                <button className={`${styles.toggle} ${supportPk ? styles.toggleOn : ''}`} type="button" onClick={() => setSupportPk((current) => !current)}>
-                  <span />
-                </button>
-              </div>
-              <div className={styles.toggleRow}>
-                <div className={styles.toggleInfo}>
-                  <div className={styles.toggleLabel}>顺丰包邮</div>
-                  <div className={styles.toggleDesc}>中奖商品顺丰发货</div>
-                </div>
-                <button className={`${styles.toggle} ${expressFree ? styles.toggleOn : ''}`} type="button" onClick={() => setExpressFree((current) => !current)}>
-                  <span />
-                </button>
-              </div>
-              <div className={styles.toggleRow}>
-                <div className={styles.toggleInfo}>
-                  <div className={styles.toggleLabel}>自动补货</div>
-                  <div className={styles.toggleDesc}>库存不足时自动补货</div>
-                </div>
-                <button className={`${styles.toggle} ${autoRestock ? styles.toggleOn : ''}`} type="button" onClick={() => setAutoRestock((current) => !current)}>
-                  <span />
-                </button>
+              <div className={styles.confirmDesc}>
+                确认后，页面只会把你选中的品牌商品加入店铺商品库。竞猜价格、补偿券、包邮和自动补货等配置当前不在这里设置，也不会随本次提交生效。
               </div>
             </div>
           </div>

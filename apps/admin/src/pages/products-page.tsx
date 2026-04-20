@@ -11,7 +11,7 @@ import {
   type AdminProduct,
 } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, productStatusMeta } from '../lib/format';
-import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
 interface ProductsPageProps {
   refreshToken?: number;

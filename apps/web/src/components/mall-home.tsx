@@ -159,6 +159,10 @@ function applyFavoritedState(items: ProductFeedItem[], productId: string, favori
   return items.map((item) => (item.id === productId ? { ...item, favorited } : item));
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function MallHome() {
   const router = useRouter();
   const [mallItems, setMallItems] = useState<ProductFeedItem[]>([]);
@@ -166,6 +170,8 @@ export function MallHome() {
   const [categoryItems, setCategoryItems] = useState<Record<string, ProductFeedItem[]>>({});
   const [cartCount, setCartCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [productError, setProductError] = useState<string | null>(null);
+  const [cartError, setCartError] = useState<string | null>(null);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -174,11 +180,18 @@ export function MallHome() {
   const [contentTab, setContentTab] = useState<MallTab>('recommend');
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSort, setActiveSort] = useState<MallSort>('default');
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
 
     async function load() {
+      if (!ignore) {
+        setLoading(true);
+        setProductError(null);
+        setCartError(null);
+      }
+
       try {
         const [result, cartResult] = await Promise.allSettled([fetchProductList(50), fetchCart()]);
         if (!ignore) {
@@ -186,20 +199,19 @@ export function MallHome() {
             setMallItems(applyLegacyGridMeta(result.value.items));
             setProductCategories(result.value.categories);
           } else {
-            setMallItems([]);
-            setProductCategories([]);
+            setProductError(getErrorMessage(result.reason, '商品流读取失败'));
           }
           if (cartResult.status === 'fulfilled') {
             setCartCount(cartResult.value.items.length);
           } else {
-            setCartCount(0);
+            setCartError(getErrorMessage(cartResult.reason, '购物车读取失败'));
           }
         }
-      } catch {
+      } catch (error) {
         if (!ignore) {
-          setMallItems([]);
-          setProductCategories([]);
-          setCartCount(0);
+          const message = getErrorMessage(error, '商城首页读取失败');
+          setProductError(message);
+          setCartError(message);
         }
       } finally {
         if (!ignore) {
@@ -212,7 +224,7 @@ export function MallHome() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   useEffect(() => {
     setFeedAnimating(true);
@@ -610,7 +622,27 @@ export function MallHome() {
       </div>
 
       <div className={`m-feed-area ${feedAnimating ? 'm-feed-animate' : ''}`} id="mFeedArea">
+        {!loading && cartError ? (
+          <div className="m-state-card m-state-card-warning">
+            <div className="m-state-title">购物车状态读取失败</div>
+            <div className="m-state-desc">{cartError}</div>
+            <button className="m-state-action" type="button" onClick={() => setReloadToken((current) => current + 1)}>
+              重新加载
+            </button>
+          </div>
+        ) : null}
+
         {tabBanner}
+
+        {!loading && productError ? (
+          <div className="m-state-card m-state-card-error">
+            <div className="m-state-title">商品流加载失败</div>
+            <div className="m-state-desc">{productError}</div>
+            <button className="m-state-action" type="button" onClick={() => setReloadToken((current) => current + 1)}>
+              重试
+            </button>
+          </div>
+        ) : null}
 
         {contentTab === 'recommend' && featuredItem && heroNames ? (
           <section className="m-hero mfc-enter" style={{ animationDelay: '0s' }}>
@@ -671,10 +703,15 @@ export function MallHome() {
         {loading || (contentTab === 'category' && activeCategory !== 'all' && categoryLoading && !categoryItems[activeCategory]) ? (
           <div className="m-load-more">正在加载商品...</div>
         ) : null}
-        {!loading && !(contentTab === 'category' && activeCategory !== 'all' && categoryLoading && !categoryItems[activeCategory]) && filteredItems.length === 0 ? (
+        {!loading &&
+        !productError &&
+        !(contentTab === 'category' && activeCategory !== 'all' && categoryLoading && !categoryItems[activeCategory]) &&
+        filteredItems.length === 0 ? (
           <div className="m-load-more">当前分类暂无商品</div>
         ) : null}
-        {!loading && visibleGridItems.length > 0 ? <div className={`m-grid ${useInlinePairGrid ? 'm-grid-inline-pair' : ''}`}>{gridNodes}</div> : null}
+        {!loading && !productError && visibleGridItems.length > 0 ? (
+          <div className={`m-grid ${useInlinePairGrid ? 'm-grid-inline-pair' : ''}`}>{gridNodes}</div>
+        ) : null}
 
         {contentTab === 'recommend' && bannerItem && hasLoadedMore ? (
           <div className="m-banner mfc-enter" onClick={() => router.push(`/product/${bannerItem.id}`)} style={{ animationDelay: '0.08s' }}>
@@ -698,7 +735,7 @@ export function MallHome() {
         ) : null}
       </div>
 
-      {!loading && filteredItems.length > 0 ? (
+      {!loading && !productError && filteredItems.length > 0 ? (
         <div
           className={`m-load-more ${hasMore ? '' : 'is-disabled'}`}
           id="mLoadMore"

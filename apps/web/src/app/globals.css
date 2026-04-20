@@ -845,6 +845,67 @@ button {
   padding-bottom: 16px;
 }
 
+.m-state-card {
+  margin: 12px 16px 0;
+  padding: 14px 14px 12px;
+  border-radius: 14px;
+  background: #fff7f4;
+  border: 1px solid rgba(232, 81, 26, 0.14);
+  box-shadow: 0 6px 18px rgba(232, 81, 26, 0.08);
+}
+
+.m-state-card-warning {
+  background: #fffaf0;
+  border-color: rgba(201, 123, 24, 0.18);
+  box-shadow: 0 6px 18px rgba(201, 123, 24, 0.08);
+}
+
+.m-state-card-error {
+  background: #fff7f4;
+}
+
+.m-state-title {
+  color: #8f3410;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.m-state-card-warning .m-state-title {
+  color: #8b5b12;
+}
+
+.m-state-desc {
+  margin-top: 6px;
+  color: #8a5542;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.m-state-card-warning .m-state-desc {
+  color: #8b6c3f;
+}
+
+.m-state-action {
+  margin-top: 10px;
+  min-width: 88px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #e8511a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.m-state-card-warning .m-state-action {
+  background: #c97b18;
+}
+
+.m-state-action:active {
+  transform: scale(0.98);
+}
+
 .m-feed-animate .m-card,
 .m-feed-animate .mfc-enter {
   animation: mFeedIn 0.35s ease both;

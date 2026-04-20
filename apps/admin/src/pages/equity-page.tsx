@@ -1,11 +1,14 @@
 import type { UserSummary } from '@umi/shared';
-import { Typography } from 'antd';
-import type { TableColumnsType } from 'antd';
-import { useMemo } from 'react';
+import type { ProColumns } from '@ant-design/pro-components';
+import { ProTable } from '@ant-design/pro-components';
+import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
+import { AdminSearchPanel } from '../components/admin-list-controls';
 import { fetchAdminUsers } from '../lib/api/users';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
+import { buildOptions } from '../lib/admin-filter-options';
 import { formatAmount } from '../lib/format';
-import { AdminDataTablePage, buildOptions, useAsyncPageData } from './shared/admin-page-tools';
 
 interface EquityPageProps {
   refreshToken?: number;
@@ -21,13 +24,42 @@ type EquityRow = {
   userName: string;
 };
 
+type EquityFilters = {
+  userName?: string;
+  accountType?: string;
+  note?: string;
+};
+
 export function EquityPage({ refreshToken = 0 }: EquityPageProps) {
-  const { data: users, issue, loading } = useAsyncPageData<UserSummary[]>({
-    deps: [refreshToken],
-    errorMessage: '权益账户加载失败',
-    initialData: [],
-    load: async () => fetchAdminUsers().then((result) => result.items),
-  });
+  const [searchForm] = Form.useForm<EquityFilters>();
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [filters, setFilters] = useState<EquityFilters>({});
+  const [selected, setSelected] = useState<EquityRow | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    async function loadPageData() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const items = await fetchAdminUsers().then((result) => result.items);
+        if (!alive) return;
+        setUsers(items);
+      } catch (error) {
+        if (!alive) return;
+        setUsers([]);
+        setIssue(error instanceof Error ? error.message : '权益账户加载失败');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }
+    void loadPageData();
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
 
   const rows = useMemo<EquityRow[]>(
     () =>
@@ -47,14 +79,21 @@ export function EquityPage({ refreshToken = 0 }: EquityPageProps) {
     [users],
   );
 
-  const accountTypeOptions = useMemo(
-    () => buildOptions(rows as Array<Record<string, unknown>>, 'accountType'),
-    [rows],
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((record) => {
+        if (filters.userName && !record.userName.toLowerCase().includes(filters.userName.trim().toLowerCase())) return false;
+        if (filters.accountType && record.accountType !== filters.accountType) return false;
+        if (filters.note && !record.note.toLowerCase().includes(filters.note.trim().toLowerCase())) return false;
+        return true;
+      }),
+    [filters.accountType, filters.note, filters.userName, rows],
   );
 
-  const columns: TableColumnsType<EquityRow> = [
+  const columns: ProColumns<EquityRow>[] = [
     {
       title: '账户',
+      width: 220,
       render: (_, record) => (
         <div>
           <Typography.Text strong>{record.userName}</Typography.Text>
@@ -62,39 +101,67 @@ export function EquityPage({ refreshToken = 0 }: EquityPageProps) {
         </div>
       ),
     },
-    { title: '账户类型', dataIndex: 'accountType' },
-    { title: '可用余额', dataIndex: 'balance', render: (value: number) => formatAmount(value) },
-    { title: '冻结金额', dataIndex: 'frozen', render: (value: number) => formatAmount(value) },
-    { title: '备注', dataIndex: 'note' },
+    { title: '账户类型', dataIndex: 'accountType', width: 140 },
+    { title: '可用余额', dataIndex: 'balance', width: 140, render: (_, record) => formatAmount(record.balance) },
+    { title: '冻结金额', dataIndex: 'frozen', width: 140, render: (_, record) => formatAmount(record.frozen) },
+    { title: '备注', dataIndex: 'note', width: 180 },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 100,
+      fixed: 'right',
+      valueType: 'option',
+      render: (_, record) => <Button size="small" type="link" onClick={() => setSelected(record)}>查看</Button>,
+    },
   ];
 
   return (
-    <>
-      <AdminDataTablePage
-        columns={columns}
-        drawerTitle="权益金管理"
-        filterRows={(sourceRows, filters) =>
-          sourceRows.filter((record) => {
-            if (filters.keyword && !record.userName.toLowerCase().includes(filters.keyword.trim().toLowerCase())) {
-              return false;
-            }
-            if (filters.second && record.accountType !== filters.second) {
-              return false;
-            }
-            if (filters.third && !record.note.toLowerCase().includes(filters.third.trim().toLowerCase())) {
-              return false;
-            }
-            return true;
-          })
-        }
-        issue={issue}
-        loading={loading}
-        refreshSeed={refreshToken}
-        rows={rows}
-        searchPlaceholder="用户名称"
-        secondField={{ options: accountTypeOptions, placeholder: '账户类型' }}
-        thirdField={{ placeholder: '备注', type: 'input' }}
-      />
-    </>
+    <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
+      <AdminSearchPanel
+        form={searchForm}
+        onSearch={() => setFilters(searchForm.getFieldsValue())}
+        onReset={() => {
+          searchForm.resetFields();
+          setFilters({});
+        }}
+      >
+        <Form.Item name="userName">
+          <Input allowClear placeholder="用户名称" />
+        </Form.Item>
+        <Form.Item name="accountType">
+          <Select allowClear options={buildOptions(rows as Array<Record<string, unknown>>, 'accountType')} placeholder="账户类型" />
+        </Form.Item>
+        <Form.Item name="note">
+          <Input allowClear placeholder="备注" />
+        </Form.Item>
+      </AdminSearchPanel>
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<EquityRow>
+          cardBordered={false}
+          rowKey="id"
+          columns={columns}
+          columnsState={{}}
+          dataSource={filteredRows}
+          loading={loading}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => []}
+        />
+      </ConfigProvider>
+      <Drawer open={selected != null} title="权益金管理" width={460} onClose={() => setSelected(null)}>
+        {selected ? (
+          <Descriptions column={1} size="small">
+            <Descriptions.Item label="用户">{selected.userName}</Descriptions.Item>
+            <Descriptions.Item label="用户 ID">{selected.userId}</Descriptions.Item>
+            <Descriptions.Item label="账户类型">{selected.accountType}</Descriptions.Item>
+            <Descriptions.Item label="可用余额">{formatAmount(selected.balance)}</Descriptions.Item>
+            <Descriptions.Item label="冻结金额">{formatAmount(selected.frozen)}</Descriptions.Item>
+            <Descriptions.Item label="备注">{selected.note}</Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Drawer>
+    </div>
   );
 }

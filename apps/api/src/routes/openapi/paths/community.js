@@ -147,7 +147,20 @@ export const communityPaths = {
             tags: ['Community'],
             summary: '获取社区动态详情',
             security: bearerSecurity,
-            parameters: [pathIdParameter('id', '动态 ID')],
+            parameters: [
+                pathIdParameter('id', '动态 ID'),
+                {
+                    name: 'sort',
+                    in: 'query',
+                    required: false,
+                    schema: {
+                        type: 'string',
+                        enum: ['hot', 'newest'],
+                        default: 'hot',
+                    },
+                    description: '评论排序方式',
+                },
+            ],
             responses: {
                 200: successResponse({
                     type: 'object',
@@ -165,6 +178,36 @@ export const communityPaths = {
                 }),
                 401: errorResponse(401, '请先登录'),
                 404: errorResponse(404, '动态不存在或不可见'),
+            },
+        },
+    },
+    '/api/community/posts/{id}/report': {
+        post: {
+            tags: ['Community'],
+            summary: '举报社区动态',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '动态 ID')],
+            requestBody: jsonRequestBody({
+                type: 'object',
+                required: ['reasonType'],
+                properties: {
+                    reasonType: {
+                        type: 'integer',
+                        enum: [10, 20, 30, 40, 90],
+                        example: 20,
+                    },
+                    reasonDetail: { type: 'string', nullable: true, example: '包含明显广告导流内容' },
+                },
+            }),
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    properties: {
+                        success: { type: 'boolean', example: true },
+                    },
+                }),
+                400: errorResponse(400, '举报失败'),
+                401: errorResponse(401, '请先登录'),
             },
         },
     },

@@ -13,6 +13,8 @@ export default function GuessHistoryPage() {
   const [tab, setTab] = useState<TabKey>('all');
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
   const [historyData, setHistoryData] = useState({
     stats: {
       total: 0,
@@ -40,28 +42,21 @@ export default function GuessHistoryPage() {
     let ignore = false;
 
     async function loadHistory() {
+      if (!ignore) {
+        setLoading(true);
+        setLoadError('');
+      }
+
       try {
         const data = await fetchGuessHistory();
         if (!ignore) {
           setHistoryData(data);
         }
-      } catch {
+      } catch (error) {
         if (ignore) {
           return;
         }
-        setHistoryData({
-          stats: {
-            total: 0,
-            active: 0,
-            won: 0,
-            lost: 0,
-            pk: 0,
-            winRate: 0,
-          },
-          active: [],
-          history: [],
-          pk: [],
-        });
+        setLoadError(error instanceof Error ? error.message : '竞猜历史加载失败，请稍后重试');
       } finally {
         if (!ignore) {
           setLoading(false);
@@ -74,7 +69,7 @@ export default function GuessHistoryPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   const filteredHistory = useMemo(
     () => historyData.history.filter((card) => tab === 'all' || card.outcome === tab),
@@ -104,6 +99,24 @@ export default function GuessHistoryPage() {
         </button>
       </header>
 
+      {loadError ? (
+        <>
+          <main className={styles.records}>
+            <div className={styles.issueCard}>
+              <div className={styles.issueIcon}>
+                <i className="fa-solid fa-circle-exclamation" />
+              </div>
+              <div className={styles.issueTitle}>竞猜历史暂时不可用</div>
+              <div className={styles.issueDesc}>{loadError}</div>
+              <button className={styles.issueBtn} type="button" onClick={() => setReloadToken((value) => value + 1)}>
+                重新加载
+              </button>
+            </div>
+          </main>
+          {toast ? <div className={styles.toast}>{toast}</div> : null}
+        </>
+      ) : (
+        <>
       <section className={styles.hero}>
         <div className={styles.heroTitle}>
           <i className="fa-solid fa-chart-pie" />
@@ -274,6 +287,8 @@ export default function GuessHistoryPage() {
           </div>
         ) : null}
       </main>
+        </>
+      )}
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </div>

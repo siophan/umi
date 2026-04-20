@@ -33,13 +33,6 @@ type LiveDetail = {
   currentGuess?: LiveGuess | null;
 };
 
-const defaultDanmaku = [
-  {
-    name: '系统',
-    text: '欢迎来到直播间！',
-  },
-];
-
 function formatNum(value: number) {
   if (value >= 10000) {
     return `${(value / 10000).toFixed(1)}万`;
@@ -71,7 +64,6 @@ export default function LiveDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [selected, setSelected] = useState(0);
-  const [messages, setMessages] = useState(defaultDanmaku);
   const [input, setInput] = useState('');
   const [toast, setToast] = useState('');
   const [live, setLive] = useState<LiveDetail | null>(null);
@@ -113,7 +105,6 @@ export default function LiveDetailPage() {
         if (!ignore) {
           setLive(payload.data);
           setError('');
-          setMessages(defaultDanmaku);
         }
       } catch {
         if (!ignore) {
@@ -145,20 +136,10 @@ export default function LiveDetailPage() {
     () => live?.currentGuess?.odds?.map((item) => `${item}`) ?? [],
     [live],
   );
-  const canSend = input.trim().length > 0;
 
   useEffect(() => {
     setSelected(0);
   }, [options.length]);
-
-  const sendDanmaku = () => {
-    if (!input.trim()) {
-      return;
-    }
-
-    setMessages((current) => [...current, { name: '我', text: input.trim() }]);
-    setInput('');
-  };
 
   return (
     <main className={styles.page}>
@@ -213,16 +194,13 @@ export default function LiveDetailPage() {
                 <button
                   className={styles.joinBtn}
                   type="button"
-                  onClick={() => {
-                    if (options.length === 0) {
-                      setToast('暂无进行中的竞猜');
-                      return;
-                    }
-                    setToast('参与成功！');
-                  }}
+                  disabled
                 >
-                  参与竞猜
+                  参与竞猜暂未开放
                 </button>
+                <div className={styles.featureNotice}>
+                  当前直播页仅展示实时信息，竞猜参与能力尚未接入真实写链路。
+                </div>
               </div>
             </div>
 
@@ -245,13 +223,11 @@ export default function LiveDetailPage() {
 
             <section className={styles.danmakuSection}>
               <h3>弹幕互动</h3>
-              <div className={styles.danmakuList}>
-                {messages.map((item, index) => (
-                  <div className={styles.danmakuItem} key={`${item.name}-${item.text}-${index}`}>
-                    <span className={styles.dmName}>{item.name}：</span>
-                    <span className={styles.dmText}>{item.text}</span>
-                  </div>
-                ))}
+              <div className={styles.danmakuPlaceholder}>
+                <div className={styles.danmakuPlaceholderTitle}>弹幕功能暂未开放</div>
+                <div className={styles.danmakuPlaceholderText}>
+                  当前版本未接入直播弹幕写链路，页面不会再伪装发送成功。
+                </div>
               </div>
             </section>
           </>
@@ -261,22 +237,29 @@ export default function LiveDetailPage() {
       <footer className={styles.inputBar}>
         <input
           className={styles.input}
-          placeholder="发送弹幕..."
+          placeholder="弹幕功能暂未开放"
           value={input}
+          disabled
           onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              sendDanmaku();
-            }
-          }}
         />
-        <button className={styles.actionBtn} type="button" disabled={!canSend} onClick={sendDanmaku}>
+        <button className={styles.actionBtn} type="button" disabled>
           <i className="fa-solid fa-paper-plane" />
         </button>
-        <button className={styles.actionBtnMuted} type="button" onClick={() => setToast('礼物功能')}>
+        <button className={styles.actionBtnMuted} type="button" disabled>
           <i className="fa-solid fa-gift" />
         </button>
-        <button className={styles.actionBtnMuted} type="button" onClick={() => setToast('链接已复制')}>
+        <button
+          className={styles.actionBtnMuted}
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              setToast('链接已复制');
+            } catch {
+              setToast('复制失败，请稍后重试');
+            }
+          }}
+        >
           <i className="fa-solid fa-share-nodes" />
         </button>
       </footer>

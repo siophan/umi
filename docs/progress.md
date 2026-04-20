@@ -1,275 +1,366 @@
 # 项目进度
 
-最后更新：2026-04-19（持续收口中）
+最后更新：2026-04-20
 
-本文档用于记录 `umi` 当前的整体功能进度。后续每次功能新增、页面接入真实接口、管理台补模块、API 从 demo 切到数据库后，都应同步更新本文件。
+本文档只记录当前仓库代码能直接确认的事实，不写无法从代码、脚本或构建结果直接证明的判断。
 
 ## 状态说明
 
 | 状态 | 含义 |
 | --- | --- |
-| `已完成` | 已有可见实现，且当前仓库中已经落地 |
-| `进行中` | 已有页面或接口骨架，但仍未形成真实业务闭环 |
-| `未开始` | 仅有规划，当前仓库没有有效实现 |
-| `Demo` | 目前依赖 mock / demo 数据，未接真实接口或数据库 |
+| `已完成` | 当前仓库中已有明确实现，且代码或脚本能直接确认 |
+| `进行中` | 已有结构、页面或接口，但闭环仍不完整 |
+| `未开始` | 当前仓库里未见有效实现 |
+| `阻塞` | 有实现，但当前被构建、类型或关键缺口卡住 |
 
 ## 总体判断
 
-| 模块 | 当前状态 | 备注 |
+| 模块 | 当前状态 | 代码事实 |
 | --- | --- | --- |
-| Monorepo 工程底座 | `已完成` | `pnpm workspace + turbo + shared/db/config` 已就位 |
-| 用户端 `apps/web` | `进行中` | 旧静态页已 `41/41` 覆盖，当前已进入最后一批高感知页面收口阶段；首页、个人中心、社区、店铺、直播、新手页仍在继续压旧系统细节，主线类型检查保持通过 |
-| 管理台 `apps/admin` | `进行中` | 只有单页骨架和模块规划，尚未形成真实后台 |
-| 后端 `apps/api` | `进行中` | 认证、个人资料、好友、通知、聊天、钱包、竞猜列表/详情、订单、仓库、店铺已接真实数据库，Admin 和部分商城/社区接口仍有 demo 路由 |
-| 共享契约 `packages/shared` | `已完成` | 已抽出领域类型、状态枚举、API 契约基础层，并承接真实联调字段扩展（如 `uid`） |
-| 数据库文档 / 结构说明 | `已完成` | 已有 [db.md](docs/db.md) |
+| Monorepo 工程底座 | `已完成` | 根目录已形成 `pnpm workspace + turbo`，包含 `apps/web`、`apps/admin`、`apps/api`、`packages/shared`、`packages/db`、`packages/config` |
+| 用户端 `apps/web` | `进行中` | `apps/web/src/app` 下当前有 `57` 个 `page.tsx` 页面文件，且已存在 `20` 个 API client 文件 |
+| 管理台 `apps/admin` | `进行中` | `apps/admin/src/pages` 下当前有 `40` 个页面文件，`apps/admin/src/lib/api` 下有 `9` 个 API client 文件 |
+| 后端 `apps/api` | `进行中` | `apps/api/src/modules` 下当前有 `20` 个 `router.ts` 路由入口和 `46` 个 TypeScript 模块文件 |
+| 共享契约 `packages/shared` | `已完成` | 当前包含 `api.ts`、`domain.ts`、`status.ts`、`admin-permissions.ts`、`index.ts` 五个共享源码文件 |
+| 数据库资产 `packages/db` | `进行中` | 当前包含 `20` 个 SQL 文件，但尚未形成统一 migration 体系 |
 
-## 基础工程
+## 全局统筹判断
 
-| 项目 | 状态 | 说明 |
+### 项目经理口径评分
+
+| 维度 | 当前估算 | 判断依据 |
 | --- | --- | --- |
-| Workspace 结构 | `已完成` | `apps/web`、`apps/admin`、`apps/api`、`packages/*`、`docs` 已拆开 |
-| TypeScript 基础配置 | `已完成` | root tsconfig / package tsconfig 已建立 |
-| 开发脚本 | `已完成` | `pnpm install`、`pnpm typecheck`、`pnpm dev` 可用 |
-| 共享类型包 | `已完成` | Web / Admin / API 已共用 `@umi/shared` |
-| 统一数据库接入 | `进行中` | `apps/api` 已有 MySQL 连接层，认证/资料/社交/聊天/钱包/竞猜/订单/仓库/店铺已开始真实读写 |
-| 权限 / 事务 / 状态机 | `进行中` | 已有基于 session token 的登录鉴权，事务/复杂状态流仍未系统化落地 |
+| 整体完成度 | `65%` | 页面覆盖已较完整，但“后台可运营闭环 + 测试覆盖 + 未收口链路”仍明显拖分 |
+| 用户端 | `70%` | 高频主链路大多已存在真实 API 接入，但仍有 `8` 个静态/本地态页面，且 `invite`、`checkin` 链路未闭环 |
+| 管理后台 | `60%` | 核心列表和权限体系已成型，但仍有 `10` 个静态/本地态页面，营销、内容、直播后台仍不算真实运营闭环 |
+| 后端 API | `75%` | `apps/api/src/app.ts` 已注册 `20` 个业务模块，主资源域较完整，但仍有缺失路由和部分后台业务闭环不足 |
+| 测试覆盖 | `50%` | 已有一批 API integration/smoke，但绝大多数页面级测试缺失，营销和治理后台专项测试不足 |
+| 部署准备 | `70%` | 工程底座、部署文档和构建链路已具备基础交付条件，但功能闭环不足仍会影响“上线后可运营程度” |
+
+### 当前阶段判断
+
+- 这个项目已经过了“纯壳子/纯 demo”阶段，进入“高频链路可用、低频链路和运营后台继续收口”的阶段。
+- 影响整体完成度的主因不再是页面数量，而是：
+  - 后台静态页仍多
+  - 前后端链路未完全闭环
+  - 老系统对齐仍有不少页面未核对
+  - 自动化测试仍偏 API 层，页面级覆盖不足
+
+## 工程健康
+
+### 构建与类型检查
+
+| 项目 | 当前状态 | 代码事实 |
+| --- | --- | --- |
+| `pnpm build` | `已完成` | 我已实际执行，当前 workspace 构建通过；`apps/web` 完成 Next.js 生产构建，`apps/admin` 产出 `dist/` |
+| `pnpm typecheck` | `已完成` | 我已实际执行，当前 workspace `typecheck` 通过；本轮已修复 `apps/admin` 角色页和 `apps/api` 订单路由的类型错误 |
+| `apps/web` 构建警告 | `进行中` | Next.js 当前仍提示多 lockfile 导致 workspace root 推断警告 |
+| `apps/admin` 构建警告 | `进行中` | Vite 构建产物存在大 chunk warning，主 bundle 已超过默认体积提示阈值 |
+
+### 当前阻塞点
+
+- 当前没有 workspace 级 `typecheck` 阻塞，工程健康的主问题已从“编不过”转向“业务闭环不完整”。
+- 当前最影响交付的阻塞点是：
+  - 用户端 `invite`、`checkin` 页面已直连接口，但 `apps/api/src/app.ts` 中未见对应 router 注册
+  - 管理后台营销、内容、直播多页仍是本地表格或静态态，不能按真实后台闭环计算
+  - 大量页面仍缺页面级专项测试，当前测试重心主要在 API integration / smoke
+  - 仍有不少页面的 `老系统对齐状态` 只能保守标成 `未核对`
 
 ## 用户端 Web
 
-### 1. 页面覆盖
+### 页面结构
 
-当前 `apps/web` 已经覆盖旧静态站的大部分页面名和主要路由。
+当前 `apps/web/src/app` 下可直接确认的页面入口共 `57` 个。
 
-页面覆盖补充说明：
+其中包含：
 
-- 旧 `frontend` 静态页面总数：`41`
-- 当前 `apps/web` 已完成对应路由覆盖：`41 / 41`
-- 当前缺失页面数：`0`
-- 当前剩余工作重点已经从“补页面和收 UI”转成“继续替换真实接口与维护零散文案”，不是继续补页面数量
+- 首页与聚合页：`/`、`/ranking`、`/lives`、`/mall`
+- 登录注册相关：`/login`、`/register`、`/reset-password`
+- 用户相关：`/me`、`/edit-profile`、`/user/[uid]`、`/friends`、`/notifications`
+- 社区相关：`/community`、`/community-search`、`/post/[id]`
+- 商品与店铺：`/product/[id]`、`/shop/[id]`、`/cart`、`/payment`
+- 订单与仓库：`/orders`、`/order-detail`、`/review`、`/warehouse`
+- 兼容或静态页：如 `/detail`、`/product-detail`、`/shop-detail`、`/profile`、`/myshop`、`/splash`、`/terms`、`/privacy`
 
-| 分类 | 已落地页面 |
-| --- | --- |
-| 首页 / 商城 | `/`、`/mall` |
-| 登录注册 | `/login`、`/register` |
-| 个人中心 | `/me`、`/profile`、`/edit-profile` |
-| 用户资料辅助 | `/address`、`/coupons`、`/notifications`、`/checkin`、`/invite` |
-| 竞猜相关 | `/guess/[id]`、`/detail`、`/guess-history`、`/guess-order`、`/novice-guess` |
-| 商品 / 店铺 | `/product/[id]`、`/product-detail`、`/shop/[id]`、`/shop-detail`、`/cart` |
-| 订单 / 支付 | `/orders`、`/my-orders`、`/order-detail`、`/payment` |
-| 仓库 | `/warehouse` |
-| 社区 / 社交 | `/community`、`/community-search`、`/post/[id]`、`/post-detail`、`/friends`、`/chat`、`/chat/[id]`、`/chat-detail`、`/user/[uid]`、`/user-profile` |
-| 直播 / 创作 / 商家 | `/lives`、`/live/[id]`、`/live`、`/create`、`/create-user`、`/my-shop`、`/myshop`、`/brand-auth`、`/add-product` |
-| 其他 | `/features`、`/all-features`、`/ranking`、`/search`、`/splash`、`/test-api`、`/ai-demo` |
+### 数据接入现状
 
-### 2. 用户端功能状态
+从代码可直接确认，`apps/web` 已有 `20` 个 API client 文件：
 
-| 功能 | 状态 | 说明 |
+- `auth`
+- `address`
+- `banners`
+- `cart`
+- `chat`
+- `community`
+- `coupons`
+- `friends`
+- `guesses`
+- `lives`
+- `notifications`
+- `orders`
+- `products`
+- `rankings`
+- `search`
+- `shops`
+- `users`
+- `wallet`
+- `warehouse`
+- `shared`
+
+从页面代码中的直接 import 可以确认，下列页面或组件已接入 API client：
+
+- 首页客户端层：[page-client.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/page-client.tsx:1)
+- 首页服务端首屏数据：[page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/page.tsx:1)
+- 榜单页：[ranking/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/ranking/page.tsx:1)
+- 直播列表页：[lives/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/lives/page.tsx:1)
+- 登录、注册、重置密码
+- `me`、`edit-profile`
+- `friends`、`notifications`、`chat`、`chat/[id]`
+- `community`、`community-search`、`post/[id]`
+- `search`
+- `product/[id]`、`shop/[id]`
+- `cart`、`payment`
+- `orders`、`order-detail`、`review`
+- `warehouse`
+- `my-shop`、`brand-auth`、`add-product`
+
+这说明当前用户端不是“只有页面壳”，而是已经存在较广的 API 接入面。
+
+### 可直接确认的实现方式
+
+- 首页 [page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/page.tsx:1) 在服务端直接请求：
+  - `/api/banners`
+  - `/api/guesses`
+  - `/api/lives`
+  - `/api/rankings`
+- 榜单页 [ranking/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/ranking/page.tsx:1) 在服务端直接请求 `/api/rankings`
+- 直播列表页 [lives/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/lives/page.tsx:1) 在服务端直接请求 `/api/lives`
+- 通用请求封装位于 [apps/web/src/lib/api/shared.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/lib/api/shared.ts:1)，当前统一走 `ApiEnvelope` 和 Bearer token
+
+### 当前判断
+
+| 子项 | 当前状态 | 代码事实 |
 | --- | --- | --- |
-| 首页竞猜流 | `进行中` | 首页结构、榜单、开奖区、底部导航已按旧页持续收口；近期补了模式切换时 hero 归位、列表副标题联动、榜单/记录入口，首页访问已取消强制跳 `splash`，仍有少量旧单页联动细节未完全复刻 |
-| 商城首页 | `进行中` | 主商品流、动态分类、搜索商品结果已接真实 `/api/products`，商品收藏已接真实 `product_interaction`；近期继续按旧页收了分类面板开合/排序、推荐态 hero、联名卡、底部 banner、加载更多节奏、收藏按钮和瀑布流高低差。当前 `tag / miniTag / isNew / height` 仍属派生字段，`秒杀 / 新品 / 特卖`、hero、联名卡和底部 banner 仍是基于真实商品流的页面规则，不是独立活动配置 |
-| 购物车 UI | `进行中` | `/cart` 已接真实 `cart_item` 链路，支持读取购物车、勾选、改数量、删除和从推荐商品加入购物车；支付后续链路和部分促销展示仍未真实化 |
-| 登录 / 注册 UI | `已完成` | 页面已完成且已接真实认证接口，支持验证码 / 密码登录、注册、登录态持久化 |
-| 个人中心 UI | `进行中` | `me/profile/edit-profile` 已接真实资料、作品、收藏、点赞和消息未读数；优米号已改为后端生成的唯一 `uid_code`；设置抽屉、搜索层、开店弹窗与角标样式已多轮收口，仍在继续压高频细节 |
-| 竞猜详情 UI | `进行中` | 页面主体、PK 进度条、评论、分享、下注弹层已继续对齐旧页；竞猜主数据已切到真实接口，评论/弹幕/下注闭环仍未完成 |
-| 商品详情 UI | `进行中` | `product/[id]` 已接真实商品主数据、进行中竞猜、换购库存和推荐商品；假规格和假评价已去掉，仍剩部分玩法说明和购买后续链路待真实化 |
-| 店铺详情 UI | `进行中` | `shop/[id]` 已接真实店铺信息、店铺商品和进行中竞猜；假券包已改成真实经营统计，底部主按钮已改成切到对应内容并带视口滚动，仍有部分奖池/参与人数口径受接口字段限制 |
-| 订单列表 / 详情 UI | `进行中` | 订单列表已接真实 `/api/orders`，状态文案、物流弹层、底部按钮状态机已按旧页收口；订单详情和售后仍待真实化 |
-| 仓库 UI | `进行中` | 仓库列表已接真实 `/api/warehouse/virtual|physical`，提货/寄售/取消寄售行为和提示已继续对齐旧页，写接口仍未完成 |
-| 社区 / 聊天 / 用户主页 UI | `进行中` | `user/[uid]`、`friends`、`notifications`、`chat`、`chat/[id]`、`community`、`community-search`、`post/[id]` 已接真实接口且已清主要 fallback；用户主页公开路由已统一切到 `uid_code`，社区主 feed、详情、搜索、点赞、收藏、转发、评论与回复都已走真实链路 |
-| 搜索 UI | `进行中` | 商品搜索结果已接真实 `/api/products?q=...`，竞猜结果已复用真实竞猜列表过滤；热门词、搜索历史和部分排序展示仍为前端层逻辑 |
-| 消息 / 通知 UI | `进行中` | 已补老页 fallback，系统入口、列表结构、时间分隔、已读交互已继续对齐旧页；`chat` 已是真实会话/发消息链路，`notifications` 已支持真实单条已读和全部已读 |
-| 个人店铺 / 上架商品 UI | `进行中` | `my-shop`、`brand-auth`、`add-product` 已接真实接口并按旧页继续收口；`shop-detail` 仍是静态实现 |
-| 创建竞猜 UI | `进行中` | `/create`、`/create-user` 已从占位页重建为旧创建页主体结构，细节交互仍需继续收口 |
-| 邀请 / 编辑资料 / 调试页 UI | `进行中` | `invite`、`edit-profile`、`test-api` 已继续清理开发态内容并对齐旧页结构；`test-api` 已恢复旧页测试项顺序 |
-| 底部导航和全局视觉统一 | `已完成` | 底部导航、图标体系、toast、badge 已按旧系统完成收口 |
-
-### 2.1 最终复查补充说明
-
-- `apps/web` 已做过一轮全量残留扫描，当前残留的 `window.prompt / window.confirm / 开发中` 文案主要来自两类：
-  1. 旧静态页本身就存在的原样交互或原样文案，例如 `/community` 的转发 prompt、`/my-shop` 的下架 confirm、`/me` 设置抽屉中的“语言切换开发中”等；
-  2. `/login` 页面中的开发态文案，该页面由其他线程单独处理，本轮未改动。
-- 除上述两类之外，`apps/web` 已基本清掉远程占位图、随机头像、明显 demo/token 文案和非旧页行为。
-
-### 3. 兼容别名路由
-
-这些页面主要用于兼容旧静态页路径，本质上不是新的独立功能：
-
-| 兼容路径 | 实际功能 |
-| --- | --- |
-| `/all-features` | `features` 别名 |
-| `/my-orders` | `orders` 别名 |
-| `/chat-detail` | `chat/[id]` 兼容页 |
-| `/profile` | `me` 兼容页 |
-| `/myshop` | `my-shop` 兼容页 |
-| `/post-detail` | `post/[id]` 兼容页 |
-| `/user-profile` | `user/[uid]` 兼容页 |
-| `/live` | `live/[id]` 兼容页 |
-| `/detail`、`/product-detail`、`/shop-detail` | 旧页面名兼容包装页 |
-
-### 4. 真实数据接入情况
-
-| 项目 | 状态 | 说明 |
-| --- | --- | --- |
-| 页面调用 `src/lib/api.ts` | `进行中` | 登录、注册、个人中心、编辑资料、好友、通知、用户主页已真正接 API client |
-| 页面调用本地 demo 数据 | `进行中` | 主要残留在 `product/[id]` 局部说明区、直播/支付、订单详情等周边页面；`/mall` 主商品流、商品收藏、`/search` 已切到独立搜索域（统一搜索 / 热搜 / 联想）、`/cart`、社区主浏览链和 `shop/[id]`、`product/[id]` 主数据已切真实接口 |
-| 页面接真实后端接口 | `进行中` | 已覆盖 auth / me / friends / notifications / user profile / chat / community / community-search / post-detail / shop / orders / warehouse / guess-history / guess-detail / product-detail / product-list / unified-search / product-favorite / cart 等模块 |
-
-一句话：`apps/web` 当前是“旧静态页面已 41/41 全覆盖，高频页面 UI/交互已经过多轮对齐，认证、商品发现、社区主浏览、订单列表、仓库、店铺等主读链路已接真实接口，但支付、订单详情、直播和商品详情局部说明区仍有不少构造态”。 
+| 页面覆盖 | `已完成` | 页面文件数量和路由骨架已较完整 |
+| 主读链路 API 接入 | `进行中` | 多数高频页面已直接引入 API client，但并非所有页面都直接接入数据层 |
+| 兼容页与静态页清理 | `进行中` | 仍保留多组兼容页和明显的包装页 |
 
 ## 管理台 Admin
 
-### 1. 已落地内容
+### 页面与导航结构
 
-| 功能 | 状态 | 说明 |
+当前 `apps/admin` 仍是单壳层应用，但不是“只剩一个占位页”。
+
+代码事实：
+
+- 页面入口共 `40` 个
+- 主壳层位于 [apps/admin/src/App.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/App.tsx:1)
+- 菜单定义位于 [apps/admin/src/lib/admin-navigation.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-navigation.tsx:1)
+- 当前使用 hash 路由路径分发
+- 页面访问与菜单显示已接入权限过滤逻辑
+
+从 `PAGE_COMPONENTS` 和菜单树可直接确认，当前已有这些页面分组：
+
+- Dashboard
+- 用户与商家
+- 商品与竞猜
+- 订单与履约
+- 营销中心
+- 内容与风控
+- 系统配置
+
+### 权限体系
+
+当前管理台权限不是临时字符串散落在页面里。
+
+代码事实：
+
+- 权限定义集中在 [packages/shared/src/admin-permissions.ts](/Users/ezreal/Downloads/joy/umi/packages/shared/src/admin-permissions.ts:1)
+- `admin-navigation.tsx` 通过 `findAdminMenuPermissionByPath()` 将菜单路径与权限码关联
+- `App.tsx` 使用：
+  - `filterAdminMenuTreeByAccess`
+  - `findFirstAccessibleAdminPath`
+  - `isAdminPathAccessible`
+
+这说明后台菜单和页面权限已经抽到共享层，而不是页面里自行硬编码。
+
+### 数据接入现状
+
+当前 `apps/admin/src/lib/api` 下共有 `9` 个 API client 文件：
+
+- `auth`
+- `catalog`
+- `categories`
+- `dashboard`
+- `merchant`
+- `orders`
+- `shared`
+- `system`
+- `users`
+
+从页面 import 可直接确认，当前已接入后台接口的数据页包括：
+
+- 仪表盘
+- 用户页
+- 店铺页、开店审核页（店铺列表已支持启用/暂停/关闭，且已关闭店铺可重新启用；开店审核已支持通过/拒绝审核）
+- 品牌管理页（已支持直接新增/编辑品牌，不再保留品牌入驻审核页）
+- 品牌授权申请页（已支持通过/拒绝审核）
+- 品牌商品、商品列表
+- 竞猜列表、好友竞猜、PK 对战、创建竞猜
+- 订单列表、交易流水、物流、寄售
+- 仓库页、寄售页
+- 系统通知、系统聊天、系统用户
+- 角色、权限、分类、系统通知（角色已支持新增/编辑/改状态/分配权限；系统通知已支持发送通知）
+
+### 当前判断
+
+| 子项 | 当前状态 | 代码事实 |
 | --- | --- | --- |
-| 管理台壳层 | `已完成` | 单页壳层、侧边导航、模块卡片已落地 |
-| 模块规划列表 | `已完成` | 已定义 `Dashboard / Users / Products / Guesses / Orders / Warehouse` |
-| 管理台 API client | `已完成` | 已有 dashboard / users / guesses / orders 的请求封装 |
-
-### 2. 尚未完成
-
-| 功能 | 状态 | 说明 |
-| --- | --- | --- |
-| 登录页 | `已完成基础链路` | 已有独立后台登录与资料接口，前端有独立后台入口 |
-| 路由体系 | `已完成` | 已按真实业务路由拆分为单页单文件，不再是 `src/App.tsx` 单页分发 |
-| 列表页 / 详情页 / 表单页 | `进行中` | `users / products / guesses / orders / warehouse / system / marketing` 已有页面与数据链路，仍未形成完整 CRUD |
-| 竞猜审核 / 开奖 | `进行中` | 已有竞猜管理相关页面，审核与开奖闭环仍待继续补齐 |
-| 订单履约 / 退款审核 | `进行中` | 已有订单、物流、交易、寄售页面，履约审核闭环仍未全部完成 |
-| 仓库管理页面 | `进行中` | 已有仓库与寄售页面，不再只是模块卡片 |
-
-一句话：`apps/admin` 已经不是“功能规划 + 单页骨架”，当前是“路由拆分完成、页面骨架齐全、业务闭环继续补”的阶段。
+| 页面骨架 | `已完成` | 页面、导航、权限路径映射都已存在 |
+| 数据读取链路 | `进行中` | 多数页面已接入后台 API client |
+| 后台工程健康 | `进行中` | 当前 workspace `typecheck` 已通过，但后台关键模块仍在持续补完整操作闭环 |
 
 ## 后端 API
 
-### 1. 已落地路由
+### 模块结构
 
-| 模块 | 路由 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| Health | `GET /health` | `已完成` | 健康检查 |
-| Auth | `POST /api/auth/send-code` | `已完成` | 写入 `sms_verification_code`，生产存验证码哈希，开发环境返回 `devCode` |
-| Auth | `POST /api/auth/register` | `已完成` | 校验验证码，真实写入 `user + user_profile`，并生成唯一 `uid_code` |
-| Auth | `POST /api/auth/login` | `已完成` | 支持验证码 / 密码登录，验证码登录可自动注册用户 |
-| Auth | `POST /api/auth/change-password` | `已完成` | 统一走 `requireUser + HttpError`，修改当前登录用户密码 |
-| Auth | `POST /api/auth/logout` | `已完成` | 删除当前 `auth_session` |
-| Users | `GET /api/users/me` | `已完成` | 返回当前用户公开资料与登录态摘要 |
-| Users | `PUT /api/users/me` | `已完成` | 更新昵称、头像、签名、性别、地区等资料 |
-| Users | `GET /api/users/me/activity` | `已完成` | 返回我的作品、收藏、点赞、未读消息数 |
-| Users | `GET /api/users/me/summary` | `已完成` | 返回个人中心摘要数据 |
-| Users | `GET /api/users/search` | `已完成` | 搜索真实用户结果 |
-| Users | `GET /api/users/:id` | `已完成` | 返回公开用户资料 |
-| Users | `GET /api/users/:id/activity` | `已完成` | 返回用户公开动态、竞猜和收藏信息 |
-| Users | `POST /api/users/:id/follow` | `已完成` | 关注用户 |
-| Users | `DELETE /api/users/:id/follow` | `已完成` | 取消关注 |
-| Notifications | `GET /api/notifications` | `已完成` | 读取通知列表 |
-| Notifications | `POST /api/notifications/read-all` | `已完成` | 全部通知标记已读 |
-| Notifications | `POST /api/notifications/:id/read` | `已完成` | 单条通知标记已读 |
-| Social | `GET /api/social` | `已完成` | 返回好友、关注、粉丝、申请列表 |
-| Social | `POST /api/social/requests/:id/accept` | `已完成` | 接受好友申请 |
-| Social | `POST /api/social/requests/:id/reject` | `已完成` | 忽略好友申请 |
-| Chats | `GET /api/chats` | `已完成` | 读取真实会话列表，基于 `chat_conversation` |
-| Chats | `GET /api/chats/:userId` | `已完成` | 读取真实聊天明细，并自动清未读 |
-| Chats | `POST /api/chats/:userId` | `已完成` | 写入真实 `chat_message`，同步更新 `chat_conversation` |
-| Community | `GET /api/community/feed` | `已完成` | 读取真实社区推荐流和关注流 |
-| Community | `GET /api/community/discovery` | `已完成` | 聚合社区头图与热门话题 |
-| Community | `GET /api/community/search` | `已完成` | 搜索真实动态与用户结果 |
-| Community | `POST /api/community/posts` | `已完成` | 发布真实动态，支持图片和可见范围 |
-| Community | `POST /api/community/posts/:id/repost` | `已完成` | 真实转发动态，写入 `post.repost_id` |
-| Community | `GET /api/community/posts/:id` | `已完成` | 读取动态详情、评论与相关推荐 |
-| Community | `POST /api/community/posts/:id/comments` | `已完成` | 发表评论 / 回复评论 |
-| Community | `POST /api/community/comments/:id/like` | `已完成` | 点赞评论 |
-| Community | `DELETE /api/community/comments/:id/like` | `已完成` | 取消评论点赞 |
-| Community | `POST /api/community/posts/:id/like` | `已完成` | 点赞动态 |
-| Community | `DELETE /api/community/posts/:id/like` | `已完成` | 取消点赞 |
-| Community | `POST /api/community/posts/:id/bookmark` | `已完成` | 收藏动态 |
-| Community | `DELETE /api/community/posts/:id/bookmark` | `已完成` | 取消收藏 |
-| Guesses | `GET /api/guesses` | `已完成` | 竞猜列表，真实读 `guess / guess_product / product / brand_product / guess_option / guess_bet` |
-| Guesses | `GET /api/guesses/:id` | `已完成` | 竞猜详情，真实读竞猜主表、商品信息、选项和票数 |
-| Guesses | `GET /api/guesses/:id/stats` | `已完成` | 竞猜统计，真实按下注聚合 |
-| Orders | `GET /api/orders` | `已完成` | 订单列表，真实读 `order / order_item / fulfillment_order / product / brand_product` |
-| Orders | `GET /api/orders/:id` | `Demo` | 订单详情 |
-| Orders | `GET /api/orders/admin/stats/overview` | `已完成` | 订单概览，真实聚合订单表 |
-| Products | `GET /api/products/:id` | `已完成` | 商品详情，真实聚合商品主信息、所属店铺、进行中竞猜、仓库库存和推荐商品 |
-| Products | `GET /api/products` | `已完成` | 商品列表 / 搜索，支持首页商品流和关键词搜索 |
-| Products | `POST /api/products/:id/favorite` | `已完成` | 收藏商品，真实写 `product_interaction` |
-| Products | `DELETE /api/products/:id/favorite` | `已完成` | 取消收藏商品，真实写 `product_interaction` |
-| Cart | `GET /api/cart` | `已完成` | 购物车列表，真实读 `cart_item / product / shop / brand_product / brand` |
-| Cart | `POST /api/cart/items` | `已完成` | 加入购物车，按 `user_id + product_id + specs` 合并 |
-| Cart | `PUT /api/cart/items/:id` | `已完成` | 更新勾选状态或购买数量 |
-| Cart | `DELETE /api/cart/items/:id` | `已完成` | 删除购物车商品 |
-| Wallet | `GET /api/wallet/ledger` | `已完成` | 余额读 `user_stats.coins`，流水读 `coin_ledger` |
-| Warehouse | `GET /api/warehouse/virtual` | `已完成` | 虚拟仓，真实读 `virtual_warehouse` |
-| Warehouse | `GET /api/warehouse/physical` | `已完成` | 实体仓，真实读 `physical_warehouse + fulfillment_order` |
-| Warehouse | `GET /api/warehouse/admin/stats` | `已完成` | 仓库概览，真实聚合仓库表 |
-| Shops | `GET /api/shops/me` | `已完成` | 读取当前店铺、授权和上架商品 |
-| Shops | `GET /api/shops/brand-auth` | `已完成` | 读取授权记录和可申请品牌 |
-| Shops | `POST /api/shops/brand-auth` | `已完成` | 提交品牌授权申请 |
-| Shops | `GET /api/shops/brand-products` | `已完成` | 读取品牌商品池 |
-| Shops | `POST /api/shops/products` | `已完成` | 将品牌商品上架到店铺商品表 |
-| Admin | `GET /api/admin/dashboard/stats` | `Demo` | 运营概览 |
-| Admin | `GET /api/admin/users` | `Demo` | 用户列表 |
-| Admin | `GET /api/admin/guesses` | `Demo` | 竞猜列表 |
-| Admin | `GET /api/admin/orders` | `Demo` | 订单列表 |
+当前 `apps/api/src/app.ts` 注册了这些业务模块：
 
-### 2. API 当前状态
+- `auth`
+- `banner`
+- `ranking`
+- `live`
+- `users`
+- `social`
+- `notifications`
+- `community`
+- `chat`
+- `cart`
+- `address`
+- `coupon`
+- `guess`
+- `order`
+- `product`
+- `search`
+- `shop`
+- `wallet`
+- `warehouse`
+- `admin`
 
-| 项目 | 状态 | 说明 |
+这意味着当前 API 不是少数几个演示路由，而是已经拆成 `20` 个路由入口模块。
+
+### 用户侧与通用接口
+
+从模块目录和 OpenAPI path 文件可直接确认，当前已存在以下资源域：
+
+- 认证与密码相关
+- 用户资料与搜索
+- 社交
+- 通知
+- 社区
+- 聊天
+- 购物车
+- 地址
+- 优惠券
+- 竞猜
+- 订单
+- 商品
+- 搜索
+- 店铺
+- 钱包
+- 仓库
+- 首页 Banner / 排行榜 / 直播
+
+### 后台接口
+
+从 [apps/api/src/modules/admin/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/router.ts:1) 可直接确认，后台接口当前已不止登录和几条列表：
+
+- 后台认证：登录、当前管理员、退出、修改密码
+- 仪表盘统计
+- 用户列表、用户详情、用户竞猜、用户订单、封禁
+- 系统用户：新增、更新、改状态、重置密码
+- 角色：列表、创建、改状态、更新权限
+- 权限：列表、矩阵、创建、更新、改状态
+- 分类：列表、创建、更新、改状态
+- 商品、品牌商品
+- 竞猜、好友竞猜、PK
+- 订单、交易流水、物流、寄售
+- 店铺、开店申请、品牌、品牌申请、品牌授权申请、品牌授权记录
+- 店铺商品
+- 系统通知、系统聊天
+
+### 数据是否直连数据库
+
+从代码可直接确认，API 中大量模块已经接 MySQL 查询实现，而不是只返回常量。
+
+明确证据：
+
+- [apps/api/src/lib/db.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/lib/db.ts:1) 提供 MySQL 连接池
+- [apps/api/src/modules/admin/dashboard.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/dashboard.ts:1) 直接查询 `user`、`product`、`guess`、`order`、`order_refund`、`report_item`
+- [apps/api/src/modules/admin/orders.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/orders.ts:1) 直接查询订单、履约、退款、寄售相关表
+- `users`、`auth`、`community`、`chat`、`shop`、`warehouse`、`cart`、`coupon`、`address` 等模块目录下都存在对应的 store/query/router 实现
+
+因此，当前 API 更准确的描述是：
+
+- 用户侧主资源域已较完整
+- 后台侧已铺开多资源域读取和部分写接口
+- 但整体仍未完成完整事务、状态机和后台业务闭环
+
+### 当前判断
+
+| 子项 | 当前状态 | 代码事实 |
 | --- | --- | --- |
-| Express 应用骨架 | `已完成` | 路由挂载已经齐了 |
-| 真实数据库接入 | `进行中` | 认证、用户资料、好友、通知、聊天、钱包、竞猜、订单列表、仓库、店铺、商品列表/搜索/详情已接当前 MySQL；Admin 与部分订单详情/支付接口仍未切库 |
-| Service 层 | `进行中` | `auth`、`wallet`、`guess`、`order`、`warehouse`、`shop`、`product` 已形成真实查询逻辑，Admin 和部分商城/社区模块仍多为 demo router 直返 |
-| 权限控制 | `进行中` | 已有基于 `auth_session` 的 Bearer token 鉴权，RBAC 仍未落地 |
-| 事务 / 状态流 / 幂等 | `未开始` | 新后端里还没有系统化落地 |
-| 写操作接口 | `进行中` | 已有注册、登录、登出、更新资料、通知已读、聊天发送等写接口，核心业务写接口仍未开始 |
-
-一句话：`apps/api` 当前是“认证、商品发现、社区主浏览、竞猜、订单列表、仓库、店铺等主读链路已形成最小真实后端，但 Admin、订单详情、支付和核心写操作仍未补齐”。
+| 路由拆分 | `已完成` | 业务模块已拆成 `20` 个 router |
+| 用户侧资源域 | `进行中` | 主资源域都已有 router 与 OpenAPI 路径定义，但不能据此直接判定所有链路已完整闭环 |
+| 后台资源域 | `进行中` | 已覆盖大量后台资源域，但还不能说明所有业务闭环已完成 |
+| 事务与状态机 | `进行中` | 代码中已见大量写接口，但还未看到统一事务框架或系统化状态机层 |
 
 ## Shared / DB
 
-| 模块 | 状态 | 说明 |
-| --- | --- | --- |
-| `packages/shared` 类型与状态枚举 | `已完成` | 已供 Web / Admin / API 共用 |
-| `packages/db` 结构承接 | `进行中` | 已补 `sms_verification_code`、`auth_session`、`chat_conversation`、`user_profile/user_stats/user_shop_profile`、`brand_product`、`shop_brand_auth`、`uid_code` 等 SQL，运行期仍在逐步接入 |
-| 数据库结构说明文档 | `已完成` | 见 [db.md](docs/db.md) |
+### `packages/shared`
+
+当前可直接确认：
+
+- 已导出共享 API 类型
+- 已导出领域类型
+- 已导出状态枚举
+- 已导出后台权限目录
+
+这说明 `packages/shared` 当前已经是实际在用的共享层，而不是空目录。
+
+### `packages/db`
+
+当前可直接确认：
+
+- 共有 `20` 个 SQL 文件
+- 已覆盖的资产包括：
+  - `auth_session`
+  - `sms_verification_code`
+  - `chat_conversation`
+  - `brand_product`
+  - `shop_brand_auth`
+  - `product_review`
+  - `user_profile`
+  - `user_stats`
+  - `uid_code`
+
+但从目录结构看，当前仍是 SQL 资产集合，不是统一 migration 系统。
 
 ## 当前最大缺口
 
-| 优先级 | 缺口 | 说明 |
+| 优先级 | 缺口 | 代码事实 |
 | --- | --- | --- |
-| P0 | 商品发现链路仍未完全业务化 | `/mall` 主商品流、分类、搜索和收藏已经接真实接口，但 `tag / miniTag / isNew / height` 仍是派生字段，活动位、hero、联名卡和 tab 逻辑仍基于商品流规则；`product/[id]` 的玩法说明和购买后续链路仍待清理 |
-| P0 | 社区 / 支付 / 订单详情等周边页仍未接数据库 | 社区、直播、支付、订单详情仍明显依赖本地构造数据 |
-| P1 | Admin 只有壳层 | 还没有运营闭环页面 |
-| P1 | 权限 / 事务 / 状态机未落地 | 新主线工程尚未进入真实业务阶段 |
-| P1 | 拆表后的余额 / 用户链路仍需继续扩散 | 目前已切 auth / chat / wallet / shop，其他模块仍要逐步统一到新表 |
-| P2 | 文案 / UI / 页面行为仍在持续对齐旧系统 | 当前主要剩首页、`me`、社区、店铺、直播、新手页这一批高感知页面的最后收口 |
+| P0 | 用户端 `invite` / `checkin` 链路未闭环 | 前端页面已直接请求接口，但当前 `apps/api/src/app.ts` 中未见对应 router 注册 |
+| P0 | 管理后台仍有 `10` 个静态/本地态页面 | 主要集中在 `#/marketing/*`、`#/community/*`、`#/live/*`、`#/system/rankings` |
+| P1 | 用户端仍有 `8` 个静态/本地态页面 | 主要包括 `/terms`、`/privacy`、`/guess-order`、`/novice-guess`、`/create`、`/create-user`、`/ai-demo`、`/splash` |
+| P1 | 页面级自动化测试覆盖不足 | 当前强项仍是 API integration / smoke，大多数 `apps/web`、`apps/admin` 页面未见专项测试 |
+| P1 | `packages/db` 仍不是统一迁移体系 | 当前以 SQL 文件资产为主，未形成统一 migration runner |
+| P1 | 构建警告仍未清理 | Next 多 lockfile warning 与 Admin 大 chunk warning 仍存在 |
 
-## 当前高感知页面收口清单
+## 下一步建议
 
-以下页面仍在持续按旧 `frontend` 对齐，是当前 UI 收口的重点：
-
-| 页面 | 当前状态 | 最近补回的代表性细节 |
-| --- | --- | --- |
-| `/` | `进行中` | 模式切换时 hero 归位、记录/榜单入口、副标题联动；首页访问已取消强制首访 `splash` |
-| `/mall` | `进行中` | 动态分类、推荐态 hero、联名卡、底部 banner、加载更多节奏、收藏按钮和瀑布流错落；收藏已切真实 `product_interaction`，活动位和标签仍需继续收口 |
-| `/cart` | `进行中` | 已切真实 `cart_item` 读写，保留旧页购物车结构和编辑/删除交互，仍剩支付后续和促销口径待真实化 |
-| `/me` | `进行中` | 菜单抽屉、搜索层、开店弹窗、仓库角标、设置项旧页文案 |
-| `/community` | `进行中` | 推荐流 / 关注流 / 发现区 / 发布 / 搜索 / 转发 / 评论回复都已走真实接口，仍剩少量运营位和次级交互细节待继续收口 |
-| `/shop/[id]` | `进行中` | 底部主按钮切内容并滚动、店铺卡片/竞猜卡结构、券区和经营统计 |
-| `/live/[id]` | `进行中` | 空竞猜时主按钮语义、错误态、弹幕输入栏、直播主操作 |
-| `/novice-guess` | `进行中` | 结果页、奖励区、连胜弹层、复活区、贴底 CTA 结构 |
-
-## 下一阶段建议
-
-1. 继续把商城活动位、标签、联名文案和 tab 规则从前端派生收口成更稳定的配置或真实业务字段，并清理 `product/[id]` 剩余静态展示区。
-2. 把竞猜详情页的评论、弹幕、下注闭环补成真实接口。
-3. 把 `friends` 页上的同意 / 拒绝 / 回关 / 关注补成真实写接口。
-4. 把社区 / 支付 / 订单详情这些周边页继续从本地构造切到真实数据。
-5. 最后补 `apps/admin` 的 `Dashboard / Guesses / Orders / Warehouse` 最小后台闭环。
-
-## 更新规则
-
-后续每次推进功能时，至少同步更新以下三项：
-
-1. 新增了什么模块或页面。
-2. 该功能属于 `已完成 / 进行中 / 未开始 / Demo` 哪一类。
-3. 是否已经接入真实接口、真实数据库，还是仍然依赖 mock / demo 数据。
+1. 优先补齐 `invite`、`checkin` 的后端承接或明确下线页面入口，先收掉“前端已接、后端未见”的伪闭环。
+2. 优先把 `apps/admin` 的营销、内容、直播后台从静态表格推进到真实接口闭环。
+3. 继续按页面重要性清理 `apps/web` 中的静态页、兼容页和仅本地态页面，先收口 `/novice-guess`、`/create`、`/create-user` 等高感知页面。
+4. 给已成型的高频页补页面级或链路级自动化测试，至少优先覆盖首页、商城、订单、后台审核和通知发送。
+5. 如果后续继续强化数据库演进流程，再把 `packages/db` 从 SQL 资产集合推进到统一 migration 方案。

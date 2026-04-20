@@ -43,6 +43,15 @@ export const authSchemas = {
       newPassword: { type: 'string', example: '654321' },
     },
   },
+  ResetPasswordPayload: {
+    type: 'object',
+    required: ['phone', 'code', 'newPassword'],
+    properties: {
+      phone: { type: 'string', example: '13800138000' },
+      code: { type: 'string', example: '123456' },
+      newPassword: { type: 'string', example: '654321' },
+    },
+  },
   UpdateMePayload: {
     type: 'object',
     properties: {

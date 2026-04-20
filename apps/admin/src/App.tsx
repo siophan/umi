@@ -32,7 +32,6 @@ import {
   getAdminMenuTree,
   isAdminPathAccessible,
 } from './lib/admin-navigation';
-import { BrandAppliesPage } from './pages/brand-applies-page';
 import { BrandLibraryPage } from './pages/brand-library-page';
 import { BrandsPage } from './pages/brands-page';
 import { CategoriesPage } from './pages/categories-page';
@@ -55,8 +54,6 @@ import { OrdersPage } from './pages/orders-page';
 import { OrderTransactionsPage } from './pages/order-transactions-page';
 import { PermissionsPage } from './pages/permissions-page';
 import { PkMatchesPage } from './pages/pk-matches-page';
-import { ProductAuthPage } from './pages/product-auth-page';
-import { ProductAuthRecordsPage } from './pages/product-auth-records-page';
 import { ProductsPage } from './pages/products-page';
 import { RolesPage } from './pages/roles-page';
 import { ShopAppliesPage } from './pages/shop-applies-page';
@@ -80,7 +77,6 @@ const PATH_ALIASES: Record<string, string> = {
   '/orders': '/orders/list',
   '/shops': '/shops/list',
   '/brands': '/brands/list',
-  '/product-auth': '/product-auth/list',
   '/warehouse': '/warehouse/virtual',
   '/community': '/community/posts',
   '/live': '/live/list',
@@ -89,7 +85,6 @@ const MENU_TREE = getAdminMenuTree();
 const SIDER_WIDTH = 256;
 const SIDER_COLLAPSED_WIDTH = 64;
 const PAGE_COMPONENTS: Record<string, ComponentType<{ refreshToken?: number }>> = {
-  '/brands/apply': BrandAppliesPage,
   '/brands/list': BrandsPage,
   '/community/comments': CommunityCommentsPage,
   '/community/posts': CommunityPostsPage,
@@ -109,8 +104,6 @@ const PAGE_COMPONENTS: Record<string, ComponentType<{ refreshToken?: number }>> 
   '/orders/logistics': OrderLogisticsPage,
   '/orders/transactions': OrderTransactionsPage,
   '/pk': PkMatchesPage,
-  '/product-auth/list': ProductAuthPage,
-  '/product-auth/records': ProductAuthRecordsPage,
   '/products/brands': BrandLibraryPage,
   '/products/list': ProductsPage,
   '/shops/apply': ShopAppliesPage,
@@ -326,9 +319,7 @@ export function App() {
 
   useEffect(() => {
     setMenuOpenKeys((currentKeys) =>
-      sameKeys(currentKeys, activeMenuParentKeys)
-        ? currentKeys
-        : Array.from(new Set([...currentKeys, ...activeMenuParentKeys])),
+      sameKeys(currentKeys, activeMenuParentKeys) ? currentKeys : activeMenuParentKeys,
     );
   }, [activeMenuParentKeys]);
 
@@ -497,7 +488,8 @@ export function App() {
             }}
             onOpenChange={(keys) => {
               if (!collapsed) {
-                setMenuOpenKeys(keys as string[]);
+                const nextKeys = keys as string[];
+                setMenuOpenKeys(nextKeys.length > 0 ? [nextKeys[nextKeys.length - 1] as string] : []);
               }
             }}
             openKeys={collapsed ? [] : menuOpenKeys}

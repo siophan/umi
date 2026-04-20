@@ -17,11 +17,11 @@ const shortcuts: ReadonlyArray<{
   icon: string;
   badge?: boolean;
 }> = [
-  { label: '我的店铺', href: '/myshop', icon: 'fa-solid fa-store' },
+  { label: '我的店铺', href: '/my-shop', icon: 'fa-solid fa-store' },
   { label: '我的仓库', href: '/warehouse', icon: 'fa-solid fa-box-archive', badge: true },
   { label: '我的订单', href: '/orders', icon: 'fa-solid fa-bag-shopping', badge: true },
   { label: '我的竞猜', href: '/guess-history', icon: 'fa-solid fa-clock-rotate-left' },
-  { label: '全部功能', href: '/all-features', icon: 'fa-solid fa-ellipsis' },
+  { label: '全部功能', href: '/features', icon: 'fa-solid fa-ellipsis' },
 ];
 
 type ActivityPost = {
@@ -807,7 +807,7 @@ export default function MePage() {
                   type="button"
                   onClick={() => {
                     setShopModalOpen(false);
-                    router.push('/myshop');
+                    router.push('/my-shop');
                   }}
                 >
                   🏪 去填写开店申请

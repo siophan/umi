@@ -94,9 +94,9 @@ function LoginPageInner() {
     if (countdown > 0) return;
 
     try {
+      const result = await sendCode({ phone: codePhone, bizType: "login" });
       setCountdown(60);
       setCodeSent(true);
-      const result = await sendCode({ phone: codePhone, bizType: "login" });
       openToast("验证码已发送 📱");
       if (result.devCode) {
         window.setTimeout(() => {
@@ -104,11 +104,10 @@ function LoginPageInner() {
         }, 300);
       }
     } catch (error) {
-      console.warn("send code failed, using legacy fallback:", error);
-      openToast("验证码已发送 📱");
-      window.setTimeout(() => {
-        setCodeValue("8888");
-      }, 600);
+      console.warn("send code failed:", error);
+      setCountdown(0);
+      setCodeSent(false);
+      openToast(error instanceof Error ? error.message : "验证码发送失败");
     }
   };
 

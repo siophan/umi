@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { OrderSummary } from '@umi/shared';
 
@@ -114,6 +114,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -124,33 +125,34 @@ export default function OrdersPage() {
     };
   }, []);
 
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadOrders() {
-      try {
-        const data = await fetchOrders();
-        if (!ignore) {
-          setOrders(data.items);
-        }
-      } catch {
-        if (ignore) {
-          return;
-        }
-        setOrders([]);
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+  const loadOrders = useCallback(async (shouldIgnore: () => boolean = () => false) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchOrders();
+      if (!shouldIgnore()) {
+        setOrders(data.items);
+      }
+    } catch (loadError) {
+      if (shouldIgnore()) {
+        return;
+      }
+      setError(loadError instanceof Error ? loadError.message : '订单加载失败，请稍后重试');
+    } finally {
+      if (!shouldIgnore()) {
+        setLoading(false);
       }
     }
+  }, []);
 
-    void loadOrders();
+  useEffect(() => {
+    let ignore = false;
+    void loadOrders(() => ignore);
 
     return () => {
       ignore = true;
     };
-  }, [pathname, router]);
+  }, [loadOrders, pathname]);
 
   const total = orders.length;
   const guessWon = orders.filter((order) => order.orderType === 'guess' || Boolean(order.guessId)).length;
@@ -285,7 +287,17 @@ export default function OrdersPage() {
         </section>
 
         <main className={styles.list}>
-          {!loading && filtered.length === 0 ? (
+          {!loading && error ? (
+            <div className={styles.empty}>
+              <div className={styles.emptyIcon}>⚠️</div>
+              <div className={styles.emptyTitle}>订单加载失败</div>
+              <div className={styles.emptyDesc}>{error}</div>
+              <button className={styles.emptyBtn} type="button" onClick={() => void loadOrders()}>
+                <i className="fa-solid fa-rotate-right" />
+                重新加载
+              </button>
+            </div>
+          ) : !loading && filtered.length === 0 ? (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>{emptyMap[tab].icon}</div>
               <div className={styles.emptyTitle}>{emptyMap[tab].title}</div>

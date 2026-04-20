@@ -152,10 +152,9 @@ export const adminSchemas = {
       usageCount: { type: 'integer', example: 18 },
       usageBreakdown: {
         type: 'object',
-        required: ['brands', 'brandApplies', 'brandProducts', 'shops', 'shopApplies', 'guesses'],
+        required: ['brands', 'brandProducts', 'shops', 'shopApplies', 'guesses'],
         properties: {
           brands: { type: 'integer', example: 0 },
-          brandApplies: { type: 'integer', example: 0 },
           brandProducts: { type: 'integer', example: 18 },
           shops: { type: 'integer', example: 0 },
           shopApplies: { type: 'integer', example: 0 },
@@ -450,6 +449,45 @@ export const adminSchemas = {
       },
     },
   },
+  CreateAdminRolePayload: {
+    type: 'object',
+    required: ['code', 'name'],
+    properties: {
+      code: { type: 'string', example: 'ops_manager' },
+      name: { type: 'string', example: '运营经理' },
+      description: { type: 'string', nullable: true, example: '负责活动与内容运营' },
+      sort: { type: 'integer', example: 20 },
+      status: {
+        type: 'string',
+        enum: ['active', 'disabled'],
+        example: 'active',
+      },
+    },
+  },
+  CreateAdminRoleResult: {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: { type: 'string', example: '2' },
+    },
+  },
+  UpdateAdminRolePayload: {
+    type: 'object',
+    required: ['code', 'name'],
+    properties: {
+      code: { type: 'string', example: 'ops_manager' },
+      name: { type: 'string', example: '运营经理' },
+      description: { type: 'string', nullable: true, example: '负责活动与内容运营' },
+      sort: { type: 'integer', example: 20 },
+    },
+  },
+  UpdateAdminRoleResult: {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: { type: 'string', example: '2' },
+    },
+  },
   AdminRoleListItem: {
     type: 'object',
     required: [
@@ -534,6 +572,141 @@ export const adminSchemas = {
       permissionIds: {
         type: 'array',
         items: { type: 'string', example: '11' },
+      },
+    },
+  },
+  CreateAdminNotificationPayload: {
+    type: 'object',
+    required: ['title', 'content', 'type', 'audience'],
+    properties: {
+      title: { type: 'string', example: '系统维护通知' },
+      content: { type: 'string', example: '今晚 23:00-23:30 进行系统维护，请提前保存操作。' },
+      type: {
+        type: 'string',
+        enum: ['system', 'order', 'guess', 'social'],
+        example: 'system',
+      },
+      audience: {
+        type: 'string',
+        enum: ['all_users', 'order_users', 'guess_users', 'post_users', 'chat_users'],
+        example: 'all_users',
+      },
+      actionUrl: { type: 'string', nullable: true, example: '/orders' },
+    },
+  },
+  CreateAdminNotificationResult: {
+    type: 'object',
+    required: ['sentCount'],
+    properties: {
+      sentCount: { type: 'integer', example: 1280 },
+    },
+  },
+  UpdateAdminShopStatusPayload: {
+    type: 'object',
+    required: ['status'],
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['active', 'paused', 'closed'],
+        example: 'paused',
+      },
+    },
+  },
+  UpdateAdminShopStatusResult: {
+    type: 'object',
+    required: ['id', 'status'],
+    properties: {
+      id: { type: 'string', example: '12' },
+      status: {
+        type: 'string',
+        enum: ['active', 'paused', 'closed'],
+        example: 'paused',
+      },
+    },
+  },
+  ReviewAdminShopApplyPayload: {
+    type: 'object',
+    required: ['status'],
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['approved', 'rejected'],
+        example: 'approved',
+      },
+      rejectReason: { type: 'string', nullable: true, example: '资质信息不完整' },
+    },
+  },
+  ReviewAdminShopApplyResult: {
+    type: 'object',
+    required: ['id', 'status'],
+    properties: {
+      id: { type: 'string', example: '18' },
+      status: {
+        type: 'string',
+        enum: ['approved', 'rejected'],
+        example: 'approved',
+      },
+    },
+  },
+  CreateAdminBrandPayload: {
+    type: 'object',
+    required: ['name', 'categoryId'],
+    properties: {
+      name: { type: 'string', example: '耐克' },
+      categoryId: { type: 'string', example: '12' },
+      contactName: { type: 'string', nullable: true, example: '张三' },
+      contactPhone: { type: 'string', nullable: true, example: '13800138000' },
+      description: { type: 'string', nullable: true, example: '运动品牌' },
+      status: { type: 'string', enum: ['active', 'disabled'], example: 'active' },
+    },
+  },
+  CreateAdminBrandResult: {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: { type: 'string', example: '22' },
+    },
+  },
+  UpdateAdminBrandPayload: {
+    type: 'object',
+    required: ['name', 'categoryId', 'status'],
+    properties: {
+      name: { type: 'string', example: '耐克' },
+      categoryId: { type: 'string', example: '12' },
+      contactName: { type: 'string', nullable: true, example: '张三' },
+      contactPhone: { type: 'string', nullable: true, example: '13800138000' },
+      description: { type: 'string', nullable: true, example: '运动品牌' },
+      status: { type: 'string', enum: ['active', 'disabled'], example: 'active' },
+    },
+  },
+  UpdateAdminBrandResult: {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: { type: 'string', example: '22' },
+    },
+  },
+  ReviewAdminBrandAuthApplyPayload: {
+    type: 'object',
+    required: ['status'],
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['approved', 'rejected'],
+        example: 'approved',
+      },
+      rejectReason: { type: 'string', nullable: true, example: '授权资料不完整' },
+    },
+  },
+  ReviewAdminBrandAuthApplyResult: {
+    type: 'object',
+    required: ['id', 'status'],
+    properties: {
+      id: { type: 'string', example: '31' },
+      status: {
+        type: 'string',
+        enum: ['approved', 'rejected'],
+        example: 'approved',
       },
     },
   },

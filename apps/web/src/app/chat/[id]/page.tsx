@@ -59,11 +59,14 @@ export default function ChatDetailPage() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [ready, setReady] = useState(false);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
 
     async function load() {
+      setError(null);
       try {
         const result = await fetchChatDetail(peerId);
         if (ignore) {
@@ -83,11 +86,7 @@ export default function ChatDetailPage() {
         if (ignore) {
           return;
         }
-        setPeer({
-          name: '好友',
-          avatar: '/legacy/images/mascot/mouse-happy.png',
-        });
-        setMessages([]);
+        setError('聊天详情读取失败');
       }
 
       if (!ignore) {
@@ -107,7 +106,7 @@ export default function ChatDetailPage() {
         window.clearTimeout(toastTimer.current);
       }
     };
-  }, [peerId]);
+  }, [peerId, reloadToken]);
 
   useEffect(() => {
     document.title = `${peer.name} - Umi`;
@@ -137,7 +136,7 @@ export default function ChatDetailPage() {
 
   async function handleSend() {
     const content = value.trim();
-    if (!content || !peerId || sending) {
+    if (!content || !peerId || sending || error) {
       return;
     }
 
@@ -174,8 +173,18 @@ export default function ChatDetailPage() {
 
       <div className={styles.messageList} ref={listRef}>
         {!peerId && ready ? <div className={styles.emptyHint}>无效的聊天</div> : null}
-        {ready && peerId && messages.length === 0 ? <div className={styles.emptyHint}>暂无消息，说点什么吧~</div> : null}
-        {messages.map((message, index) => (
+        {ready && peerId && error ? (
+          <div className={styles.errorState}>
+            <div className={styles.errorIcon}>⚠️</div>
+            <div className={styles.errorTitle}>聊天详情加载失败</div>
+            <div className={styles.errorDesc}>{error}</div>
+            <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+              重新加载
+            </button>
+          </div>
+        ) : null}
+        {ready && peerId && !error && messages.length === 0 ? <div className={styles.emptyHint}>暂无消息，说点什么吧~</div> : null}
+        {!error ? messages.map((message, index) => (
           <div key={message.key}>
             {shouldRenderTime(messages[index - 1]?.createdAt, message.createdAt) ? (
               <div className={styles.timeDivider}>{formatMessageTime(message.createdAt)}</div>
@@ -189,7 +198,7 @@ export default function ChatDetailPage() {
               <div className={styles.bubble}>{message.content}</div>
             </div>
           </div>
-        ))}
+        )) : null}
       </div>
 
       <div className={styles.inputBar}>
@@ -203,9 +212,10 @@ export default function ChatDetailPage() {
             }
           }}
           placeholder="输入消息..."
+          disabled={Boolean(error)}
           autoComplete="off"
         />
-        <button className={styles.sendBtn} disabled={!canSend} type="button" onClick={() => void handleSend()}>
+        <button className={styles.sendBtn} disabled={!canSend || Boolean(error)} type="button" onClick={() => void handleSend()}>
           <i className="fa-solid fa-paper-plane" />
         </button>
       </div>

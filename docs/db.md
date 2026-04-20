@@ -51,7 +51,6 @@
 - `category` 已按 `biz_type` 区分不同业务域，不再共用一套无边界分类池
 - 当前已经接入 `category_id` 的主表包括：
   - `brand`
-  - `brand_apply`
   - `brand_product`
   - `guess`
   - `shop`
@@ -68,7 +67,7 @@
 `category` 这张表当前的职责不是“随便放一些分类文案”，而是整个系统的分类主数据表，承担 4 个业务域的统一分类来源：
 
 - `biz_type = 10`
-  品牌分类，给 `brand` / `brand_apply` 用
+  品牌分类，给 `brand` 用
 - `biz_type = 20`
   店铺经营分类，给 `shop` / `shop_apply` 用
 - `biz_type = 30`
@@ -130,7 +129,6 @@
 | 表名 | 用途 |
 | --- | --- |
 | `brand` | 品牌主表 |
-| `brand_apply` | 品牌入驻申请表 |
 | `brand_product` | 平台品牌商品库 |
 | `category` | 分类表 |
 | `product` | 商品主表 |
@@ -228,6 +226,14 @@
 
 - 新系统后台不再把 `user.role='admin'` 当作长期权限模型
 - 用户端账号与后台管理员账号分离，避免普通用户体系和后台权限体系耦合
+- 当前后台权限目录已经按“模块根权限 + 菜单叶子页权限”落库：
+  - 模块根权限通常使用 `*.manage`
+  - 菜单叶子页权限通常使用 `*.view`
+- 当前后台菜单权限目录由共享权限定义维护，并同步到 `admin_permission`
+- 当前后台菜单显示和页面访问控制以 `admin_permission.code` 为主，不再只按模块名粗略判断
+- 当前账号如果只拥有父权限，前端对子菜单会做父权限兼容显示
+- 菜单叶子页权限通过 `admin_permission.parent_id` 归属到对应模块根权限
+- 角色分配模块根权限时，应用层会同步补齐该模块下已定义的菜单叶子页权限，避免前端菜单和权限表脱节
 
 ### 商品和店铺主链路
 
@@ -375,6 +381,9 @@
 用途：
 
 - 后台权限定义表
+- 当前已同时承载：
+  - 后台模块根权限定义
+  - 后台菜单叶子页权限定义
 
 关键字段：
 
@@ -388,6 +397,17 @@
 | `parent_id` | 父权限 ID，可空 |
 | `status` | 状态编码 |
 | `sort` | 排序 |
+
+当前约定：
+
+- `code` 必须稳定，可直接作为前端菜单访问控制和后端角色权限分配依据
+- 菜单叶子页权限应与实际后台页面一一对应
+- 菜单叶子页权限的 `parent_id` 指向所属模块根权限
+- 当前权限目录不是纯手工维护，应用层会按共享权限定义自动补齐缺失项并回写 `parent_id / sort / module / action`
+- 例如：
+  - `user.manage` 是模块根权限
+  - `user.list.view` 是菜单叶子页权限
+  - `user.list.view.parent_id -> user.manage.id`
 
 ### `admin_user_role` / `admin_role_permission`
 
@@ -950,7 +970,6 @@
 - `fulfillment_order.fulfillment_sn`
 - `consign_trade.trade_no`
 - `shop_brand_auth.auth_no`
-- `brand_apply.apply_no`
 - `shop_apply.apply_no`
 - `shop_brand_auth_apply.apply_no`
 - `post_interaction(user_id, post_id, interaction_type)`

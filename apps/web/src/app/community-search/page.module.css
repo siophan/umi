@@ -198,6 +198,39 @@
   font-size: 12px;
 }
 
+.sectionIssue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #ffd7d1;
+  border-radius: 14px;
+  background: #fff5f3;
+}
+
+.sectionIssueTitle {
+  color: #d84315;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sectionIssueDesc {
+  color: #8d6e63;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sectionRetry {
+  align-self: flex-start;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .historyList {
   display: flex;
   flex-wrap: wrap;
@@ -553,6 +586,17 @@
 .emptyDesc {
   margin-top: 8px;
   font-size: 12px;
+}
+
+.emptyRetry {
+  margin-top: 12px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .toast {

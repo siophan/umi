@@ -190,6 +190,8 @@ export const adminPaths = {
         { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
         { name: 'pageSize', in: 'query', schema: { type: 'integer', example: 20 } },
         { name: 'keyword', in: 'query', schema: { type: 'string', example: '1380013' } },
+        { name: 'phone', in: 'query', schema: { type: 'string', example: '13800138000' } },
+        { name: 'shopName', in: 'query', schema: { type: 'string', example: 'Joy Select' } },
         {
           name: 'role',
           in: 'query',
@@ -343,7 +345,7 @@ export const adminPaths = {
   '/api/admin/products/brand-library': {
     get: {
       tags: ['Admin'],
-      summary: '管理台品牌商品库',
+      summary: '管理台品牌商品列表',
       security: bearerSecurity,
       parameters: [
         { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
@@ -467,6 +469,28 @@ export const adminPaths = {
       },
     },
   },
+  '/api/admin/shops/{id}': {
+    get: {
+      tags: ['Admin'],
+      summary: '管理台店铺详情',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '店铺 ID')],
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            shop: { type: 'object', additionalProperties: true },
+            products: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            orders: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            guesses: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            brandAuths: { type: 'array', items: { type: 'object', additionalProperties: true } },
+          },
+        }),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '店铺不存在'),
+      },
+    },
+  },
   '/api/admin/shops/applies': {
     get: {
       tags: ['Admin'],
@@ -484,10 +508,27 @@ export const adminPaths = {
       },
     },
   },
+  '/api/admin/shops/applies/{id}/review': {
+    put: {
+      tags: ['Admin'],
+      summary: '审核开店申请',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '开店申请 ID')],
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/ReviewAdminShopApplyPayload',
+      }),
+      responses: {
+        200: successResponse({ $ref: '#/components/schemas/ReviewAdminShopApplyResult' }),
+        400: errorResponse(400, '请填写拒绝原因'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '开店申请不存在'),
+      },
+    },
+  },
   '/api/admin/brands': {
     get: {
       tags: ['Admin'],
-      summary: '管理台品牌方列表',
+      summary: '管理台品牌管理列表',
       security: bearerSecurity,
       responses: {
         200: successResponse({
@@ -500,21 +541,36 @@ export const adminPaths = {
         401: errorResponse(401, '请先登录'),
       },
     },
-  },
-  '/api/admin/brands/applies': {
-    get: {
+    post: {
       tags: ['Admin'],
-      summary: '管理台品牌入驻审核列表',
+      summary: '管理台新增品牌',
       security: bearerSecurity,
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/CreateAdminBrandPayload',
+      }),
       responses: {
-        200: successResponse({
-          type: 'object',
-          properties: {
-            items: { type: 'array', items: { type: 'object', additionalProperties: true } },
-            summary: { type: 'object', additionalProperties: true },
-          },
-        }),
+        200: successResponse({ $ref: '#/components/schemas/CreateAdminBrandResult' }),
+        400: errorResponse(400, '新增品牌失败'),
         401: errorResponse(401, '请先登录'),
+        409: errorResponse(409, '品牌名称已存在'),
+      },
+    },
+  },
+  '/api/admin/brands/{id}': {
+    put: {
+      tags: ['Admin'],
+      summary: '管理台编辑品牌',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '品牌 ID')],
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/UpdateAdminBrandPayload',
+      }),
+      responses: {
+        200: successResponse({ $ref: '#/components/schemas/UpdateAdminBrandResult' }),
+        400: errorResponse(400, '编辑品牌失败'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '品牌不存在'),
+        409: errorResponse(409, '品牌名称已存在'),
       },
     },
   },
@@ -532,6 +588,23 @@ export const adminPaths = {
           },
         }),
         401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
+  '/api/admin/brands/auth-applies/{id}/review': {
+    put: {
+      tags: ['Admin'],
+      summary: '审核品牌授权申请',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '品牌授权申请 ID')],
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/ReviewAdminBrandAuthApplyPayload',
+      }),
+      responses: {
+        200: successResponse({ $ref: '#/components/schemas/ReviewAdminBrandAuthApplyResult' }),
+        400: errorResponse(400, '请填写拒绝原因'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '品牌授权申请不存在'),
       },
     },
   },
@@ -555,41 +628,7 @@ export const adminPaths = {
   '/api/admin/shops/products': {
     get: {
       tags: ['Admin'],
-      summary: '管理台店铺授权商品列表',
-      security: bearerSecurity,
-      responses: {
-        200: successResponse({
-          type: 'object',
-          properties: {
-            items: { type: 'array', items: { type: 'object', additionalProperties: true } },
-            summary: { type: 'object', additionalProperties: true },
-          },
-        }),
-        401: errorResponse(401, '请先登录'),
-      },
-    },
-  },
-  '/api/admin/product-auth': {
-    get: {
-      tags: ['Admin'],
-      summary: '管理台商品授权列表',
-      security: bearerSecurity,
-      responses: {
-        200: successResponse({
-          type: 'object',
-          properties: {
-            items: { type: 'array', items: { type: 'object', additionalProperties: true } },
-            summary: { type: 'object', additionalProperties: true },
-          },
-        }),
-        401: errorResponse(401, '请先登录'),
-      },
-    },
-  },
-  '/api/admin/product-auth/records': {
-    get: {
-      tags: ['Admin'],
-      summary: '管理台商品授权记录',
+      summary: '管理台店铺商品列表',
       security: bearerSecurity,
       responses: {
         200: successResponse({
@@ -620,6 +659,19 @@ export const adminPaths = {
         401: errorResponse(401, '请先登录'),
       },
     },
+    post: {
+      tags: ['Admin'],
+      summary: '发送通知',
+      security: bearerSecurity,
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/CreateAdminNotificationPayload',
+      }),
+      responses: {
+        200: successResponse({ $ref: '#/components/schemas/CreateAdminNotificationResult' }),
+        400: errorResponse(400, '通知标题不能为空'),
+        401: errorResponse(401, '请先登录'),
+      },
+    },
   },
   '/api/admin/chats': {
     get: {
@@ -636,6 +688,23 @@ export const adminPaths = {
           },
         }),
         401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
+  '/api/admin/shops/{id}/status': {
+    put: {
+      tags: ['Admin'],
+      summary: '更新店铺状态',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '店铺 ID')],
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/UpdateAdminShopStatusPayload',
+      }),
+      responses: {
+        200: successResponse({ $ref: '#/components/schemas/UpdateAdminShopStatusResult' }),
+        400: errorResponse(400, '更新店铺状态失败'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '店铺不存在'),
       },
     },
   },
@@ -711,6 +780,36 @@ export const adminPaths = {
       responses: {
         200: successResponse({ $ref: '#/components/schemas/AdminRoleListResult' }),
         401: errorResponse(401, '请先登录'),
+      },
+    },
+    post: {
+      tags: ['Admin'],
+      summary: '新增角色',
+      security: bearerSecurity,
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/CreateAdminRolePayload',
+      }),
+      responses: {
+        200: successResponse({ $ref: '#/components/schemas/CreateAdminRoleResult' }),
+        400: errorResponse(400, '角色编码不能为空'),
+        401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
+  '/api/admin/roles/{id}': {
+    put: {
+      tags: ['Admin'],
+      summary: '更新角色基础信息',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '角色 ID')],
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/UpdateAdminRolePayload',
+      }),
+      responses: {
+        200: successResponse({ $ref: '#/components/schemas/UpdateAdminRoleResult' }),
+        400: errorResponse(400, '角色编码不能为空'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '角色不存在'),
       },
     },
   },

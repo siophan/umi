@@ -10,6 +10,8 @@ function buildAdminUserFilterWhere(query: AdminUserListQuery) {
   const conditions: string[] = [];
   const params: Array<string | number> = [];
   const keyword = query.keyword?.trim();
+  const phone = query.phone?.trim();
+  const shopName = query.shopName?.trim();
 
   if (keyword) {
     const like = `%${keyword}%`;
@@ -19,10 +21,20 @@ function buildAdminUserFilterWhere(query: AdminUserListQuery) {
     params.push(like, like, like, like, like);
   }
 
+  if (phone) {
+    conditions.push(`source.phone_number LIKE ?`);
+    params.push(`%${phone}%`);
+  }
+
+  if (shopName) {
+    conditions.push(`source.shop_name LIKE ?`);
+    params.push(`%${shopName}%`);
+  }
+
   if (query.role === 'user') {
-    conditions.push(`source.shop_verified = 0 AND (source.shop_name IS NULL OR source.shop_name = '')`);
+    conditions.push(`source.shop_verified = 0`);
   } else if (query.role === 'shop_owner') {
-    conditions.push(`(source.shop_verified > 0 OR (source.shop_name IS NOT NULL AND source.shop_name <> ''))`);
+    conditions.push(`source.shop_verified > 0`);
   } else if (query.role === 'banned') {
     conditions.push(`source.banned > 0`);
   }

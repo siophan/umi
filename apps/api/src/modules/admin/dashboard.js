@@ -7,7 +7,6 @@ const ORDER_PAID = 20;
 const ORDER_FULFILLED = 30;
 const ORDER_REFUNDED = 90;
 const SHOP_APPLY_PENDING = 10;
-const BRAND_APPLY_PENDING = 10;
 const REFUND_PENDING = 10;
 const REFUND_REVIEWING = 20;
 const REPORT_PENDING = 10;
@@ -40,7 +39,7 @@ function mapProductStatus(code) {
 export async function getAdminDashboardStats() {
     const db = getDbPool();
     const todayStart = startOfDay(new Date());
-    const [[userRows], [productRows], [activeGuessRows], [orderRows], [todayUserRows], [todayBetRows], [todayOrderRows], [todayGmvRows], [orderDistributionRows], [guessCategoryRows], [hotGuessRows], [hotProductRows], [pendingGuessRows], [pendingShopApplyRows], [pendingBrandApplyRows], [pendingRefundRows], [pendingReportRows],] = await Promise.all([
+    const [[userRows], [productRows], [activeGuessRows], [orderRows], [todayUserRows], [todayBetRows], [todayOrderRows], [todayGmvRows], [orderDistributionRows], [guessCategoryRows], [hotGuessRows], [hotProductRows], [pendingGuessRows], [pendingShopApplyRows], [pendingRefundRows], [pendingReportRows],] = await Promise.all([
         db.execute('SELECT COUNT(*) AS total FROM user'),
         db.execute('SELECT COUNT(*) AS total FROM product'),
         db.execute(`
@@ -130,11 +129,6 @@ export async function getAdminDashboardStats() {
       `, [SHOP_APPLY_PENDING]),
         db.execute(`
         SELECT COUNT(*) AS total
-        FROM brand_apply
-        WHERE status = ?
-      `, [BRAND_APPLY_PENDING]),
-        db.execute(`
-        SELECT COUNT(*) AS total
         FROM order_refund
         WHERE status IN (?, ?)
       `, [REFUND_PENDING, REFUND_REVIEWING]),
@@ -199,13 +193,6 @@ export async function getAdminDashboardStats() {
             count: toNumber(pendingShopApplyRows[0]?.total),
             tone: 'processing',
             description: '新店入驻申请待处理。',
-        },
-        {
-            id: 'brand-apply',
-            title: '品牌入驻',
-            count: toNumber(pendingBrandApplyRows[0]?.total),
-            tone: 'processing',
-            description: '品牌方入驻申请待处理。',
         },
         {
             id: 'refund-review',

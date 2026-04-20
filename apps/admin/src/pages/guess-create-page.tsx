@@ -1,16 +1,12 @@
 import type { GuessSummary } from '@umi/shared';
 import { Card, Descriptions, List, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { AdminCategoryItem } from '../lib/api/categories';
 import { fetchAdminCategories } from '../lib/api/categories';
 import type { AdminFriendGuessItem, AdminProduct } from '../lib/api/catalog';
-import {
-  fetchAdminFriendGuesses,
-  fetchAdminGuesses,
-  fetchAdminProducts,
-} from '../lib/api/catalog';
+import { fetchAdminFriendGuesses, fetchAdminGuesses, fetchAdminProducts } from '../lib/api/catalog';
 import { guessReviewStatusMeta, guessStatusMeta } from '../lib/format';
-import { useAsyncPageData } from './shared/admin-page-tools';
 
 interface GuessCreatePageProps {
   refreshToken?: number;
@@ -23,32 +19,41 @@ interface GuessCreatePageData {
   products: AdminProduct[];
 }
 
-const emptyData: GuessCreatePageData = {
-  categories: [],
-  friendGuesses: [],
-  guesses: [],
-  products: [],
-};
+const emptyData: GuessCreatePageData = { categories: [], friendGuesses: [], guesses: [], products: [] };
 
 export function GuessCreatePage({ refreshToken = 0 }: GuessCreatePageProps) {
-  const { data, issue } = useAsyncPageData({
-    deps: [refreshToken],
-    errorMessage: '创建竞猜页数据加载失败',
-    initialData: emptyData,
-    load: async () => {
-      const [guesses, products, categories, friendGuesses] = await Promise.all([
-        fetchAdminGuesses().then((result) => result.items),
-        fetchAdminProducts({ page: 1, pageSize: 100 }).then((result) => result.items),
-        fetchAdminCategories().then((result) => result.items),
-        fetchAdminFriendGuesses().then((result) => result.items),
-      ]);
-      return { categories, friendGuesses, guesses, products };
-    },
-  });
+  const [data, setData] = useState<GuessCreatePageData>(emptyData);
+  const [issue, setIssue] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    async function loadPageData() {
+      setIssue(null);
+      try {
+        const [guesses, products, categories, friendGuesses] = await Promise.all([
+          fetchAdminGuesses().then((result) => result.items),
+          fetchAdminProducts({ page: 1, pageSize: 100 }).then((result) => result.items),
+          fetchAdminCategories().then((result) => result.items),
+          fetchAdminFriendGuesses().then((result) => result.items),
+        ]);
+        if (!alive) return;
+        setData({ categories, friendGuesses, guesses, products });
+      } catch (error) {
+        if (!alive) return;
+        setData(emptyData);
+        setIssue(error instanceof Error ? error.message : '创建竞猜页数据加载失败');
+      }
+    }
+    void loadPageData();
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
 
   const draftCount = data.guesses.filter((item) => item.reviewStatus === 'pending').length;
-  const guessCategories = data.categories.filter(
-    (item) => item.bizType === 'guess' && item.status === 'active',
+  const guessCategories = useMemo(
+    () => data.categories.filter((item) => item.bizType === 'guess' && item.status === 'active'),
+    [data.categories],
   );
 
   return (

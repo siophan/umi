@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { WarehouseItem } from '@umi/shared';
 
@@ -59,6 +59,7 @@ export default function WarehousePage() {
   const [toast, setToast] = useState<string | null>(null);
   const [items, setItems] = useState<WarehouseItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sellItem, setSellItem] = useState<WarehouseItem | null>(null);
   const [sellPrice, setSellPrice] = useState('0');
   const [sellQty, setSellQty] = useState('1');
@@ -72,34 +73,35 @@ export default function WarehousePage() {
     };
   }, []);
 
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadWarehouse() {
-      try {
-        const [virtualData, physicalData] = await Promise.all([fetchVirtualWarehouse(), fetchPhysicalWarehouse()]);
-        if (!ignore) {
-          const merged = [...virtualData.items, ...physicalData.items];
-          setItems(merged.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-        }
-      } catch {
-        if (ignore) {
-          return;
-        }
-        setItems([]);
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+  const loadWarehouse = useCallback(async (shouldIgnore: () => boolean = () => false) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [virtualData, physicalData] = await Promise.all([fetchVirtualWarehouse(), fetchPhysicalWarehouse()]);
+      if (!shouldIgnore()) {
+        const merged = [...virtualData.items, ...physicalData.items];
+        setItems(merged.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      }
+    } catch (loadError) {
+      if (shouldIgnore()) {
+        return;
+      }
+      setError(loadError instanceof Error ? loadError.message : '仓库加载失败，请稍后重试');
+    } finally {
+      if (!shouldIgnore()) {
+        setLoading(false);
       }
     }
+  }, []);
 
-    void loadWarehouse();
+  useEffect(() => {
+    let ignore = false;
+    void loadWarehouse(() => ignore);
 
     return () => {
       ignore = true;
     };
-  }, [pathname, router]);
+  }, [loadWarehouse, pathname]);
 
   const counts = useMemo(
     () =>
@@ -249,10 +251,21 @@ export default function WarehousePage() {
         </section>
 
         <main className={styles.list}>
-          {!loading && filtered.length === 0 ? (
+          {!loading && error ? (
+            <div className={styles.empty}>
+              <div className={styles.emptyIcon}><i className="fa-solid fa-triangle-exclamation" /></div>
+              <div className={styles.emptyText}>仓库加载失败</div>
+              <div className={styles.emptyDesc}>{error}</div>
+              <button className={styles.emptyBtn} type="button" onClick={() => void loadWarehouse()}>
+                <i className="fa-solid fa-rotate-right" />
+                重新加载
+              </button>
+            </div>
+          ) : !loading && filtered.length === 0 ? (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}><i className={emptyMap[tab].icon} /></div>
               <div className={styles.emptyText}>{emptyMap[tab].title}</div>
+              <div className={styles.emptyDesc}>{emptyMap[tab].desc}</div>
             </div>
           ) : (
             filtered.map((item, index) => {
@@ -305,7 +318,7 @@ export default function WarehousePage() {
                                 setItems((current) =>
                                   current.map((entry) =>
                                     entry.id === item.id
-                                      ? { ...entry, status: 'delivered', consignPrice: undefined, estimateDays: undefined }
+                                      ? { ...entry, status: 'stored', consignPrice: undefined, estimateDays: undefined }
                                       : entry,
                                   ),
                                 );

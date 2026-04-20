@@ -21,7 +21,7 @@ const SEARCH_HISTORY_KEY = 'gj_search_history';
 
 type SearchProductItem = ProductFeedItem & {
   salesText: string;
-  ratingText: string;
+  ratingText: string | null;
   tagText: string;
 };
 
@@ -37,11 +37,11 @@ function formatSalesCount(value: number) {
   return value >= 1000 ? `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k` : String(value);
 }
 
-function formatProductItem(item: ProductFeedItem, index: number): SearchProductItem {
+function formatProductItem(item: ProductFeedItem): SearchProductItem {
   return {
     ...item,
     salesText: `${formatSalesCount(item.sales)}已售`,
-    ratingText: (item.rating > 0 ? item.rating : 4.6 + ((index % 4) * 0.1)).toFixed(1),
+    ratingText: item.rating > 0 ? item.rating.toFixed(1) : null,
     tagText: [item.brand, item.category].filter(Boolean).join(' · ') || item.tag,
   };
 }
@@ -172,7 +172,7 @@ function SearchPageInner() {
     fetchSearchResult({ q: keyword, sort, limit: 50 })
       .then((result) => {
         if (cancelled) return;
-        setProducts(result.products.items.map((item, index) => formatProductItem(item, index)));
+        setProducts(result.products.items.map((item) => formatProductItem(item)));
         setGuesses(result.guesses.items.map((item) => formatGuessItem(item)));
         setProductTotal(result.products.total);
         setGuessTotal(result.guesses.total);
@@ -514,7 +514,11 @@ function SearchPageInner() {
                         </div>
                         <div className={styles.productMeta}>
                           <span className={styles.productSales}>{item.salesText}</span>
-                          <span className={styles.productRating}>★ {item.ratingText}</span>
+                          {item.ratingText ? (
+                            <span className={styles.productRating}>★ {item.ratingText}</span>
+                          ) : (
+                            <span className={styles.productRatingEmpty}>暂无评分</span>
+                          )}
                         </div>
                         <div className={styles.productTag}>{item.tagText}</div>
                       </div>

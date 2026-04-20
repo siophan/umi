@@ -16,8 +16,13 @@ async function fetchServerLiveList() {
 
 export default async function LivesPage() {
   try {
-    return <LivesPageClient initialItems={await fetchServerLiveList()} />;
-  } catch {
-    return <LivesPageClient initialItems={[]} />;
+    return <LivesPageClient initialItems={await fetchServerLiveList()} initialError={null} />;
+  } catch (error) {
+    return (
+      <LivesPageClient
+        initialItems={[]}
+        initialError={error instanceof Error ? error.message : '直播列表加载失败，请稍后重试'}
+      />
+    );
   }
 }

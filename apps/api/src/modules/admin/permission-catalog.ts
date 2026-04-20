@@ -15,6 +15,11 @@ const ACTION_CODE_MAP = {
 } as const;
 
 const PERMISSION_STATUS_ACTIVE = 10;
+const OBSOLETE_PERMISSION_CODES = [
+  'brand.apply.view',
+  'product.auth.list.view',
+  'product.auth.records.view',
+] as const;
 
 type ExistingPermissionRow = {
   id: number | string;
@@ -47,6 +52,34 @@ async function fetchPermissionsByCodes(
   );
 
   return rows as ExistingPermissionRow[];
+}
+
+async function deletePermissionsByCodes(
+  connection: mysql.PoolConnection,
+  codes: readonly string[],
+) {
+  if (codes.length === 0) {
+    return;
+  }
+
+  const placeholders = codes.map(() => '?').join(', ');
+  await connection.execute(
+    `
+      DELETE arp
+      FROM admin_role_permission arp
+      INNER JOIN admin_permission ap ON ap.id = arp.permission_id
+      WHERE ap.code IN (${placeholders})
+    `,
+    [...codes],
+  );
+
+  await connection.execute(
+    `
+      DELETE FROM admin_permission
+      WHERE code IN (${placeholders})
+    `,
+    [...codes],
+  );
 }
 
 async function fetchRoleIdsByPermissionCodes(
@@ -84,6 +117,8 @@ async function syncAdminPermissionCatalog() {
 
   try {
     await connection.beginTransaction();
+
+    await deletePermissionsByCodes(connection, OBSOLETE_PERMISSION_CODES);
 
     const existingPermissions = await fetchPermissionsByCodes(
       connection,

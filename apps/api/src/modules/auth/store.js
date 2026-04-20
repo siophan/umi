@@ -75,12 +75,16 @@ async function updateUserPassword(userId, password) {
     const db = getDbPool();
     await db.execute(`UPDATE user SET password = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?`, [password, userId]);
 }
-async function createUserProfile(userId, name) {
+async function clearUserSessions(userId) {
+    const db = getDbPool();
+    await db.execute(`DELETE FROM auth_session WHERE user_id = ?`, [userId]);
+}
+async function createUserProfile(userId, name, avatar) {
     const db = getDbPool();
     await db.execute(`
-      INSERT INTO user_profile (user_id, name, created_at, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
-    `, [userId, name]);
+      INSERT INTO user_profile (user_id, name, avatar_url, created_at, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+    `, [userId, name, avatar ?? null]);
 }
 async function createSession(user) {
     await cleanupExpiredSessions();
@@ -226,12 +230,27 @@ export async function register(payload) {
         achievements
       ) VALUES (?, ?, ?, JSON_ARRAY())
     `, [uidCode, payload.phone, hashedPassword]);
-    await createUserProfile(result.insertId, payload.name.trim());
+    await createUserProfile(result.insertId, payload.name.trim(), payload.avatar);
     const user = await findUserById(result.insertId);
     if (!user) {
         throw new Error('注册成功后读取用户失败');
     }
     return createSession(user);
+}
+export async function resetPassword(payload) {
+    requireValidPhone(payload.phone);
+    if (!payload.newPassword || payload.newPassword.length < 6) {
+        throw new Error('新密码长度至少6位');
+    }
+    const user = await findUserByPhone(payload.phone);
+    if (!user) {
+        throw new Error('用户不存在');
+    }
+    await requireCode(payload.phone, payload.code, 'reset_password');
+    const hashedPassword = await bcrypt.hash(payload.newPassword, 10);
+    await updateUserPassword(String(user.id), hashedPassword);
+    await clearUserSessions(String(user.id));
+    return { success: true };
 }
 export async function changePassword(userId, payload) {
     const user = await findUserById(userId);

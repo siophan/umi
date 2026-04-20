@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+import { toEntityId } from '@umi/shared';
 import { getDbPool } from '../../lib/db';
 const STATUS_PENDING = 10;
 const STATUS_APPROVED = 30;
@@ -19,6 +21,9 @@ const AUTH_TYPE_TRIAL = 30;
 const AUTH_SCOPE_ALL_BRAND = 10;
 const AUTH_SCOPE_CATEGORY_ONLY = 20;
 const AUTH_SCOPE_PRODUCT_ONLY = 30;
+function createNo(prefix) {
+    return `${prefix}${randomBytes(6).toString('hex')}`;
+}
 function toId(value) {
     return value == null ? null : String(value);
 }
@@ -41,6 +46,35 @@ function parseJsonValue(value) {
         }
     }
     return value;
+}
+function collectScopeEntityIds(scopeValue) {
+    const ids = new Set();
+    function visit(value) {
+        if (value == null) {
+            return;
+        }
+        if (Array.isArray(value)) {
+            value.forEach(visit);
+            return;
+        }
+        if (typeof value === 'number' || typeof value === 'string') {
+            const parsed = Number(value);
+            if (Number.isInteger(parsed) && parsed > 0) {
+                ids.add(parsed);
+            }
+            return;
+        }
+        if (typeof value === 'object') {
+            const record = value;
+            for (const key of ['id', 'value', 'productId', 'brandProductId', 'categoryId']) {
+                if (key in record) {
+                    visit(record[key]);
+                }
+            }
+        }
+    }
+    visit(scopeValue);
+    return Array.from(ids);
 }
 function buildUserDisplayName(name, phone) {
     if (name?.trim()) {
@@ -125,6 +159,30 @@ function summarizeByKey(items, key) {
         counts.set(value, (counts.get(value) ?? 0) + 1);
     }
     return Object.fromEntries(counts);
+}
+function normalizeReviewStatus(status) {
+    if (status === 'approved' || status === 'rejected') {
+        return status;
+    }
+    throw new Error('审核状态不合法');
+}
+function normalizeRejectReason(status, rejectReason) {
+    const value = rejectReason?.trim() ?? '';
+    if (status === 'rejected' && !value) {
+        throw new Error('请填写拒绝原因');
+    }
+    return value ? value.slice(0, 200) : null;
+}
+function ensurePendingReview(status) {
+    if (Number(status ?? 0) !== STATUS_PENDING) {
+        throw new Error('申请已审核');
+    }
+}
+function normalizeBrandStatus(status) {
+    if (status === 'disabled') {
+        return BRAND_STATUS_DISABLED;
+    }
+    return BRAND_STATUS_ACTIVE;
 }
 async function listBrandAuthRecordsInternal() {
     const db = getDbPool();
@@ -257,6 +315,250 @@ export async function getAdminShops() {
         },
     };
 }
+export async function getAdminShopDetail(shopId) {
+    const db = getDbPool();
+    const [shopRows] = await db.execute(`
+      SELECT
+        s.id,
+        s.user_id,
+        s.name,
+        up.name AS owner_name,
+        u.phone_number AS owner_phone,
+        c.name AS category_name,
+        s.status,
+        s.description,
+        COALESCE(pc.product_count, 0) AS product_count,
+        COALESCE(oc.order_count, 0) AS order_count,
+        ROUND(COALESCE(rc.avg_rating, 0), 2) AS avg_rating,
+        COALESCE(ac.brand_auth_count, 0) AS brand_auth_count,
+        COALESCE(pc.total_sales, 0) AS total_sales,
+        s.created_at,
+        s.updated_at
+      FROM shop s
+      LEFT JOIN user u ON u.id = s.user_id
+      LEFT JOIN user_profile up ON up.user_id = u.id
+      LEFT JOIN category c ON c.id = s.category_id
+      LEFT JOIN (
+        SELECT shop_id, COUNT(*) AS product_count, COALESCE(SUM(sales), 0) AS total_sales
+        FROM product
+        GROUP BY shop_id
+      ) pc ON pc.shop_id = s.id
+      LEFT JOIN (
+        SELECT shop_id, COUNT(*) AS order_count
+        FROM fulfillment_order
+        GROUP BY shop_id
+      ) oc ON oc.shop_id = s.id
+      LEFT JOIN (
+        SELECT shop_id, AVG(rating) AS avg_rating
+        FROM product
+        GROUP BY shop_id
+      ) rc ON rc.shop_id = s.id
+      LEFT JOIN (
+        SELECT shop_id, COUNT(*) AS brand_auth_count
+        FROM shop_brand_auth
+        WHERE status = ?
+        GROUP BY shop_id
+      ) ac ON ac.shop_id = s.id
+      WHERE s.id = ?
+      LIMIT 1
+    `, [AUTH_STATUS_ACTIVE, shopId]);
+    const shop = shopRows[0];
+    if (!shop) {
+        return null;
+    }
+    const [productRows, orderRows, guessRows, brandAuthRows] = await Promise.all([
+        db.execute(`
+        SELECT
+          p.id,
+          p.name,
+          b.name AS brand_name,
+          p.price,
+          p.original_price,
+          p.sales,
+          p.stock,
+          p.frozen_stock,
+          p.status,
+          p.created_at,
+          p.updated_at
+        FROM product p
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+        LEFT JOIN brand b ON b.id = bp.brand_id
+        WHERE p.shop_id = ?
+        ORDER BY p.created_at DESC, p.id DESC
+        LIMIT 50
+      `, [shopId]),
+        db.execute(`
+        SELECT
+          o.id,
+          o.order_sn,
+          up.name AS buyer_name,
+          u.phone_number AS buyer_phone,
+          o.amount,
+          o.status,
+          o.created_at
+        FROM \`order\` o
+        LEFT JOIN user u ON u.id = o.user_id
+        LEFT JOIN user_profile up ON up.user_id = u.id
+        WHERE o.shop_id = ?
+        ORDER BY o.created_at DESC, o.id DESC
+        LIMIT 50
+      `, [shopId]),
+        db.execute(`
+        SELECT
+          g.id,
+          g.title,
+          g.status,
+          g.end_time,
+          g.created_at,
+          COALESCE(bc.bet_count, 0) AS bet_count
+        FROM guess_product gp
+        INNER JOIN \`guess\` g ON g.id = gp.guess_id
+        LEFT JOIN (
+          SELECT guess_id, COUNT(*) AS bet_count
+          FROM guess_bet
+          GROUP BY guess_id
+        ) bc ON bc.guess_id = g.id
+        WHERE gp.shop_id = ?
+        GROUP BY g.id, g.title, g.status, g.end_time, g.created_at, bc.bet_count
+        ORDER BY g.created_at DESC, g.id DESC
+        LIMIT 50
+      `, [shopId]),
+        db.execute(`
+        SELECT
+          sba.id,
+          sba.auth_no,
+          sba.brand_id,
+          b.name AS brand_name,
+          sba.auth_type,
+          sba.auth_scope,
+          sba.status,
+          sba.granted_at,
+          sba.expire_at
+        FROM shop_brand_auth sba
+        LEFT JOIN brand b ON b.id = sba.brand_id
+        WHERE sba.shop_id = ?
+        ORDER BY sba.created_at DESC, sba.id DESC
+        LIMIT 50
+      `, [shopId]),
+    ]);
+    const shopStatus = mapShopStatus(shop.status);
+    return {
+        shop: {
+            id: toEntityId(shop.id),
+            name: shop.name,
+            ownerId: toEntityId(shop.user_id),
+            ownerName: buildUserDisplayName(shop.owner_name, shop.owner_phone),
+            ownerPhone: shop.owner_phone ?? null,
+            category: shop.category_name ?? null,
+            status: shopStatus.key,
+            statusLabel: shopStatus.label,
+            description: shop.description ?? null,
+            products: toNumber(shop.product_count),
+            orders: toNumber(shop.order_count),
+            score: Number(toNumber(shop.avg_rating).toFixed(2)),
+            brandAuthCount: toNumber(shop.brand_auth_count),
+            totalSales: toNumber(shop.total_sales),
+            createdAt: toIso(shop.created_at),
+            updatedAt: toIso(shop.updated_at),
+        },
+        products: productRows[0].map((row) => {
+            const status = mapProductStatus(row.status);
+            return {
+                id: toEntityId(row.id),
+                name: row.name,
+                brandName: row.brand_name ?? null,
+                price: toNumber(row.price) / 100,
+                originalPrice: toNumber(row.original_price ?? row.price) / 100,
+                sales: toNumber(row.sales),
+                stock: toNumber(row.stock),
+                frozenStock: toNumber(row.frozen_stock),
+                status: status.key,
+                statusLabel: status.label,
+                createdAt: toIso(row.created_at),
+                updatedAt: toIso(row.updated_at),
+            };
+        }),
+        orders: orderRows[0].map((row) => ({
+            id: toEntityId(row.id),
+            orderNo: row.order_sn,
+            buyerName: buildUserDisplayName(row.buyer_name, row.buyer_phone),
+            amount: toNumber(row.amount) / 100,
+            statusCode: toNumber(row.status),
+            createdAt: toIso(row.created_at),
+        })),
+        guesses: guessRows[0].map((row) => ({
+            id: toEntityId(row.id),
+            title: row.title,
+            statusCode: toNumber(row.status),
+            endTime: toIso(row.end_time),
+            betCount: toNumber(row.bet_count),
+            createdAt: toIso(row.created_at),
+        })),
+        brandAuths: brandAuthRows[0].map((row) => {
+            const authType = mapAuthType(row.auth_type);
+            const authScope = mapAuthScope(row.auth_scope);
+            const status = mapAuthStatus(row.status);
+            return {
+                id: toEntityId(row.id),
+                authNo: row.auth_no,
+                brandId: toEntityId(row.brand_id),
+                brandName: row.brand_name ?? '未知品牌',
+                authTypeLabel: authType.label,
+                authScopeLabel: authScope.label,
+                status: status.key,
+                statusLabel: status.label,
+                grantedAt: toIso(row.granted_at),
+                expireAt: toIso(row.expire_at),
+            };
+        }),
+    };
+}
+export async function updateAdminShopStatus(shopId, payload) {
+    const targetStatus = payload.status === 'paused'
+        ? SHOP_STATUS_PAUSED
+        : payload.status === 'closed'
+            ? SHOP_STATUS_CLOSED
+            : SHOP_STATUS_ACTIVE;
+    const db = getDbPool();
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [rows] = await connection.execute(`
+        SELECT id, status
+        FROM shop
+        WHERE id = ?
+        LIMIT 1
+      `, [shopId]);
+        const shop = rows[0];
+        if (!shop) {
+            throw new Error('店铺不存在');
+        }
+        await connection.execute(`
+        UPDATE shop
+        SET status = ?, updated_at = NOW()
+        WHERE id = ?
+      `, [targetStatus, shopId]);
+        if (targetStatus === SHOP_STATUS_CLOSED) {
+            await connection.execute(`
+          UPDATE product
+          SET status = ?, updated_at = NOW()
+          WHERE shop_id = ? AND status = ?
+        `, [PRODUCT_STATUS_OFF_SHELF, shopId, PRODUCT_STATUS_ACTIVE]);
+        }
+        await connection.commit();
+        return {
+            id: toEntityId(shop.id),
+            status: payload.status,
+        };
+    }
+    catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally {
+        connection.release();
+    }
+}
 export async function getAdminShopApplies() {
     const db = getDbPool();
     const [rows] = await db.execute(`
@@ -295,56 +597,6 @@ export async function getAdminShopApplies() {
             rejectReason: row.reject_reason ?? null,
             reviewedAt: toIso(row.reviewed_at),
             submittedAt: toIso(row.created_at),
-        };
-    });
-    return {
-        items,
-        summary: {
-            total: items.length,
-            byStatus: summarizeByKey(items, 'status'),
-        },
-    };
-}
-export async function getAdminBrandApplies() {
-    const db = getDbPool();
-    const [rows] = await db.execute(`
-      SELECT
-        ba.id,
-        ba.apply_no,
-        ba.brand_name,
-        c.name AS category_name,
-        ba.contact_name,
-        ba.contact_phone,
-        ba.license,
-        ba.deposit,
-        ba.reason,
-        ba.status,
-        ba.reject_reason,
-        ba.reviewed_at,
-        ba.brand_id,
-        ba.created_at
-      FROM brand_apply ba
-      LEFT JOIN category c ON c.id = ba.category_id
-      ORDER BY ba.created_at DESC, ba.id DESC
-    `);
-    const items = rows.map((row) => {
-        const status = mapReviewStatus(row.status);
-        return {
-            id: String(row.id),
-            applyNo: row.apply_no,
-            name: row.brand_name,
-            category: row.category_name ?? null,
-            applicant: row.contact_name ?? null,
-            contactPhone: row.contact_phone ?? null,
-            license: row.license ?? null,
-            deposit: toNumber(row.deposit),
-            reason: row.reason ?? null,
-            status: status.key,
-            statusLabel: status.label,
-            rejectReason: row.reject_reason ?? null,
-            reviewedAt: toIso(row.reviewed_at),
-            submittedAt: toIso(row.created_at),
-            brandId: toId(row.brand_id),
         };
     });
     return {
@@ -419,6 +671,313 @@ export async function getAdminBrandAuthRecords() {
         },
     };
 }
+export async function reviewAdminShopApply(applyId, payload) {
+    const status = normalizeReviewStatus(payload.status);
+    const rejectReason = normalizeRejectReason(status, payload.rejectReason);
+    const db = getDbPool();
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [applyRows] = await connection.execute(`
+        SELECT id, user_id, shop_name, category_id, status
+        FROM shop_apply
+        WHERE id = ?
+        LIMIT 1
+      `, [applyId]);
+        const apply = applyRows[0];
+        if (!apply) {
+            throw new Error('开店申请不存在');
+        }
+        ensurePendingReview(apply.status);
+        if (status === 'approved') {
+            const [shopRows] = await connection.execute(`
+          SELECT id
+          FROM shop
+          WHERE user_id = ?
+          ORDER BY CASE WHEN status = ${SHOP_STATUS_ACTIVE} THEN 0 ELSE 1 END, id DESC
+          LIMIT 1
+        `, [apply.user_id]);
+            const shop = shopRows[0];
+            if (shop?.id) {
+                await connection.execute(`
+            UPDATE shop
+            SET
+              name = ?,
+              category_id = ?,
+              status = ?,
+              updated_at = CURRENT_TIMESTAMP(3)
+            WHERE id = ?
+          `, [apply.shop_name, apply.category_id, SHOP_STATUS_ACTIVE, shop.id]);
+            }
+            else {
+                await connection.execute(`
+            INSERT INTO shop (
+              user_id,
+              name,
+              category_id,
+              status,
+              created_at,
+              updated_at
+            ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+          `, [apply.user_id, apply.shop_name, apply.category_id, SHOP_STATUS_ACTIVE]);
+            }
+        }
+        await connection.execute(`
+        UPDATE shop_apply
+        SET
+          status = ?,
+          reject_reason = ?,
+          reviewed_at = CURRENT_TIMESTAMP(3),
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+      `, [status === 'approved' ? STATUS_APPROVED : STATUS_REJECTED, rejectReason, applyId]);
+        await connection.commit();
+        return { id: toEntityId(apply.id), status };
+    }
+    catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally {
+        connection.release();
+    }
+}
+export async function createAdminBrand(payload) {
+    const name = payload.name.trim();
+    const contactName = payload.contactName?.trim() || null;
+    const contactPhone = payload.contactPhone?.trim() || null;
+    const description = payload.description?.trim() || null;
+    const categoryId = payload.categoryId;
+    if (!name) {
+        throw new Error('品牌名称不能为空');
+    }
+    if (!categoryId) {
+        throw new Error('请选择类目');
+    }
+    const db = getDbPool();
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [categoryRows] = await connection.execute(`
+        SELECT id
+        FROM category
+        WHERE id = ?
+          AND biz_type = 10
+        LIMIT 1
+      `, [categoryId]);
+        if (categoryRows.length === 0) {
+            throw new Error('品牌类目不存在');
+        }
+        const [duplicateRows] = await connection.execute(`
+        SELECT id
+        FROM brand
+        WHERE name = ?
+        LIMIT 1
+      `, [name]);
+        if (duplicateRows.length > 0) {
+            throw new Error('品牌名称已存在');
+        }
+        const [result] = await connection.execute(`
+        INSERT INTO brand (
+          name,
+          category_id,
+          contact_name,
+          contact_phone,
+          description,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      `, [
+            name,
+            categoryId,
+            contactName,
+            contactPhone,
+            description,
+            normalizeBrandStatus(payload.status),
+        ]);
+        await connection.commit();
+        return { id: toEntityId(result.insertId) };
+    }
+    catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally {
+        connection.release();
+    }
+}
+export async function updateAdminBrand(brandId, payload) {
+    const name = payload.name.trim();
+    const contactName = payload.contactName?.trim() || null;
+    const contactPhone = payload.contactPhone?.trim() || null;
+    const description = payload.description?.trim() || null;
+    const categoryId = payload.categoryId;
+    if (!name) {
+        throw new Error('品牌名称不能为空');
+    }
+    if (!categoryId) {
+        throw new Error('请选择类目');
+    }
+    const db = getDbPool();
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [brandRows] = await connection.execute(`
+        SELECT id
+        FROM brand
+        WHERE id = ?
+        LIMIT 1
+      `, [brandId]);
+        if (brandRows.length === 0) {
+            throw new Error('品牌不存在');
+        }
+        const [categoryRows] = await connection.execute(`
+        SELECT id
+        FROM category
+        WHERE id = ?
+          AND biz_type = 10
+        LIMIT 1
+      `, [categoryId]);
+        if (categoryRows.length === 0) {
+            throw new Error('品牌类目不存在');
+        }
+        const [duplicateRows] = await connection.execute(`
+        SELECT id
+        FROM brand
+        WHERE name = ?
+          AND id <> ?
+        LIMIT 1
+      `, [name, brandId]);
+        if (duplicateRows.length > 0) {
+            throw new Error('品牌名称已存在');
+        }
+        await connection.execute(`
+        UPDATE brand
+        SET
+          name = ?,
+          category_id = ?,
+          contact_name = ?,
+          contact_phone = ?,
+          description = ?,
+          status = ?,
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+      `, [
+            name,
+            categoryId,
+            contactName,
+            contactPhone,
+            description,
+            normalizeBrandStatus(payload.status),
+            brandId,
+        ]);
+        await connection.commit();
+        return { id: toEntityId(brandId) };
+    }
+    catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally {
+        connection.release();
+    }
+}
+export async function reviewAdminBrandAuthApply(applyId, payload) {
+    const status = normalizeReviewStatus(payload.status);
+    const rejectReason = normalizeRejectReason(status, payload.rejectReason);
+    const db = getDbPool();
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [applyRows] = await connection.execute(`
+        SELECT id, shop_id, brand_id, status
+        FROM shop_brand_auth_apply
+        WHERE id = ?
+        LIMIT 1
+      `, [applyId]);
+        const apply = applyRows[0];
+        if (!apply) {
+            throw new Error('品牌授权申请不存在');
+        }
+        ensurePendingReview(apply.status);
+        if (status === 'approved') {
+            const [authRows] = await connection.execute(`
+          SELECT id
+          FROM shop_brand_auth
+          WHERE shop_id = ?
+            AND brand_id = ?
+          ORDER BY CASE WHEN status = ${AUTH_STATUS_ACTIVE} THEN 0 ELSE 1 END, id DESC
+          LIMIT 1
+        `, [apply.shop_id, apply.brand_id]);
+            const auth = authRows[0];
+            if (auth?.id) {
+                await connection.execute(`
+            UPDATE shop_brand_auth
+            SET
+              auth_type = ?,
+              auth_scope = ?,
+              scope_value = NULL,
+              status = ?,
+              granted_at = CURRENT_TIMESTAMP(3),
+              expire_at = NULL,
+              expired_at = NULL,
+              updated_at = CURRENT_TIMESTAMP(3)
+            WHERE id = ?
+          `, [
+                    AUTH_TYPE_NORMAL,
+                    AUTH_SCOPE_ALL_BRAND,
+                    AUTH_STATUS_ACTIVE,
+                    auth.id,
+                ]);
+            }
+            else {
+                await connection.execute(`
+            INSERT INTO shop_brand_auth (
+              auth_no,
+              shop_id,
+              brand_id,
+              auth_type,
+              auth_scope,
+              scope_value,
+              status,
+              granted_at,
+              expire_at,
+              expired_at,
+              created_at,
+              updated_at
+            ) VALUES (?, ?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP(3), NULL, NULL, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+          `, [
+                    createNo('SBA'),
+                    apply.shop_id,
+                    apply.brand_id,
+                    AUTH_TYPE_NORMAL,
+                    AUTH_SCOPE_ALL_BRAND,
+                    AUTH_STATUS_ACTIVE,
+                ]);
+            }
+        }
+        await connection.execute(`
+        UPDATE shop_brand_auth_apply
+        SET
+          status = ?,
+          reject_reason = ?,
+          reviewed_at = CURRENT_TIMESTAMP(3),
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+      `, [status === 'approved' ? STATUS_APPROVED : STATUS_REJECTED, rejectReason, applyId]);
+        await connection.commit();
+        return { id: toEntityId(apply.id), status };
+    }
+    catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally {
+        connection.release();
+    }
+}
 export async function getAdminShopProducts() {
     const db = getDbPool();
     const [rows] = await db.execute(`
@@ -448,6 +1007,8 @@ export async function getAdminShopProducts() {
     `);
     const items = rows.map((row) => {
         const status = mapProductStatus(row.status);
+        const stock = toNumber(row.stock);
+        const frozenStock = toNumber(row.frozen_stock);
         return {
             id: String(row.id),
             shopId: toId(row.shop_id),
@@ -458,8 +1019,9 @@ export async function getAdminShopProducts() {
             productName: row.product_name,
             status: status.key,
             statusLabel: status.label,
-            stock: toNumber(row.stock),
-            frozenStock: toNumber(row.frozen_stock),
+            stock,
+            availableStock: Math.max(0, stock - frozenStock),
+            frozenStock,
             sales: toNumber(row.sales),
             price: toNumber(row.price),
             originalPrice: toNumber(row.original_price),
@@ -484,6 +1046,7 @@ export async function getAdminBrands() {
         b.id,
         b.name,
         b.logo_url,
+        b.category_id,
         c.name AS category_name,
         b.contact_name,
         b.contact_phone,
@@ -514,6 +1077,7 @@ export async function getAdminBrands() {
             id: String(row.id),
             name: row.name,
             logoUrl: row.logo_url ?? null,
+            categoryId: toId(row.category_id),
             category: row.category_name ?? null,
             contactName: row.contact_name ?? null,
             contactPhone: row.contact_phone ?? null,
@@ -526,58 +1090,6 @@ export async function getAdminBrands() {
             updatedAt: toIso(row.updated_at),
         };
     });
-    return {
-        items,
-        summary: {
-            total: items.length,
-            byStatus: summarizeByKey(items, 'status'),
-        },
-    };
-}
-export async function getAdminProductAuthRows() {
-    const items = (await listBrandAuthRecordsInternal())
-        .filter((item) => item.authScope === 'product_only')
-        .map((item) => ({
-        id: item.id,
-        authNo: item.authNo,
-        brandId: item.brandId,
-        brandName: item.brandName,
-        shopId: item.shopId,
-        shopName: item.shopName,
-        mode: item.authType,
-        modeLabel: item.authTypeLabel,
-        status: item.status,
-        statusLabel: item.statusLabel,
-        grantedAt: item.grantedAt,
-        expireAt: item.expireAt,
-        productName: null,
-        scopeValue: item.scopeValue,
-    }));
-    return {
-        items,
-        summary: {
-            total: items.length,
-            byStatus: summarizeByKey(items, 'status'),
-        },
-    };
-}
-export async function getAdminProductAuthRecords() {
-    const items = (await listBrandAuthRecordsInternal())
-        .filter((item) => item.authScope === 'product_only')
-        .map((item) => ({
-        id: item.id,
-        authNo: item.authNo,
-        subject: item.subject,
-        mode: item.authType,
-        modeLabel: item.authTypeLabel,
-        status: item.status,
-        statusLabel: item.statusLabel,
-        operatorName: item.operatorName,
-        createdAt: item.createdAt,
-        grantedAt: item.grantedAt,
-        expireAt: item.expireAt,
-        scopeValue: item.scopeValue,
-    }));
     return {
         items,
         summary: {

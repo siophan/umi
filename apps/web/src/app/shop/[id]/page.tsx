@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { fetchShopDetail } from '../../../lib/api/shops';
 import styles from './page.module.css';
 
@@ -34,9 +34,10 @@ function createInitialsAvatar(seed: string) {
 function ShopDetailPageInner() {
   const routeParams = useParams<{ id: string }>();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [shopData, setShopData] = useState<Awaited<ReturnType<typeof fetchShopDetail>> | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
   const [tab, setTab] = useState<TabKey>('all');
   const [filter, setFilter] = useState<FilterKey>('default');
   const [followed, setFollowed] = useState(false);
@@ -65,14 +66,20 @@ function ShopDetailPageInner() {
     let ignore = false;
 
     async function load() {
+      if (!ignore) {
+        setLoading(true);
+        setLoadError('');
+      }
+
       try {
         const result = await fetchShopDetail(shopId);
         if (!ignore) {
           setShopData(result);
         }
-      } catch {
+      } catch (error) {
         if (!ignore) {
           setShopData(null);
+          setLoadError(error instanceof Error ? error.message : '店铺详情加载失败，请稍后重试');
         }
       } finally {
         if (!ignore) {
@@ -85,7 +92,7 @@ function ShopDetailPageInner() {
     return () => {
       ignore = true;
     };
-  }, [shopId]);
+  }, [reloadToken, shopId]);
 
   const meta = shopData?.shop
     ? {
@@ -97,16 +104,10 @@ function ShopDetailPageInner() {
           shopData.shop.brandAuthCount > 8
             ? '至尊商家'
             : shopData.shop.brandAuthCount > 3
-              ? '皇冠商家'
+            ? '皇冠商家'
               : '金牌商家',
       }
-    : {
-        full: decodeURIComponent(searchParams.get('brand') || shopId || '店铺'),
-        desc: '品质保证 · 正品行货',
-        city: '中国',
-        fans: '0',
-        grade: '金牌商家',
-      };
+    : null;
 
   const shopProducts = useMemo(
     () => shopData?.products || [],
@@ -148,48 +149,15 @@ function ShopDetailPageInner() {
     .slice(0, 8);
   const newProducts = [...shopProducts].reverse().slice(0, 6);
 
-  const openedYear = useMemo(() => {
-    const years = shopProducts
-      .map((item) => new Date(item.createdAt).getFullYear())
-      .filter((value) => Number.isFinite(value));
-    return years.length ? `${Math.min(...years)}年` : '2020年';
-  }, [shopProducts]);
-
-  const logoSrc = shopData?.shop?.logo || shopProducts[0]?.img || '/legacy/images/products/p001-lays.jpg';
-  const heroAvatarSrc = useMemo(() => createInitialsAvatar(meta.full), [meta.full]);
-
-  const scoreQuality = useMemo(() => {
-    const base = shopProducts.length ? Number(avgRating) : 4.7;
-    return Math.min(4.9, Math.max(4.3, base - 0.1)).toFixed(1);
-  }, [avgRating, shopProducts.length]);
-
-  const scoreShipping = useMemo(() => {
-    const base = shopProducts.length ? Number(avgRating) : 4.8;
-    return Math.min(4.9, Math.max(4.2, base)).toFixed(1);
-  }, [avgRating, shopProducts.length]);
-
-  const scoreService = useMemo(() => {
-    const base = shopProducts.length ? Number(avgRating) : 4.9;
-    return Math.min(4.9, Math.max(4.4, base + 0.1)).toFixed(1);
-  }, [avgRating, shopProducts.length]);
-
-  const scoreAverage = useMemo(() => {
-    return (
-      (Number(scoreQuality) + Number(scoreShipping) + Number(scoreService)) /
-      3
-    ).toFixed(1);
-  }, [scoreQuality, scoreService, scoreShipping]);
-
-  const scoreCircumference = 2 * Math.PI * 22;
-  const scoreOffset = scoreCircumference * (1 - Number(scoreAverage) / 5);
+  const heroAvatarSrc = useMemo(() => createInitialsAvatar(meta?.full || shopId || '店铺'), [meta?.full, shopId]);
   const shopFacts = useMemo(
     () => [
       { value: `${shopData?.shop?.brandAuthCount ?? 0}`, name: '品牌授权', desc: '已通过审核品牌数' },
       { value: `${shopProducts.length}`, name: '在售商品', desc: '当前店铺商品数量' },
-      { value: avgRating, name: '综合评分', desc: '根据当前商品数据生成' },
-      { value: openedYear, name: '开店时间', desc: `${meta.city} · 店铺经营时间` },
+      { value: formatNum(totalSales), name: '累计销量', desc: '按当前商品销量聚合' },
+      { value: `${shopGuess.length}`, name: '竞猜活动', desc: '当前关联竞猜数量' },
     ],
-    [avgRating, meta.city, openedYear, shopData?.shop?.brandAuthCount, shopProducts.length],
+    [shopData?.shop?.brandAuthCount, shopGuess.length, shopProducts.length, totalSales],
   );
 
   useEffect(() => {
@@ -200,8 +168,8 @@ function ShopDetailPageInner() {
   }, []);
 
   useEffect(() => {
-    document.title = `${meta.full} - UMI`;
-  }, [meta.full]);
+    document.title = `${meta?.full || '店铺详情'} - UMI`;
+  }, [meta?.full]);
 
   function toggleFollow() {
     setFollowed((current) => {
@@ -241,6 +209,45 @@ function ShopDetailPageInner() {
 
   if (loading) {
     return <div className={styles.page} />;
+  }
+
+  if (!shopData || !meta) {
+    return (
+      <div className={styles.page}>
+        <header className={`${styles.nav} ${styles.navSolid}`}>
+          <button className={styles.back} type="button" onClick={() => router.back()}>
+            <i className="fa-solid fa-chevron-left" />
+          </button>
+          <div className={styles.navTitle}>店铺详情</div>
+          <div className={styles.navActions}>
+            <button type="button" className={styles.navBtn} onClick={() => setReloadToken((value) => value + 1)}>
+              <i className="fa-solid fa-rotate-right" />
+            </button>
+            <button type="button" className={styles.navBtn} onClick={() => router.push('/')}>
+              <i className="fa-solid fa-home" />
+            </button>
+          </div>
+        </header>
+
+        <main className={styles.issueWrap}>
+          <div className={styles.issueCard}>
+            <div className={styles.issueIcon}>
+              <i className="fa-solid fa-store-slash" />
+            </div>
+            <div className={styles.issueTitle}>店铺详情暂时不可用</div>
+            <div className={styles.issueDesc}>{loadError || '当前无法读取店铺数据，请稍后重试。'}</div>
+            <div className={styles.issueActions}>
+              <button className={styles.issueGhostBtn} type="button" onClick={() => router.back()}>
+                返回上一页
+              </button>
+              <button className={styles.issuePrimaryBtn} type="button" onClick={() => setReloadToken((value) => value + 1)}>
+                重新加载
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -322,7 +329,7 @@ function ShopDetailPageInner() {
             </div>
             <div className={styles.heroStat}>
               <div className={styles.heroVal}>{avgRating}</div>
-              <div className={styles.heroLbl}>店铺评分</div>
+              <div className={styles.heroLbl}>商品均分</div>
             </div>
             <div className={styles.heroStat}>
               <div className={styles.heroVal}>{meta.fans}</div>
@@ -334,60 +341,11 @@ function ShopDetailPageInner() {
             <span className={styles.heroTag}><i className="fa-solid fa-crown" style={{ fontSize: 9, color: '#FFD700' }} /> 品牌授权</span>
             <span className={styles.heroTag}><i className="fa-solid fa-cubes-stacked" style={{ fontSize: 9 }} /> 在售商品 {shopProducts.length}</span>
             <span className={styles.heroTag}>
-              <i className="fa-solid fa-location-dot" style={{ fontSize: 9 }} /> {meta.city} · {openedYear}
+              <i className="fa-solid fa-location-dot" style={{ fontSize: 9 }} /> {meta.city}
             </span>
             {shopGuess.length ? (
               <span className={styles.heroTag}><i className="fa-solid fa-bullseye" style={{ fontSize: 9, color: '#FF6B00' }} /> 竞猜活动</span>
             ) : null}
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.scoreCard}>
-        <div className={styles.scoreRing}>
-          <svg viewBox="0 0 52 52">
-            <circle className={styles.scoreRingBg} cx="26" cy="26" r="22" />
-            <circle
-              className={styles.scoreRingFill}
-              cx="26"
-              cy="26"
-              r="22"
-              strokeDasharray={scoreCircumference}
-              strokeDashoffset={scoreOffset}
-            />
-          </svg>
-          <div className={styles.scoreVal}>{scoreAverage}</div>
-        </div>
-        <div className={styles.scoreItems}>
-          <div className={styles.scoreItem}>
-            <div className={`${styles.scoreItemVal} ${Number(scoreQuality) >= 4.5 ? styles.scoreItemValHigh : ''}`}>{scoreQuality}</div>
-            <div className={styles.scoreItemLbl}>商品质量</div>
-            <div className={styles.scoreBar}>
-              <div
-                className={styles.scoreFill}
-                style={{ width: `${(Number(scoreQuality) / 5) * 100}%`, background: 'var(--c-green)' }}
-              />
-            </div>
-          </div>
-          <div className={styles.scoreItem}>
-            <div className={`${styles.scoreItemVal} ${Number(scoreShipping) >= 4.5 ? styles.scoreItemValHigh : ''}`}>{scoreShipping}</div>
-            <div className={styles.scoreItemLbl}>物流速度</div>
-            <div className={styles.scoreBar}>
-              <div
-                className={styles.scoreFill}
-                style={{ width: `${(Number(scoreShipping) / 5) * 100}%`, background: 'var(--c-blue)' }}
-              />
-            </div>
-          </div>
-          <div className={styles.scoreItem}>
-            <div className={`${styles.scoreItemVal} ${Number(scoreService) >= 4.5 ? styles.scoreItemValHigh : ''}`}>{scoreService}</div>
-            <div className={styles.scoreItemLbl}>服务态度</div>
-            <div className={styles.scoreBar}>
-              <div
-                className={styles.scoreFill}
-                style={{ width: `${(Number(scoreService) / 5) * 100}%`, background: 'var(--c-orange)' }}
-              />
-            </div>
           </div>
         </div>
       </section>

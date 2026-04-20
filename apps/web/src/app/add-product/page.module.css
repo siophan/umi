@@ -257,7 +257,7 @@
   margin-right: 3px;
 }
 
-.configWrap {
+.confirmWrap {
   padding: 0 12px;
 }
 
@@ -301,7 +301,7 @@
   font-weight: 800;
 }
 
-.configCard {
+.confirmCard {
   margin-bottom: 8px;
   padding: 14px;
   border-radius: 12px;
@@ -309,118 +309,41 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-.configTitle {
-  margin-bottom: 12px;
+.confirmTitle {
+  margin-bottom: 10px;
   color: #1a1a1a;
   font-size: 14px;
   font-weight: 700;
 }
 
-.inputRow {
+.confirmList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirmRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 0.5px solid #f5f5f5;
-}
-
-.inputRow:last-child {
-  border-bottom: 0;
-}
-
-.inputLabel {
-  color: #555;
+  color: #666;
   font-size: 13px;
 }
 
-.inputVal {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.inputVal input,
-.inputVal select {
-  height: 32px;
-  border: 1.5px solid #e8e8e8;
-  border-radius: 8px;
-  padding: 0 10px;
-  outline: none;
+.confirmRow strong {
   color: #1a1a1a;
   font-size: 13px;
-  font-family: inherit;
+  font-weight: 700;
 }
 
-.inputVal input {
-  width: 80px;
-  text-align: right;
-}
-
-.textInput {
-  width: 100px !important;
-  text-align: left !important;
-}
-
-.inputVal span {
-  color: #999;
+.confirmDesc {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff7f1;
+  color: #9b6a4e;
   font-size: 12px;
-}
-
-.toggleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 0.5px solid #f5f5f5;
-}
-
-.toggleRow:last-child {
-  border-bottom: 0;
-}
-
-.toggleInfo {
-  flex: 1;
-}
-
-.toggleLabel {
-  color: #333;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.toggleDesc {
-  margin-top: 2px;
-  color: #bbb;
-  font-size: 11px;
-}
-
-.toggle {
-  position: relative;
-  width: 44px;
-  height: 24px;
-  border: 0;
-  border-radius: 12px;
-  background: #ddd;
-}
-
-.toggle span {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s ease;
-}
-
-.toggleOn {
-  background: #ff5722;
-}
-
-.toggleOn span {
-  transform: translateX(20px);
+  line-height: 1.6;
 }
 
 .bottom {

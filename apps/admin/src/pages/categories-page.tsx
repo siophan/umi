@@ -481,9 +481,6 @@ export function CategoriesPage({ refreshToken = 0 }: CategoriesPageProps) {
             <Card title="引用明细" size="small">
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="品牌">{selected.usageBreakdown.brands}</Descriptions.Item>
-                <Descriptions.Item label="品牌入驻申请">
-                  {selected.usageBreakdown.brandApplies}
-                </Descriptions.Item>
                 <Descriptions.Item label="品牌商品">
                   {selected.usageBreakdown.brandProducts}
                 </Descriptions.Item>

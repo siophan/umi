@@ -7,9 +7,9 @@ import { getAdminDashboardStats } from './dashboard';
 import { adminLogin, changeAdminPassword, getRequestAdmin, getBearerToken, logoutAdminByToken, requireAdmin, } from './auth';
 import { createAdminCategory, getAdminCategories, updateAdminCategory, updateAdminCategoryStatus, } from './categories';
 import { getAdminFriendGuesses, getAdminGuesses, getAdminPkMatches } from './guesses';
-import { getAdminBrandApplies, getAdminBrandAuthApplies, getAdminBrandAuthRecords, getAdminBrands, getAdminProductAuthRecords, getAdminProductAuthRows, getAdminShopApplies, getAdminShopProducts, getAdminShops, } from './merchant';
+import { getAdminBrandAuthApplies, getAdminBrandAuthRecords, getAdminBrands, getAdminShopDetail, reviewAdminBrandAuthApply, reviewAdminShopApply, getAdminShopApplies, getAdminShopProducts, getAdminShops, updateAdminShopStatus, createAdminBrand, updateAdminBrand, } from './merchant';
 import { getAdminBrandLibrary, getAdminProducts } from './products';
-import { getAdminChats, getAdminNotifications, getAdminPermissionsMatrix, getAdminRoles, getAdminSystemUsers, createAdminSystemUser, resetAdminSystemUserPassword, updateAdminRolePermissions, updateAdminSystemUser, updateAdminRoleStatus, updateAdminSystemUserStatus, } from './system';
+import { getAdminChats, getAdminNotifications, getAdminPermissions, getAdminPermissionsMatrix, getAdminRoles, getAdminSystemUsers, createAdminPermission, createAdminNotification, createAdminRole, createAdminSystemUser, resetAdminSystemUserPassword, updateAdminPermission, updateAdminRole, updateAdminRolePermissions, updateAdminPermissionStatus, updateAdminSystemUser, updateAdminRoleStatus, updateAdminSystemUserStatus, } from './system';
 import { getAdminUserGuesses, getAdminUserOrders } from './users';
 import { getAdminConsignRows, getAdminLogistics, getAdminOrders, getAdminTransactions, } from './orders';
 export const adminRouter = Router();
@@ -93,6 +93,12 @@ adminRouter.get('/users', asyncHandler(async (request, response) => {
         pageSize: Number(request.query.pageSize ?? 20),
         keyword: typeof request.query.keyword === 'string'
             ? request.query.keyword
+            : undefined,
+        phone: typeof request.query.phone === 'string'
+            ? request.query.phone
+            : undefined,
+        shopName: typeof request.query.shopName === 'string'
+            ? request.query.shopName
             : undefined,
         role: typeof request.query.role === 'string'
             ? request.query.role
@@ -211,6 +217,39 @@ adminRouter.put('/roles/:id/permissions', asyncHandler(async (request, response)
         ]);
     }
 }));
+adminRouter.put('/permissions/:id', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await updateAdminPermission(getRouteParam(request.params.id), request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_PERMISSION_UPDATE_FAILED',
+            message: '更新权限失败',
+        }, [
+            { message: '权限不存在', status: 404, code: 'ADMIN_PERMISSION_NOT_FOUND' },
+            { message: '权限编码不能为空', status: 400, code: 'ADMIN_PERMISSION_CODE_REQUIRED' },
+            { message: '权限名称不能为空', status: 400, code: 'ADMIN_PERMISSION_NAME_REQUIRED' },
+            { message: '所属模块不能为空', status: 400, code: 'ADMIN_PERMISSION_MODULE_REQUIRED' },
+            { message: '权限动作不合法', status: 400, code: 'ADMIN_PERMISSION_ACTION_INVALID' },
+            { message: '权限编码已存在', status: 400, code: 'ADMIN_PERMISSION_CODE_DUPLICATE' },
+            { message: '父权限不存在', status: 400, code: 'ADMIN_PERMISSION_PARENT_NOT_FOUND' },
+            { message: '父权限不能是自己', status: 400, code: 'ADMIN_PERMISSION_PARENT_SELF_FORBIDDEN' },
+        ]);
+    }
+}));
+adminRouter.put('/permissions/:id/status', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await updateAdminPermissionStatus(getRouteParam(request.params.id), request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_PERMISSION_STATUS_UPDATE_FAILED',
+            message: '更新权限状态失败',
+        }, [{ message: '权限不存在', status: 404, code: 'ADMIN_PERMISSION_NOT_FOUND' }]);
+    }
+}));
 adminRouter.put('/roles/:id/status', asyncHandler(async (request, response) => {
     try {
         ok(response, await updateAdminRoleStatus(getRouteParam(request.params.id), request.body));
@@ -278,17 +317,95 @@ adminRouter.get('/orders/consign', asyncHandler(async (_request, response) => {
 adminRouter.get('/shops', asyncHandler(async (_request, response) => {
     ok(response, await getAdminShops());
 }));
+adminRouter.put('/shops/:id/status', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await updateAdminShopStatus(getRouteParam(request.params.id), request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_SHOP_STATUS_UPDATE_FAILED',
+            message: '更新店铺状态失败',
+        }, [{ message: '店铺不存在', status: 404, code: 'ADMIN_SHOP_NOT_FOUND' }]);
+    }
+}));
 adminRouter.get('/shops/applies', asyncHandler(async (_request, response) => {
     ok(response, await getAdminShopApplies());
+}));
+adminRouter.put('/shops/applies/:id/review', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await reviewAdminShopApply(getRouteParam(request.params.id), request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_SHOP_APPLY_REVIEW_FAILED',
+            message: '开店申请审核失败',
+        }, [
+            { message: '开店申请不存在', status: 404, code: 'ADMIN_SHOP_APPLY_NOT_FOUND' },
+            { message: '申请已审核', status: 400, code: 'ADMIN_SHOP_APPLY_ALREADY_REVIEWED' },
+            { message: '审核状态不合法', status: 400, code: 'ADMIN_REVIEW_STATUS_INVALID' },
+            { message: '请填写拒绝原因', status: 400, code: 'ADMIN_REJECT_REASON_REQUIRED' },
+        ]);
+    }
 }));
 adminRouter.get('/brands', asyncHandler(async (_request, response) => {
     ok(response, await getAdminBrands());
 }));
-adminRouter.get('/brands/applies', asyncHandler(async (_request, response) => {
-    ok(response, await getAdminBrandApplies());
+adminRouter.post('/brands', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await createAdminBrand(request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_BRAND_CREATE_FAILED',
+            message: '新增品牌失败',
+        }, [
+            { message: '品牌名称不能为空', status: 400, code: 'ADMIN_BRAND_NAME_REQUIRED' },
+            { message: '请选择类目', status: 400, code: 'ADMIN_BRAND_CATEGORY_REQUIRED' },
+            { message: '品牌类目不存在', status: 400, code: 'ADMIN_BRAND_CATEGORY_INVALID' },
+            { message: '品牌名称已存在', status: 409, code: 'ADMIN_BRAND_NAME_DUPLICATED' },
+        ]);
+    }
+}));
+adminRouter.put('/brands/:id', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await updateAdminBrand(getRouteParam(request.params.id), request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_BRAND_UPDATE_FAILED',
+            message: '编辑品牌失败',
+        }, [
+            { message: '品牌名称不能为空', status: 400, code: 'ADMIN_BRAND_NAME_REQUIRED' },
+            { message: '请选择类目', status: 400, code: 'ADMIN_BRAND_CATEGORY_REQUIRED' },
+            { message: '品牌类目不存在', status: 400, code: 'ADMIN_BRAND_CATEGORY_INVALID' },
+            { message: '品牌名称已存在', status: 409, code: 'ADMIN_BRAND_NAME_DUPLICATED' },
+            { message: '品牌不存在', status: 404, code: 'ADMIN_BRAND_NOT_FOUND' },
+        ]);
+    }
 }));
 adminRouter.get('/brands/auth-applies', asyncHandler(async (_request, response) => {
     ok(response, await getAdminBrandAuthApplies());
+}));
+adminRouter.put('/brands/auth-applies/:id/review', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await reviewAdminBrandAuthApply(getRouteParam(request.params.id), request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_BRAND_AUTH_APPLY_REVIEW_FAILED',
+            message: '品牌授权申请审核失败',
+        }, [
+            { message: '品牌授权申请不存在', status: 404, code: 'ADMIN_BRAND_AUTH_APPLY_NOT_FOUND' },
+            { message: '申请已审核', status: 400, code: 'ADMIN_BRAND_AUTH_APPLY_ALREADY_REVIEWED' },
+            { message: '审核状态不合法', status: 400, code: 'ADMIN_REVIEW_STATUS_INVALID' },
+            { message: '请填写拒绝原因', status: 400, code: 'ADMIN_REJECT_REASON_REQUIRED' },
+        ]);
+    }
 }));
 adminRouter.get('/brands/auth-records', asyncHandler(async (_request, response) => {
     ok(response, await getAdminBrandAuthRecords());
@@ -296,14 +413,35 @@ adminRouter.get('/brands/auth-records', asyncHandler(async (_request, response) 
 adminRouter.get('/shops/products', asyncHandler(async (_request, response) => {
     ok(response, await getAdminShopProducts());
 }));
-adminRouter.get('/product-auth', asyncHandler(async (_request, response) => {
-    ok(response, await getAdminProductAuthRows());
-}));
-adminRouter.get('/product-auth/records', asyncHandler(async (_request, response) => {
-    ok(response, await getAdminProductAuthRecords());
+adminRouter.get('/shops/:id', asyncHandler(async (request, response) => {
+    const detail = await getAdminShopDetail(getRouteParam(request.params.id));
+    if (!detail) {
+        throw new HttpError(404, 'ADMIN_SHOP_NOT_FOUND', '店铺不存在');
+    }
+    ok(response, detail);
 }));
 adminRouter.get('/notifications', asyncHandler(async (_request, response) => {
     ok(response, await getAdminNotifications());
+}));
+adminRouter.post('/notifications', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await createAdminNotification(request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_NOTIFICATION_CREATE_FAILED',
+            message: '发送通知失败',
+        }, [
+            { message: '通知标题不能为空', status: 400, code: 'ADMIN_NOTIFICATION_TITLE_REQUIRED' },
+            { message: '通知内容不能为空', status: 400, code: 'ADMIN_NOTIFICATION_CONTENT_REQUIRED' },
+            {
+                message: '当前筛选人群没有可发送用户',
+                status: 400,
+                code: 'ADMIN_NOTIFICATION_NO_RECIPIENTS',
+            },
+        ]);
+    }
 }));
 adminRouter.get('/chats', asyncHandler(async (_request, response) => {
     ok(response, await getAdminChats());
@@ -314,11 +452,59 @@ adminRouter.get('/system-users', asyncHandler(async (_request, response) => {
 adminRouter.get('/roles', asyncHandler(async (_request, response) => {
     ok(response, await getAdminRoles());
 }));
+adminRouter.post('/roles', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await createAdminRole(request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, { status: 400, code: 'ADMIN_ROLE_CREATE_FAILED', message: '创建角色失败' });
+    }
+}));
+adminRouter.put('/roles/:id', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await updateAdminRole(getRouteParam(request.params.id), request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, { status: 400, code: 'ADMIN_ROLE_UPDATE_FAILED', message: '更新角色失败' }, [
+            { message: '角色不存在', status: 404, code: 'ADMIN_ROLE_NOT_FOUND' },
+            { message: '角色编码不能为空', status: 400, code: 'ADMIN_ROLE_CODE_REQUIRED' },
+            { message: '角色名称不能为空', status: 400, code: 'ADMIN_ROLE_NAME_REQUIRED' },
+            { message: '角色编码已存在', status: 400, code: 'ADMIN_ROLE_CODE_DUPLICATE' },
+            {
+                message: '系统内置角色不允许编辑',
+                status: 400,
+                code: 'ADMIN_ROLE_SYSTEM_EDIT_FORBIDDEN',
+            },
+        ]);
+    }
+}));
+adminRouter.get('/permissions', asyncHandler(async (_request, response) => {
+    ok(response, await getAdminPermissions());
+}));
 adminRouter.get('/permissions/matrix', asyncHandler(async (_request, response) => {
     ok(response, await getAdminPermissionsMatrix());
 }));
 adminRouter.get('/categories', asyncHandler(async (_request, response) => {
     ok(response, await getAdminCategories());
+}));
+adminRouter.post('/permissions', asyncHandler(async (request, response) => {
+    try {
+        ok(response, await createAdminPermission(request.body));
+    }
+    catch (error) {
+        throw toRouteHttpError(error, {
+            status: 400,
+            code: 'ADMIN_PERMISSION_CREATE_FAILED',
+            message: '新增权限失败',
+        }, [
+            { message: '权限编码不能为空', status: 400, code: 'ADMIN_PERMISSION_CODE_REQUIRED' },
+            { message: '权限名称不能为空', status: 400, code: 'ADMIN_PERMISSION_NAME_REQUIRED' },
+            { message: '所属模块不能为空', status: 400, code: 'ADMIN_PERMISSION_MODULE_REQUIRED' },
+            { message: '权限动作不合法', status: 400, code: 'ADMIN_PERMISSION_ACTION_INVALID' },
+            { message: '权限编码已存在', status: 400, code: 'ADMIN_PERMISSION_CODE_DUPLICATE' },
+            { message: '父权限不存在', status: 400, code: 'ADMIN_PERMISSION_PARENT_NOT_FOUND' },
+        ]);
+    }
 }));
 adminRouter.post('/categories', asyncHandler(async (request, response) => {
     try {

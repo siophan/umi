@@ -42,11 +42,14 @@ export default function ChatListPage() {
     lastMessageAt: string;
   }>>([]);
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
 
     async function load() {
+      setError(null);
       try {
         const result = await fetchChats();
         if (ignore) {
@@ -57,7 +60,7 @@ export default function ChatListPage() {
         if (ignore) {
           return;
         }
-        setItems([]);
+        setError('会话列表读取失败');
       }
 
       if (!ignore) {
@@ -70,7 +73,7 @@ export default function ChatListPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   return (
     <main className={styles.page}>
@@ -100,8 +103,18 @@ export default function ChatListPage() {
       </div>
 
       <div className={styles.chatList}>
-        {ready && items.length === 0 ? <div className={styles.empty}>暂无聊天消息</div> : null}
-        {items.map((chat) => (
+        {ready && error ? (
+          <div className={styles.errorState}>
+            <div className={styles.errorIcon}>⚠️</div>
+            <div className={styles.errorTitle}>消息列表加载失败</div>
+            <div className={styles.errorDesc}>{error}</div>
+            <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+              重新加载
+            </button>
+          </div>
+        ) : null}
+        {ready && !error && items.length === 0 ? <div className={styles.empty}>暂无聊天消息</div> : null}
+        {!error ? items.map((chat) => (
           <Link className={styles.chatItem} href={`/chat/${encodeURIComponent(chat.userId)}`} key={chat.userId}>
             <div className={styles.avatarWrap}>
               <img className={styles.avatar} src={chat.avatar || '/legacy/images/mascot/mouse-happy.png'} alt={chat.name} />
@@ -113,7 +126,7 @@ export default function ChatListPage() {
             </div>
             <div className={styles.time}>{formatChatTime(chat.lastMessageAt)}</div>
           </Link>
-        ))}
+        )) : null}
       </div>
     </main>
   );

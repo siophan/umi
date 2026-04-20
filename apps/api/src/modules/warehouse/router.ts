@@ -359,12 +359,16 @@ function computeEstimateDays(priceYuan: number, marketPriceYuan: number): number
   return 7;
 }
 
+function getRouteIdParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? '';
+}
+
 warehouseRouter.post(
   '/physical/:id/consign',
   requireUser,
   asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
-    const rawId = request.params.id;
+    const rawId = getRouteIdParam(request.params.id);
     if (!rawId.startsWith('pw-')) {
       response.status(400).json({ success: false, code: 'INVALID_ID', message: '只有实体仓库商品可以寄售', status: 400 });
       return;
@@ -416,7 +420,7 @@ warehouseRouter.post(
   requireUser,
   asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
-    const rawId = request.params.id;
+    const rawId = getRouteIdParam(request.params.id);
     if (!rawId.startsWith('pw-')) {
       response.status(400).json({ success: false, code: 'INVALID_ID', message: '无效的商品 ID', status: 400 });
       return;

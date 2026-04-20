@@ -211,14 +211,6 @@
 | `approved` | `30` | 已通过 |
 | `rejected` | `40` | 已拒绝 |
 
-### `brand_apply.status`
-
-| 原语义 | 编码 | 说明 |
-| --- | --- | --- |
-| `pending` | `10` | 待审核 |
-| `approved` | `30` | 已通过 |
-| `rejected` | `40` | 已拒绝 |
-
 ### `shop_brand_auth_apply.status`
 
 | 原语义 | 编码 | 说明 |

@@ -3,11 +3,15 @@ import bcrypt from 'bcryptjs';
 import type {
   AdminPermissionMutationResult,
   AdminSystemUserMutationResult,
+  CreateAdminNotificationPayload,
+  CreateAdminNotificationResult,
   CreateAdminPermissionPayload,
   CreateAdminRolePayload,
   CreateAdminRoleResult,
   CreateAdminSystemUserPayload,
   ResetAdminSystemUserPasswordPayload,
+  UpdateAdminRolePayload,
+  UpdateAdminRoleResult,
   UpdateAdminPermissionPayload,
   UpdateAdminPermissionStatusPayload,
   UpdateAdminPermissionStatusResult,
@@ -158,6 +162,105 @@ export interface AdminNotificationListResult {
     unread: number;
   };
   basis: string;
+}
+
+async function fetchNotificationRecipientIds(
+  connection: mysql.PoolConnection,
+  audience: CreateAdminNotificationPayload['audience'],
+) {
+  if (audience === 'order_users') {
+    const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT DISTINCT o.user_id AS user_id
+        FROM \`order\` o
+        INNER JOIN user u ON u.id = o.user_id
+        WHERE COALESCE(u.banned, 0) = 0
+      `,
+    );
+    return (rows as Array<{ user_id: number | string | null }>)
+      .map((row) => row.user_id)
+      .filter((value): value is number | string => value != null)
+      .map((value) => String(value));
+  }
+
+  if (audience === 'guess_users') {
+    const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT DISTINCT gb.user_id AS user_id
+        FROM guess_bet gb
+        INNER JOIN user u ON u.id = gb.user_id
+        WHERE COALESCE(u.banned, 0) = 0
+      `,
+    );
+    return (rows as Array<{ user_id: number | string | null }>)
+      .map((row) => row.user_id)
+      .filter((value): value is number | string => value != null)
+      .map((value) => String(value));
+  }
+
+  if (audience === 'post_users') {
+    const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT DISTINCT p.user_id AS user_id
+        FROM post p
+        INNER JOIN user u ON u.id = p.user_id
+        WHERE COALESCE(u.banned, 0) = 0
+      `,
+    );
+    return (rows as Array<{ user_id: number | string | null }>)
+      .map((row) => row.user_id)
+      .filter((value): value is number | string => value != null)
+      .map((value) => String(value));
+  }
+
+  if (audience === 'chat_users') {
+    const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT DISTINCT candidate.user_id AS user_id
+        FROM (
+          SELECT sender_id AS user_id FROM chat_message
+          UNION
+          SELECT receiver_id AS user_id FROM chat_message
+        ) candidate
+        INNER JOIN user u ON u.id = candidate.user_id
+        WHERE COALESCE(u.banned, 0) = 0
+      `,
+    );
+    return (rows as Array<{ user_id: number | string | null }>)
+      .map((row) => row.user_id)
+      .filter((value): value is number | string => value != null)
+      .map((value) => String(value));
+  }
+
+  const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id
+      FROM user
+      WHERE COALESCE(banned, 0) = 0
+    `,
+  );
+  return (rows as Array<{ id: number | string | null }>)
+    .map((row) => row.id)
+    .filter((value): value is number | string => value != null)
+    .map((value) => String(value));
+}
+
+function mapNotificationAudienceTargetType(
+  audience: CreateAdminNotificationPayload['audience'],
+) {
+  if (audience === 'order_users') {
+    return NOTIFICATION_TARGET_ORDER;
+  }
+  if (audience === 'guess_users') {
+    return NOTIFICATION_TARGET_GUESS;
+  }
+  if (audience === 'post_users') {
+    return NOTIFICATION_TARGET_POST;
+  }
+  if (audience === 'chat_users') {
+    return NOTIFICATION_TARGET_CHAT;
+  }
+  return null;
 }
 
 export type AdminChatRiskLevel = 'low' | 'medium' | 'high';
@@ -1083,6 +1186,74 @@ export async function getAdminNotifications(): Promise<AdminNotificationListResu
   };
 }
 
+export async function createAdminNotification(
+  payload: CreateAdminNotificationPayload,
+): Promise<CreateAdminNotificationResult> {
+  const title = payload.title.trim();
+  const content = payload.content.trim();
+  if (!title) {
+    throw new Error('通知标题不能为空');
+  }
+  if (!content) {
+    throw new Error('通知内容不能为空');
+  }
+
+  const type =
+    payload.type === 'order'
+      ? NOTIFICATION_TYPE_ORDER
+      : payload.type === 'guess'
+        ? NOTIFICATION_TYPE_GUESS
+        : payload.type === 'social'
+          ? NOTIFICATION_TYPE_SOCIAL
+          : NOTIFICATION_TYPE_SYSTEM;
+  const targetType = mapNotificationAudienceTargetType(payload.audience);
+
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const recipientIds = uniq(
+      await fetchNotificationRecipientIds(connection, payload.audience),
+    );
+
+    if (recipientIds.length === 0) {
+      throw new Error('当前筛选人群没有可发送用户');
+    }
+
+    for (const userId of recipientIds) {
+      await connection.execute(
+        `
+          INSERT INTO notification (
+            user_id,
+            type,
+            title,
+            content,
+            target_type,
+            target_id,
+            action_url,
+            is_read,
+            created_at,
+            updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, NULL, ?, 0, NOW(), NOW())
+        `,
+        [userId, type, title, content, targetType, payload.actionUrl?.trim() || null],
+      );
+    }
+
+    await connection.commit();
+
+    return { sentCount: recipientIds.length };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 export async function getAdminChats(): Promise<AdminChatListResult> {
   const rows = await fetchAdminChatRows();
   const items = rows.map<AdminChatItem>((row) => {
@@ -1498,6 +1669,60 @@ export async function createAdminRole(payload: CreateAdminRolePayload): Promise<
   );
 
   return { id: toEntityId(result.insertId) };
+}
+
+export async function updateAdminRole(
+  roleId: string,
+  payload: UpdateAdminRolePayload,
+): Promise<UpdateAdminRoleResult> {
+  const code = payload.code.trim();
+  const name = payload.name.trim();
+  if (!code) throw new Error('角色编码不能为空');
+  if (!name) throw new Error('角色名称不能为空');
+
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const role = await findAdminRoleById(connection, roleId);
+    if (!role) {
+      throw new Error('角色不存在');
+    }
+
+    if (Boolean(role.is_system)) {
+      throw new Error('系统内置角色不允许编辑');
+    }
+
+    const [existing] = await connection.execute<mysql.RowDataPacket[]>(
+      `SELECT id FROM admin_role WHERE code = ? AND id <> ? LIMIT 1`,
+      [code, roleId],
+    );
+    if ((existing as mysql.RowDataPacket[]).length > 0) {
+      throw new Error('角色编码已存在');
+    }
+
+    const sort = Math.max(0, Math.trunc(Number(payload.sort ?? 0) || 0));
+
+    await connection.execute(
+      `
+        UPDATE admin_role
+        SET code = ?, name = ?, description = ?, sort = ?, updated_at = NOW()
+        WHERE id = ?
+      `,
+      [code, name, payload.description?.trim() || null, sort, roleId],
+    );
+
+    await connection.commit();
+
+    return { id: toEntityId(role.id) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function getAdminRoles(): Promise<AdminRoleListResult> {

@@ -22,22 +22,33 @@ async function fetchServerRankingList(type: RankingType) {
   return payload.data.items;
 }
 
+type RankTabState = {
+  items: RankingListResult['items'];
+  error: string | null;
+};
+
 export default async function RankingPage() {
-  const initialDataMap: Record<RankTab, RankingListResult['items']> = {
-    winRate: [],
-    earnings: [],
-    active: [],
+  const initialStateMap: Record<RankTab, RankTabState> = {
+    winRate: { items: [], error: null },
+    earnings: { items: [], error: null },
+    active: { items: [], error: null },
   };
 
   await Promise.all(
     (Object.keys(rankingTypes) as RankTab[]).map(async (key) => {
       try {
-        initialDataMap[key] = await fetchServerRankingList(rankingTypes[key]);
-      } catch {
-        initialDataMap[key] = [];
+        initialStateMap[key] = {
+          items: await fetchServerRankingList(rankingTypes[key]),
+          error: null,
+        };
+      } catch (error) {
+        initialStateMap[key] = {
+          items: [],
+          error: error instanceof Error ? error.message : '榜单加载失败，请稍后重试',
+        };
       }
     }),
   );
 
-  return <RankingPageClient initialDataMap={initialDataMap} />;
+  return <RankingPageClient initialStateMap={initialStateMap} />;
 }

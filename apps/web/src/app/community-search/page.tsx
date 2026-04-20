@@ -7,6 +7,7 @@ import type { CommunityFeedItem, UserSearchItem } from '@umi/shared';
 
 import { fetchCommunityDiscovery, searchCommunity } from '../../lib/api/community';
 import { followUser, searchUsers, unfollowUser } from '../../lib/api/users';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
 type SearchFilter = 'all' | 'post' | 'guess' | 'user';
@@ -114,10 +115,17 @@ function CommunitySearchPageInner() {
   const [posts, setPosts] = useState<CommunityFeedItem[]>([]);
   const [users, setUsers] = useState<UserSearchItem[]>([]);
   const [ready, setReady] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const [searching, setSearching] = useState(false);
   const [followSavingId, setFollowSavingId] = useState('');
   const [toast, setToast] = useState('');
   const [hotSearches, setHotSearches] = useState<Array<{ title: string; desc: string; tag: string; kind: 'hotFire' | 'hotNew' | 'hotBoom' }>>([]);
+  const [hotError, setHotError] = useState('');
+  const [recommendError, setRecommendError] = useState('');
+  const [searchError, setSearchError] = useState('');
+  const [discoveryReloadToken, setDiscoveryReloadToken] = useState(0);
+  const [searchReloadToken, setSearchReloadToken] = useState(0);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(HISTORY_KEY);
@@ -140,6 +148,9 @@ function CommunitySearchPageInner() {
       setFocused(true);
     }
 
+    setLoggedIn(hasAuthToken());
+    setAuthReady(true);
+
     return () => {
       if (blurTimer.current) {
         window.clearTimeout(blurTimer.current);
@@ -154,42 +165,69 @@ function CommunitySearchPageInner() {
     let ignore = false;
 
     async function loadRecommended() {
-      try {
-        const [result, discovery] = await Promise.all([searchUsers(), fetchCommunityDiscovery()]);
-        if (ignore) {
-          return;
-        }
-        setRecommendedUsers(result.items.slice(0, 6));
+      if (!authReady) {
+        return;
+      }
+      if (!loggedIn) {
+        setRecommendedUsers([]);
+        setHotSearches([]);
+        setRecommendError('');
+        setHotError('');
+        setReady(true);
+        return;
+      }
+
+      const [userResult, discoveryResult] = await Promise.allSettled([
+        searchUsers(),
+        fetchCommunityDiscovery(),
+      ]);
+      if (ignore) {
+        return;
+      }
+
+      if (userResult.status === 'fulfilled') {
+        setRecommendedUsers(userResult.value.items.slice(0, 6));
+        setRecommendError('');
+      } else {
+        setRecommendedUsers([]);
+        setRecommendError(
+          userResult.reason instanceof Error ? userResult.reason.message : '推荐关注加载失败，请稍后重试',
+        );
+      }
+
+      if (discoveryResult.status === 'fulfilled') {
         setHotSearches(
-          discovery.hotTopics.slice(0, 8).map((item, index) => ({
+          discoveryResult.value.hotTopics.slice(0, 8).map((item, index) => ({
             title: item.text,
             desc: item.desc,
             tag: index === 0 ? '爆' : index < 3 ? '热' : '新',
             kind: index === 0 ? 'hotBoom' : index < 3 ? 'hotFire' : 'hotNew',
           })),
         );
-      } catch {
-        if (!ignore) {
-          setRecommendedUsers([]);
-          setHotSearches([]);
-        }
-      } finally {
-        if (!ignore) {
-          setReady(true);
-        }
+        setHotError('');
+      } else {
+        setHotSearches([]);
+        setHotError(
+          discoveryResult.reason instanceof Error ? discoveryResult.reason.message : '热搜加载失败，请稍后重试',
+        );
       }
+
+      setReady(true);
     }
 
     void loadRecommended();
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [authReady, discoveryReloadToken, loggedIn]);
 
   useEffect(() => {
     let ignore = false;
 
     async function runSearch() {
+      if (!authReady) {
+        return;
+      }
       const keyword = searchedQuery.trim();
       if (!keyword) {
         setPosts([]);
@@ -197,19 +235,28 @@ function CommunitySearchPageInner() {
         setSearching(false);
         return;
       }
+      if (!loggedIn) {
+        setPosts([]);
+        setUsers([]);
+        setSearchError('');
+        setSearching(false);
+        return;
+      }
 
       try {
         setSearching(true);
+        setSearchError('');
         const result = await searchCommunity(keyword);
         if (ignore) {
           return;
         }
         setPosts(result.posts);
         setUsers(result.users);
-      } catch {
+      } catch (error) {
         if (!ignore) {
           setPosts([]);
           setUsers([]);
+          setSearchError(error instanceof Error ? error.message : '搜索失败，请稍后重试');
         }
       } finally {
         if (!ignore) {
@@ -222,7 +269,14 @@ function CommunitySearchPageInner() {
     return () => {
       ignore = true;
     };
-  }, [searchedQuery]);
+  }, [authReady, loggedIn, searchedQuery, searchReloadToken]);
+
+  const loginRedirect = useMemo(() => {
+    const keyword = searchedQuery.trim() || query.trim();
+    return keyword ? `/community-search?q=${encodeURIComponent(keyword)}` : '/community-search';
+  }, [query, searchedQuery]);
+
+  const authAction = searchedQuery.trim() ? '查看社区搜索结果' : '进入社区搜索';
 
   const suggestions = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -386,7 +440,26 @@ function CommunitySearchPageInner() {
 
       {!searchedQuery ? (
         <div className={styles.defaultView}>
-          {searchHistory.length > 0 ? (
+          {!loggedIn ? (
+            <div className={styles.empty}>
+              <i className="fa-solid fa-user-lock" />
+              <div className={styles.emptyTitle}>登录后查看社区热搜和推荐关注</div>
+              <div className={styles.emptyDesc}>社区搜索支持搜动态、竞猜话题和猜友</div>
+              <button
+                className={styles.emptyRetry}
+                type="button"
+                onClick={() =>
+                  router.push(
+                    `/login?redirect=${encodeURIComponent(loginRedirect)}&action=${encodeURIComponent(authAction)}`,
+                  )
+                }
+              >
+                去登录
+              </button>
+            </div>
+          ) : null}
+
+          {loggedIn && searchHistory.length > 0 ? (
             <section className={styles.section}>
               <div className={styles.sectionTitle}>
                 <span><i className="fa-solid fa-clock-rotate-left" /></span> 搜索历史
@@ -412,6 +485,7 @@ function CommunitySearchPageInner() {
             </section>
           ) : null}
 
+          {loggedIn ? (
           <section className={styles.section}>
             <div className={styles.sectionTitle}>
               <span><i className="fa-solid fa-fire" /></span> 热搜榜
@@ -431,11 +505,21 @@ function CommunitySearchPageInner() {
                   </button>
                 ))}
               </div>
+            ) : hotError ? (
+              <div className={styles.sectionIssue}>
+                <div className={styles.sectionIssueTitle}>热搜加载失败</div>
+                <div className={styles.sectionIssueDesc}>{hotError}</div>
+                <button className={styles.sectionRetry} type="button" onClick={() => setDiscoveryReloadToken((value) => value + 1)}>
+                  重试
+                </button>
+              </div>
             ) : (
               <div className={styles.sectionEmpty}>暂无热搜内容</div>
             )}
           </section>
+          ) : null}
 
+          {loggedIn ? (
           <section className={styles.section}>
             <div className={styles.sectionTitle}>
               <span><i className="fa-solid fa-user-plus" /></span> 推荐关注
@@ -465,18 +549,55 @@ function CommunitySearchPageInner() {
                   );
                 })}
               </div>
+            ) : recommendError ? (
+              <div className={styles.sectionIssue}>
+                <div className={styles.sectionIssueTitle}>推荐关注加载失败</div>
+                <div className={styles.sectionIssueDesc}>{recommendError}</div>
+                <button className={styles.sectionRetry} type="button" onClick={() => setDiscoveryReloadToken((value) => value + 1)}>
+                  重试
+                </button>
+              </div>
             ) : (
               <div className={styles.sectionEmpty}>暂无推荐用户</div>
             )}
           </section>
+          ) : null}
         </div>
       ) : (
         <div className={styles.resultsView}>
-          {searching ? (
+          {!loggedIn ? (
+            <div className={styles.empty}>
+              <i className="fa-solid fa-user-lock" />
+              <div className={styles.emptyTitle}>
+                登录后可查看“{searchedQuery}”相关内容
+              </div>
+              <div className={styles.emptyDesc}>社区搜索、热搜和推荐关注需要登录后使用</div>
+              <button
+                className={styles.emptyRetry}
+                type="button"
+                onClick={() =>
+                  router.push(
+                    `/login?redirect=${encodeURIComponent(loginRedirect)}&action=${encodeURIComponent(authAction)}`,
+                  )
+                }
+              >
+                去登录
+              </button>
+            </div>
+          ) : searching ? (
             <div className={styles.empty}>
               <i className="fa-solid fa-spinner fa-spin" />
               <div className={styles.emptyTitle}>搜索中</div>
               <div className={styles.emptyDesc}>正在查找相关内容...</div>
+            </div>
+          ) : searchError ? (
+            <div className={styles.empty}>
+              <i className="fa-solid fa-circle-exclamation" />
+              <div className={styles.emptyTitle}>搜索失败</div>
+              <div className={styles.emptyDesc}>{searchError}</div>
+              <button className={styles.emptyRetry} type="button" onClick={() => setSearchReloadToken((value) => value + 1)}>
+                重试
+              </button>
             </div>
           ) : (
             <>

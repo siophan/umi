@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 const tickerItems = [
-  { name: '小鹿', prize: '智慧达人礼包', avatar: '/legacy/images/mascot/mouse-cute.png' },
-  { name: '咖啡控', prize: '星巴克兑换券', avatar: '/legacy/images/mascot/mouse-reserved.png' },
-  { name: '猫奴', prize: '萌宠限定礼盒', avatar: '/legacy/images/mascot/mouse-casual.png' },
-  { name: '答题王', prize: '3连全胜大奖', avatar: '/legacy/images/mascot/mouse-main.png' },
-  { name: '吃货本货', prize: '价值¥99零食盲盒', avatar: '/legacy/images/mascot/mouse-happy.png' },
+  { name: '品牌体验', prize: '竞猜新玩法', avatar: '/legacy/images/mascot/mouse-cute.png' },
+  { name: '好友互动', prize: '社交竞猜体验', avatar: '/legacy/images/mascot/mouse-reserved.png' },
+  { name: '趣味探索', prize: '浏览更多话题', avatar: '/legacy/images/mascot/mouse-casual.png' },
+  { name: '新手指南', prize: '了解基础流程', avatar: '/legacy/images/mascot/mouse-main.png' },
+  { name: '平台精选', prize: '发现热门内容', avatar: '/legacy/images/mascot/mouse-happy.png' },
 ];
 
 const particles = Array.from({ length: 18 }, (_, index) => ({
@@ -30,20 +30,20 @@ const rules = [
       { icon: '📊', text: '赔率根据参与人数实时变动，越早参与可能获得更高赔率' },
     ],
   },
-  {
-    title: '奖励机制',
-    items: [
-      { icon: '🏆', text: '猜中：商品直接发货到家，享受超低竞猜价，最高可省 90%' },
-      { icon: '🎁', text: '未猜中：获得等额优惠券补偿，可用于商城直购，不亏反赚' },
-      { icon: '⚡', text: '好友PK：邀请好友对战竞猜，胜者赢取额外奖励和排行荣誉' },
-    ],
-  },
+      {
+        title: '奖励机制',
+        items: [
+      { icon: '🏆', text: '不同活动会配置不同奖励和结算方式，请以具体页面和实际规则为准' },
+      { icon: '🎁', text: '部分新手体验页仅用于演示流程，不代表奖励已发放或已入仓' },
+      { icon: '⚡', text: '好友互动、排行和商城能力会按页面当前接线状态逐步开放' },
+        ],
+      },
   {
     title: '注意事项',
     items: [
-      { icon: '💳', text: '竞猜金额支付后不可退回，请确认后再参与' },
-      { icon: '📦', text: '猜中商品将在 48小时内发货，物流信息可在“我的订单”中查看' },
-      { icon: '🔒', text: '平台保障公平公正，竞猜结果由系统自动判定，不可人为干预' },
+      { icon: '💳', text: '不同页面处于不同接线阶段，正式支付和发货信息请以真实订单页为准' },
+      { icon: '📦', text: '是否发货、是否入仓、是否补偿，都以具体业务页和实际接口结果为准' },
+      { icon: '🔒', text: '引导页和宣传素材可能用于说明玩法，不等同于实时中奖动态或收益承诺' },
     ],
   },
 ];
@@ -188,7 +188,7 @@ export default function SplashPage() {
                 <div className={styles.tickerItem} key={`${item.name}-${index}`}>
                   <img src={item.avatar} alt={item.name} />
                   <span>{item.name}</span>
-                  <span>刚赢了</span>
+                  <span>正在了解</span>
                   <span className={styles.tickerPrize}>{item.prize}</span>
                 </div>
               ))}
@@ -204,14 +204,14 @@ export default function SplashPage() {
             <div className={`${styles.brandEn} ${styles.brandEnShow}`}>UMI</div>
             <div className={`${styles.brandDivider} ${styles.brandDividerShow}`} />
             <div className={`${styles.slogan} ${styles.sloganShow}`}>
-              <div className={styles.sloganMain}>竞猜赢好物 · 社交新玩法</div>
-              <div className={styles.sloganSub}>猜中发货 · 猜错补券 · 稳赚不亏</div>
+              <div className={styles.sloganMain}>竞猜体验 · 社交新玩法</div>
+              <div className={styles.sloganSub}>玩法与奖励以具体页面说明和真实结果为准</div>
             </div>
             <div className={`${styles.tags} ${styles.tagsShow}`}>
               <span className={styles.tag}><i className="fa-solid fa-dice" /> 趣味竞猜</span>
               <span className={styles.tag}><i className="fa-solid fa-user-group" /> 好友PK</span>
               <span className={styles.tag}><i className="fa-solid fa-bag-shopping" /> 潮品商城</span>
-              <span className={styles.tag}><i className="fa-solid fa-gift" /> 猜中即赚</span>
+              <span className={styles.tag}><i className="fa-solid fa-gift" /> 玩法体验</span>
             </div>
           </div>
 
@@ -249,10 +249,10 @@ export default function SplashPage() {
               </div>
             ))}
           </div>
-          <div className={styles.rulesTip}>
-            <span className={styles.rulesTipIcon}>💡</span>
-            <span>新手建议先体验“新手竞猜”了解流程，系统赠送的体验金不扣真实费用哦~</span>
-          </div>
+            <div className={styles.rulesTip}>
+              <span className={styles.rulesTipIcon}>💡</span>
+            <span>新手建议先体验“新手竞猜”了解流程，体验页文案不代表实时中奖、固定补偿或收益承诺。</span>
+            </div>
           <div className={styles.rulesFooter}>
             <button className={styles.rulesConfirmBtn} type="button" onClick={() => router.push('/novice-guess')}>
               我已知晓

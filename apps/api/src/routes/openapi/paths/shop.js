@@ -1,4 +1,4 @@
-import { bearerSecurity, errorResponse, jsonRequestBody, successResponse, } from '../shared';
+import { bearerSecurity, errorResponse, jsonRequestBody, pathIdParameter, successResponse, } from '../shared';
 export const shopPaths = {
     '/api/shops/me': {
         get: {
@@ -198,6 +198,34 @@ export const shopPaths = {
                 401: errorResponse(401, '请先登录'),
                 403: errorResponse(403, '该品牌尚未授权'),
                 500: errorResponse(500, '上架商品失败'),
+            },
+        },
+    },
+    '/api/shops/{id}': {
+        get: {
+            tags: ['Shop'],
+            summary: '获取公开店铺详情',
+            parameters: [pathIdParameter('id', '店铺 ID')],
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    properties: {
+                        shop: {
+                            type: 'object',
+                            additionalProperties: true,
+                        },
+                        products: {
+                            type: 'array',
+                            items: { type: 'object', additionalProperties: true },
+                        },
+                        guesses: {
+                            type: 'array',
+                            items: { type: 'object', additionalProperties: true },
+                        },
+                    },
+                }),
+                404: errorResponse(404, '店铺不存在'),
+                500: errorResponse(500, '读取店铺详情失败'),
             },
         },
     },

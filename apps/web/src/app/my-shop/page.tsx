@@ -77,6 +77,7 @@ export default function MyShopPage() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [shopStatus, setShopStatus] = useState<ShopStatusData>(initialShopStatus);
   const [shopData, setShopData] = useState<ShopData>(initialShopData);
@@ -95,48 +96,46 @@ export default function MyShopPage() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  useEffect(() => {
-    let ignore = false;
+  async function loadPage(shouldIgnore: () => boolean = () => false) {
+    setLoading(true);
+    setError(null);
+    try {
+      const status = await fetchShopStatus();
+      if (shouldIgnore()) {
+        return;
+      }
+      setShopStatus(status);
 
-    async function loadPage() {
-      try {
-        const status = await fetchShopStatus();
-        if (ignore) {
-          return;
+      if (status.status === 'active') {
+        const data = await fetchMyShop();
+        if (!shouldIgnore()) {
+          setShopData(data);
         }
-        setShopStatus(status);
-
-        if (status.status === 'active') {
-          const data = await fetchMyShop();
-          if (!ignore) {
-            setShopData(data);
-          }
-        } else {
-          setShopData(initialShopData);
-          if (status.latestApplication) {
-            setForm({
-              shopName: status.latestApplication.shopName,
-              categoryId: status.latestApplication.categoryId || '',
-              reason: status.latestApplication.reason || '',
-            });
-          }
-        }
-      } catch (error) {
-        if (ignore) {
-          return;
-        }
-        setShopStatus(initialShopStatus);
+      } else {
         setShopData(initialShopData);
-        setToast(error instanceof Error ? error.message : '读取店铺状态失败');
-      } finally {
-        if (!ignore) {
-          setLoading(false);
+        if (status.latestApplication) {
+          setForm({
+            shopName: status.latestApplication.shopName,
+            categoryId: status.latestApplication.categoryId || '',
+            reason: status.latestApplication.reason || '',
+          });
         }
       }
+    } catch (loadError) {
+      if (shouldIgnore()) {
+        return;
+      }
+      setError(loadError instanceof Error ? loadError.message : '读取店铺状态失败');
+    } finally {
+      if (!shouldIgnore()) {
+        setLoading(false);
+      }
     }
+  }
 
-    void loadPage();
-
+  useEffect(() => {
+    let ignore = false;
+    void loadPage(() => ignore);
     return () => {
       ignore = true;
     };
@@ -242,6 +241,18 @@ export default function MyShopPage() {
         <section className={styles.applySection}>
           <div className={styles.emptyTitle}>正在读取店铺状态</div>
           <div className={styles.emptyDesc}>稍等片刻，正在同步你的开店申请与店铺信息。</div>
+        </section>
+      );
+    }
+
+    if (error) {
+      return (
+        <section className={styles.applySection}>
+          <div className={styles.emptyTitle}>店铺状态读取失败</div>
+          <div className={styles.emptyDesc}>{error}</div>
+          <button className={styles.submitBtn} type="button" onClick={() => void loadPage()}>
+            重新加载
+          </button>
         </section>
       );
     }

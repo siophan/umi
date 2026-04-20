@@ -217,6 +217,37 @@
   font-size: 12px;
 }
 
+.hotError {
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  background: #fff7f4;
+  border: 1px solid #ffd8ca;
+}
+
+.hotErrorTitle {
+  color: #c7461a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hotErrorDesc {
+  margin-top: 4px;
+  color: #9b5d46;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hotErrorBtn {
+  margin-top: 10px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .hotChipHot {
   color: #ff5722;
   font-weight: 700;
@@ -608,6 +639,44 @@
 .empty {
   padding: 60px 20px;
   text-align: center;
+}
+
+.errorState {
+  padding: 40px 20px 24px;
+  text-align: center;
+}
+
+.errorIcon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 14px;
+  border-radius: 20px;
+  background: #fff7f4;
+  font-size: 32px;
+}
+
+.errorTitle {
+  margin-bottom: 4px;
+  color: #999;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.errorDesc {
+  color: #bbb;
+  font-size: 12px;
+}
+
+.errorBtn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .emptyIcon {

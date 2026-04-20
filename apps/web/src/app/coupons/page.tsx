@@ -13,6 +13,8 @@ export default function CouponsPage() {
   const [toast, setToast] = useState('');
   const [couponsData, setCouponsData] = useState<CouponListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -22,9 +24,13 @@ export default function CouponsPage() {
         const result = await fetchCoupons();
         if (!ignore) {
           setCouponsData(result);
+          setError('');
         }
-      } catch {
-        if (!ignore) setCouponsData([]);
+      } catch (loadError) {
+        if (!ignore) {
+          setCouponsData([]);
+          setError(loadError instanceof Error ? loadError.message : '优惠券加载失败，请稍后重试');
+        }
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -34,7 +40,7 @@ export default function CouponsPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   useEffect(() => {
     if (!toast) {
@@ -83,6 +89,16 @@ export default function CouponsPage() {
         {loading ? (
           <div className={styles.empty}>
             <div className={styles.emptyText}>正在加载优惠券...</div>
+          </div>
+        ) : error ? (
+          <div className={styles.empty}>
+            <div className={styles.emptyIcon}>
+              <i className="fa-solid fa-circle-exclamation" />
+            </div>
+            <div className={styles.emptyText}>{error}</div>
+            <button className={styles.retryBtn} type="button" onClick={() => setReloadToken((value) => value + 1)}>
+              重试
+            </button>
           </div>
         ) : coupons.length ? (
           coupons.map((coupon) => (

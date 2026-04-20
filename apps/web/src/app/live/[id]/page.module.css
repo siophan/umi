@@ -149,6 +149,18 @@
   cursor: pointer;
 }
 
+.joinBtn:disabled {
+  background: linear-gradient(135deg, #c7c9d1, #aab0bb);
+  cursor: not-allowed;
+}
+
+.featureNotice {
+  margin-top: 10px;
+  color: #8d6e63;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .statsRow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -190,6 +202,26 @@
 .danmakuList {
   max-height: 200px;
   overflow-y: auto;
+}
+
+.danmakuPlaceholder {
+  padding: 16px;
+  border: 1px dashed #f0c6b8;
+  border-radius: 16px;
+  background: #fff7f4;
+}
+
+.danmakuPlaceholderTitle {
+  color: #d84315;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.danmakuPlaceholderText {
+  margin-top: 6px;
+  color: #8d6e63;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .danmakuItem {
@@ -236,6 +268,10 @@
   font-size: 14px;
 }
 
+.input:disabled {
+  color: #9ca3af;
+}
+
 .actionBtn,
 .actionBtnMuted {
   width: 40px;
@@ -253,10 +289,16 @@
 
 .actionBtn:disabled {
   color: #d1d5db;
+  cursor: not-allowed;
 }
 
 .actionBtnMuted {
   color: #9ca3af;
+}
+
+.actionBtnMuted:disabled {
+  color: #d1d5db;
+  cursor: not-allowed;
 }
 
 .toast {

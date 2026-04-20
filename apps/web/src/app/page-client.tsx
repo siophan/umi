@@ -97,6 +97,12 @@ type HomePageInitialData = {
   rankingItems: RankingItem[];
   historyItems: GuessHistoryRecordItem[];
   hotTopics: Array<{ text: string; desc: string }>;
+  sectionErrors: {
+    banners: string | null;
+    guesses: string | null;
+    lives: string | null;
+    rankings: string | null;
+  };
 };
 
 type HomePageClientProps = {
@@ -466,6 +472,7 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
   const [rankingItems, setRankingItems] = useState<RankingItem[]>(initialData.rankingItems);
   const [historyItems, setHistoryItems] = useState<GuessHistoryRecordItem[]>(initialData.historyItems);
   const [hotTopics, setHotTopics] = useState<Array<{ text: string; desc: string }>>(initialData.hotTopics);
+  const [sectionErrors, setSectionErrors] = useState(initialData.sectionErrors);
 
   useEffect(() => {
     let ignore = false;
@@ -490,6 +497,33 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
       if (ignore) {
         return;
       }
+
+      setSectionErrors({
+        banners:
+          bannersResult.status === 'rejected'
+            ? bannersResult.reason instanceof Error
+              ? bannersResult.reason.message
+              : '首页头图加载失败'
+            : null,
+        guesses:
+          guessResult.status === 'rejected'
+            ? guessResult.reason instanceof Error
+              ? guessResult.reason.message
+              : '竞猜列表加载失败'
+            : null,
+        lives:
+          liveResult.status === 'rejected'
+            ? liveResult.reason instanceof Error
+              ? liveResult.reason.message
+              : '直播列表加载失败'
+            : null,
+        rankings:
+          rankingResult.status === 'rejected'
+            ? rankingResult.reason instanceof Error
+              ? rankingResult.reason.message
+              : '榜单加载失败'
+            : null,
+      });
 
       setGuessBanners(
         bannersResult.status === 'fulfilled' ? bannersResult.value.items : [],
@@ -670,6 +704,10 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
                 </div>
               </div>
             </div>
+
+            {sectionErrors.banners ? (
+              <div className={styles.sectionNotice}>首页头图加载失败，当前已降级展示其他真实内容。</div>
+            ) : null}
 
             {heroCard ? (
               <section className={styles.heroSwiper}>
@@ -868,6 +906,8 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
                     </div>
                   </article>
                 ))
+              ) : sectionErrors.guesses ? (
+                <div className={styles.sectionNotice}>竞猜列表加载失败，请稍后刷新重试。</div>
               ) : (
                 <div className={styles.emptyState}>暂无可展示的竞猜内容</div>
               )}
@@ -918,6 +958,8 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
                     <div className={styles.rankRate}>{item.value}</div>
                   </div>
                 ))
+              ) : sectionErrors.rankings ? (
+                <div className={styles.sectionNotice}>榜单加载失败，请稍后刷新重试。</div>
               ) : (
                 <div className={styles.emptyState}>暂无排行榜结果</div>
               )}
@@ -993,6 +1035,8 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
                     </article>
                   );
                 })
+              ) : sectionErrors.lives ? (
+                <div className={styles.sectionNotice}>直播列表加载失败，请稍后刷新重试。</div>
               ) : (
                 <div className={styles.emptyState}>暂无直播</div>
               )}

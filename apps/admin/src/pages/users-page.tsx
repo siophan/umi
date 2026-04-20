@@ -28,7 +28,7 @@ import {
   fetchAdminUserOrders,
   updateAdminUserBan,
 } from '../lib/api/users';
-import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
 interface UsersPageProps {
   refreshToken?: number;
@@ -44,10 +44,8 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
-  const [extraFilters, setExtraFilters] = useState<{
-    phone?: string;
-    shopName?: string;
-  }>({});
+  const [phone, setPhone] = useState('');
+  const [shopName, setShopName] = useState('');
   const [summary, setSummary] = useState({
     totalUsers: 0,
     verifiedUsers: 0,
@@ -163,7 +161,6 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
           return;
         }
         setUserOrders([]);
-        setOrderTotal(0);
         setOrderIssue(error instanceof Error ? `订单记录：${error.message}` : '订单记录加载失败');
       } finally {
         if (alive) {
@@ -205,7 +202,6 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
           return;
         }
         setUserGuesses([]);
-        setGuessTotal(0);
         setGuessIssue(error instanceof Error ? `竞猜记录：${error.message}` : '竞猜记录加载失败');
       } finally {
         if (alive) {
@@ -226,28 +222,6 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
     [guessIssue, orderIssue, profileIssue],
   );
 
-  const visibleUsers = useMemo(() => {
-    return listData.filter((user) => {
-      if (
-        extraFilters.phone &&
-        !String(user.phone ?? '')
-          .toLowerCase()
-          .includes(extraFilters.phone.trim().toLowerCase())
-      ) {
-        return false;
-      }
-      if (
-        extraFilters.shopName &&
-        !String(user.shopName ?? '')
-          .toLowerCase()
-          .includes(extraFilters.shopName.trim().toLowerCase())
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [extraFilters.phone, extraFilters.shopName, listData]);
-
   useEffect(() => {
     let alive = true;
 
@@ -258,6 +232,8 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
           page,
           pageSize,
           keyword,
+          phone,
+          shopName,
           role,
         });
 
@@ -288,7 +264,7 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
     return () => {
       alive = false;
     };
-  }, [keyword, page, pageSize, refreshToken, role]);
+  }, [keyword, page, pageSize, phone, refreshToken, role, shopName]);
 
   async function handleToggleBan() {
     if (!selected) {
@@ -308,6 +284,8 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
         page,
         pageSize,
         keyword,
+        phone,
+        shopName,
         role,
       });
       setListData(refreshed.items);
@@ -386,6 +364,72 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
       render: (value) => formatDateTime(value),
     },
   ];
+
+  const orderTabContent = orderIssue ? (
+    <Alert showIcon type="warning" message="订单记录加载失败" description={orderIssue} />
+  ) : userOrders.length > 0 || ordersLoading ? (
+    <Table
+      columns={orderColumns}
+      dataSource={userOrders}
+      loading={ordersLoading}
+      pagination={{
+        current: orderPage,
+        pageSize: orderPageSize,
+        total: orderTotal,
+        showSizeChanger: true,
+        showTotal: (value) => `共 ${value} 条`,
+        pageSizeOptions: [10, 20, 50],
+        locale: {
+          items_per_page: '条/页',
+        },
+        onChange: (nextPage, nextPageSize) => {
+          if (nextPageSize !== orderPageSize) {
+            setOrderPage(1);
+            setOrderPageSize(nextPageSize);
+            return;
+          }
+          setOrderPage(nextPage);
+        },
+      }}
+      rowKey="id"
+      size="small"
+    />
+  ) : (
+    <Empty description="暂无订单记录" />
+  );
+
+  const guessTabContent = guessIssue ? (
+    <Alert showIcon type="warning" message="竞猜记录加载失败" description={guessIssue} />
+  ) : userGuesses.length > 0 || guessesLoading ? (
+    <Table
+      columns={guessColumns}
+      dataSource={userGuesses}
+      loading={guessesLoading}
+      pagination={{
+        current: guessPage,
+        pageSize: guessPageSize,
+        total: guessTotal,
+        showSizeChanger: true,
+        showTotal: (value) => `共 ${value} 条`,
+        pageSizeOptions: [10, 20, 50],
+        locale: {
+          items_per_page: '条/页',
+        },
+        onChange: (nextPage, nextPageSize) => {
+          if (nextPageSize !== guessPageSize) {
+            setGuessPage(1);
+            setGuessPageSize(nextPageSize);
+            return;
+          }
+          setGuessPage(nextPage);
+        },
+      }}
+      rowKey="id"
+      size="small"
+    />
+  ) : (
+    <Empty description="暂无竞猜记录" />
+  );
 
   const columns: TableColumnsType<UserSummary> = [
     {
@@ -497,16 +541,15 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
         onSearch={() => {
           const values = searchForm.getFieldsValue();
           setKeyword(values.keyword ?? '');
-          setExtraFilters({
-            phone: values.phone,
-            shopName: values.shopName,
-          });
+          setPhone(values.phone ?? '');
+          setShopName(values.shopName ?? '');
           setPage(1);
         }}
         onReset={() => {
           searchForm.resetFields();
           setKeyword('');
-          setExtraFilters({});
+          setPhone('');
+          setShopName('');
           setRole('all');
           setPage(1);
         }}
@@ -527,7 +570,7 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
         items={[
           { key: 'all', label: '全部', count: summary.totalUsers },
           { key: 'user', label: '普通用户' },
-          { key: 'shop_owner', label: '店主', count: summary.verifiedUsers },
+          { key: 'shop_owner', label: '认证店主', count: summary.verifiedUsers },
           { key: 'banned', label: '已封禁', count: summary.bannedUsers },
         ]}
         onChange={(nextRole) => {
@@ -542,7 +585,7 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
           rowKey="id"
           columns={columns as never}
           columnsState={{}}
-          dataSource={visibleUsers}
+          dataSource={listData}
           loading={listLoading}
           options={{ reload: true, density: true, fullScreen: false, setting: true }}
           pagination={{
@@ -660,72 +703,12 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
                 {
                   key: 'orders',
                   label: `订单记录 (${orderTotal})`,
-                  children:
-                    userOrders.length > 0 || ordersLoading ? (
-                      <Table
-                        columns={orderColumns}
-                        dataSource={userOrders}
-                        loading={ordersLoading}
-                        pagination={{
-                          current: orderPage,
-                          pageSize: orderPageSize,
-                          total: orderTotal,
-                          showSizeChanger: true,
-                          showTotal: (value) => `共 ${value} 条`,
-                          pageSizeOptions: [10, 20, 50],
-                          locale: {
-                            items_per_page: '条/页',
-                          },
-                          onChange: (nextPage, nextPageSize) => {
-                            if (nextPageSize !== orderPageSize) {
-                              setOrderPage(1);
-                              setOrderPageSize(nextPageSize);
-                              return;
-                            }
-                            setOrderPage(nextPage);
-                          },
-                        }}
-                        rowKey="id"
-                        size="small"
-                      />
-                    ) : (
-                      <Empty description="暂无订单记录" />
-                    ),
+                  children: orderTabContent,
                 },
                 {
                   key: 'guesses',
                   label: `竞猜记录 (${guessTotal})`,
-                  children:
-                    userGuesses.length > 0 || guessesLoading ? (
-                      <Table
-                        columns={guessColumns}
-                        dataSource={userGuesses}
-                        loading={guessesLoading}
-                        pagination={{
-                          current: guessPage,
-                          pageSize: guessPageSize,
-                          total: guessTotal,
-                          showSizeChanger: true,
-                          showTotal: (value) => `共 ${value} 条`,
-                          pageSizeOptions: [10, 20, 50],
-                          locale: {
-                            items_per_page: '条/页',
-                          },
-                          onChange: (nextPage, nextPageSize) => {
-                            if (nextPageSize !== guessPageSize) {
-                              setGuessPage(1);
-                              setGuessPageSize(nextPageSize);
-                              return;
-                            }
-                            setGuessPage(nextPage);
-                          },
-                        }}
-                        rowKey="id"
-                        size="small"
-                      />
-                    ) : (
-                      <Empty description="暂无竞猜记录" />
-                    ),
+                  children: guessTabContent,
                 },
               ]}
             />

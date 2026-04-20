@@ -1,44 +1,78 @@
-import { Tag, Typography } from 'antd';
-import type { TableColumnsType } from 'antd';
+import type { ProColumns } from '@ant-design/pro-components';
+import { ProTable } from '@ant-design/pro-components';
+import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import { fetchAdminChats, type AdminChatItem } from '../lib/api/system';
+import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import { formatDateTime } from '../lib/format';
-import { AdminDataTablePage, useAsyncPageData } from './shared/admin-page-tools';
 
 interface SystemChatsPageProps {
   refreshToken?: number;
 }
 
+type ChatFilters = {
+  pair?: string;
+  riskLevel?: string;
+};
+
 function riskTag(record: AdminChatItem) {
   return (
-    <Tag
-      color={
-        record.riskLevel === 'high'
-          ? 'error'
-          : record.riskLevel === 'medium'
-            ? 'warning'
-            : 'success'
-      }
-    >
+    <Tag color={record.riskLevel === 'high' ? 'error' : record.riskLevel === 'medium' ? 'warning' : 'success'}>
       {record.riskLevel === 'high' ? '高风险' : record.riskLevel === 'medium' ? '中风险' : '低风险'}
     </Tag>
   );
 }
 
 export function SystemChatsPage({ refreshToken = 0 }: SystemChatsPageProps) {
-  const { data: rows, issue, loading } = useAsyncPageData({
-    deps: [refreshToken],
-    errorMessage: '聊天会话加载失败',
-    initialData: [] as AdminChatItem[],
-    load: async () => {
-      const result = await fetchAdminChats();
-      return result.items;
-    },
-  });
+  const [searchForm] = Form.useForm<ChatFilters>();
+  const [rows, setRows] = useState<AdminChatItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ChatFilters>({});
+  const [status, setStatus] = useState<'all' | AdminChatItem['status']>('all');
+  const [selected, setSelected] = useState<AdminChatItem | null>(null);
 
-  const columns: TableColumnsType<AdminChatItem> = [
+  useEffect(() => {
+    let alive = true;
+    async function loadPageData() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const result = await fetchAdminChats();
+        if (!alive) return;
+        setRows(result.items);
+      } catch (error) {
+        if (!alive) return;
+        setRows([]);
+        setIssue(error instanceof Error ? error.message : '聊天会话加载失败');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }
+    void loadPageData();
+    return () => {
+      alive = false;
+    };
+  }, [refreshToken]);
+
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((record) => {
+        if (status !== 'all' && record.status !== status) return false;
+        const pair = `${record.userA.name} ${record.userB.name}`.toLowerCase();
+        if (filters.pair && !pair.includes(filters.pair.trim().toLowerCase())) return false;
+        if (filters.riskLevel && record.riskLevel !== filters.riskLevel) return false;
+        return true;
+      }),
+    [filters.pair, filters.riskLevel, rows, status],
+  );
+
+  const columns: ProColumns<AdminChatItem>[] = [
     {
       title: '会话双方',
+      width: 220,
       render: (_, record) => (
         <div>
           <Typography.Text strong>{record.userA.name}</Typography.Text>
@@ -46,64 +80,85 @@ export function SystemChatsPage({ refreshToken = 0 }: SystemChatsPageProps) {
         </div>
       ),
     },
-    { title: '消息数', dataIndex: 'messages' },
-    { title: '未读', dataIndex: 'unreadMessages' },
-    { title: '风险等级', render: (_, record) => riskTag(record) },
-    { title: '状态', dataIndex: 'status' },
-    { title: '更新时间', dataIndex: 'updatedAt', render: (value) => formatDateTime(value) },
+    { title: '消息数', dataIndex: 'messages', width: 100 },
+    { title: '未读', dataIndex: 'unreadMessages', width: 100 },
+    { title: '风险等级', width: 120, render: (_, record) => riskTag(record) },
+    { title: '状态', dataIndex: 'status', width: 120 },
+    { title: '更新时间', dataIndex: 'updatedAt', width: 180, render: (_, record) => formatDateTime(record.updatedAt) },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 100,
+      fixed: 'right',
+      valueType: 'option',
+      render: (_, record) => <Button size="small" type="link" onClick={() => setSelected(record)}>查看</Button>,
+    },
   ];
 
   return (
-    <>
-      <AdminDataTablePage
-        columns={columns}
-        drawerTitle="聊天详情"
-        filterRows={(sourceRows, filters, status) =>
-          sourceRows.filter((record) => {
-            if (status !== 'all' && record.status !== status) {
-              return false;
-            }
-            const pair = `${record.userA.name} ${record.userB.name}`.toLowerCase();
-            if (filters.keyword && !pair.includes(filters.keyword.trim().toLowerCase())) {
-              return false;
-            }
-            if (filters.second && record.riskLevel !== filters.second) {
-              return false;
-            }
-            if (filters.third && record.status !== filters.third) {
-              return false;
-            }
-            return true;
-          })
-        }
-        issue={issue}
-        loading={loading}
-        refreshSeed={refreshToken}
-        rows={rows}
-        searchPlaceholder="会话用户"
-        secondField={{
-          options: [
-            { label: 'low', value: 'low' },
-            { label: 'medium', value: 'medium' },
-            { label: 'high', value: 'high' },
-          ],
-          placeholder: '风险等级',
+    <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
+      <AdminSearchPanel
+        form={searchForm}
+        onSearch={() => setFilters(searchForm.getFieldsValue())}
+        onReset={() => {
+          searchForm.resetFields();
+          setFilters({});
+          setStatus('all');
         }}
-        statusItems={[
+      >
+        <Form.Item name="pair">
+          <Input allowClear placeholder="会话用户" />
+        </Form.Item>
+        <Form.Item name="riskLevel">
+          <Select
+            allowClear
+            options={[
+              { label: '低风险', value: 'low' },
+              { label: '中风险', value: 'medium' },
+              { label: '高风险', value: 'high' },
+            ]}
+            placeholder="风险等级"
+          />
+        </Form.Item>
+      </AdminSearchPanel>
+      <AdminStatusTabs
+        activeKey={status}
+        items={[
           { key: 'all', label: '全部', count: rows.length },
-          { key: 'normal', label: 'normal', count: rows.filter((item) => item.status === 'normal').length },
-          { key: 'review', label: 'review', count: rows.filter((item) => item.status === 'review').length },
-          { key: 'escalated', label: 'escalated', count: rows.filter((item) => item.status === 'escalated').length },
+          { key: 'normal', label: '正常', count: rows.filter((item) => item.status === 'normal').length },
+          { key: 'review', label: '复核中', count: rows.filter((item) => item.status === 'review').length },
+          { key: 'escalated', label: '升级处理', count: rows.filter((item) => item.status === 'escalated').length },
         ]}
-        thirdField={{
-          options: [
-            { label: 'normal', value: 'normal' },
-            { label: 'review', value: 'review' },
-            { label: 'escalated', value: 'escalated' },
-          ],
-          placeholder: '状态',
-        }}
+        onChange={(key) => setStatus(key as typeof status)}
       />
-    </>
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<AdminChatItem>
+          cardBordered={false}
+          rowKey="id"
+          columns={columns}
+          columnsState={{}}
+          dataSource={filteredRows}
+          loading={loading}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => []}
+        />
+      </ConfigProvider>
+      <Drawer open={selected != null} title="聊天详情" width={460} onClose={() => setSelected(null)}>
+        {selected ? (
+          <Descriptions column={1} size="small">
+            <Descriptions.Item label="用户 A">{selected.userA.name}</Descriptions.Item>
+            <Descriptions.Item label="用户 B">{selected.userB.name}</Descriptions.Item>
+            <Descriptions.Item label="消息数">{selected.messages}</Descriptions.Item>
+            <Descriptions.Item label="未读消息">{selected.unreadMessages}</Descriptions.Item>
+            <Descriptions.Item label="风险等级">{selected.riskLevel === 'high' ? '高风险' : selected.riskLevel === 'medium' ? '中风险' : '低风险'}</Descriptions.Item>
+            <Descriptions.Item label="状态">{selected.status}</Descriptions.Item>
+            <Descriptions.Item label="更新时间">{formatDateTime(selected.updatedAt)}</Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Drawer>
+    </div>
   );
 }

@@ -221,7 +221,7 @@ export default function NoviceGuessPage() {
       setWins(nextWins);
       setStreak((value) => value + 1);
       setWonProducts((value) => [...value, question.product]);
-      setToast(`已解锁 ${question.product.name}`);
+      setToast(`已点亮体验奖励：${question.product.name}`);
     }
 
     window.setTimeout(() => {
@@ -252,7 +252,7 @@ export default function NoviceGuessPage() {
   }
 
   function handleShare() {
-    setToast('战绩卡已生成');
+    setToast('演示战绩卡已生成');
   }
 
   function optionState(index: number) {
@@ -305,11 +305,11 @@ export default function NoviceGuessPage() {
         <div className={styles.streakModal}>
           <div className={styles.modalPrizeSection}>
             <div className={styles.modalPrizeIcon}>{question.product.badge === '终极大奖' ? '🎊' : '🎁'}</div>
-            <div className={styles.modalPrizeTitle}>恭喜解锁 {question.product.badge}</div>
+            <div className={styles.modalPrizeTitle}>已点亮 {question.product.badge}</div>
             <div className={styles.modalPrizeSub}>
-              {question.product.badge === '首题奖励' ? '你的第一件竞猜战利品已入库' : '小神秘奖品已解锁'}
+              {question.product.badge === '首题奖励' ? '你的第一件体验奖励已点亮' : '小神秘体验奖励已点亮'}
               <br />
-              <span className={styles.modalPrizeHint}>可在「我的仓库」中查看</span>
+              <span className={styles.modalPrizeHint}>当前仍是体验模式，只展示演示结果，不会发放真实奖励</span>
             </div>
 
             <div className={styles.modalProductCard}>
@@ -317,7 +317,7 @@ export default function NoviceGuessPage() {
               <div className={styles.modalProductInfo}>
                 <div className={styles.modalProductName}>{question.product.name}</div>
                 <div className={styles.modalProductValue}>{formatPrice(question.product.price)}</div>
-                <div className={styles.modalProductStatus}>猜中已锁定，完成后自动入仓</div>
+                <div className={styles.modalProductStatus}>体验模式已点亮，仅用于演示展示</div>
               </div>
             </div>
           </div>
@@ -326,13 +326,13 @@ export default function NoviceGuessPage() {
             <div className={styles.modalDivider}>
               <span>CONTINUE</span>
             </div>
-            <div className={styles.modalChallengeTitle}>继续冲击连续奖励</div>
+            <div className={styles.modalChallengeTitle}>继续点亮后续体验奖励</div>
             <div className={styles.modalChallengeDesc}>
               {currentRound === QUESTIONS.length - 2
-                ? '全部猜中可解锁大神秘奖品！'
-                : `再答对 ${QUESTIONS.length - wins} 题，可把后续奖励全部拿下。`}
+                ? '全部猜中可点亮最终体验大奖展示。'
+                : `再答对 ${QUESTIONS.length - wins} 题，可继续点亮后续体验奖励。`}
               <br />
-              {currentRound === QUESTIONS.length - 2 ? '距离全胜之王只差最后一步！' : '继续挑战，赢更多！'}
+              {currentRound === QUESTIONS.length - 2 ? '距离完整体验只差最后一步。' : '继续挑战，解锁更多演示内容。'}
             </div>
 
             <div className={styles.modalRewardsPreview}>
@@ -354,15 +354,15 @@ export default function NoviceGuessPage() {
               🔥 继续挑战，赢更多！
             </button>
             <button className={styles.modalExploreButton} type="button" onClick={() => setPhase('result')}>
-              收下奖品，去探索更多
+              查看结果，去探索更多
               <span className={styles.modalExploreArrow}>→</span>
             </button>
             <div className={styles.modalSecondaryRow}>
               <button className={styles.modalSecondaryButton} type="button" onClick={handleShare}>
                 晒战绩
               </button>
-              <button className={styles.modalSecondaryButton} type="button" onClick={() => router.push('/warehouse')}>
-                我的仓库
+              <button className={styles.modalSecondaryButton} type="button" onClick={() => router.push('/all-features')}>
+                继续体验
               </button>
             </div>
           </div>
@@ -394,7 +394,7 @@ export default function NoviceGuessPage() {
             {tickerLoop.map((item, index) => (
               <div className={styles.tickerItem} key={`${item.name}-${index}`}>
                 <img className={styles.tickerAvatar} src={item.avatar} alt={item.name} />
-                <span>{item.name} 刚拿到</span>
+                <span>{item.name} 正在体验</span>
                 <span className={styles.prize}>{item.prize}</span>
               </div>
             ))}
@@ -404,8 +404,8 @@ export default function NoviceGuessPage() {
         <div className={styles.splashCenter}>
           <div className={styles.splashBrand}>⚡ 新用户专属福利</div>
           <div className={styles.splashLogo}>Umi</div>
-          <div className={styles.splashSlogan}>猜对了就是你的</div>
-          <div className={styles.splashSub}>万物皆可猜 · 猜中免费拿</div>
+          <div className={styles.splashSlogan}>先体验一轮猜题流程</div>
+          <div className={styles.splashSub}>静态演示页 · 用来熟悉玩法</div>
           <div className={styles.splashLive}>
             <span className={styles.dot} />
             <span className={styles.count}>{liveCount.toLocaleString()}</span>
@@ -414,8 +414,8 @@ export default function NoviceGuessPage() {
           <button className={styles.splashCta} type="button" onClick={startGame}>
             <span className={styles.ctaShine} />
             <span className={styles.ctaIcon}>🎁</span>
-            免费猜一次
-            <span className={styles.ctaSub}>0元赢好物 · 新人必得</span>
+            开始体验
+            <span className={styles.ctaSub}>演示模式 · 不发放真实奖励</span>
           </button>
           <button className={styles.splashSkip} type="button" onClick={() => router.push('/')}>
             已有账号，直接进入
@@ -503,17 +503,17 @@ export default function NoviceGuessPage() {
             <div className={styles.prizeInfo}>
               <div className={styles.prizeLabel}>
                 <span className={styles.dot} />
-                猜中即可免费获得
+                猜中即可点亮体验奖励
               </div>
               <div className={styles.prizeValueRow}>
                 <span className={styles.prizeValue}>{formatPrice(question.product.guessPrice)}</span>
                 <span className={styles.prizeOrig}>{formatPrice(question.product.price)}</span>
               </div>
             </div>
-            <div className={styles.prizeTag}>猜中免费</div>
+            <div className={styles.prizeTag}>体验模式</div>
           </div>
           <div className={styles.totalLine}>
-            🎁 本场共 {QUESTIONS.length} 件商品可赢 · 总价值 <span className={styles.totalValue}>{formatPrice(allPrizeValue)}</span> · 已赢{' '}
+            🎁 本场共 {QUESTIONS.length} 件体验商品展示 · 总价值 <span className={styles.totalValue}>{formatPrice(allPrizeValue)}</span> · 已点亮{' '}
             <span className={styles.totalValue}>{formatPrice(totalPrize)}</span>
           </div>
         </div>
@@ -525,7 +525,7 @@ export default function NoviceGuessPage() {
             <div className={styles.resultHero}>
               <div className={styles.modalPrizeIcon}>😢</div>
               <div className={styles.loseTitle}>这次差一点</div>
-              <div className={styles.loseSub}>别灰心，马上复活继续挑战，奖励还在等你。</div>
+              <div className={styles.loseSub}>别灰心，继续体验下一轮，后面的演示内容还在等你。</div>
             </div>
 
             <div className={styles.challengeCard}>
@@ -533,7 +533,7 @@ export default function NoviceGuessPage() {
               <div className={styles.challengeSub}>
                 正确答案是「{question.options[question.correct]}」
                 <br />
-                没关系，新手都有免费复活机会！
+                没关系，这里仍是新手体验模式。
               </div>
               <div className={styles.challengeList}>
                 {STREAK_REWARDS.map((item, index) => (
@@ -549,22 +549,22 @@ export default function NoviceGuessPage() {
               </div>
               <div className={styles.challengeWarning}>
                 <span className={styles.warningIcon}>⚠</span>
-                未猜中不会入仓，奖励仅保留本次挑战结果。
+                当前页面仅作演示，结果不会进入真实账户或仓库。
               </div>
             </div>
 
             <div className={styles.revivalBox}>
-              <div className={styles.revivalTitle}>🔄 复活机会！</div>
+              <div className={styles.revivalTitle}>🔄 继续体验</div>
               <div className={styles.revivalDesc}>
-                连胜中断，但你可以：
+                连胜中断，但你仍可以继续体验：
                 <br />
-                • 分享给好友 → 立即获得 1 次复活机会
+                • 分享演示战绩 → 生成体验海报
                 <br />
-                • 邀请 2 位好友参与 → 免费再来一轮！
+                • 返回功能页 → 探索更多真实能力
               </div>
               <div className={styles.revivalButtons}>
                 <button className={styles.revivalPrimary} type="button" onClick={handleShare}>
-                  📤 分享复活
+                  📤 分享战绩
                 </button>
                 <button className={styles.revivalGhost} type="button" onClick={() => router.push('/all-features')}>
                   继续逛逛
@@ -572,7 +572,7 @@ export default function NoviceGuessPage() {
               </div>
             </div>
             <div className={styles.loginHint}>
-              去 <button className={styles.inlineLink} type="button" onClick={() => router.push('/register')}>登录保存</button>，下次继续挑战更轻松。
+              去 <button className={styles.inlineLink} type="button" onClick={() => router.push('/register')}>登录</button> 后体验真实业务页面。
             </div>
           </div>
         ) : (
@@ -592,7 +592,7 @@ export default function NoviceGuessPage() {
               <div className={`${styles.winTitle} ${isFullWin ? styles.full : styles.partial}`}>
                 {isFullWin ? '🔥 全部猜中！' : `恭喜猜中 ${wins} 题！`}
               </div>
-              <div className={styles.winTagline}>奖励已锁定，完成注册后自动入仓</div>
+              <div className={styles.winTagline}>当前展示的是体验奖励，不会发放到真实账户</div>
             </div>
 
             <div className={styles.lootGrid}>
@@ -604,7 +604,7 @@ export default function NoviceGuessPage() {
                   <div className={styles.lootInfo}>
                     <div className={styles.lootName}>{item.name}</div>
                     <div className={styles.lootPrice}>{formatPrice(item.price)}</div>
-                    <div className={styles.lootStatus}>✅ 猜中已锁定</div>
+                    <div className={styles.lootStatus}>✅ 体验模式已点亮</div>
                   </div>
                 </div>
               ))}
@@ -629,14 +629,14 @@ export default function NoviceGuessPage() {
             <div className={styles.brandStrip}>
               <span className={styles.brandLogo}>Umi</span>
               <span className={styles.brandDot} />
-              <span className={styles.brandText}>猜对了就是你的</span>
+              <span className={styles.brandText}>先熟悉猜题体验</span>
               <span className={styles.brandDot} />
               <span className={styles.brandText}>{brandDate}</span>
             </div>
 
             <div className={styles.challengeCard}>
               <div className={styles.challengeTitle}>连续奖励进度</div>
-              <div className={styles.challengeSub}>继续完成后续题目，可把剩下的奖励一起收入仓库。</div>
+              <div className={styles.challengeSub}>继续完成后续题目，可把剩下的体验奖励一起点亮。</div>
               <div className={styles.challengeList}>
                 {STREAK_REWARDS.map((item, index) => {
                   const stateClass =
@@ -655,7 +655,7 @@ export default function NoviceGuessPage() {
               </div>
               <div className={styles.challengeWarning}>
                 <span className={styles.warningIcon}>⚠</span>
-                未注册时奖励仅保留当前会话，请尽快登录保存。
+                当前页是静态体验页，奖励和结果都不会进入真实账户。
               </div>
             </div>
 
@@ -669,12 +669,12 @@ export default function NoviceGuessPage() {
                 <button className={styles.secondaryAction} type="button" onClick={handleShare}>
                   晒战绩
                 </button>
-                <button className={styles.secondaryAction} type="button" onClick={() => router.push('/warehouse')}>
-                  我的仓库
+                <button className={styles.secondaryAction} type="button" onClick={() => router.push('/all-features')}>
+                  继续体验
                 </button>
               </div>
               <div className={styles.loginHint}>
-                去 <button className={styles.inlineLink} type="button" onClick={() => router.push('/register')}>登录保存</button>，奖励不会丢。
+                去 <button className={styles.inlineLink} type="button" onClick={() => router.push('/register')}>登录</button> 后体验真实业务链路。
               </div>
             </div>
           </div>

@@ -5,6 +5,48 @@
   color: #1a1a1a;
 }
 
+.errorState {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 24px 40px;
+  text-align: center;
+}
+
+.errorIcon {
+  margin-bottom: 12px;
+  font-size: 42px;
+}
+
+.errorTitle {
+  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.errorDesc {
+  margin-top: 8px;
+  color: #8f8f8f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.errorBtn {
+  margin-top: 14px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.errorBtn:active {
+  transform: scale(0.97);
+}
+
 .topbar {
   position: fixed;
   inset: 0 0 auto;

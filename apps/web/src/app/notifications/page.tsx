@@ -21,6 +21,9 @@ export default function NotificationsPage() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [toast, setToast] = useState('');
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [markAllSaving, setMarkAllSaving] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   function formatTime(value: string) {
     const timestamp = new Date(value).getTime();
@@ -49,6 +52,7 @@ export default function NotificationsPage() {
     let ignore = false;
 
     async function load() {
+      setError(null);
       try {
         const result = await fetchNotifications();
         if (ignore) {
@@ -60,7 +64,7 @@ export default function NotificationsPage() {
         if (ignore) {
           return;
         }
-        setItems([]);
+        setError('通知读取失败');
         setReady(true);
       }
     }
@@ -69,7 +73,7 @@ export default function NotificationsPage() {
     return () => {
       ignore = true;
     };
-  }, [router]);
+  }, [reloadToken, router]);
 
   const filtered = useMemo(
     () => (tab === 'all' ? items : items.filter((item) => item.type === tab)),
@@ -91,13 +95,19 @@ export default function NotificationsPage() {
   }
 
   async function handleMarkAllRead() {
-    try {
-      await markAllNotificationsRead();
-    } catch {
-      // Keep the old static-page behavior when the API is unavailable.
+    if (markAllSaving) {
+      return;
     }
-    setItems((prev) => prev.map((item) => ({ ...item, read: true })));
-    setToast('全部已读');
+    try {
+      setMarkAllSaving(true);
+      await markAllNotificationsRead();
+      setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+      setToast('全部已读');
+    } catch (markError) {
+      setToast(markError instanceof Error ? markError.message : '全部已读失败');
+    } finally {
+      setMarkAllSaving(false);
+    }
     window.setTimeout(() => setToast(''), 1600);
   }
 
@@ -112,7 +122,7 @@ export default function NotificationsPage() {
           <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>通知中心</div>
-        <button className={styles.actionBtn} type="button" onClick={() => void handleMarkAllRead()}>
+        <button className={styles.actionBtn} type="button" onClick={() => void handleMarkAllRead()} disabled={markAllSaving}>
           <i className="fa-solid fa-check-double" />
         </button>
       </header>
@@ -137,7 +147,17 @@ export default function NotificationsPage() {
       </nav>
 
       <section className={styles.list}>
-        {filtered.map((item) => (
+        {error ? (
+          <div className={styles.errorState}>
+            <div className={styles.errorIcon}>⚠️</div>
+            <div className={styles.errorTitle}>通知加载失败</div>
+            <div className={styles.errorDesc}>{error}</div>
+            <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+              重新加载
+            </button>
+          </div>
+        ) : null}
+        {!error ? filtered.map((item) => (
           <article
             key={item.id}
             className={`${styles.item} ${item.read ? '' : styles.unread}`}
@@ -152,8 +172,8 @@ export default function NotificationsPage() {
               <div className={styles.time}>{formatTime(item.createdAt)}</div>
             </div>
           </article>
-        ))}
-        {filtered.length === 0 ? (
+        )) : null}
+        {!error && filtered.length === 0 ? (
           <div className={styles.empty}>暂无通知</div>
         ) : null}
       </section>

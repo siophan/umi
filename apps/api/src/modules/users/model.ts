@@ -37,7 +37,7 @@ export type UserRow = {
 };
 
 function resolveUserRole(row: Pick<UserRow, 'shop_name' | 'shop_verified'>): UserSummary['role'] {
-  if (Number(row.shop_verified ?? 0) > 0 || (row.shop_name ?? '').trim()) {
+  if (Number(row.shop_verified ?? 0) > 0) {
     return 'shop_owner';
   }
   return 'user';

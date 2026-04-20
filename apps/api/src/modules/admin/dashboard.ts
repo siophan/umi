@@ -12,7 +12,6 @@ const ORDER_FULFILLED = 30;
 const ORDER_REFUNDED = 90;
 
 const SHOP_APPLY_PENDING = 10;
-const BRAND_APPLY_PENDING = 10;
 const REFUND_PENDING = 10;
 const REFUND_REVIEWING = 20;
 const REPORT_PENDING = 10;
@@ -110,7 +109,6 @@ export async function getAdminDashboardStats() {
     [hotProductRows],
     [pendingGuessRows],
     [pendingShopApplyRows],
-    [pendingBrandApplyRows],
     [pendingRefundRows],
     [pendingReportRows],
   ] = await Promise.all([
@@ -242,14 +240,6 @@ export async function getAdminDashboardStats() {
     db.execute<mysql.RowDataPacket[]>(
       `
         SELECT COUNT(*) AS total
-        FROM brand_apply
-        WHERE status = ?
-      `,
-      [BRAND_APPLY_PENDING],
-    ),
-    db.execute<mysql.RowDataPacket[]>(
-      `
-        SELECT COUNT(*) AS total
         FROM order_refund
         WHERE status IN (?, ?)
       `,
@@ -328,13 +318,6 @@ export async function getAdminDashboardStats() {
       count: toNumber((pendingShopApplyRows[0] as QueueRow | undefined)?.total),
       tone: 'processing',
       description: '新店入驻申请待处理。',
-    },
-    {
-      id: 'brand-apply',
-      title: '品牌入驻',
-      count: toNumber((pendingBrandApplyRows[0] as QueueRow | undefined)?.total),
-      tone: 'processing',
-      description: '品牌方入驻申请待处理。',
     },
     {
       id: 'refund-review',
