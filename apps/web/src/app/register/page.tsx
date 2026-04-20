@@ -132,6 +132,7 @@ function RegisterPageInner() {
         code,
         password,
         name: name.trim(),
+        avatar: avatars[selectedAvatar]?.src,
       });
       setAuthToken(result.token);
       showToast("注册成功 🎉");

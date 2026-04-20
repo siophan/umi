@@ -1,4 +1,6 @@
 import type { ApiEnvelope, RankingListResult, RankingType } from '@umi/shared';
+
+import { serverApiBaseUrl } from '../../lib/env';
 import RankingPageClient from './page-client';
 
 type RankTab = 'winRate' | 'earnings' | 'active';
@@ -9,10 +11,8 @@ const rankingTypes: Record<RankTab, RankingType> = {
   active: 'inviteCount',
 };
 
-const apiBaseUrl = 'http://127.0.0.1:4000';
-
 async function fetchServerRankingList(type: RankingType) {
-  const response = await fetch(`${apiBaseUrl}/api/rankings?type=${type}&periodType=allTime&limit=20`, {
+  const response = await fetch(`${serverApiBaseUrl}/api/rankings?type=${type}&periodType=allTime&limit=20`, {
     cache: 'no-store',
   });
   const payload = (await response.json()) as ApiEnvelope<RankingListResult>;

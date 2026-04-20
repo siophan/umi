@@ -6,12 +6,11 @@ import type {
   RankingListResult,
 } from '@umi/shared';
 
+import { serverApiBaseUrl } from '../lib/env';
 import HomePageClient from './page-client';
 
-const apiBaseUrl = 'http://127.0.0.1:4000';
-
 async function fetchServerData<T>(path: string) {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${serverApiBaseUrl}${path}`, {
     cache: 'no-store',
   });
   const payload = (await response.json()) as ApiEnvelope<T>;

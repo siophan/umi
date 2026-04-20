@@ -90,6 +90,7 @@ export interface RegisterPayload {
   code: string;
   password: string;
   name: string;
+  avatar?: string;
 }
 
 export interface LogoutResult {
@@ -98,6 +99,12 @@ export interface LogoutResult {
 
 export interface ChangePasswordPayload {
   currentPassword?: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordPayload {
+  phone: string;
+  code: string;
   newPassword: string;
 }
 

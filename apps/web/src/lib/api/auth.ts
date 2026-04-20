@@ -3,6 +3,7 @@ import type {
   LoginResult,
   LogoutResult,
   RegisterPayload,
+  ResetPasswordPayload,
   SendCodePayload,
   SendCodeResult,
   UpdateMePayload,
@@ -33,4 +34,8 @@ export async function logout() {
 
 export async function updateMe(payload: UpdateMePayload) {
   return putJson<UserSummary, UpdateMePayload>('/api/users/me', payload);
+}
+
+export async function resetPassword(payload: ResetPasswordPayload) {
+  return postJson<{ success: true }, ResetPasswordPayload>('/api/auth/reset-password', payload);
 }

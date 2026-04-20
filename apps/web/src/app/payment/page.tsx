@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toEntityId, type CouponListItem, type EntityId, type UserAddressItem } from '@umi/shared';
 
 import { fetchAddresses } from '../../lib/api/address';
+import { fetchCart } from '../../lib/api/cart';
 import { fetchCoupons } from '../../lib/api/coupons';
 import { createOrder } from '../../lib/api/orders';
 import { fetchProductDetail } from '../../lib/api/products';
@@ -90,30 +91,26 @@ function PaymentPageInner() {
         setCoupons(couponResult.filter((item) => item.status === 'unused'));
 
         if (from === 'cart') {
-          const raw = window.sessionStorage.getItem('payCartItems');
-          if (!raw) {
+          const idsParam = searchParams.get('cartItemIds');
+          const selectedIds = new Set(idsParam ? idsParam.split(',').filter(Boolean) : []);
+          if (selectedIds.size === 0) {
             setProducts([]);
             return;
           }
-          const parsed = JSON.parse(raw) as Array<{
-            id?: string;
-            cartItemId?: string;
-            name?: string;
-            price?: number;
-            qty?: number;
-            img?: string;
-            orig?: number;
-          }>;
+          const cartResult = await fetchCart();
+          if (ignore) return;
           setProducts(
-            parsed.map((item) => ({
-              productId: item.id || '',
-              cartItemId: item.cartItemId,
-              name: item.name || '商品',
-              price: Number(item.price) || 0,
-              qty: Math.max(1, Number(item.qty) || 1),
-              orig: Number(item.orig ?? item.price) || 0,
-              img: item.img || '',
-            })),
+            cartResult.items
+              .filter((item) => selectedIds.has(item.id))
+              .map((item) => ({
+                productId: item.productId,
+                cartItemId: item.id,
+                name: item.name,
+                price: item.price,
+                qty: Math.max(1, item.quantity),
+                orig: item.originalPrice,
+                img: item.img,
+              })),
           );
           return;
         }

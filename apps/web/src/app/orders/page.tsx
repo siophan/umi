@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { OrderSummary } from '@umi/shared';
 
-import { confirmOrder, fetchOrders } from '../../lib/api/orders';
+import { confirmOrder, fetchOrders, urgeOrder } from '../../lib/api/orders';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 
@@ -209,17 +209,19 @@ export default function OrdersPage() {
       return;
     }
     if (action.text === '联系卖家') {
-      triggerToast('正在接入客服...');
+      router.push('/chat');
       return;
     }
     if (action.text === '催发货') {
-      triggerToast('✅ 已提醒卖家尽快发货');
+      urgeOrder(order.id)
+        .then(() => triggerToast('✅ 已提醒卖家尽快发货'))
+        .catch((err: unknown) => triggerToast(err instanceof Error ? err.message : '催发货失败'));
       return;
     }
     if (action.text === '评价') {
       const productId = order.items[0]?.productId;
       if (productId) {
-        router.push(`/product/${encodeURIComponent(productId)}`);
+        router.push(`/review?orderId=${encodeURIComponent(order.id)}&productId=${encodeURIComponent(productId)}`);
         return;
       }
       triggerToast('暂无可评价商品');

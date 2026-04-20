@@ -350,6 +350,109 @@ warehouseRouter.get(
   }),
 );
 
+function computeEstimateDays(priceYuan: number, marketPriceYuan: number): number {
+  if (marketPriceYuan <= 0) return 5;
+  const ratio = priceYuan / marketPriceYuan;
+  if (ratio <= 0.85) return 2;
+  if (ratio <= 0.95) return 3;
+  if (ratio <= 1.05) return 5;
+  return 7;
+}
+
+warehouseRouter.post(
+  '/physical/:id/consign',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const rawId = request.params.id;
+    if (!rawId.startsWith('pw-')) {
+      response.status(400).json({ success: false, code: 'INVALID_ID', message: '只有实体仓库商品可以寄售', status: 400 });
+      return;
+    }
+    const dbId = Number(rawId.slice(3));
+    if (!Number.isFinite(dbId) || dbId <= 0) {
+      response.status(400).json({ success: false, code: 'INVALID_ID', message: '无效的商品 ID', status: 400 });
+      return;
+    }
+
+    const body = request.body as { price?: number };
+    const priceYuan = Number(body.price);
+    if (!Number.isFinite(priceYuan) || priceYuan <= 0) {
+      response.status(400).json({ success: false, code: 'INVALID_PRICE', message: '请输入有效价格', status: 400 });
+      return;
+    }
+
+    const db = getDbPool();
+    const [rows] = await db.execute<mysql.RowDataPacket[]>(
+      `SELECT id, user_id, price, status FROM physical_warehouse WHERE id = ? AND user_id = ? LIMIT 1`,
+      [dbId, user.id],
+    );
+    const row = rows[0] as { id: number; user_id: number; price: number; status: number } | undefined;
+    if (!row) {
+      response.status(404).json({ success: false, code: 'NOT_FOUND', message: '商品不存在', status: 404 });
+      return;
+    }
+    if (row.status !== PHYSICAL_STATUS_STORED) {
+      response.status(400).json({ success: false, code: 'INVALID_STATUS', message: '当前状态不可寄售', status: 400 });
+      return;
+    }
+
+    const marketPriceYuan = Number(row.price) / 100;
+    const estimateDays = computeEstimateDays(priceYuan, marketPriceYuan);
+
+    await db.execute(
+      `UPDATE physical_warehouse
+       SET status = ?, consign_price = ?, estimate_days = ?, consign_date = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3)
+       WHERE id = ?`,
+      [PHYSICAL_STATUS_CONSIGNING, Math.round(priceYuan * 100), estimateDays, dbId],
+    );
+
+    ok(response, { success: true, estimateDays });
+  }),
+);
+
+warehouseRouter.post(
+  '/physical/:id/cancel-consign',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const rawId = request.params.id;
+    if (!rawId.startsWith('pw-')) {
+      response.status(400).json({ success: false, code: 'INVALID_ID', message: '无效的商品 ID', status: 400 });
+      return;
+    }
+    const dbId = Number(rawId.slice(3));
+    if (!Number.isFinite(dbId) || dbId <= 0) {
+      response.status(400).json({ success: false, code: 'INVALID_ID', message: '无效的商品 ID', status: 400 });
+      return;
+    }
+
+    const db = getDbPool();
+    const [rows] = await db.execute<mysql.RowDataPacket[]>(
+      `SELECT id, user_id, status FROM physical_warehouse WHERE id = ? AND user_id = ? LIMIT 1`,
+      [dbId, user.id],
+    );
+    const row = rows[0] as { id: number; user_id: number; status: number } | undefined;
+    if (!row) {
+      response.status(404).json({ success: false, code: 'NOT_FOUND', message: '商品不存在', status: 404 });
+      return;
+    }
+    if (row.status !== PHYSICAL_STATUS_CONSIGNING) {
+      response.status(400).json({ success: false, code: 'INVALID_STATUS', message: '当前状态不可取消寄售', status: 400 });
+      return;
+    }
+
+    await db.execute(
+      `UPDATE physical_warehouse
+       SET status = ?, consign_price = NULL, estimate_days = NULL, consign_date = NULL, updated_at = CURRENT_TIMESTAMP(3)
+       WHERE id = ?`,
+      [PHYSICAL_STATUS_STORED, dbId],
+    );
+
+    ok(response, { success: true });
+  }),
+);
+
 warehouseRouter.get(
   '/admin/stats',
   requireAdmin,

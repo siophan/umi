@@ -1023,3 +1023,76 @@ orderRouter.post(
     },
   ),
 );
+
+orderRouter.post(
+  '/:id/urge',
+  requireUser,
+  withErrorBoundary(
+    {
+      status: 400,
+      code: 'ORDER_URGE_FAILED',
+      message: '催发货失败',
+    },
+    async (request, response) => {
+      const user = getRequestUser(request);
+      const orderId = String(request.params.id);
+      const db = getDbPool();
+      const [rows] = await db.execute<mysql.RowDataPacket[]>(
+        `SELECT id, status FROM \`order\` WHERE id = ? AND user_id = ? LIMIT 1`,
+        [orderId, user.id],
+      );
+      const row = rows[0] as { id: number | string; status: number | string } | undefined;
+      if (!row?.id) {
+        throw new HttpError(404, 'ORDER_NOT_FOUND', '订单不存在');
+      }
+      if (Number(row.status) !== ORDER_PAID) {
+        throw new HttpError(400, 'ORDER_URGE_NOT_ALLOWED', '当前订单状态不支持催发货');
+      }
+      await db.execute(
+        `INSERT INTO order_status_log (order_id, from_status, to_status, operator_id, operator_role, note, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`,
+        [orderId, row.status, row.status, user.id, 'user', '用户催发货'],
+      );
+      ok(response, { success: true as const });
+    },
+  ),
+);
+
+orderRouter.post(
+  '/:id/review',
+  requireUser,
+  withErrorBoundary(
+    {
+      status: 400,
+      code: 'ORDER_REVIEW_FAILED',
+      message: '提交评价失败',
+    },
+    async (request, response) => {
+      const user = getRequestUser(request);
+      const orderId = String(request.params.id);
+      const { productId, rating, content } = request.body as { productId: string; rating: number; content?: string };
+      if (!productId) {
+        throw new HttpError(400, 'REVIEW_PRODUCT_REQUIRED', '请指定评价商品');
+      }
+      const ratingNum = Math.max(1, Math.min(5, Math.trunc(Number(rating) || 5)));
+      const db = getDbPool();
+      const [rows] = await db.execute<mysql.RowDataPacket[]>(
+        `SELECT o.id FROM \`order\` o
+         INNER JOIN order_item oi ON oi.order_id = o.id AND oi.product_id = ?
+         WHERE o.id = ? AND o.user_id = ? AND o.status = ?
+         LIMIT 1`,
+        [productId, orderId, user.id, ORDER_FULFILLED],
+      );
+      if (!(rows as mysql.RowDataPacket[]).length) {
+        throw new HttpError(403, 'REVIEW_NOT_ALLOWED', '只能评价已完成订单中的商品');
+      }
+      await db.execute(
+        `INSERT INTO product_review (order_id, user_id, product_id, rating, content, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+         ON DUPLICATE KEY UPDATE rating = VALUES(rating), content = VALUES(content), updated_at = CURRENT_TIMESTAMP(3)`,
+        [orderId, user.id, productId, ratingNum, content?.trim() || null],
+      );
+      ok(response, { success: true as const });
+    },
+  ),
+);

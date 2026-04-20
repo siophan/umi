@@ -321,9 +321,9 @@ function LoginPageInner() {
             </label>
 
             <div className={styles.forgotRow}>
-              <button className={styles.forgotLink} type="button" onClick={() => openToast("密码重置功能开发中")}>
+              <Link href="/reset-password" className={styles.forgotLink}>
                 忘记密码？
-              </button>
+              </Link>
             </div>
 
           <button className={styles.submitBtn} type="submit" disabled={!pwdReady}>

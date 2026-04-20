@@ -5,6 +5,7 @@ import type {
   ChangePasswordPayload,
   LoginPayload,
   RegisterPayload,
+  ResetPasswordPayload,
   SendCodePayload,
 } from '@umi/shared';
 
@@ -16,6 +17,7 @@ import {
   login,
   logoutByToken,
   register,
+  resetPassword,
   sendCode,
 } from './store';
 
@@ -81,6 +83,20 @@ authRouter.post(
         response,
         await changePassword(user.id, request.body as ChangePasswordPayload),
       );
+    },
+  ),
+);
+
+authRouter.post(
+  '/reset-password',
+  withErrorBoundary(
+    {
+      status: 400,
+      code: 'AUTH_RESET_PASSWORD_FAILED',
+      message: '重置密码失败',
+    },
+    async (request, response) => {
+      ok(response, await resetPassword(request.body as ResetPasswordPayload));
     },
   ),
 );

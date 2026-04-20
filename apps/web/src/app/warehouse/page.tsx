@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { WarehouseItem } from '@umi/shared';
 
-import { fetchPhysicalWarehouse, fetchVirtualWarehouse } from '../../lib/api/warehouse';
+import { cancelConsignWarehouseItem, consignWarehouseItem, fetchPhysicalWarehouse, fetchVirtualWarehouse } from '../../lib/api/warehouse';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 
@@ -148,7 +148,7 @@ export default function WarehousePage() {
               ? { title: '预计 5 日内出售', desc: '接近市场价，需要一定等待时间', level: 1 }
               : { title: '预计 7 日内出售', desc: '高于市场价，出售可能较慢', level: 0 };
 
-  const submitSell = () => {
+  const submitSell = async () => {
     if (!sellItem) return;
     const quantity = Number.parseInt(sellQty, 10);
     if (!priceValue || priceValue <= 0) {
@@ -159,20 +159,21 @@ export default function WarehousePage() {
       triggerToast('数量无效');
       return;
     }
-    setItems((current) =>
-      current.map((item) =>
-        item.id === sellItem.id
-          ? {
-              ...item,
-              status: 'consigning',
-              consignPrice: priceValue,
-              estimateDays: estimate?.level === 3 ? 2 : estimate?.level === 2 ? 3 : estimate?.level === 1 ? 5 : 7,
-            }
-          : item,
-      ),
-    );
-    triggerToast(`🏷️ 已寄售 ${sellItem.productName} ×${quantity}，寄售价 ¥${priceValue}`);
-    closeSell();
+
+    try {
+      const result = await consignWarehouseItem(sellItem.id, priceValue);
+      setItems((current) =>
+        current.map((item) =>
+          item.id === sellItem.id
+            ? { ...item, status: 'consigning', consignPrice: priceValue, estimateDays: result.estimateDays }
+            : item,
+        ),
+      );
+      triggerToast(`🏷️ 已寄售 ${sellItem.productName} ×${quantity}，寄售价 ¥${priceValue}`);
+      closeSell();
+    } catch (error) {
+      triggerToast(error instanceof Error ? error.message : '寄售失败，请重试');
+    }
   };
 
   return (
@@ -183,9 +184,7 @@ export default function WarehousePage() {
             <i className="fa-solid fa-chevron-left" />
           </button>
           <h1 className={styles.title}>我的仓库</h1>
-          <button className={styles.action} type="button" onClick={() => triggerToast('批量操作')}>
-            <i className="fa-solid fa-list-check" />
-          </button>
+          <div className={styles.action} />
         </header>
 
         <section className={styles.summary}>
@@ -300,19 +299,21 @@ export default function WarehousePage() {
                           className={`${styles.btn} ${styles.cancel}`}
                           type="button"
                           onClick={() => {
-                            setItems((current) =>
-                              current.map((entry) =>
-                                entry.id === item.id
-                                  ? {
-                                      ...entry,
-                                      status: 'stored',
-                                      consignPrice: undefined,
-                                      estimateDays: undefined,
-                                    }
-                                  : entry,
-                              ),
-                            );
-                            triggerToast(`✅ 已取消寄售 ${item.productName}`);
+                            void (async () => {
+                              try {
+                                await cancelConsignWarehouseItem(item.id);
+                                setItems((current) =>
+                                  current.map((entry) =>
+                                    entry.id === item.id
+                                      ? { ...entry, status: 'delivered', consignPrice: undefined, estimateDays: undefined }
+                                      : entry,
+                                  ),
+                                );
+                                triggerToast(`✅ 已取消寄售 ${item.productName}`);
+                              } catch (error) {
+                                triggerToast(error instanceof Error ? error.message : '取消寄售失败');
+                              }
+                            })();
                           }}
                         >
                           <i className="fa-solid fa-xmark" />
@@ -451,7 +452,7 @@ export default function WarehousePage() {
                 <div className={styles.hint}>可售数量：{sellItem.quantity}</div>
               </div>
 
-              <button className={styles.submit} type="button" onClick={submitSell}>
+              <button className={styles.submit} type="button" onClick={() => void submitSell()}>
                 确认寄售
               </button>
             </div>

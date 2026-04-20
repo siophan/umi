@@ -8,29 +8,16 @@ import { fetchCart, removeCartItem, updateCartItem } from '../../lib/api/cart';
 import { fetchProductList } from '../../lib/api/products';
 import styles from './page.module.css';
 
-const SHOP_NAME_MAP: Record<string, string> = {
-  乐事: '乐事官方旗舰店',
-  三只松鼠: '三只松鼠旗舰店',
-  德芙: '德芙旗舰店',
-  卫龙: '卫龙旗舰店',
-  元气森林: '元气森林旗舰店',
-  奥利奥: '奥利奥旗舰店',
-  百草味: '百草味旗舰店',
-  良品铺子: '良品铺子旗舰店',
-  旺旺: '旺旺旗舰店',
-  蒙牛: '蒙牛旗舰店',
-};
-
 function getGroupKey(item: CartLineItem) {
   return item.brand?.trim() || item.shop?.trim() || '其他';
 }
 
 function getDisplayShopName(item: CartLineItem) {
-  const groupKey = getGroupKey(item);
   if (item.shop?.trim() && item.shop !== '未知店铺') {
     return item.shop;
   }
-  return SHOP_NAME_MAP[groupKey] || `${groupKey}旗舰店`;
+  const groupKey = getGroupKey(item);
+  return `${groupKey}旗舰店`;
 }
 
 export default function CartPage() {
@@ -248,18 +235,8 @@ export default function CartPage() {
       showToast('请选择商品');
       return;
     }
-    const payItems = selectedItems.map((item) => ({
-      id: item.productId,
-      cartItemId: item.id,
-      name: item.name,
-      price: item.price,
-      qty: item.quantity,
-      img: item.img,
-      orig: item.originalPrice,
-      brand: item.brand,
-    }));
-    window.sessionStorage.setItem('payCartItems', JSON.stringify(payItems));
-    router.push('/payment?from=cart');
+    const ids = selectedItems.map((item) => item.id).join(',');
+    router.push(`/payment?from=cart&cartItemIds=${encodeURIComponent(ids)}`);
   };
 
   return (
@@ -317,11 +294,9 @@ export default function CartPage() {
                         >
                           <i className="fa-solid fa-check" />
                         </button>
-                        <img
-                          className={styles.shopLogo}
-                          src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(shop)}&backgroundColor=FF6B35`}
-                          alt={shop}
-                        />
+                        <span className={styles.shopLogo} aria-hidden="true">
+                          {shop.charAt(0)}
+                        </span>
                         <div className={styles.shopName}>
                           {shopDisplayName}
                           <span className={styles.shopTag}>官方</span>
