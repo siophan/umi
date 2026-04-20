@@ -31,7 +31,7 @@
 | Workspace 结构 | `已完成` | `apps/web`、`apps/admin`、`apps/api`、`packages/*`、`docs` 已拆开 |
 | TypeScript 基础配置 | `已完成` | root tsconfig / package tsconfig 已建立 |
 | 开发脚本 | `已完成` | `pnpm install`、`pnpm typecheck`、`pnpm dev` 可用 |
-| 共享类型包 | `已完成` | Web / Admin / API 已共用 `@joy/shared` |
+| 共享类型包 | `已完成` | Web / Admin / API 已共用 `@umi/shared` |
 | 统一数据库接入 | `进行中` | `apps/api` 已有 MySQL 连接层，认证/资料/社交/聊天/钱包/竞猜/订单/仓库/店铺已开始真实读写 |
 | 权限 / 事务 / 状态机 | `进行中` | 已有基于 session token 的登录鉴权，事务/复杂状态流仍未系统化落地 |
 
@@ -67,7 +67,8 @@
 | 功能 | 状态 | 说明 |
 | --- | --- | --- |
 | 首页竞猜流 | `进行中` | 首页结构、榜单、开奖区、底部导航已按旧页持续收口；近期补了模式切换时 hero 归位、列表副标题联动、榜单/记录入口，首页访问已取消强制跳 `splash`，仍有少量旧单页联动细节未完全复刻 |
-| 商城首页 | `进行中` | 主商品流、动态分类、搜索商品结果已接真实 `/api/products`；近期继续按旧页收了 tab banner、秒杀倒计时、分类面板开合/排序、推荐态 hero、联名卡、底部 banner、加载更多节奏、收藏按钮和瀑布流高低差。当前仍有少量活动文案、倒计时和展示标签属于前端按真实商品数据派生，不是独立运营配置 |
+| 商城首页 | `进行中` | 主商品流、动态分类、搜索商品结果已接真实 `/api/products`，商品收藏已接真实 `product_interaction`；近期继续按旧页收了分类面板开合/排序、推荐态 hero、联名卡、底部 banner、加载更多节奏、收藏按钮和瀑布流高低差。当前 `tag / miniTag / isNew / height` 仍属派生字段，`秒杀 / 新品 / 特卖`、hero、联名卡和底部 banner 仍是基于真实商品流的页面规则，不是独立活动配置 |
+| 购物车 UI | `进行中` | `/cart` 已接真实 `cart_item` 链路，支持读取购物车、勾选、改数量、删除和从推荐商品加入购物车；支付后续链路和部分促销展示仍未真实化 |
 | 登录 / 注册 UI | `已完成` | 页面已完成且已接真实认证接口，支持验证码 / 密码登录、注册、登录态持久化 |
 | 个人中心 UI | `进行中` | `me/profile/edit-profile` 已接真实资料、作品、收藏、点赞和消息未读数；优米号已改为后端生成的唯一 `uid_code`；设置抽屉、搜索层、开店弹窗与角标样式已多轮收口，仍在继续压高频细节 |
 | 竞猜详情 UI | `进行中` | 页面主体、PK 进度条、评论、分享、下注弹层已继续对齐旧页；竞猜主数据已切到真实接口，评论/弹幕/下注闭环仍未完成 |
@@ -111,8 +112,8 @@
 | 项目 | 状态 | 说明 |
 | --- | --- | --- |
 | 页面调用 `src/lib/api.ts` | `进行中` | 登录、注册、个人中心、编辑资料、好友、通知、用户主页已真正接 API client |
-| 页面调用本地 demo 数据 | `进行中` | 主要残留在 `product/[id]` 局部说明区、直播/支付、订单详情等周边页面；`/mall` 主商品流、`/search` 商品结果、社区主浏览链和 `shop/[id]`、`product/[id]` 主数据已切真实接口 |
-| 页面接真实后端接口 | `进行中` | 已覆盖 auth / me / friends / notifications / user profile / chat / community / community-search / post-detail / shop / orders / warehouse / guess-history / guess-detail / product-detail / product-list / product-search 等模块 |
+| 页面调用本地 demo 数据 | `进行中` | 主要残留在 `product/[id]` 局部说明区、直播/支付、订单详情等周边页面；`/mall` 主商品流、商品收藏、`/search` 已切到独立搜索域（统一搜索 / 热搜 / 联想）、`/cart`、社区主浏览链和 `shop/[id]`、`product/[id]` 主数据已切真实接口 |
+| 页面接真实后端接口 | `进行中` | 已覆盖 auth / me / friends / notifications / user profile / chat / community / community-search / post-detail / shop / orders / warehouse / guess-history / guess-detail / product-detail / product-list / unified-search / product-favorite / cart 等模块 |
 
 一句话：`apps/web` 当前是“旧静态页面已 41/41 全覆盖，高频页面 UI/交互已经过多轮对齐，认证、商品发现、社区主浏览、订单列表、仓库、店铺等主读链路已接真实接口，但支付、订单详情、直播和商品详情局部说明区仍有不少构造态”。 
 
@@ -130,14 +131,14 @@
 
 | 功能 | 状态 | 说明 |
 | --- | --- | --- |
-| 登录页 | `未开始` | 还没有独立后台登录流程 |
-| 路由体系 | `未开始` | 当前只有 `src/App.tsx` 单页 |
-| 列表页 / 详情页 / 表单页 | `未开始` | 还没有真实 CRUD 页面 |
-| 竞猜审核 / 开奖 | `未开始` | 还没有运营闭环页面 |
-| 订单履约 / 退款审核 | `未开始` | 只有规划描述，没有真实功能 |
-| 仓库管理页面 | `未开始` | 只有模块卡片，没有数据视图 |
+| 登录页 | `已完成基础链路` | 已有独立后台登录与资料接口，前端有独立后台入口 |
+| 路由体系 | `已完成` | 已按真实业务路由拆分为单页单文件，不再是 `src/App.tsx` 单页分发 |
+| 列表页 / 详情页 / 表单页 | `进行中` | `users / products / guesses / orders / warehouse / system / marketing` 已有页面与数据链路，仍未形成完整 CRUD |
+| 竞猜审核 / 开奖 | `进行中` | 已有竞猜管理相关页面，审核与开奖闭环仍待继续补齐 |
+| 订单履约 / 退款审核 | `进行中` | 已有订单、物流、交易、寄售页面，履约审核闭环仍未全部完成 |
+| 仓库管理页面 | `进行中` | 已有仓库与寄售页面，不再只是模块卡片 |
 
-一句话：`apps/admin` 当前是“功能规划 + 单页骨架”，不是可用管理后台。
+一句话：`apps/admin` 已经不是“功能规划 + 单页骨架”，当前是“路由拆分完成、页面骨架齐全、业务闭环继续补”的阶段。
 
 ## 后端 API
 
@@ -149,29 +150,39 @@
 | Auth | `POST /api/auth/send-code` | `已完成` | 写入 `sms_verification_code`，生产存验证码哈希，开发环境返回 `devCode` |
 | Auth | `POST /api/auth/register` | `已完成` | 校验验证码，真实写入 `user + user_profile`，并生成唯一 `uid_code` |
 | Auth | `POST /api/auth/login` | `已完成` | 支持验证码 / 密码登录，验证码登录可自动注册用户 |
-| Auth | `GET /api/auth/me` | `已完成` | 基于 `auth_session` 返回当前用户 |
-| Auth | `PUT /api/auth/me` | `已完成` | 更新昵称、头像、签名、性别、地区等资料 |
+| Auth | `POST /api/auth/change-password` | `已完成` | 统一走 `requireUser + HttpError`，修改当前登录用户密码 |
 | Auth | `POST /api/auth/logout` | `已完成` | 删除当前 `auth_session` |
-| Auth | `GET /api/auth/me/activity` | `已完成` | 返回我的作品、收藏、点赞、未读消息数 |
-| Auth | `GET /api/auth/users/:id` | `已完成` | 返回公开用户资料 |
-| Auth | `GET /api/auth/notifications` | `已完成` | 读取通知列表 |
-| Auth | `POST /api/auth/notifications/read-all` | `已完成` | 全部通知标记已读 |
-| Auth | `POST /api/auth/notifications/:id/read` | `已完成` | 单条通知标记已读 |
-| Auth | `GET /api/auth/social` | `已完成` | 返回好友、关注、粉丝、申请列表 |
-| Auth | `GET /api/auth/chats` | `已完成` | 读取真实会话列表，基于 `chat_conversation` |
-| Auth | `GET /api/auth/chats/:userId` | `已完成` | 读取真实聊天明细，并自动清未读 |
-| Auth | `POST /api/auth/chats/:userId` | `已完成` | 写入真实 `chat_message`，同步更新 `chat_conversation` |
-| Auth | `GET /api/auth/community/feed` | `已完成` | 读取真实社区推荐流和关注流 |
-| Auth | `GET /api/auth/community/discovery` | `已完成` | 聚合社区头图与热门话题 |
-| Auth | `GET /api/auth/community/search` | `已完成` | 搜索真实动态与用户结果 |
-| Auth | `POST /api/auth/community/posts` | `已完成` | 发布真实动态，支持图片和可见范围 |
-| Auth | `POST /api/auth/community/posts/:id/repost` | `已完成` | 真实转发动态，写入 `post.repost_id` |
-| Auth | `GET /api/auth/community/posts/:id` | `已完成` | 读取动态详情、评论与相关推荐 |
-| Auth | `POST /api/auth/community/posts/:id/comments` | `已完成` | 发表评论 / 回复评论 |
-| Auth | `POST /api/auth/community/posts/:id/like` | `已完成` | 点赞动态 |
-| Auth | `DELETE /api/auth/community/posts/:id/like` | `已完成` | 取消点赞 |
-| Auth | `POST /api/auth/community/posts/:id/bookmark` | `已完成` | 收藏动态 |
-| Auth | `DELETE /api/auth/community/posts/:id/bookmark` | `已完成` | 取消收藏 |
+| Users | `GET /api/users/me` | `已完成` | 返回当前用户公开资料与登录态摘要 |
+| Users | `PUT /api/users/me` | `已完成` | 更新昵称、头像、签名、性别、地区等资料 |
+| Users | `GET /api/users/me/activity` | `已完成` | 返回我的作品、收藏、点赞、未读消息数 |
+| Users | `GET /api/users/me/summary` | `已完成` | 返回个人中心摘要数据 |
+| Users | `GET /api/users/search` | `已完成` | 搜索真实用户结果 |
+| Users | `GET /api/users/:id` | `已完成` | 返回公开用户资料 |
+| Users | `GET /api/users/:id/activity` | `已完成` | 返回用户公开动态、竞猜和收藏信息 |
+| Users | `POST /api/users/:id/follow` | `已完成` | 关注用户 |
+| Users | `DELETE /api/users/:id/follow` | `已完成` | 取消关注 |
+| Notifications | `GET /api/notifications` | `已完成` | 读取通知列表 |
+| Notifications | `POST /api/notifications/read-all` | `已完成` | 全部通知标记已读 |
+| Notifications | `POST /api/notifications/:id/read` | `已完成` | 单条通知标记已读 |
+| Social | `GET /api/social` | `已完成` | 返回好友、关注、粉丝、申请列表 |
+| Social | `POST /api/social/requests/:id/accept` | `已完成` | 接受好友申请 |
+| Social | `POST /api/social/requests/:id/reject` | `已完成` | 忽略好友申请 |
+| Chats | `GET /api/chats` | `已完成` | 读取真实会话列表，基于 `chat_conversation` |
+| Chats | `GET /api/chats/:userId` | `已完成` | 读取真实聊天明细，并自动清未读 |
+| Chats | `POST /api/chats/:userId` | `已完成` | 写入真实 `chat_message`，同步更新 `chat_conversation` |
+| Community | `GET /api/community/feed` | `已完成` | 读取真实社区推荐流和关注流 |
+| Community | `GET /api/community/discovery` | `已完成` | 聚合社区头图与热门话题 |
+| Community | `GET /api/community/search` | `已完成` | 搜索真实动态与用户结果 |
+| Community | `POST /api/community/posts` | `已完成` | 发布真实动态，支持图片和可见范围 |
+| Community | `POST /api/community/posts/:id/repost` | `已完成` | 真实转发动态，写入 `post.repost_id` |
+| Community | `GET /api/community/posts/:id` | `已完成` | 读取动态详情、评论与相关推荐 |
+| Community | `POST /api/community/posts/:id/comments` | `已完成` | 发表评论 / 回复评论 |
+| Community | `POST /api/community/comments/:id/like` | `已完成` | 点赞评论 |
+| Community | `DELETE /api/community/comments/:id/like` | `已完成` | 取消评论点赞 |
+| Community | `POST /api/community/posts/:id/like` | `已完成` | 点赞动态 |
+| Community | `DELETE /api/community/posts/:id/like` | `已完成` | 取消点赞 |
+| Community | `POST /api/community/posts/:id/bookmark` | `已完成` | 收藏动态 |
+| Community | `DELETE /api/community/posts/:id/bookmark` | `已完成` | 取消收藏 |
 | Guesses | `GET /api/guesses` | `已完成` | 竞猜列表，真实读 `guess / guess_product / product / brand_product / guess_option / guess_bet` |
 | Guesses | `GET /api/guesses/:id` | `已完成` | 竞猜详情，真实读竞猜主表、商品信息、选项和票数 |
 | Guesses | `GET /api/guesses/:id/stats` | `已完成` | 竞猜统计，真实按下注聚合 |
@@ -180,6 +191,12 @@
 | Orders | `GET /api/orders/admin/stats/overview` | `已完成` | 订单概览，真实聚合订单表 |
 | Products | `GET /api/products/:id` | `已完成` | 商品详情，真实聚合商品主信息、所属店铺、进行中竞猜、仓库库存和推荐商品 |
 | Products | `GET /api/products` | `已完成` | 商品列表 / 搜索，支持首页商品流和关键词搜索 |
+| Products | `POST /api/products/:id/favorite` | `已完成` | 收藏商品，真实写 `product_interaction` |
+| Products | `DELETE /api/products/:id/favorite` | `已完成` | 取消收藏商品，真实写 `product_interaction` |
+| Cart | `GET /api/cart` | `已完成` | 购物车列表，真实读 `cart_item / product / shop / brand_product / brand` |
+| Cart | `POST /api/cart/items` | `已完成` | 加入购物车，按 `user_id + product_id + specs` 合并 |
+| Cart | `PUT /api/cart/items/:id` | `已完成` | 更新勾选状态或购买数量 |
+| Cart | `DELETE /api/cart/items/:id` | `已完成` | 删除购物车商品 |
 | Wallet | `GET /api/wallet/ledger` | `已完成` | 余额读 `user_stats.coins`，流水读 `coin_ledger` |
 | Warehouse | `GET /api/warehouse/virtual` | `已完成` | 虚拟仓，真实读 `virtual_warehouse` |
 | Warehouse | `GET /api/warehouse/physical` | `已完成` | 实体仓，真实读 `physical_warehouse + fulfillment_order` |
@@ -219,7 +236,7 @@
 
 | 优先级 | 缺口 | 说明 |
 | --- | --- | --- |
-| P0 | 商品发现链路仍未完全业务化 | `/mall` 主商品流已经接真实接口，但活动位文案、倒计时、标签和联名展示仍有一部分是前端按真实商品数据派生；`product/[id]` 的玩法说明和购买后续链路仍待清理 |
+| P0 | 商品发现链路仍未完全业务化 | `/mall` 主商品流、分类、搜索和收藏已经接真实接口，但 `tag / miniTag / isNew / height` 仍是派生字段，活动位、hero、联名卡和 tab 逻辑仍基于商品流规则；`product/[id]` 的玩法说明和购买后续链路仍待清理 |
 | P0 | 社区 / 支付 / 订单详情等周边页仍未接数据库 | 社区、直播、支付、订单详情仍明显依赖本地构造数据 |
 | P1 | Admin 只有壳层 | 还没有运营闭环页面 |
 | P1 | 权限 / 事务 / 状态机未落地 | 新主线工程尚未进入真实业务阶段 |
@@ -233,7 +250,8 @@
 | 页面 | 当前状态 | 最近补回的代表性细节 |
 | --- | --- | --- |
 | `/` | `进行中` | 模式切换时 hero 归位、记录/榜单入口、副标题联动；首页访问已取消强制首访 `splash` |
-| `/mall` | `进行中` | 动态分类、tab banner、秒杀倒计时、分类选择自动收起、推荐态 hero、联名卡、底部 banner、加载更多节奏、收藏按钮和瀑布流错落 |
+| `/mall` | `进行中` | 动态分类、推荐态 hero、联名卡、底部 banner、加载更多节奏、收藏按钮和瀑布流错落；收藏已切真实 `product_interaction`，活动位和标签仍需继续收口 |
+| `/cart` | `进行中` | 已切真实 `cart_item` 读写，保留旧页购物车结构和编辑/删除交互，仍剩支付后续和促销口径待真实化 |
 | `/me` | `进行中` | 菜单抽屉、搜索层、开店弹窗、仓库角标、设置项旧页文案 |
 | `/community` | `进行中` | 推荐流 / 关注流 / 发现区 / 发布 / 搜索 / 转发 / 评论回复都已走真实接口，仍剩少量运营位和次级交互细节待继续收口 |
 | `/shop/[id]` | `进行中` | 底部主按钮切内容并滚动、店铺卡片/竞猜卡结构、券区和经营统计 |
@@ -242,7 +260,7 @@
 
 ## 下一阶段建议
 
-1. 继续把商城活动位、倒计时、联名文案从前端派生收口成更稳定的配置或真实业务字段，并清理 `product/[id]` 剩余静态展示区。
+1. 继续把商城活动位、标签、联名文案和 tab 规则从前端派生收口成更稳定的配置或真实业务字段，并清理 `product/[id]` 剩余静态展示区。
 2. 把竞猜详情页的评论、弹幕、下注闭环补成真实接口。
 3. 把 `friends` 页上的同意 / 拒绝 / 回关 / 关注补成真实写接口。
 4. 把社区 / 支付 / 订单详情这些周边页继续从本地构造切到真实数据。

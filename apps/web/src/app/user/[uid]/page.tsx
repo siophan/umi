@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-import { fetchChatDetail, fetchUserProfile, fetchUserProfileActivity, followUser, sendChatMessage, unfollowUser } from '../../../lib/api';
+import { fetchChatDetail, sendChatMessage } from '../../../lib/api/chat';
+import { fetchUserProfile, fetchUserProfileActivity, followUser, unfollowUser } from '../../../lib/api/users';
 import styles from './page.module.css';
 
 type ProfilePost = {

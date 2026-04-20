@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { addShopProducts, fetchBrandAuthOverview, fetchBrandProducts } from '../../lib/api';
+import type { BrandId } from '@umi/shared';
+import { addShopProducts, fetchBrandAuthOverview, fetchBrandProducts } from '../../lib/api/shops';
 import styles from './page.module.css';
 
 type BrandProduct = Awaited<ReturnType<typeof fetchBrandProducts>>['items'][number];
+type BrandAuthOverview = Awaited<ReturnType<typeof fetchBrandAuthOverview>>;
 
 type BrandMeta = {
   name: string;
@@ -28,7 +30,7 @@ const brandMetaMap: Record<string, BrandMeta> = {
 };
 
 type BrandRow = {
-  id: string;
+  id: BrandAuthOverview['available'][number]['id'];
   name: string;
   logo: string;
   deposit: number;
@@ -39,9 +41,9 @@ export default function AddProductPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [brands, setBrands] = useState<BrandRow[]>([]);
-  const [selectedBrandId, setSelectedBrandId] = useState('');
+  const [selectedBrandId, setSelectedBrandId] = useState<BrandId | ''>('');
   const [products, setProducts] = useState<BrandProduct[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<BrandProduct['id'][]>([]);
   const [guessPrice, setGuessPrice] = useState('9.9');
   const [optionCount, setOptionCount] = useState('2');
   const [couponVal, setCouponVal] = useState('10');
@@ -141,7 +143,7 @@ export default function AddProductPage() {
     [products, selectedProducts],
   );
 
-  const toggleProduct = (productId: string) => {
+  const toggleProduct = (productId: BrandProduct['id']) => {
     setSelectedProducts((current) => {
       if (current.includes(productId)) {
         return current.filter((item) => item !== productId);

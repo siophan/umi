@@ -6,10 +6,39 @@ import type {
   WarehouseStatus,
 } from './status';
 
+/**
+ * Database BIGINT identifiers travel through JSON as decimal strings.
+ * Use these aliases instead of plain string so the API contract stays explicit.
+ */
+export type BigIntString = `${bigint}`;
+export type EntityId = BigIntString;
+export type UserId = EntityId;
+export type ProductId = EntityId;
+export type GuessId = EntityId;
+export type OrderId = EntityId;
+export type CategoryId = EntityId;
+export type ShopId = EntityId;
+export type BrandId = EntityId;
+export type NotificationId = EntityId;
+export type ChatMessageId = EntityId;
+
+export function toEntityId<T extends EntityId = EntityId>(value: string | number | bigint): T {
+  return String(value) as T;
+}
+
+export function toOptionalEntityId<T extends EntityId = EntityId>(
+  value: string | number | bigint | null | undefined,
+): T | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  return toEntityId<T>(value);
+}
+
 export type UserRole = 'user' | 'admin' | 'shop_owner';
 
 export interface UserSummary {
-  id: string;
+  id: UserId;
   uid: string;
   phone: string;
   name: string;
@@ -37,7 +66,7 @@ export interface UserSummary {
 }
 
 export interface UserPublicProfile {
-  id: string;
+  id: UserId;
   uid: string;
   name: string;
   avatar?: string | null;
@@ -60,7 +89,7 @@ export interface UserPublicProfile {
 }
 
 export interface ProductSummary {
-  id: string;
+  id: ProductId;
   name: string;
   brand: string;
   img: string;
@@ -80,20 +109,20 @@ export interface GuessOption {
 }
 
 export interface GuessSummary {
-  id: string;
+  id: GuessId;
   title: string;
   status: GuessStatus;
   reviewStatus: GuessReviewStatus;
   category: string;
   endTime: string;
-  creatorId: string;
+  creatorId: UserId;
   product: ProductSummary;
   options: GuessOption[];
 }
 
 export interface OrderItem {
-  id: string;
-  productId: string;
+  id: EntityId;
+  productId: ProductId;
   productName: string;
   productImg: string;
   skuText?: string | null;
@@ -103,10 +132,10 @@ export interface OrderItem {
 }
 
 export interface OrderSummary {
-  id: string;
-  userId: string;
+  id: OrderId;
+  userId: UserId;
   orderType?: string | null;
-  guessId: string | null;
+  guessId: GuessId | null;
   guessTitle?: string | null;
   amount: number;
   status: OrderStatus;
@@ -115,21 +144,21 @@ export interface OrderSummary {
 }
 
 export interface CoinLedgerEntry {
-  id: string;
-  userId: string;
+  id: EntityId;
+  userId: UserId;
   type: LedgerType;
   amount: number;
   balanceAfter: number;
   sourceType: string;
-  sourceId: string;
+  sourceId: EntityId | null;
   note: string;
   createdAt: string;
 }
 
 export interface WarehouseItem {
-  id: string;
-  userId: string;
-  productId: string;
+  id: EntityId;
+  userId: UserId;
+  productId: ProductId;
   productName: string;
   productImg?: string | null;
   quantity: number;

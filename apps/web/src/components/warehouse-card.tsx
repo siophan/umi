@@ -1,4 +1,4 @@
-import type { WarehouseItem } from '@joy/shared';
+import type { WarehouseItem } from '@umi/shared';
 
 export function WarehouseCard({ item }: { item: WarehouseItem }) {
   return (

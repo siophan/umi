@@ -40,7 +40,7 @@ function getAuthToken() {
     return '';
   }
 
-  return window.localStorage.getItem('joy_token') ?? '';
+  return window.localStorage.getItem('umi_token') ?? '';
 }
 
 async function requestAddress(path: string, init?: RequestInit) {
@@ -203,6 +203,7 @@ export default function AddressPage() {
       city: form.city,
       district: form.district,
       detail: form.detail.trim(),
+      tag: form.tag || null,
       isDefault: form.isDefault,
     };
 
@@ -253,6 +254,7 @@ export default function AddressPage() {
           city: target.city,
           district: target.district,
           detail: target.detail,
+          tag: target.tag || null,
           isDefault: true,
         }),
       });

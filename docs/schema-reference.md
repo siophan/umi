@@ -148,6 +148,23 @@
 
 `id`, `shop_id`, `brand_product_id`, `name`, `price`, `original_price`, `image_url`, `images`, `sales`, `rating`, `stock`, `frozen_stock`, `description`, `tags`, `guess_price`, `collab`, `source_url`, `status`, `created_at`, `updated_at`
 
+### `product_interaction`
+
+`id`, `user_id`, `product_id`, `interaction_type`, `created_at`, `updated_at`
+
+说明：
+
+- 这是“商品互动关系表”
+- 当前只承接商品收藏和商品点赞
+- 不要和 `post_interaction` 混用
+
+接手时重点理解：
+
+- `user_id + product_id + interaction_type` 唯一
+- `interaction_type`
+  不是状态，而是互动动作类型
+- 商品是否被某用户收藏/点赞，默认查这里
+
 ### `cart_item`
 
 `id`, `user_id`, `product_id`, `quantity`, `specs`, `checked`, `created_at`, `updated_at`

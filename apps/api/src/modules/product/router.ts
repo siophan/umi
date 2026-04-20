@@ -2,11 +2,12 @@ import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import type mysql from 'mysql2/promise';
 
-import type { GuessSummary, ProductCategoryItem, ProductDetailResult, ProductFeedItem, ProductSummary, WarehouseItem } from '@joy/shared';
+import { toEntityId, toOptionalEntityId, type GuessSummary, type ProductCategoryItem, type ProductDetailResult, type ProductFeedItem, type ProductSummary, type WarehouseItem } from '@umi/shared';
 
+import { getRequestUser, optionalUser, requireUser } from '../../lib/auth';
+import { HttpError, asyncHandler, withErrorBoundary } from '../../lib/errors';
 import { getDbPool } from '../../lib/db';
 import { ok } from '../../lib/http';
-import { getUserByToken } from '../auth/store';
 
 export const productRouter: ExpressRouter = Router();
 
@@ -21,6 +22,7 @@ const FULFILLMENT_PROCESSING = 20;
 const FULFILLMENT_SHIPPED = 30;
 const CATEGORY_STATUS_ACTIVE = 10;
 const PRODUCT_CATEGORY_BIZ_TYPE = 30;
+const PRODUCT_INTERACTION_FAVORITE = 10;
 
 type ProductRow = {
   id: number | string;
@@ -45,6 +47,7 @@ type ProductRow = {
   brand_id: number | string | null;
   default_img?: string | null;
   created_at?: Date | string;
+  favorited?: number | string | boolean | null;
 };
 
 type ProductCategoryRow = {
@@ -91,10 +94,6 @@ type WarehouseRow = {
   estimate_days: number | string | null;
   created_at: Date | string;
 };
-
-function getBearerToken(authorization?: string) {
-  return authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
-}
 
 function safeJsonArray(value: unknown): string[] {
   if (!value) {
@@ -193,9 +192,9 @@ function sanitizeProductFeedItem(row: ProductRow, index: number): ProductFeedIte
   });
 
   return {
-    id: String(row.id),
+    id: toEntityId(row.id),
     name: row.name,
-    categoryId: row.category_id == null ? null : String(row.category_id),
+    categoryId: toOptionalEntityId(row.category_id),
     category: row.category || '未分类',
     price,
     originalPrice,
@@ -214,15 +213,16 @@ function sanitizeProductFeedItem(row: ProductRow, index: number): ProductFeedIte
     tags,
     collab: row.collab || null,
     isNew,
+    favorited: Boolean((row as ProductRow & { favorited?: number | string | boolean | null }).favorited),
   };
 }
 
 function sanitizeProductCategory(row: ProductCategoryRow): ProductCategoryItem {
   return {
-    id: String(row.id),
+    id: toEntityId(row.id),
     name: row.name,
     iconUrl: row.icon_url,
-    parentId: row.parent_id == null ? null : String(row.parent_id),
+    parentId: toOptionalEntityId(row.parent_id),
     level: Number(row.level ?? 0),
     sort: Number(row.sort ?? 0),
     count: Number(row.product_count ?? 0),
@@ -244,9 +244,9 @@ function mapGuessReviewStatus(code: number | string): GuessSummary['reviewStatus
 
 function sanitizeWarehouseRow(row: WarehouseRow): WarehouseItem {
   return {
-    id: row.id,
-    userId: String(row.user_id),
-    productId: row.product_id ? String(row.product_id) : '',
+    id: toEntityId(row.id),
+    userId: toEntityId(row.user_id),
+    productId: toEntityId(row.product_id ?? 0),
     productName: row.product_name || '未命名商品',
     productImg: row.product_img || null,
     quantity: Number(row.quantity ?? 0),
@@ -295,6 +295,69 @@ async function getProductById(productId: string) {
   );
 
   return (rows[0] as ProductRow | undefined) ?? null;
+}
+
+async function ensureProductExists(productId: string) {
+  const product = await getProductById(productId);
+  if (!product) {
+    throw new HttpError(404, 'PRODUCT_NOT_FOUND', '商品不存在');
+  }
+  return product;
+}
+
+async function getFavoritedProductIdSet(userId: string, productIds: string[]) {
+  if (!productIds.length) {
+    return new Set<string>();
+  }
+
+  const db = getDbPool();
+  const placeholders = productIds.map(() => '?').join(', ');
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT product_id
+      FROM product_interaction
+      WHERE user_id = ?
+        AND interaction_type = ?
+        AND product_id IN (${placeholders})
+    `,
+    [userId, PRODUCT_INTERACTION_FAVORITE, ...productIds],
+  );
+
+  return new Set((rows as Array<{ product_id: number | string }>).map((row) => toEntityId(row.product_id)));
+}
+
+async function favoriteProduct(userId: string, productId: string) {
+  await ensureProductExists(productId);
+  const db = getDbPool();
+  await db.execute(
+    `
+      INSERT INTO product_interaction (user_id, product_id, interaction_type, created_at, updated_at)
+      SELECT ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM product_interaction
+        WHERE user_id = ?
+          AND product_id = ?
+          AND interaction_type = ?
+      )
+    `,
+    [userId, productId, PRODUCT_INTERACTION_FAVORITE, userId, productId, PRODUCT_INTERACTION_FAVORITE],
+  );
+  return { success: true as const };
+}
+
+async function unfavoriteProduct(userId: string, productId: string) {
+  const db = getDbPool();
+  await db.execute(
+    `
+      DELETE FROM product_interaction
+      WHERE user_id = ?
+        AND product_id = ?
+        AND interaction_type = ?
+    `,
+    [userId, productId, PRODUCT_INTERACTION_FAVORITE],
+  );
+  return { success: true as const };
 }
 
 async function getActiveGuess(productId: string, product: ProductRow): Promise<GuessSummary | null> {
@@ -353,15 +416,15 @@ async function getActiveGuess(productId: string, product: ProductRow): Promise<G
   );
 
   return {
-    id: String(guess.id),
+    id: toEntityId(guess.id),
     title: guess.title,
     status: mapGuessStatus(guess.status),
     reviewStatus: mapGuessReviewStatus(guess.review_status),
     category: guess.category || product.category || '热门',
     endTime: new Date(guess.end_time).toISOString(),
-    creatorId: String(guess.creator_id),
+    creatorId: toEntityId(guess.creator_id),
     product: {
-      id: String(product.id),
+      id: toEntityId(product.id),
       name: product.name,
       brand: product.brand_name || '未知品牌',
       img: product.image_url || safeJsonArray(product.images)[0] || '',
@@ -520,7 +583,7 @@ async function getRecommendations(product: ProductRow) {
     brand_name: string | null;
   }>).map(
     (row): ProductSummary => ({
-      id: String(row.id),
+      id: toEntityId(row.id),
       name: row.name,
       brand: row.brand_name || '未知品牌',
       img: row.image_url || '',
@@ -563,53 +626,67 @@ async function getProductCategories() {
   return (rows as ProductCategoryRow[]).map((row) => sanitizeProductCategory(row));
 }
 
-productRouter.get('/:id', async (request, response) => {
-  const product = await getProductById(request.params.id);
+productRouter.get(
+  '/:id',
+  optionalUser,
+  asyncHandler(async (request, response) => {
+    const productId = Array.isArray(request.params.id)
+      ? request.params.id[0] ?? ''
+      : request.params.id;
+    const product = await getProductById(productId);
 
-  if (!product) {
-    response.status(404).json({ success: false, message: '商品不存在' });
-    return;
-  }
+    if (!product) {
+      throw new HttpError(404, 'PRODUCT_NOT_FOUND', '商品不存在');
+    }
 
-  const token = getBearerToken(request.headers.authorization);
-  const user = token ? await getUserByToken(token) : null;
-  const [activeGuess, warehouseItems, recommendations] = await Promise.all([
-    getActiveGuess(request.params.id, product),
-    user ? getWarehouseItems(user.id, request.params.id) : Promise.resolve([]),
-    getRecommendations(product),
-  ]);
+    const [activeGuess, warehouseItems, recommendations, favoritedProductIds] = await Promise.all([
+      getActiveGuess(productId, product),
+      request.user
+        ? getWarehouseItems(request.user.id, productId)
+        : Promise.resolve([]),
+      getRecommendations(product),
+      request.user
+        ? getFavoritedProductIdSet(request.user.id, [productId])
+        : Promise.resolve(new Set<string>()),
+    ]);
 
-  const images = [product.image_url, ...safeJsonArray(product.images)].filter(
-    (item, index, array): item is string => typeof item === 'string' && item.trim().length > 0 && array.indexOf(item) === index,
-  );
+    const images = [product.image_url, ...safeJsonArray(product.images)].filter(
+      (item, index, array): item is string =>
+        typeof item === 'string' &&
+        item.trim().length > 0 &&
+        array.indexOf(item) === index,
+    );
 
-  const result: ProductDetailResult = {
-    product: {
-      id: String(product.id),
-      name: product.name,
-      brand: product.brand_name || '未知品牌',
-      img: images[0] || '',
-      price: Number(product.price ?? 0) / 100,
-      guessPrice: Number(product.guess_price ?? product.price ?? 0) / 100,
-      category: product.category || '未分类',
-      status: Number(product.status ?? 0) === 10 ? 'active' : String(product.status),
-      shopId: product.shop_id ? String(product.shop_id) : null,
-      shopName: product.shop_name || null,
-      images,
-      originalPrice: Number(product.original_price ?? product.price ?? 0) / 100,
-      stock: Number(product.stock ?? 0),
-      tags: safeJsonArray(product.tags),
-      description: `${product.brand_name || '品牌'} ${product.name}，支持直购、竞猜和仓库换购。`,
-    },
-    activeGuess,
-    warehouseItems,
-    recommendations,
-  };
+    const result: ProductDetailResult = {
+      product: {
+        id: toEntityId(product.id),
+        name: product.name,
+        brand: product.brand_name || '未知品牌',
+        img: images[0] || '',
+        price: Number(product.price ?? 0) / 100,
+        guessPrice: Number(product.guess_price ?? product.price ?? 0) / 100,
+        category: product.category || '未分类',
+        status:
+          Number(product.status ?? 0) === 10 ? 'active' : String(product.status),
+        shopId: toOptionalEntityId(product.shop_id),
+        shopName: product.shop_name || null,
+        images,
+        originalPrice: Number(product.original_price ?? product.price ?? 0) / 100,
+        stock: Number(product.stock ?? 0),
+        tags: safeJsonArray(product.tags),
+        description: `${product.brand_name || '品牌'} ${product.name}，支持直购、竞猜和仓库换购。`,
+        favorited: favoritedProductIds.has(productId),
+      },
+      activeGuess,
+      warehouseItems,
+      recommendations,
+    };
 
-  ok(response, result);
-});
+    ok(response, result);
+  }),
+);
 
-productRouter.get('/', async (request, response) => {
+productRouter.get('/', optionalUser, async (request, response) => {
   const limit = Math.min(50, Math.max(1, Number(request.query.limit ?? 20) || 20));
   const keyword = String(request.query.q ?? '').trim();
   const categoryId = String(request.query.categoryId ?? '').trim();
@@ -666,7 +743,49 @@ productRouter.get('/', async (request, response) => {
     getProductCategories(),
   ]);
 
-  const items: ProductFeedItem[] = (rows as ProductRow[]).map((row, index) => sanitizeProductFeedItem(row, index));
+  const productIds = (rows as ProductRow[]).map((row) => toEntityId(row.id));
+  const favoritedProductIds = request.user
+    ? await getFavoritedProductIdSet(request.user.id, productIds)
+    : new Set<string>();
+
+  const items: ProductFeedItem[] = (rows as ProductRow[]).map((row, index) =>
+    sanitizeProductFeedItem(
+      { ...row, favorited: favoritedProductIds.has(toEntityId(row.id)) ? 1 : 0 },
+      index,
+    ),
+  );
 
   ok(response, { items, categories });
 });
+
+productRouter.post(
+  '/:id/favorite',
+  requireUser,
+  withErrorBoundary(
+    {
+      status: 400,
+      code: 'PRODUCT_FAVORITE_FAILED',
+      message: '收藏商品失败',
+    },
+    async (request, response) => {
+      const user = getRequestUser(request);
+      ok(response, await favoriteProduct(user.id, String(request.params.id)));
+    },
+  ),
+);
+
+productRouter.delete(
+  '/:id/favorite',
+  requireUser,
+  withErrorBoundary(
+    {
+      status: 400,
+      code: 'PRODUCT_UNFAVORITE_FAILED',
+      message: '取消收藏商品失败',
+    },
+    async (request, response) => {
+      const user = getRequestUser(request);
+      ok(response, await unfavoriteProduct(user.id, String(request.params.id)));
+    },
+  ),
+);

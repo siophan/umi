@@ -192,6 +192,12 @@
   font-size: 12px;
 }
 
+.sectionEmpty {
+  padding: 16px 0 4px;
+  color: #b5b5b5;
+  font-size: 12px;
+}
+
 .historyList {
   display: flex;
   flex-wrap: wrap;

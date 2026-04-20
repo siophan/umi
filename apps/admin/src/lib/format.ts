@@ -4,7 +4,7 @@ import type {
   OrderStatus,
   UserRole,
   WarehouseStatus,
-} from '@joy/shared';
+} from '@umi/shared';
 
 type StatusMeta = {
   color:

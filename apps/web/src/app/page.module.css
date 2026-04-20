@@ -338,24 +338,95 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 32px;
-  padding: 0 12px;
+  padding: 0 12px 0 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.45);
+}
+
+.catIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.catText {
   font-size: 12px;
   font-weight: 500;
 }
 
-.catChip i {
-  font-size: 11px;
+.catActive {
+  border-color: transparent;
 }
 
-.catActive {
+.catHot .catIcon {
+  background: rgba(255, 107, 53, 0.15);
+  color: #ff6b35;
+}
+
+.catStar .catIcon {
+  background: rgba(224, 64, 251, 0.12);
+  color: #e040fb;
+}
+
+.catMovie .catIcon {
+  background: rgba(255, 152, 0, 0.12);
+  color: #ffb74d;
+}
+
+.catSport .catIcon {
+  background: rgba(76, 175, 80, 0.12);
+  color: #66bb6a;
+}
+
+.catChip.catActive.catHot {
   background: linear-gradient(135deg, rgba(255, 61, 0, 0.18), rgba(255, 107, 53, 0.08));
-  color: #ff8a65;
+}
+
+.catChip.catActive.catStar {
+  background: linear-gradient(135deg, rgba(213, 0, 249, 0.15), rgba(224, 64, 251, 0.06));
+}
+
+.catChip.catActive.catMovie {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.15), rgba(255, 152, 0, 0.05));
+}
+
+.catChip.catActive.catSport {
+  background: linear-gradient(135deg, rgba(46, 125, 50, 0.18), rgba(76, 175, 80, 0.06));
+}
+
+.catChip.catActive .catText {
+  color: #fff;
+  font-weight: 700;
+}
+
+.catChip.catActive .catIcon {
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.catChip.catActive.catHot .catIcon {
+  background: linear-gradient(135deg, #ff6b35, #ff3d00);
+}
+
+.catChip.catActive.catStar .catIcon {
+  background: linear-gradient(135deg, #e040fb, #aa00ff);
+}
+
+.catChip.catActive.catMovie .catIcon {
+  background: linear-gradient(135deg, #ff9800, #e65100);
+}
+
+.catChip.catActive.catSport .catIcon {
+  background: linear-gradient(135deg, #43a047, #1b5e20);
 }
 
 .sectionHeader {
@@ -385,35 +456,76 @@
 }
 
 .modeRoller {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  margin-left: 10px;
+}
+
+.modeViewport {
+  height: 42px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.modeTrack {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .modeItem {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 7px 10px;
-  border-radius: 14px;
+  gap: 6px;
+  height: 42px;
+  padding: 0 10px;
+  border-radius: 10px;
   color: #fff;
   font-size: 10px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .modeChampion {
-  background: linear-gradient(135deg, #f9a825, #f57f17);
+  border: 1px solid rgba(255, 215, 0, 0.45);
+  background:
+    linear-gradient(90deg, rgba(15, 10, 2, 0.85) 0%, rgba(30, 20, 5, 0.6) 40%, rgba(60, 40, 10, 0.25) 70%, transparent 100%),
+    linear-gradient(135deg, #5b3b00, #a36a00);
 }
 
 .modeTriple {
-  background: linear-gradient(135deg, #7c4dff, #5c6bc0);
+  border: 1px solid rgba(179, 136, 255, 0.45);
+  background:
+    linear-gradient(90deg, rgba(8, 3, 20, 0.85) 0%, rgba(20, 8, 50, 0.6) 40%, rgba(50, 20, 100, 0.25) 70%, transparent 100%),
+    linear-gradient(135deg, #3f206e, #7c4dff);
 }
 
 .modeBlind {
-  background: linear-gradient(135deg, #26c6da, #00838f);
+  border: 1px solid rgba(38, 198, 218, 0.45);
+  background:
+    linear-gradient(90deg, rgba(3, 12, 12, 0.85) 0%, rgba(6, 25, 25, 0.6) 40%, rgba(15, 50, 50, 0.25) 70%, transparent 100%),
+    linear-gradient(135deg, #05555f, #26c6da);
 }
 
 .modeEmoji {
+  font-size: 15px;
+}
+
+.modeName {
   font-size: 12px;
+  font-weight: 800;
+}
+
+.modeSub {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.modeArrow {
+  margin-left: auto;
+  font-size: 9px;
+  opacity: 0.7;
 }
 
 .listArea {
@@ -709,4 +821,259 @@
   color: #ffd700;
   font-size: 14px;
   font-weight: 700;
+}
+
+.emptyState {
+  padding: 20px 16px 24px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+  text-align: center;
+}
+
+.liveCatBar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 14px;
+  scrollbar-width: none;
+}
+
+.liveCatBar::-webkit-scrollbar {
+  display: none;
+}
+
+.liveCatChip {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.liveCatActive {
+  border-color: rgba(255, 107, 53, 0.3);
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.2), rgba(255, 107, 53, 0.2));
+  color: #ff6b35;
+  box-shadow: 0 0 12px rgba(255, 107, 53, 0.15);
+}
+
+.liveFeed {
+  padding: 0 12px 80px;
+}
+
+.liveFeedCard {
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.liveFeedHost {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.liveFeedAvatar {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.liveFeedHostName {
+  color: #eee;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.liveFeedHostStat {
+  margin-top: 1px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+}
+
+.liveFeedStatus {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.liveFeedStatusLive {
+  background: #f44336;
+}
+
+.liveFeedStatusUpcoming {
+  background: #2196f3;
+}
+
+.liveFeedStatusReplay {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.liveFeedCover {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: #111;
+}
+
+.liveFeedCover img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.liveFeedViewers {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10px;
+}
+
+.liveFeedTitleBar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 20px 12px 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+}
+
+.liveFeedTitle {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.livePk {
+  margin: 0 12px 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 215, 0, 0.12);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(255, 107, 53, 0.08));
+}
+
+.livePkHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.livePkIcon,
+.livePkLabel {
+  color: #ffd700;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.livePkHot {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+}
+
+.livePkBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.livePkOpt {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.livePkOptA {
+  color: #ff5252;
+}
+
+.livePkOptB {
+  color: #448aff;
+}
+
+.livePkVs {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.livePkProgress {
+  display: flex;
+  overflow: hidden;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.livePkFillA {
+  background: linear-gradient(90deg, #ff5252, #ff8a80);
+}
+
+.livePkFillB {
+  background: linear-gradient(90deg, #82b1ff, #448aff);
+}
+
+.livePkPct {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.livePctA {
+  color: #ff5252;
+}
+
+.livePctB {
+  color: #448aff;
+}
+
+.livePkQuestion {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+}
+
+.livePkCta {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.livePkBtn {
+  padding: 5px 20px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #1a1a2e;
+  font-size: 11px;
+  font-weight: 800;
 }

@@ -3,7 +3,10 @@ import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import type mysql from 'mysql2/promise';
 
-import type {
+import {
+  toEntityId,
+  toOptionalEntityId,
+  type
   AddShopProductsResult,
   BrandAuthOverviewResult,
   BrandProductListResult,
@@ -12,21 +15,18 @@ import type {
   ShopStatusResult,
   SubmitBrandAuthApplicationResult,
   SubmitShopApplicationResult,
-} from '@joy/shared';
+} from '@umi/shared';
 
+import { getRequestUser, requireUser } from '../../lib/auth';
 import { getDbPool } from '../../lib/db';
+import { HttpError, sendError, toHttpError } from '../../lib/errors';
 import { ok } from '../../lib/http';
-import { getUserByToken } from '../auth/store';
 
 export const shopRouter: ExpressRouter = Router();
 
 const STATUS_ACTIVE = 10;
 const STATUS_PENDING = 10;
 const STATUS_APPROVED = 30;
-
-function getBearerToken(authorization?: string) {
-  return authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
-}
 
 function createNo(prefix: string) {
   return `${prefix}${randomBytes(6).toString('hex')}`;
@@ -78,15 +78,6 @@ type ShopApplyRow = {
   reviewed_at: Date | string | null;
   created_at: Date | string;
 };
-
-async function requireCurrentUser(request: { headers: { authorization?: string } }) {
-  const token = getBearerToken(request.headers.authorization);
-  const user = token ? await getUserByToken(token) : null;
-  if (!user) {
-    throw new Error('UNAUTHORIZED');
-  }
-  return user;
-}
 
 async function getCurrentShop(userId: string) {
   const db = getDbPool();
@@ -148,7 +139,7 @@ async function listShopCategories() {
     `,
   );
   return (rows as Array<{ id: number | string; name: string }>).map((row) => ({
-    id: String(row.id),
+    id: toEntityId(row.id),
     name: row.name,
   }));
 }
@@ -172,16 +163,16 @@ function toShopStatusResult(
     return {
       status: 'active',
       shop: {
-        id: String(shop.id),
+        id: toEntityId(shop.id),
         name: shop.name,
         status: 'active',
       },
       latestApplication: latestApplication
         ? {
-            id: String(latestApplication.id),
+            id: toEntityId(latestApplication.id),
             applyNo: latestApplication.apply_no,
             shopName: latestApplication.shop_name,
-            categoryId: latestApplication.category_id ? String(latestApplication.category_id) : null,
+            categoryId: toOptionalEntityId(latestApplication.category_id),
             categoryName: latestApplication.category_name ?? null,
             reason: latestApplication.reason ?? null,
             status: mapApplicationStatus(Number(latestApplication.status)),
@@ -200,10 +191,10 @@ function toShopStatusResult(
       status: applicationStatus === 'pending' ? 'pending' : applicationStatus === 'rejected' ? 'rejected' : 'none',
       shop: null,
       latestApplication: {
-        id: String(latestApplication.id),
+        id: toEntityId(latestApplication.id),
         applyNo: latestApplication.apply_no,
         shopName: latestApplication.shop_name,
-        categoryId: latestApplication.category_id ? String(latestApplication.category_id) : null,
+        categoryId: toOptionalEntityId(latestApplication.category_id),
         categoryName: latestApplication.category_name ?? null,
         reason: latestApplication.reason ?? null,
         status: applicationStatus,
@@ -275,15 +266,15 @@ async function getMyShopResult(userId: string): Promise<MyShopResult> {
     revenue = Number(stats?.revenue ?? 0);
 
     brandAuths = (brandRows as BrandAuthRow[]).map((row) => ({
-      id: String(row.id),
-      brandId: String(row.brand_id),
+      id: toEntityId(row.id),
+      brandId: toEntityId(row.brand_id),
       brandName: row.brand_name,
       status: Number(row.status) === STATUS_APPROVED ? 'approved' : Number(row.status) === STATUS_PENDING ? 'pending' : 'rejected',
       createdAt: new Date(row.created_at).toISOString(),
     }));
 
     products = (productRows as ShopProductRow[]).map((row) => ({
-      id: String(row.id),
+      id: toEntityId(row.id),
       name: row.name,
       brand: null,
       price: Number(row.price ?? 0) / 100,
@@ -295,7 +286,7 @@ async function getMyShopResult(userId: string): Promise<MyShopResult> {
   return {
     shop: shop
       ? {
-          id: String(shop.id),
+          id: toEntityId(shop.id),
           name: shop.name,
           category: shop.category,
           description: shop.description,
@@ -312,21 +303,25 @@ async function getMyShopResult(userId: string): Promise<MyShopResult> {
   };
 }
 
-shopRouter.get('/me', async (request, response) => {
+shopRouter.get('/me', requireUser, async (request, response) => {
   try {
-    const user = await requireCurrentUser(request);
+    const user = getRequestUser(request);
     ok(response, await getMyShopResult(user.id));
   } catch (error) {
-    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      success: false,
-      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '读取店铺失败',
-    });
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_READ_FAILED',
+        message: '读取店铺失败',
+      }),
+    );
   }
 });
 
-shopRouter.get('/me/status', async (request, response) => {
+shopRouter.get('/me/status', requireUser, async (request, response) => {
   try {
-    const user = await requireCurrentUser(request);
+    const user = getRequestUser(request);
     const [shop, latestApplication, categories] = await Promise.all([
       getCurrentShop(user.id),
       getLatestShopApplication(user.id),
@@ -334,35 +329,35 @@ shopRouter.get('/me/status', async (request, response) => {
     ]);
     ok(response, toShopStatusResult(shop, latestApplication, categories));
   } catch (error) {
-    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      success: false,
-      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '读取开店状态失败',
-    });
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_STATUS_READ_FAILED',
+        message: '读取开店状态失败',
+      }),
+    );
   }
 });
 
-shopRouter.post('/apply', async (request, response) => {
+shopRouter.post('/apply', requireUser, async (request, response) => {
   try {
-    const user = await requireCurrentUser(request);
+    const user = getRequestUser(request);
     const shopName = typeof request.body?.shopName === 'string' ? request.body.shopName.trim() : '';
     const categoryId = typeof request.body?.categoryId === 'string' ? request.body.categoryId.trim() : '';
     const reason = typeof request.body?.reason === 'string' ? request.body.reason.trim() : '';
 
     if (!shopName) {
-      response.status(400).json({ success: false, message: '请填写店铺名称' });
-      return;
+      throw new HttpError(400, 'SHOP_NAME_REQUIRED', '请填写店铺名称');
     }
     if (shopName.length > 24) {
-      response.status(400).json({ success: false, message: '店铺名称请控制在 24 字以内' });
-      return;
+      throw new HttpError(400, 'SHOP_NAME_TOO_LONG', '店铺名称请控制在 24 字以内');
     }
     if (!categoryId) {
-      response.status(400).json({ success: false, message: '请选择经营分类' });
-      return;
+      throw new HttpError(400, 'SHOP_CATEGORY_REQUIRED', '请选择经营分类');
     }
     if (!reason) {
-      response.status(400).json({ success: false, message: '请填写开店说明' });
-      return;
+      throw new HttpError(400, 'SHOP_APPLICATION_REASON_REQUIRED', '请填写开店说明');
     }
 
     const db = getDbPool();
@@ -383,19 +378,16 @@ shopRouter.post('/apply', async (request, response) => {
     ]);
 
     if (shop && Number(shop.status) === STATUS_ACTIVE) {
-      response.status(400).json({ success: false, message: '你已开通店铺' });
-      return;
+      throw new HttpError(400, 'SHOP_ALREADY_ACTIVE', '你已开通店铺');
     }
 
     if (latestApplication && Number(latestApplication.status) === STATUS_PENDING) {
-      response.status(400).json({ success: false, message: '当前已有开店申请在审核中' });
-      return;
+      throw new HttpError(400, 'SHOP_APPLICATION_PENDING', '当前已有开店申请在审核中');
     }
 
     const category = categoryRows[0][0] as { id?: number | string } | undefined;
     if (!category?.id) {
-      response.status(400).json({ success: false, message: '经营分类不存在' });
-      return;
+      throw new HttpError(400, 'SHOP_CATEGORY_NOT_FOUND', '经营分类不存在');
     }
 
     const applyNo = createNo('SA');
@@ -416,16 +408,20 @@ shopRouter.post('/apply', async (request, response) => {
     );
 
     const payload: SubmitShopApplicationResult = {
-      id: String(result.insertId),
+      id: toEntityId(result.insertId),
       applyNo,
       status: 'pending',
     };
     ok(response, payload);
   } catch (error) {
-    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      success: false,
-      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '提交开店申请失败',
-    });
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_APPLY_FAILED',
+        message: '提交开店申请失败',
+      }),
+    );
   }
 });
 
@@ -465,8 +461,7 @@ shopRouter.get('/:id(\\d+)', async (request, response) => {
     }) | undefined) ?? null;
 
     if (!shop) {
-      response.status(404).json({ success: false, message: '店铺不存在' });
-      return;
+      throw new HttpError(404, 'SHOP_NOT_FOUND', '店铺不存在');
     }
 
     const [productRows] = await db.execute<mysql.RowDataPacket[]>(
@@ -536,7 +531,7 @@ shopRouter.get('/:id(\\d+)', async (request, response) => {
 
     const result: PublicShopDetailResult = {
       shop: {
-        id: String(shop.id),
+        id: toEntityId(shop.id),
         name: shop.name,
         category: shop.category,
         description: shop.description,
@@ -550,7 +545,7 @@ shopRouter.get('/:id(\\d+)', async (request, response) => {
         brandAuthCount: Number(shop.brand_auth_count ?? 0),
       },
       products: (productRows as ShopProductRow[]).map((row, index) => ({
-        id: String(row.id),
+        id: toEntityId(row.id),
         name: row.name,
         price: Number(row.price ?? 0) / 100,
         originalPrice: Number(row.original_price ?? row.price ?? 0) / 100,
@@ -573,24 +568,31 @@ shopRouter.get('/:id(\\d+)', async (request, response) => {
         });
         const totalVotes = votes.reduce((sum, value) => sum + value, 0);
         return {
-          id: String(row.id),
+          id: toEntityId(row.id),
           title: row.title,
           votes: votes.map((value) => (totalVotes > 0 ? Math.round((value / totalVotes) * 100) : 0)),
           options: options.map((item) => item.option_text),
-          relatedProductId: row.related_product_id ? String(row.related_product_id) : null,
+          relatedProductId: toOptionalEntityId(row.related_product_id),
         };
       }),
     };
 
     ok(response, result);
-  } catch {
-    response.status(500).json({ success: false, message: '读取店铺详情失败' });
+  } catch (error) {
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_DETAIL_READ_FAILED',
+        message: '读取店铺详情失败',
+      }),
+    );
   }
 });
 
-shopRouter.get('/brand-auth', async (request, response) => {
+shopRouter.get('/brand-auth', requireUser, async (request, response) => {
   try {
-    const user = await requireCurrentUser(request);
+    const user = getRequestUser(request);
     const db = getDbPool();
     const shop = await getCurrentShop(user.id);
 
@@ -634,15 +636,15 @@ shopRouter.get('/brand-auth', async (request, response) => {
       );
 
       mine = (mineRows as BrandAuthRow[]).map((row) => ({
-        id: String(row.id),
-        brandId: String(row.brand_id),
+        id: toEntityId(row.id),
+        brandId: toEntityId(row.brand_id),
         brandName: row.brand_name,
         status: Number(row.status) === STATUS_APPROVED ? 'approved' : Number(row.status) === STATUS_PENDING ? 'pending' : 'rejected',
         createdAt: new Date(row.created_at).toISOString(),
       }));
 
       available = (brandRows as Array<{ id: number; name: string; logo_url: string | null; category: string | null; product_count: number | string; current_status: number | string | null }>).map((row) => ({
-        id: String(row.id),
+        id: toEntityId(row.id),
         name: row.name,
         logo: row.logo_url ?? null,
         category: row.category ?? null,
@@ -664,20 +666,23 @@ shopRouter.get('/brand-auth', async (request, response) => {
       available,
     });
   } catch (error) {
-    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      success: false,
-      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '读取品牌授权失败',
-    });
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_BRAND_AUTH_READ_FAILED',
+        message: '读取品牌授权失败',
+      }),
+    );
   }
 });
 
-shopRouter.post('/brand-auth', async (request, response) => {
+shopRouter.post('/brand-auth', requireUser, async (request, response) => {
   try {
-    const user = await requireCurrentUser(request);
+    const user = getRequestUser(request);
     const shop = await getCurrentShop(user.id);
     if (!shop) {
-      response.status(400).json({ success: false, message: '请先创建店铺' });
-      return;
+      throw new HttpError(400, 'SHOP_REQUIRED', '请先创建店铺');
     }
 
     const brandId = typeof request.body?.brandId === 'string' ? request.body.brandId.trim() : '';
@@ -685,12 +690,10 @@ shopRouter.post('/brand-auth', async (request, response) => {
     const license = typeof request.body?.license === 'string' ? request.body.license.trim() : '';
 
     if (!brandId) {
-      response.status(400).json({ success: false, message: '请选择品牌' });
-      return;
+      throw new HttpError(400, 'SHOP_BRAND_REQUIRED', '请选择品牌');
     }
     if (!reason) {
-      response.status(400).json({ success: false, message: '请填写申请说明' });
-      return;
+      throw new HttpError(400, 'SHOP_BRAND_AUTH_REASON_REQUIRED', '请填写申请说明');
     }
 
     const db = getDbPool();
@@ -707,8 +710,15 @@ shopRouter.post('/brand-auth', async (request, response) => {
     );
     const existing = existingRows[0] as { status?: number | string } | undefined;
     if (existing && [STATUS_PENDING, STATUS_APPROVED].includes(Number(existing.status))) {
-      response.status(400).json({ success: false, message: Number(existing.status) === STATUS_APPROVED ? '该品牌已授权' : '该品牌已在审核中' });
-      return;
+      throw new HttpError(
+        400,
+        Number(existing.status) === STATUS_APPROVED
+          ? 'SHOP_BRAND_AUTH_ALREADY_APPROVED'
+          : 'SHOP_BRAND_AUTH_PENDING',
+        Number(existing.status) === STATUS_APPROVED
+          ? '该品牌已授权'
+          : '该品牌已在审核中',
+      );
     }
 
     const [result] = await db.execute<mysql.ResultSetHeader>(
@@ -727,28 +737,30 @@ shopRouter.post('/brand-auth', async (request, response) => {
       [createNo('BA'), shop.id, brandId, reason, license || null, STATUS_PENDING],
     );
 
-    const payload: SubmitBrandAuthApplicationResult = { id: String(result.insertId), status: 'pending' };
+    const payload: SubmitBrandAuthApplicationResult = { id: toEntityId(result.insertId), status: 'pending' };
     ok(response, payload);
   } catch (error) {
-    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      success: false,
-      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '提交品牌授权失败',
-    });
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_BRAND_AUTH_SUBMIT_FAILED',
+        message: '提交品牌授权失败',
+      }),
+    );
   }
 });
 
-shopRouter.get('/brand-products', async (request, response) => {
+shopRouter.get('/brand-products', requireUser, async (request, response) => {
   try {
-    const user = await requireCurrentUser(request);
+    const user = getRequestUser(request);
     const brandId = typeof request.query.brandId === 'string' ? request.query.brandId.trim() : '';
     if (!brandId) {
-      response.status(400).json({ success: false, message: '缺少 brandId' });
-      return;
+      throw new HttpError(400, 'SHOP_BRAND_ID_REQUIRED', '缺少 brandId');
     }
     const shop = await getCurrentShop(user.id);
     if (!shop) {
-      response.status(400).json({ success: false, message: '请先创建店铺' });
-      return;
+      throw new HttpError(400, 'SHOP_REQUIRED', '请先创建店铺');
     }
 
     const db = getDbPool();
@@ -764,8 +776,7 @@ shopRouter.get('/brand-products', async (request, response) => {
       [shop.id, brandId, STATUS_ACTIVE],
     );
     if (!authRows[0]) {
-      response.status(403).json({ success: false, message: '该品牌尚未授权' });
-      return;
+      throw new HttpError(403, 'SHOP_BRAND_AUTH_REQUIRED', '该品牌尚未授权');
     }
 
     const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -791,8 +802,8 @@ shopRouter.get('/brand-products', async (request, response) => {
     );
 
     const items: BrandProductListResult['items'] = (rows as Array<{ id: number | string; brand_id: number | string; brand_name: string; name: string; category: string | null; guide_price: number | string; supply_price: number | string; default_img: string | null; status: number | string }>).map((row) => ({
-      id: String(row.id),
-      brandId: String(row.brand_id),
+      id: toEntityId(row.id),
+      brandId: toEntityId(row.brand_id),
       brandName: row.brand_name,
       name: row.name,
       category: row.category,
@@ -804,30 +815,32 @@ shopRouter.get('/brand-products', async (request, response) => {
 
     ok(response, { items });
   } catch (error) {
-    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      success: false,
-      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '读取品牌商品失败',
-    });
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_BRAND_PRODUCTS_READ_FAILED',
+        message: '读取品牌商品失败',
+      }),
+    );
   }
 });
 
-shopRouter.post('/products', async (request, response) => {
+shopRouter.post('/products', requireUser, async (request, response) => {
   try {
-    const user = await requireCurrentUser(request);
+    const user = getRequestUser(request);
     const brandId = typeof request.body?.brandId === 'string' ? request.body.brandId.trim() : '';
     const brandProductIds = Array.isArray(request.body?.brandProductIds)
       ? request.body.brandProductIds.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
       : [];
 
     if (!brandId || brandProductIds.length === 0) {
-      response.status(400).json({ success: false, message: '请选择品牌和商品' });
-      return;
+      throw new HttpError(400, 'SHOP_PRODUCTS_SELECTION_REQUIRED', '请选择品牌和商品');
     }
 
     const shop = await getCurrentShop(user.id);
     if (!shop) {
-      response.status(400).json({ success: false, message: '请先创建店铺' });
-      return;
+      throw new HttpError(400, 'SHOP_REQUIRED', '请先创建店铺');
     }
 
     const db = getDbPool();
@@ -843,8 +856,7 @@ shopRouter.post('/products', async (request, response) => {
       [shop.id, brandId, STATUS_ACTIVE],
     );
     if (!authRows[0]) {
-      response.status(403).json({ success: false, message: '该品牌尚未授权' });
-      return;
+      throw new HttpError(403, 'SHOP_BRAND_AUTH_REQUIRED', '该品牌尚未授权');
     }
 
     const [rows] = await db.query<mysql.RowDataPacket[]>(
@@ -885,9 +897,13 @@ shopRouter.post('/products', async (request, response) => {
     const result: AddShopProductsResult = { count: products.length };
     ok(response, result);
   } catch (error) {
-    response.status(error instanceof Error && error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      success: false,
-      message: error instanceof Error && error.message === 'UNAUTHORIZED' ? '请先登录' : '上架商品失败',
-    });
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_PRODUCTS_ADD_FAILED',
+        message: '上架商品失败',
+      }),
+    );
   }
 });

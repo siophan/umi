@@ -1,7 +1,7 @@
-import type { ApiEnvelope } from '@joy/shared';
+import type { ApiEnvelope } from '@umi/shared';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
-const AUTH_TOKEN_KEY = 'joy_admin_token';
+const AUTH_TOKEN_KEY = 'umi_admin_token';
 const REQUEST_TIMEOUT_MS = 8000;
 
 export class ApiRequestError extends Error {

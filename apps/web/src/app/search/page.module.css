@@ -17,6 +17,11 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
+.searchField {
+  position: relative;
+  flex: 1;
+}
+
 .back {
   width: 36px;
   height: 36px;
@@ -63,6 +68,62 @@
 
 .inputWrap input::placeholder {
   color: #bbb;
+}
+
+.suggestPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.suggestList {
+  display: flex;
+  flex-direction: column;
+}
+
+.suggestItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: #fff;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.suggestItem + .suggestItem {
+  border-top: 1px solid #f5f5f5;
+}
+
+.suggestItem i {
+  color: #bbb;
+  font-size: 12px;
+}
+
+.suggestText {
+  flex: 1;
+  min-width: 0;
+  color: #333;
+  font-size: 13px;
+}
+
+.suggestType {
+  color: #999;
+  font-size: 11px;
+}
+
+.suggestLoading,
+.suggestEmpty {
+  padding: 14px;
+  color: #bbb;
+  font-size: 12px;
 }
 
 .clear {
@@ -144,6 +205,10 @@
   padding: 16px;
 }
 
+.historySection {
+  margin-bottom: 20px;
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -155,6 +220,12 @@
   font-size: 15px;
   font-weight: 700;
   color: #1a1a1a;
+}
+
+.sectionEmpty {
+  padding: 16px 0;
+  color: #bbb;
+  font-size: 13px;
 }
 
 .iconBtn {
@@ -493,4 +564,20 @@
 .highlight {
   color: #ff5722;
   font-weight: 700;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(26, 26, 26, 0.92);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }

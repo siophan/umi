@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { fetchMe, updateMe } from "../../lib/api";
+import { fetchMe, updateMe } from "../../lib/api/auth";
 import styles from "./page.module.css";
 
 const avatarOptions = [

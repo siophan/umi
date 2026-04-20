@@ -1,16 +1,17 @@
-import type { GuessSummary } from '@joy/shared';
+import type { GuessSummary } from '@umi/shared';
 import type { TableColumnsType } from 'antd';
+import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, Card, Descriptions, Drawer, Form, Input, List, Progress, Select, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Card, ConfigProvider, Descriptions, Drawer, Form, Input, List, Progress, Select, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { fetchAdminCategories, type AdminCategoryItem } from '../lib/api/categories';
 import {
-  fetchAdminCategories,
   fetchAdminGuesses,
-  type AdminCategoryItem,
 } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, guessReviewStatusMeta, guessStatusMeta } from '../lib/format';
+import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
 
 interface GuessesPageProps {
   refreshToken?: number;
@@ -128,10 +129,10 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
       title: '竞猜标题',
       dataIndex: 'title',
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <div>
           <Typography.Text strong>{record.title}</Typography.Text>
-          <Typography.Text type="secondary">{record.product.name}</Typography.Text>
-        </Space>
+          <Typography.Text style={{ display: 'block' }} type="secondary">{record.product.name}</Typography.Text>
+        </div>
       ),
     },
     {
@@ -202,18 +203,23 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
         ]}
         onChange={(key) => setStatus(key as 'all' | 'pending_review' | GuessSummary['status'])}
       />
-      <Card>
-        <Table
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<GuessSummary>
+          cardBordered={false}
           rowKey="id"
-          columns={columns}
+          columns={columns as never}
+          columnsState={{}}
           dataSource={filteredGuesses}
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => []}
           onRow={(record) => ({
             onClick: () => setSelected(record),
           })}
         />
-      </Card>
+      </ConfigProvider>
 
       <Drawer
         open={selected != null}
@@ -222,7 +228,7 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
         onClose={() => setSelected(null)}
       >
         {selected ? (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <div style={{ display: 'grid', gap: 16, width: '100%' }}>
             <Descriptions column={1} size="small">
               <Descriptions.Item label="关联商品">
                 {selected.product.name}
@@ -256,24 +262,24 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
 
                   return (
                     <List.Item>
-                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'grid', gap: 8, width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                           <Typography.Text>{option.optionText}</Typography.Text>
                           <Typography.Text type="secondary">
                             赔率 {option.odds.toFixed(2)} / {option.voteCount} 票
                           </Typography.Text>
-                        </Space>
+                        </div>
                         <Progress
                           percent={Number(percent.toFixed(1))}
                           status={option.isResult ? 'success' : 'active'}
                         />
-                      </Space>
+                      </div>
                     </List.Item>
                   );
                 }}
               />
             </Card>
-          </Space>
+          </div>
         ) : null}
       </Drawer>
     </div>

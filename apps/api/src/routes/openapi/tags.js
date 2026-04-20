@@ -1,0 +1,16 @@
+export const openApiTags = [
+    { name: 'Health', description: '健康检查' },
+    { name: 'Auth', description: '登录、注册与会话接口' },
+    { name: 'User', description: '用户资料、个人页与关注关系' },
+    { name: 'Social', description: '好友请求与社交概览' },
+    { name: 'Notification', description: '站内通知' },
+    { name: 'Community', description: '社区动态与互动' },
+    { name: 'Chat', description: '聊天会话' },
+    { name: 'Guess', description: '竞猜相关接口' },
+    { name: 'Product', description: '商城商品接口' },
+    { name: 'Order', description: '订单相关接口' },
+    { name: 'Wallet', description: '余额流水接口' },
+    { name: 'Warehouse', description: '仓库接口' },
+    { name: 'Shop', description: '店铺与品牌授权接口' },
+    { name: 'Admin', description: '管理台接口' },
+];

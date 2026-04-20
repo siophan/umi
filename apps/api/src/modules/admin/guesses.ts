@@ -1,5 +1,5 @@
 import type mysql from 'mysql2/promise';
-import type { GuessListResult, GuessSummary, ProductSummary } from '@joy/shared';
+import { toEntityId, toOptionalEntityId, type GuessListResult, type GuessSummary, type ProductSummary } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 
@@ -172,11 +172,11 @@ function toOptionalNumber(value: number | string | null | undefined) {
 }
 
 function toStringId(value: number | string | null | undefined) {
-  return value == null ? '' : String(value);
+  return toEntityId(value ?? 0);
 }
 
 function toOptionalStringId(value: number | string | null | undefined) {
-  return value == null ? null : String(value);
+  return toOptionalEntityId(value);
 }
 
 function toIsoString(value: Date | string) {
@@ -351,13 +351,13 @@ function buildGuessSummary(
   voteCountMap: Map<string, number>,
 ): GuessSummary {
   return {
-    id: String(row.id),
+    id: toEntityId(row.id),
     title: row.title,
     status: mapGuessStatus(row.status),
     reviewStatus: mapGuessReviewStatus(row.review_status),
     category: row.category || '未分类',
     endTime: toIsoString(row.end_time),
-    creatorId: String(row.creator_id),
+    creatorId: toEntityId(row.creator_id),
     product: buildProductSummary(row),
     options: options.map((option) => ({
       id: `${String(row.id)}-${Number(option.option_index)}`,

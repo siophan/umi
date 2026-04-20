@@ -1,4 +1,4 @@
-import type { OrderListResult } from '@joy/shared';
+import type { OrderListResult } from '@umi/shared';
 
 import { getJson } from './shared';
 

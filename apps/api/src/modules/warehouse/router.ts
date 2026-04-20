@@ -2,12 +2,13 @@ import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import type mysql from 'mysql2/promise';
 
-import type { WarehouseItem } from '@joy/shared';
+import { toEntityId, type WarehouseItem } from '@umi/shared';
 
+import { getRequestUser, requireUser } from '../../lib/auth';
+import { asyncHandler } from '../../lib/errors';
 import { getDbPool } from '../../lib/db';
 import { ok } from '../../lib/http';
-import { requireAdminByAuthorization } from '../admin/auth';
-import { getUserByToken } from '../auth/store';
+import { requireAdmin } from '../admin/auth';
 
 export const warehouseRouter: ExpressRouter = Router();
 
@@ -22,10 +23,6 @@ const PHYSICAL_STATUS_FULFILLED = 30;
 const FULFILLMENT_PENDING = 10;
 const FULFILLMENT_PROCESSING = 20;
 const FULFILLMENT_SHIPPED = 30;
-
-function getBearerToken(authorization?: string) {
-  return authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
-}
 
 type VirtualWarehouseRow = {
   id: number | string;
@@ -80,9 +77,9 @@ function mapVirtualStatus(code: number): WarehouseItem['status'] {
 
 function sanitizeVirtualRow(row: VirtualWarehouseRow): WarehouseItem {
   return {
-    id: String(row.id),
-    userId: String(row.user_id),
-    productId: row.product_id ? String(row.product_id) : '',
+    id: toEntityId(row.id),
+    userId: toEntityId(row.user_id),
+    productId: toEntityId(row.product_id ?? 0),
     productName: row.product_name || '未命名商品',
     productImg: row.product_img || null,
     quantity: Number(row.quantity ?? 0),
@@ -96,9 +93,9 @@ function sanitizeVirtualRow(row: VirtualWarehouseRow): WarehouseItem {
 
 function sanitizePhysicalRow(row: PhysicalWarehouseRow): WarehouseItem {
   return {
-    id: row.id,
-    userId: String(row.user_id),
-    productId: row.product_id ? String(row.product_id) : '',
+    id: toEntityId(row.id),
+    userId: toEntityId(row.user_id),
+    productId: toEntityId(row.product_id ?? 0),
     productName: row.product_name || '未命名商品',
     productImg: row.product_img || null,
     quantity: Number(row.quantity ?? 0),
@@ -220,55 +217,53 @@ async function getAdminPhysicalWarehouseItems() {
   );
 }
 
-warehouseRouter.get('/virtual', async (request, response) => {
-  const token = getBearerToken(request.headers.authorization);
-  const user = token ? await getUserByToken(token) : null;
+warehouseRouter.get(
+  '/virtual',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const db = getDbPool();
+    const [rows] = await db.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT
+          vw.id,
+          vw.user_id,
+          vw.product_id,
+          COALESCE(p.name, bp.name) AS product_name,
+          COALESCE(p.image_url, bp.default_img) AS product_img,
+          vw.quantity,
+          vw.price,
+          vw.source_type,
+          vw.status,
+          vw.created_at
+        FROM virtual_warehouse vw
+        LEFT JOIN product p ON p.id = vw.product_id
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+        WHERE vw.user_id = ?
+          AND vw.status IN (?, ?, ?)
+        ORDER BY vw.created_at DESC, vw.id DESC
+      `,
+      [
+        user.id,
+        VIRTUAL_STATUS_STORED,
+        VIRTUAL_STATUS_LOCKED,
+        VIRTUAL_STATUS_CONVERTED,
+      ],
+    );
 
-  if (!user) {
-    response.status(401).json({ success: false, message: '请先登录' });
-    return;
-  }
+    ok(response, {
+      items: (rows as VirtualWarehouseRow[]).map((row) => sanitizeVirtualRow(row)),
+    });
+  }),
+);
 
-  const db = getDbPool();
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
-    `
-      SELECT
-        vw.id,
-        vw.user_id,
-        vw.product_id,
-        COALESCE(p.name, bp.name) AS product_name,
-        COALESCE(p.image_url, bp.default_img) AS product_img,
-        vw.quantity,
-        vw.price,
-        vw.source_type,
-        vw.status,
-        vw.created_at
-      FROM virtual_warehouse vw
-      LEFT JOIN product p ON p.id = vw.product_id
-      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
-      WHERE vw.user_id = ?
-        AND vw.status IN (?, ?, ?)
-      ORDER BY vw.created_at DESC, vw.id DESC
-    `,
-    [user.id, VIRTUAL_STATUS_STORED, VIRTUAL_STATUS_LOCKED, VIRTUAL_STATUS_CONVERTED],
-  );
-
-  ok(response, {
-    items: (rows as VirtualWarehouseRow[]).map((row) => sanitizeVirtualRow(row)),
-  });
-});
-
-warehouseRouter.get('/physical', async (request, response) => {
-  const token = getBearerToken(request.headers.authorization);
-  const user = token ? await getUserByToken(token) : null;
-
-  if (!user) {
-    response.status(401).json({ success: false, message: '请先登录' });
-    return;
-  }
-
-  const db = getDbPool();
-  const [fulfillmentRows] = await db.execute<mysql.RowDataPacket[]>(
+warehouseRouter.get(
+  '/physical',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const db = getDbPool();
+    const [fulfillmentRows] = await db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
         CONCAT('fo-', fo.id, '-', oi.id) AS id,
@@ -297,10 +292,18 @@ warehouseRouter.get('/physical', async (request, response) => {
         AND fo.status IN (?, ?, ?)
       ORDER BY fo.created_at DESC, fo.id DESC
     `,
-    [FULFILLMENT_PENDING, FULFILLMENT_PROCESSING, FULFILLMENT_SHIPPED, user.id, FULFILLMENT_PENDING, FULFILLMENT_PROCESSING, FULFILLMENT_SHIPPED],
-  );
+      [
+        FULFILLMENT_PENDING,
+        FULFILLMENT_PROCESSING,
+        FULFILLMENT_SHIPPED,
+        user.id,
+        FULFILLMENT_PENDING,
+        FULFILLMENT_PROCESSING,
+        FULFILLMENT_SHIPPED,
+      ],
+    );
 
-  const [warehouseRows] = await db.execute<mysql.RowDataPacket[]>(
+    const [warehouseRows] = await db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
         CONCAT('pw-', pw.id) AS id,
@@ -327,53 +330,69 @@ warehouseRouter.get('/physical', async (request, response) => {
         AND pw.status IN (?, ?, ?)
       ORDER BY pw.created_at DESC, pw.id DESC
     `,
-    [PHYSICAL_STATUS_STORED, PHYSICAL_STATUS_CONSIGNING, PHYSICAL_STATUS_FULFILLED, user.id, PHYSICAL_STATUS_STORED, PHYSICAL_STATUS_CONSIGNING, PHYSICAL_STATUS_FULFILLED],
-  );
+      [
+        PHYSICAL_STATUS_STORED,
+        PHYSICAL_STATUS_CONSIGNING,
+        PHYSICAL_STATUS_FULFILLED,
+        user.id,
+        PHYSICAL_STATUS_STORED,
+        PHYSICAL_STATUS_CONSIGNING,
+        PHYSICAL_STATUS_FULFILLED,
+      ],
+    );
 
-  ok(response, {
-    items: [...(fulfillmentRows as PhysicalWarehouseRow[]), ...(warehouseRows as PhysicalWarehouseRow[])].map((row) =>
-      sanitizePhysicalRow(row),
-    ),
-  });
-});
+    ok(response, {
+      items: [
+        ...(fulfillmentRows as PhysicalWarehouseRow[]),
+        ...(warehouseRows as PhysicalWarehouseRow[]),
+      ].map((row) => sanitizePhysicalRow(row)),
+    });
+  }),
+);
 
-warehouseRouter.get('/admin/stats', async (request, response) => {
-  const auth = await requireAdminByAuthorization(request.headers.authorization);
-  if (!auth.ok) {
-    response.status(auth.status).json({ success: false, message: auth.message });
-    return;
-  }
+warehouseRouter.get(
+  '/admin/stats',
+  requireAdmin,
+  asyncHandler(async (_request, response) => {
+    const db = getDbPool();
+    const [virtualRows] = await db.execute<mysql.RowDataPacket[]>(
+      `SELECT COUNT(*) AS total_virtual FROM virtual_warehouse`,
+    );
+    const [physicalRows] = await db.execute<mysql.RowDataPacket[]>(
+      `SELECT COUNT(*) AS total_physical FROM physical_warehouse`,
+    );
 
-  const db = getDbPool();
-  const [virtualRows] = await db.execute<mysql.RowDataPacket[]>(
-    `SELECT COUNT(*) AS total_virtual FROM virtual_warehouse`,
-  );
-  const [physicalRows] = await db.execute<mysql.RowDataPacket[]>(
-    `SELECT COUNT(*) AS total_physical FROM physical_warehouse`,
-  );
+    ok(response, {
+      totalVirtual: Number(
+        (
+          virtualRows[0] as
+            | { total_virtual?: number | string }
+            | undefined
+        )?.total_virtual ?? 0,
+      ),
+      totalPhysical: Number(
+        (
+          physicalRows[0] as
+            | { total_physical?: number | string }
+            | undefined
+        )?.total_physical ?? 0,
+      ),
+    });
+  }),
+);
 
-  ok(response, {
-    totalVirtual: Number((virtualRows[0] as { total_virtual?: number | string } | undefined)?.total_virtual ?? 0),
-    totalPhysical: Number((physicalRows[0] as { total_physical?: number | string } | undefined)?.total_physical ?? 0),
-  });
-});
+warehouseRouter.get(
+  '/admin/virtual',
+  requireAdmin,
+  asyncHandler(async (_request, response) => {
+    ok(response, { items: await getAdminVirtualWarehouseItems() });
+  }),
+);
 
-warehouseRouter.get('/admin/virtual', async (request, response) => {
-  const auth = await requireAdminByAuthorization(request.headers.authorization);
-  if (!auth.ok) {
-    response.status(auth.status).json({ success: false, message: auth.message });
-    return;
-  }
-
-  ok(response, { items: await getAdminVirtualWarehouseItems() });
-});
-
-warehouseRouter.get('/admin/physical', async (request, response) => {
-  const auth = await requireAdminByAuthorization(request.headers.authorization);
-  if (!auth.ok) {
-    response.status(auth.status).json({ success: false, message: auth.message });
-    return;
-  }
-
-  ok(response, { items: await getAdminPhysicalWarehouseItems() });
-});
+warehouseRouter.get(
+  '/admin/physical',
+  requireAdmin,
+  asyncHandler(async (_request, response) => {
+    ok(response, { items: await getAdminPhysicalWarehouseItems() });
+  }),
+);

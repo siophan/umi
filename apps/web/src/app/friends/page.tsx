@@ -3,17 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { GuessSummary } from '@joy/shared';
+import type { GuessSummary } from '@umi/shared';
 
 import {
   acceptFriendRequest,
-  fetchGuessHistory,
-  fetchGuessList,
   fetchSocialOverview,
-  followUser,
   rejectFriendRequest,
-  unfollowUser,
-} from '../../lib/api';
+} from '../../lib/api/friends';
+import { fetchGuessHistory, fetchGuessList } from '../../lib/api/guesses';
+import { followUser, unfollowUser } from '../../lib/api/users';
 import styles from './page.module.css';
 
 type FriendsTab = 'friends' | 'following' | 'fans' | 'requests';

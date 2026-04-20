@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import type { GuessOption, ProductSummary, WarehouseItem } from '@joy/shared';
+import { toEntityId, type GuessOption, type ProductSummary, type WarehouseItem } from '@umi/shared';
 
-import { fetchProductDetail } from '../../../lib/api';
+import { addCartItem } from '../../../lib/api/cart';
+import { favoriteProduct, fetchProductDetail, unfavoriteProduct } from '../../../lib/api/products';
 import styles from './page.module.css';
 
 export default function ProductDetailPage() {
@@ -28,6 +29,7 @@ export default function ProductDetailPage() {
     stock: number;
     tags: string[];
     description: string;
+    favorited: boolean;
   }>(null);
   const [activeGuess, setActiveGuess] = useState<null | {
     id: string;
@@ -72,6 +74,7 @@ export default function ProductDetailPage() {
         );
         setWarehouseItems(result.warehouseItems);
         setRecommendations(result.recommendations);
+        setFavActive(result.product.favorited);
         if (!result.activeGuess) {
           setCurrentTab('direct');
         }
@@ -289,7 +292,7 @@ export default function ProductDetailPage() {
         <div className={styles.specRow}>
           <div className={styles.specLabel}>标签</div>
           <div className={styles.specScroll}>
-            {(product.tags.length ? product.tags : ['优米精选', product.brand, product.category]).map((item) => (
+            {(product.tags.length ? product.tags : ['Umi精选', product.brand, product.category]).map((item) => (
               <span className={styles.specChipOn} key={item}>
                 <span className={styles.specDot} />
                 {item}
@@ -564,7 +567,7 @@ export default function ProductDetailPage() {
             <div className={styles.panelHead}>
               <div className={styles.panelTitle}><i className="fa-solid fa-comment-dots" style={{ color: '#FFB400' }} /> 用户评价 <span>0</span></div>
             </div>
-            <div className={styles.directRow}>当前还没有真实评价数据，后续会接入评论与评分接口。</div>
+            <div className={styles.directRow}>暂无用户评价。</div>
           </div>
         </div>
 
@@ -591,12 +594,24 @@ export default function ProductDetailPage() {
           <button
             className={`${styles.barIcon} ${favActive ? styles.barIconFavActive : ''}`}
             type="button"
-            onClick={() => {
-              setFavActive((value) => {
-                const next = !value;
+            onClick={async () => {
+              if (!product) {
+                return;
+              }
+              const previous = favActive;
+              const next = !previous;
+              setFavActive(next);
+              try {
+                if (next) {
+                  await favoriteProduct(product.id);
+                } else {
+                  await unfavoriteProduct(product.id);
+                }
                 setToast(next ? '已收藏 ❤️' : '取消收藏');
-                return next;
-              });
+              } catch {
+                setFavActive(previous);
+                setToast('收藏失败');
+              }
             }}
           >
             <span><i className={`fa-${favActive ? 'solid' : 'regular'} fa-heart`} /></span>
@@ -614,7 +629,11 @@ export default function ProductDetailPage() {
             onClick={() => {
               if (currentTab === 'guess') router.push('/guess-history');
               else if (currentTab === 'inv') router.push('/warehouse');
-              else setToast('已加入购物车 🛒');
+              else if (product) {
+                void addCartItem({ productId: toEntityId(product.id), quantity: 1 })
+                  .then(() => setToast('已加入购物车 🛒'))
+                  .catch(() => setToast('加入购物车失败'));
+              }
             }}
           >
             {currentTab === 'guess' ? (
@@ -643,7 +662,7 @@ export default function ProductDetailPage() {
                 router.push(`/guess-order?id=${encodeURIComponent(activeGuess.id)}`);
               } else if (currentTab === 'direct') {
                 router.push(
-                  `/payment?from=product&pid=${encodeURIComponent(product.id)}&name=${encodeURIComponent(product.name)}&price=${encodeURIComponent(String(directPrice))}&img=${encodeURIComponent(product.img)}`,
+                  `/payment?from=product&pid=${encodeURIComponent(product.id)}&qty=1`,
                 );
               }
               else setExchangeOpen(true);
@@ -726,7 +745,7 @@ export default function ProductDetailPage() {
                   if (selectedWarehouse.length === 0) return;
                   setExchangeOpen(false);
                   router.push(
-                    `/payment?from=exchange&pid=${encodeURIComponent(product.id)}&name=${encodeURIComponent(product.name)}&price=${encodeURIComponent(String(exchangeToPay || 0.01))}&img=${encodeURIComponent(product.img)}`,
+                    `/payment?from=exchange&pid=${encodeURIComponent(product.id)}&qty=1`,
                   );
                 }}
                 style={{

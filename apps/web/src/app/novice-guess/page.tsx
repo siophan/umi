@@ -403,7 +403,7 @@ export default function NoviceGuessPage() {
 
         <div className={styles.splashCenter}>
           <div className={styles.splashBrand}>⚡ 新用户专属福利</div>
-          <div className={styles.splashLogo}>优米</div>
+          <div className={styles.splashLogo}>Umi</div>
           <div className={styles.splashSlogan}>猜对了就是你的</div>
           <div className={styles.splashSub}>万物皆可猜 · 猜中免费拿</div>
           <div className={styles.splashLive}>
@@ -627,7 +627,7 @@ export default function NoviceGuessPage() {
             {isFullWin ? <div className={styles.statBadge}>💎 全胜之王</div> : null}
 
             <div className={styles.brandStrip}>
-              <span className={styles.brandLogo}>优米</span>
+              <span className={styles.brandLogo}>Umi</span>
               <span className={styles.brandDot} />
               <span className={styles.brandText}>猜对了就是你的</span>
               <span className={styles.brandDot} />

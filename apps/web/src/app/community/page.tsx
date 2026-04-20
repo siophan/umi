@@ -6,19 +6,19 @@ import type { ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { MobileShell } from '../../components/mobile-shell';
-import type { CommunityFeedItem as CommunityFeedApiItem } from '@joy/shared';
+import type { CommunityFeedItem as CommunityFeedApiItem } from '@umi/shared';
 
 import {
   bookmarkCommunityPost,
   createCommunityPost,
   fetchCommunityDiscovery,
   fetchCommunityFeed,
-  fetchSocialOverview,
   likeCommunityPost,
   repostCommunityPost,
   unbookmarkCommunityPost,
   unlikeCommunityPost,
-} from '../../lib/api';
+} from '../../lib/api/community';
+import { fetchSocialOverview } from '../../lib/api/friends';
 import styles from './page.module.css';
 
 type Scope = 'public' | 'friends' | 'fans' | 'followers' | 'private';
@@ -59,7 +59,7 @@ type FollowUser = {
 };
 
 type GuessActivity = {
-  id: string;
+  id: NonNullable<CommunityFeedApiItem['guessInfo']>['id'];
   title: string;
   participants: number;
   options: [string, string];
@@ -137,9 +137,9 @@ const locationData = [
 ];
 
 const guessActivities: GuessActivity[] = [
-  { id: 'guess-1', title: '乐事薯片新口味大竞猜', participants: 1234, options: ['番茄味', '黄瓜味'], pcts: [55, 45] },
-  { id: 'guess-2', title: '德芙vs费列罗情人节对决', participants: 3890, options: ['德芙', '费列罗'], pcts: [58, 42] },
-  { id: 'guess-3', title: '三只松鼠马年年货销量王', participants: 2567, options: ['坚果礼盒', '糕点系列'], pcts: [62, 38] },
+  { id: '1001', title: '乐事薯片新口味大竞猜', participants: 1234, options: ['番茄味', '黄瓜味'], pcts: [55, 45] },
+  { id: '1002', title: '德芙vs费列罗情人节对决', participants: 3890, options: ['德芙', '费列罗'], pcts: [58, 42] },
+  { id: '1003', title: '三只松鼠马年年货销量王', participants: 2567, options: ['坚果礼盒', '糕点系列'], pcts: [62, 38] },
 ];
 
 const emojiCategories = {

@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { WarehouseItem } from '@joy/shared';
+import type { WarehouseItem } from '@umi/shared';
 
-import { fetchPhysicalWarehouse, fetchVirtualWarehouse } from '../../lib/api';
+import { fetchPhysicalWarehouse, fetchVirtualWarehouse } from '../../lib/api/warehouse';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 

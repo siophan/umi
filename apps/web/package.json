@@ -1,5 +1,5 @@
 {
-  "name": "@joy/web",
+  "name": "@umi/web",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@joy/shared": "workspace:*",
+    "@umi/shared": "workspace:*",
     "next": "^15.3.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

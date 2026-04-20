@@ -25,7 +25,7 @@ function getAuthToken() {
     return '';
   }
 
-  return window.localStorage.getItem('joy_token') ?? '';
+  return window.localStorage.getItem('umi_token') ?? '';
 }
 
 async function requestInvite(path: string, init?: RequestInit) {

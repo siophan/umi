@@ -2,7 +2,7 @@ import './globals.css';
 import type { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'JOY Web',
+  title: 'UMI Web',
   description: '用户端应用骨架',
 };
 

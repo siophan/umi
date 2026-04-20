@@ -1,5 +1,23 @@
-import type { AdminCategoryItem } from './catalog';
-import { getJson } from './shared';
+import type {
+  AdminPermissionMutationResult,
+  EntityId,
+  CreateAdminPermissionPayload,
+  AdminSystemUserMutationResult,
+  CreateAdminSystemUserPayload,
+  ResetAdminSystemUserPasswordPayload,
+  UpdateAdminPermissionPayload,
+  UpdateAdminPermissionStatusPayload,
+  UpdateAdminPermissionStatusResult,
+  UpdateAdminRolePermissionsPayload,
+  UpdateAdminRolePermissionsResult,
+  UpdateAdminRoleStatusPayload,
+  UpdateAdminRoleStatusResult,
+  UpdateAdminSystemUserPayload,
+  UpdateAdminSystemUserStatusPayload,
+  UpdateAdminSystemUserStatusResult,
+} from '@umi/shared';
+
+import { getJson, postJson, putJson } from './shared';
 
 export interface AdminNotificationItem {
   id: string;
@@ -36,6 +54,7 @@ export interface AdminSystemUserItem {
   email: string | null;
   role: string;
   roleCodes: string[];
+  roleIds: EntityId[];
   status: 'active' | 'disabled';
   lastLoginAt: string | null;
   createdAt: string;
@@ -46,7 +65,8 @@ export interface AdminRoleListItem {
   code: string;
   name: string;
   description: string | null;
-  scope: string;
+  permissionRange: string;
+  permissionModules: string[];
   memberCount: number;
   permissionCount: number;
   status: 'active' | 'disabled';
@@ -97,6 +117,19 @@ export interface AdminPermissionMatrixData {
   };
 }
 
+export interface AdminPermissionItem {
+  id: string;
+  code: string;
+  name: string;
+  module: string;
+  action: 'view' | 'create' | 'edit' | 'manage' | 'unknown';
+  parentId: string | null;
+  parentName: string | null;
+  status: 'active' | 'disabled';
+  sort: number;
+  assignedRoleCount: number;
+}
+
 type AdminNotificationListResult = {
   items: AdminNotificationItem[];
   summary: {
@@ -138,13 +171,13 @@ type AdminRoleListResult = {
   };
 };
 
-type AdminCategoryListResult = {
-  items: AdminCategoryItem[];
+type AdminPermissionListResult = {
+  items: AdminPermissionItem[];
   summary: {
     total: number;
     active: number;
     disabled: number;
-    byBizType: Record<string, number>;
+    modules: number;
   };
 };
 
@@ -160,14 +193,98 @@ export function fetchAdminSystemUsers() {
   return getJson<AdminSystemUserListResult>('/api/admin/system-users');
 }
 
+export function createAdminSystemUser(payload: CreateAdminSystemUserPayload) {
+  return postJson<AdminSystemUserMutationResult, CreateAdminSystemUserPayload>(
+    '/api/admin/system-users',
+    payload,
+  );
+}
+
+export function updateAdminSystemUser(
+  id: string,
+  payload: UpdateAdminSystemUserPayload,
+) {
+  return putJson<AdminSystemUserMutationResult, UpdateAdminSystemUserPayload>(
+    `/api/admin/system-users/${id}`,
+    payload,
+  );
+}
+
+export function resetAdminSystemUserPassword(
+  id: string,
+  payload: ResetAdminSystemUserPasswordPayload,
+) {
+  return postJson<AdminSystemUserMutationResult, ResetAdminSystemUserPasswordPayload>(
+    `/api/admin/system-users/${id}/reset-password`,
+    payload,
+  );
+}
+
+export function updateAdminSystemUserStatus(
+  id: string,
+  payload: UpdateAdminSystemUserStatusPayload,
+) {
+  return putJson<UpdateAdminSystemUserStatusResult, UpdateAdminSystemUserStatusPayload>(
+    `/api/admin/system-users/${id}/status`,
+    payload,
+  );
+}
+
 export function fetchAdminRoles() {
   return getJson<AdminRoleListResult>('/api/admin/roles');
 }
 
-export function fetchAdminPermissionsMatrix() {
-  return getJson<AdminPermissionMatrixData>('/api/admin/permissions/matrix');
+export function updateAdminRoleStatus(
+  id: string,
+  payload: UpdateAdminRoleStatusPayload,
+) {
+  return putJson<UpdateAdminRoleStatusResult, UpdateAdminRoleStatusPayload>(
+    `/api/admin/roles/${id}/status`,
+    payload,
+  );
 }
 
-export function fetchAdminCategories() {
-  return getJson<AdminCategoryListResult>('/api/admin/categories');
+export function updateAdminRolePermissions(
+  id: string,
+  payload: UpdateAdminRolePermissionsPayload,
+) {
+  return putJson<UpdateAdminRolePermissionsResult, UpdateAdminRolePermissionsPayload>(
+    `/api/admin/roles/${id}/permissions`,
+    payload,
+  );
+}
+
+export function fetchAdminPermissions() {
+  return getJson<AdminPermissionListResult>('/api/admin/permissions');
+}
+
+export function createAdminPermission(payload: CreateAdminPermissionPayload) {
+  return postJson<AdminPermissionMutationResult, CreateAdminPermissionPayload>(
+    '/api/admin/permissions',
+    payload,
+  );
+}
+
+export function updateAdminPermission(
+  id: string,
+  payload: UpdateAdminPermissionPayload,
+) {
+  return putJson<AdminPermissionMutationResult, UpdateAdminPermissionPayload>(
+    `/api/admin/permissions/${id}`,
+    payload,
+  );
+}
+
+export function updateAdminPermissionStatus(
+  id: string,
+  payload: UpdateAdminPermissionStatusPayload,
+) {
+  return putJson<UpdateAdminPermissionStatusResult, UpdateAdminPermissionStatusPayload>(
+    `/api/admin/permissions/${id}/status`,
+    payload,
+  );
+}
+
+export function fetchAdminPermissionsMatrix() {
+  return getJson<AdminPermissionMatrixData>('/api/admin/permissions/matrix');
 }

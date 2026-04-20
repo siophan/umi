@@ -1,6 +1,6 @@
 import type mysql from 'mysql2/promise';
 
-import type { OrderItem, OrderSummary } from '@joy/shared';
+import { toEntityId, toOptionalEntityId, type OrderItem, type OrderSummary } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 
@@ -494,8 +494,8 @@ function sanitizeOrderItem(row: AdminOrderQueryRow): AdminOrderItem | null {
   }
 
   return {
-    id: String(row.item_id),
-    productId: String(row.product_id),
+    id: toEntityId(row.item_id),
+    productId: toEntityId(row.product_id),
     productName: row.product_name,
     productImg: row.product_img || '',
     skuText: formatSpecs(row.specs),
@@ -599,17 +599,17 @@ export async function getAdminOrders(): Promise<AdminOrderRecord[]> {
   const orderMap = new Map<string, AdminOrderRecord>();
 
   for (const row of rows as AdminOrderQueryRow[]) {
-    const orderId = String(row.id);
+    const orderId = toEntityId(row.id);
     let order = orderMap.get(orderId);
 
     if (!order) {
-      const guessId = row.guess_id ? String(row.guess_id) : null;
+      const guessId = toOptionalEntityId(row.guess_id);
       order = {
         id: orderId,
         orderSn: row.order_sn,
-        userId: String(row.user_id),
+        userId: toEntityId(row.user_id),
         user: {
-          id: String(row.user_id),
+          id: String(toEntityId(row.user_id)),
           uidCode: row.uid_code,
           phoneNumber: row.user_phone_number,
           name: row.user_name,
@@ -633,7 +633,7 @@ export async function getAdminOrders(): Promise<AdminOrderRecord[]> {
         createdAt: new Date(row.created_at).toISOString(),
         address: row.address_id
           ? {
-              id: String(row.address_id),
+              id: String(toEntityId(row.address_id)),
               name: row.address_name,
               phoneNumber: row.address_phone_number,
               province: row.province,
@@ -644,7 +644,7 @@ export async function getAdminOrders(): Promise<AdminOrderRecord[]> {
           : null,
         fulfillment: row.fulfillment_id
           ? {
-              id: String(row.fulfillment_id),
+              id: String(toEntityId(row.fulfillment_id)),
               fulfillmentSn: row.fulfillment_sn,
               typeCode:
                 row.fulfillment_type == null ? null : Number(row.fulfillment_type),
@@ -664,7 +664,7 @@ export async function getAdminOrders(): Promise<AdminOrderRecord[]> {
           : null,
         refund: row.refund_id
           ? {
-              id: String(row.refund_id),
+              id: String(toEntityId(row.refund_id)),
               refundNo: row.refund_no,
               statusCode: row.refund_status == null ? null : Number(row.refund_status),
               refundAmount: toMoney(row.refund_amount),
@@ -730,9 +730,9 @@ export async function getAdminTransactions(): Promise<AdminTransactionRow[]> {
 
   const payments = (paymentRows as AdminTransactionPaymentRow[]).map((row) => ({
     id: row.order_sn || `PAY-${String(row.order_id)}`,
-    orderId: String(row.order_id),
+    orderId: String(toEntityId(row.order_id)),
     orderSn: row.order_sn,
-    userId: String(row.user_id),
+    userId: String(toEntityId(row.user_id)),
     userName: row.user_name,
     channel:
       Number(row.order_type ?? 0) === ORDER_TYPE_GUESS_REWARD
@@ -749,9 +749,9 @@ export async function getAdminTransactions(): Promise<AdminTransactionRow[]> {
 
   const refunds = (refundRows as AdminTransactionRefundRow[]).map((row) => ({
     id: row.refund_no || `RF-${String(row.id)}`,
-    orderId: String(row.order_id),
+    orderId: String(toEntityId(row.order_id)),
     orderSn: row.order_sn,
-    userId: String(row.user_id),
+    userId: String(toEntityId(row.user_id)),
     userName: row.user_name,
     channel:
       Number(row.order_type ?? 0) === ORDER_TYPE_GUESS_REWARD
@@ -834,11 +834,11 @@ export async function getAdminLogistics(): Promise<AdminLogisticsRow[]> {
     const status = mapLogisticsStatus(Number(row.status ?? 0));
 
     return {
-      id: String(row.id),
+      id: String(toEntityId(row.id)),
       fulfillmentSn: row.fulfillment_sn,
-      orderId: row.order_id ? String(row.order_id) : null,
+      orderId: row.order_id ? String(toEntityId(row.order_id)) : null,
       orderSn: row.order_sn,
-      userId: String(row.user_id),
+      userId: String(toEntityId(row.user_id)),
       receiver: row.receiver_name,
       phoneNumber: row.phone_number,
       carrier,
@@ -896,14 +896,14 @@ export async function getAdminConsignRows(): Promise<AdminConsignRow[]> {
   return (rows as AdminConsignQueryRow[]).map((row) => {
     const sourceType = mapConsignSourceType(row);
     return {
-      id: String(row.id),
+      id: String(toEntityId(row.id)),
       tradeNo: row.trade_no,
-      physicalItemId: row.physical_item_id ? String(row.physical_item_id) : null,
+      physicalItemId: row.physical_item_id ? String(toEntityId(row.physical_item_id)) : null,
       productName: row.product_name || '未命名商品',
       productImg: row.product_img,
-      userId: String(row.seller_user_id),
-      buyerUserId: row.buyer_user_id ? String(row.buyer_user_id) : null,
-      orderId: row.order_id ? String(row.order_id) : null,
+      userId: String(toEntityId(row.seller_user_id)),
+      buyerUserId: row.buyer_user_id ? String(toEntityId(row.buyer_user_id)) : null,
+      orderId: row.order_id ? String(toEntityId(row.order_id)) : null,
       orderSn: row.order_sn,
       price: toMoney(row.sale_amount ?? row.consign_price),
       listingPrice: row.consign_price == null ? null : toMoney(row.consign_price),

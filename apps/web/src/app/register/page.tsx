@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fetchMe, register, sendCode, setAuthToken } from "../../lib/api";
+import { fetchMe, register, sendCode } from "../../lib/api/auth";
+import { setAuthToken } from "../../lib/api/shared";
 import styles from "./page.module.css";
 
 const avatars = [
@@ -16,7 +17,7 @@ const avatars = [
   { id: "mascot-beach", label: "海边鼠", src: "/legacy/images/mascot/mascot-beach.png" },
 ] as const;
 
-export default function RegisterPage() {
+function RegisterPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
@@ -154,7 +155,7 @@ export default function RegisterPage() {
           </button>
           <div className={styles.brandBg} />
           <div className={styles.brandInner}>
-            <div className={styles.brandLogo}>优米</div>
+            <div className={styles.brandLogo}>Umi</div>
             <div className={styles.brandDesc}>创建账号，开启竞猜之旅</div>
           </div>
         </section>
@@ -355,5 +356,13 @@ export default function RegisterPage() {
 
       <div className={`${styles.toast} ${toast ? styles.toastShow : ""}`}>{toast}</div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<main className={styles.page} />}>
+      <RegisterPageInner />
+    </Suspense>
   );
 }

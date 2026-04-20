@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-import type { CommunityFeedItem, CommunityPostDetailResult } from '@joy/shared';
+import type {
+  CommunityCommentSort,
+  CommunityFeedItem,
+  CommunityPostDetailResult,
+} from '@umi/shared';
 
 import {
   bookmarkCommunityPost,
@@ -12,11 +16,11 @@ import {
   fetchCommunityPost,
   likeCommunityComment,
   likeCommunityPost,
-  repostCommunityPost,
+  reportCommunityPost,
   unbookmarkCommunityPost,
   unlikeCommunityComment,
   unlikeCommunityPost,
-} from '../../../lib/api';
+} from '../../../lib/api/community';
 import styles from './page.module.css';
 
 const TAG_CLS_MAP: Record<string, string> = {
@@ -30,6 +34,16 @@ const TAG_CLS_MAP: Record<string, string> = {
   店铺推荐: styles.tagHot,
   转发: styles.tagGuess,
 };
+
+const EMOJIS = ['😀', '😂', '🤣', '😍', '🥰', '😎', '🤔', '😢', '😡', '🥳', '🎉', '🔥', '❤️', '👍', '👎', '🙏', '💪', '🎯', '🏆', '✅', '⭐', '💰', '🎁', '🍕'];
+
+const REPORT_REASON_OPTIONS = [
+  { value: 10 as const, label: '垃圾广告' },
+  { value: 20 as const, label: '低俗色情' },
+  { value: 30 as const, label: '人身攻击' },
+  { value: 40 as const, label: '虚假信息' },
+  { value: 90 as const, label: '其他原因' },
+];
 
 function formatRelativeTime(value: string) {
   const timestamp = new Date(value).getTime();
@@ -71,6 +85,62 @@ function guessLabel(post: CommunityFeedItem) {
   return post.tag?.trim() || '猜友动态';
 }
 
+function mapCommentTree(
+  items: CommunityPostDetailResult['comments'],
+  targetId: string,
+  update: (item: CommunityPostDetailResult['comments'][number]) => CommunityPostDetailResult['comments'][number],
+): CommunityPostDetailResult['comments'] {
+  return items.map((item) => {
+    if (item.id === targetId) {
+      return update(item);
+    }
+    if (item.replies?.length) {
+      return {
+        ...item,
+        replies: mapCommentTree(item.replies, targetId, update),
+      };
+    }
+    return item;
+  });
+}
+
+function appendReplyToTree(
+  items: CommunityPostDetailResult['comments'],
+  targetId: string,
+  reply: CommunityPostDetailResult['comments'][number],
+): CommunityPostDetailResult['comments'] {
+  return items.map((item) => {
+    if (item.id === targetId) {
+      return {
+        ...item,
+        replies: [...(item.replies ?? []), reply],
+      };
+    }
+    if (item.replies?.length) {
+      return {
+        ...item,
+        replies: appendReplyToTree(item.replies, targetId, reply),
+      };
+    }
+    return item;
+  });
+}
+
+function findTopLevelCommentIdByReplyId(
+  items: CommunityPostDetailResult['comments'],
+  replyId: string,
+): CommunityPostDetailResult['comments'][number]['id'] | null {
+  for (const item of items) {
+    if (item.id === replyId) {
+      return item.id;
+    }
+    if (item.replies?.some((reply) => reply.id === replyId)) {
+      return item.id;
+    }
+  }
+  return null;
+}
+
 export default function PostDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -80,23 +150,43 @@ export default function PostDetailPage() {
   const [error, setError] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
   const [comment, setComment] = useState('');
+  const [toast, setToast] = useState('');
   const [likeSaving, setLikeSaving] = useState(false);
   const [bookmarkSaving, setBookmarkSaving] = useState(false);
   const [commentSaving, setCommentSaving] = useState(false);
   const [commentLikeSavingId, setCommentLikeSavingId] = useState('');
-  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
-  const [repostOpen, setRepostOpen] = useState(false);
-  const [repostDraft, setRepostDraft] = useState('转发动态');
-  const [repostSaving, setRepostSaving] = useState(false);
+  const [replyTo, setReplyTo] = useState<{ id: CommunityPostDetailResult['comments'][number]['id']; name: string } | null>(null);
   const [expandedReplyIds, setExpandedReplyIds] = useState<Record<string, boolean>>({});
+  const [commentSort, setCommentSort] = useState<CommunityCommentSort>('hot');
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<(typeof REPORT_REASON_OPTIONS)[number]['value']>(10);
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportSaving, setReportSaving] = useState(false);
   const commentsRef = useRef<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  function showToast(message: string) {
+    setToast(message);
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => setToast(''), 1800);
+  }
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     let ignore = false;
 
     async function load() {
       try {
-        const result = await fetchCommunityPost(postId);
+        const result = await fetchCommunityPost(postId, commentSort);
         if (ignore) {
           return;
         }
@@ -125,7 +215,7 @@ export default function PostDetailPage() {
     return () => {
       ignore = true;
     };
-  }, [postId]);
+  }, [commentSort, postId]);
 
   const post = detail?.post ?? null;
   const imageClass = useMemo(() => {
@@ -136,6 +226,9 @@ export default function PostDetailPage() {
     if (post.images.length === 2) return styles.img2;
     return styles.img3;
   }, [post]);
+  const comments = detail?.comments ?? [];
+  const related = detail?.related ?? [];
+  const totalCommentCount = post?.comments ?? 0;
 
   async function handleToggleLike() {
     if (!post || likeSaving) {
@@ -164,7 +257,7 @@ export default function PostDetailPage() {
       } else {
         await likeCommunityPost(post.id);
       }
-    } catch {
+    } catch (error) {
       setDetail((current) =>
         current
           ? {
@@ -174,9 +267,10 @@ export default function PostDetailPage() {
                 liked: previous,
                 likes: previousLikes,
               },
-            }
-          : current,
+          }
+        : current,
       );
+      showToast(error instanceof Error ? error.message : '点赞失败');
     } finally {
       setLikeSaving(false);
     }
@@ -184,7 +278,7 @@ export default function PostDetailPage() {
 
   async function handleToggleBookmark() {
     if (!post || bookmarkSaving) {
-      return;
+      return false;
     }
 
     const previous = post.bookmarked;
@@ -207,7 +301,8 @@ export default function PostDetailPage() {
       } else {
         await bookmarkCommunityPost(post.id);
       }
-    } catch {
+      return true;
+    } catch (error) {
       setDetail((current) =>
         current
           ? {
@@ -216,9 +311,11 @@ export default function PostDetailPage() {
                 ...current.post,
                 bookmarked: previous,
               },
-            }
-          : current,
+          }
+        : current,
       );
+      showToast(error instanceof Error ? error.message : '收藏失败');
+      return false;
     } finally {
       setBookmarkSaving(false);
     }
@@ -228,7 +325,11 @@ export default function PostDetailPage() {
     if (!post || commentSaving) {
       return;
     }
-    const content = comment.trim();
+    const prefix = replyTo ? `回复 @${replyTo.name}：` : '';
+    const rawContent = comment.trim();
+    const content = replyTo && rawContent.startsWith(prefix)
+      ? rawContent.slice(prefix.length).trim()
+      : rawContent;
     if (!content) {
       return;
     }
@@ -248,19 +349,17 @@ export default function PostDetailPage() {
                 comments: current.post.comments + 1,
               },
               comments: replyTo
-                ? current.comments.map((item) =>
-                    item.id === replyTo.id
-                      ? { ...item, replies: [...(item.replies ?? []), created] }
-                      : item,
-                  )
+                ? appendReplyToTree(current.comments, replyTo.id, created)
                 : [created, ...current.comments],
             }
           : current,
       );
       setComment('');
       setReplyTo(null);
-    } catch {
-      // Keep the UI quiet here; the page already blocks duplicate submits and will stay editable.
+      setEmojiOpen(false);
+      showToast('评论已发送');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '评论发送失败');
     } finally {
       setCommentSaving(false);
     }
@@ -279,10 +378,7 @@ export default function PostDetailPage() {
         return current;
       }
 
-      const nextComments = current.comments.map((item) => {
-        if (item.id !== commentId) {
-          return item;
-        }
+      const nextComments = mapCommentTree(current.comments, commentId, (item) => {
         previousLiked = item.liked;
         previousLikes = item.likes;
         return {
@@ -305,23 +401,20 @@ export default function PostDetailPage() {
       } else {
         await likeCommunityComment(commentId);
       }
-    } catch {
+    } catch (error) {
       setDetail((current) =>
         current
           ? {
               ...current,
-              comments: current.comments.map((item) =>
-                item.id === commentId
-                  ? {
-                      ...item,
-                      liked: previousLiked,
-                      likes: previousLikes,
-                    }
-                  : item,
-              ),
+              comments: mapCommentTree(current.comments, commentId, (item) => ({
+                ...item,
+                liked: previousLiked,
+                likes: previousLikes,
+              })),
             }
           : current,
       );
+      showToast(error instanceof Error ? error.message : '评论点赞失败');
     } finally {
       setCommentLikeSavingId('');
     }
@@ -360,55 +453,7 @@ export default function PostDetailPage() {
       </main>
     );
   }
-
   const tagClass = TAG_CLS_MAP[guessLabel(post)] ?? styles.tagGuess;
-  const comments = detail?.comments ?? [];
-  const related = detail?.related ?? [];
-
-  function openRepostComposer() {
-    setShareOpen(false);
-    setRepostDraft('转发动态');
-    setRepostOpen(true);
-  }
-
-  function closeRepostComposer() {
-    if (repostSaving) {
-      return;
-    }
-    setRepostOpen(false);
-    setRepostDraft('转发动态');
-  }
-
-  async function handleRepostFromDetail() {
-    if (!post || repostSaving) {
-      return;
-    }
-
-    try {
-      setRepostSaving(true);
-      await repostCommunityPost(post.id, {
-        content: repostDraft.trim() || '转发动态',
-        scope: 'public',
-      });
-      setDetail((current) =>
-        current
-          ? {
-              ...current,
-              post: {
-                ...current.post,
-                shares: current.post.shares + 1,
-              },
-            }
-          : current,
-      );
-      setRepostOpen(false);
-      setRepostDraft('转发动态');
-    } catch {
-      // noop
-    } finally {
-      setRepostSaving(false);
-    }
-  }
 
   function toggleReplyThread(commentId: string) {
     setExpandedReplyIds((current) => ({
@@ -419,6 +464,7 @@ export default function PostDetailPage() {
 
   function handleSaveImage() {
     if (!post?.images.length) {
+      showToast('当前动态暂无图片可保存');
       return;
     }
     const link = document.createElement('a');
@@ -428,6 +474,109 @@ export default function PostDetailPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    showToast('图片已保存');
+  }
+
+  function insertEmoji(emoji: string) {
+    setComment((current) => `${current}${emoji}`);
+    inputRef.current?.focus();
+  }
+
+  async function handleShareAction(label: string) {
+    if (!post) {
+      return;
+    }
+
+    const url = `${window.location.origin}/post/${post.id}`;
+    const title = post.title || '动态详情';
+    const text = post.desc || title;
+
+    try {
+      if (label === '复制链接') {
+        await navigator.clipboard.writeText(url);
+        showToast('链接已复制');
+        setShareOpen(false);
+        return;
+      }
+
+      if (label === '收藏') {
+        const nextBookmarked = !post.bookmarked;
+        const success = await handleToggleBookmark();
+        if (success) {
+          showToast(nextBookmarked ? '⭐ 收藏成功' : '已取消收藏');
+        }
+        setShareOpen(false);
+        return;
+      }
+
+      if (label === '保存图片') {
+        handleSaveImage();
+        setShareOpen(false);
+        return;
+      }
+
+      if (label === '举报') {
+        setShareOpen(false);
+        setReportOpen(true);
+        return;
+      }
+
+      if ((label === '微信' || label === '朋友圈') && typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({ title, text, url });
+        setShareOpen(false);
+        return;
+      }
+
+      if (label === 'QQ') {
+        window.open(
+          `https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&summary=${encodeURIComponent(text)}`,
+          '_blank',
+          'noopener,noreferrer',
+        );
+        showToast('正在打开 QQ 分享');
+        setShareOpen(false);
+        return;
+      }
+
+      if (label === '微博') {
+        window.open(
+          `https://service.weibo.com/share/share.php?url=${encodeURIComponent(url)}&title=${encodeURIComponent(`${title} ${text}`)}`,
+          '_blank',
+          'noopener,noreferrer',
+        );
+        showToast('正在打开微博分享');
+        setShareOpen(false);
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+      showToast(`链接已复制，请去${label}粘贴分享`);
+      setShareOpen(false);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '分享失败');
+    }
+  }
+
+  async function handleSubmitReport() {
+    if (!post || reportSaving) {
+      return;
+    }
+
+    try {
+      setReportSaving(true);
+      await reportCommunityPost(post.id, {
+        reasonType: reportReason,
+        reasonDetail: reportDetail.trim() || null,
+      });
+      setReportOpen(false);
+      setReportReason(10);
+      setReportDetail('');
+      showToast('举报已提交');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '举报失败');
+    } finally {
+      setReportSaving(false);
+    }
   }
 
   return (
@@ -443,7 +592,11 @@ export default function PostDetailPage() {
       </header>
 
       <article className={styles.card}>
-        <div className={styles.cardAuthor}>
+        <button
+          className={styles.cardAuthor}
+          type="button"
+          onClick={() => router.push(`/user/${encodeURIComponent(post.author.uid)}`)}
+        >
           <img src={post.author.avatar || '/legacy/images/mascot/mouse-main.png'} alt={post.author.name} />
           <div className={styles.cardAuthorInfo}>
             <div className={styles.cardAuthorName}>
@@ -460,7 +613,7 @@ export default function PostDetailPage() {
               ) : null}
             </div>
           </div>
-        </div>
+        </button>
 
         <div className={styles.content}>
           {post.title ? <h1 className={styles.title}>{post.title}</h1> : null}
@@ -484,7 +637,9 @@ export default function PostDetailPage() {
         {post.guessInfo ? (
           <section className={styles.guessBar}>
             <div className={styles.guessHead}>
-              <div className={styles.guessTitle}>关联竞猜</div>
+              <div className={styles.guessTitle}>
+                <i className="fa-solid fa-bullseye" /> 参与竞猜
+              </div>
               <span className={styles.guessCount}>{formatCount(post.guessInfo.participants)}人参与</span>
             </div>
             <div className={styles.guessOptions}>
@@ -508,8 +663,15 @@ export default function PostDetailPage() {
           <button className={`${styles.interactItem} ${post.liked ? styles.active : ''}`} type="button" disabled={likeSaving} onClick={() => void handleToggleLike()}>
             <i className={`${post.liked ? 'fa-solid' : 'fa-regular'} fa-heart`} /> <span>{formatCount(post.likes)}</span>
           </button>
-          <button className={styles.interactItem} type="button" onClick={() => commentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-            <i className="fa-regular fa-comment" /> <span>{formatCount(comments.length)}</span>
+          <button
+            className={styles.interactItem}
+            type="button"
+            onClick={() => {
+              commentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              window.setTimeout(() => inputRef.current?.focus(), 350);
+            }}
+          >
+            <i className="fa-regular fa-comment" /> <span>{formatCount(totalCommentCount)}</span>
           </button>
           <button className={styles.interactItem} type="button" onClick={() => setShareOpen(true)}>
             <i className="fa-solid fa-share-nodes" /> <span>{formatCount(post.shares)}</span>
@@ -524,34 +686,96 @@ export default function PostDetailPage() {
         <div className={styles.commentsHeader}>
           <div>
             <span className={styles.commentsTitle}>评论</span>
-            <span className={styles.commentsCount}>{comments.length} 条</span>
+            <span className={styles.commentsCount}>{totalCommentCount} 条</span>
           </div>
-          <button className={styles.sortBtn} type="button">
-            <i className="fa-solid fa-arrow-down-wide-short" /> 最热
+          <button
+            className={styles.sortBtn}
+            type="button"
+            onClick={() => setCommentSort((current) => (current === 'hot' ? 'newest' : 'hot'))}
+          >
+            <i className={`fa-solid ${commentSort === 'hot' ? 'fa-arrow-down-wide-short' : 'fa-arrow-down-short-wide'}`} />
+            {commentSort === 'hot' ? '最热' : '最新'}
           </button>
         </div>
         {comments.length ? comments.map((item) => (
           <article className={styles.comment} key={item.id}>
-            <img className={styles.commentAvatar} src={item.authorAvatar || '/legacy/images/mascot/mouse-main.png'} alt={item.authorName} />
+            <button
+              className={styles.commentAvatarBtn}
+              type="button"
+              onClick={() => router.push(`/user/${encodeURIComponent(item.authorUid)}`)}
+            >
+              <img className={styles.commentAvatar} src={item.authorAvatar || '/legacy/images/mascot/mouse-main.png'} alt={item.authorName} />
+            </button>
             <div className={styles.commentBody}>
               <div className={styles.commentTop}>
-                <div className={styles.commentName}>{item.authorName}</div>
+                <button
+                  className={styles.commentNameBtn}
+                  type="button"
+                  onClick={() => router.push(`/user/${encodeURIComponent(item.authorUid)}`)}
+                >
+                  {item.authorName}
+                </button>
                 <div className={styles.commentTime}>{formatRelativeTime(item.createdAt)}</div>
               </div>
               <div className={styles.commentText}>{item.content}</div>
               <div className={styles.commentActions}>
-                <span onClick={() => setReplyTo({ id: item.id, name: item.authorName })}>回复</span>
+                <span
+                  onClick={() => {
+                    setReplyTo({ id: item.id, name: item.authorName });
+                    setComment(`回复 @${item.authorName}：`);
+                    window.setTimeout(() => inputRef.current?.focus(), 0);
+                  }}
+                >
+                  回复
+                </span>
               </div>
               {item.replies?.length ? (
                 <div className={styles.replies}>
                   {(expandedReplyIds[item.id] ? item.replies : item.replies.slice(0, 2)).map((reply) => (
                     <div className={styles.reply} key={reply.id}>
                       <div className={styles.replyHead}>
-                        <span>{reply.authorName}</span>
+                        <button
+                          className={styles.replyNameBtn}
+                          type="button"
+                          onClick={() => router.push(`/user/${encodeURIComponent(reply.authorUid)}`)}
+                        >
+                          {reply.authorName}
+                        </button>
                         <em>回复</em>
                       </div>
                       <div className={styles.replyText}>{reply.content}</div>
-                      <div className={styles.replyMeta}>{formatRelativeTime(reply.createdAt)}</div>
+                      <div className={styles.replyFooter}>
+                        <div className={styles.replyMeta}>{formatRelativeTime(reply.createdAt)}</div>
+                        <div className={styles.replyActions}>
+                          <button
+                            className={styles.replyActionBtn}
+                            type="button"
+                            onClick={() => {
+                              const topLevelId = findTopLevelCommentIdByReplyId(
+                                detail?.comments ?? [],
+                                reply.id,
+                              );
+                              setReplyTo({
+                                id: topLevelId ?? reply.id,
+                                name: reply.authorName,
+                              });
+                              setComment(`回复 @${reply.authorName}：`);
+                              window.setTimeout(() => inputRef.current?.focus(), 0);
+                            }}
+                          >
+                            回复
+                          </button>
+                          <button
+                            className={`${styles.replyLikeBtn} ${reply.liked ? styles.commentLikeActive : ''}`}
+                            type="button"
+                            disabled={commentLikeSavingId === reply.id}
+                            onClick={() => void handleToggleCommentLike(reply.id)}
+                          >
+                            <i className={reply.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
+                            <span>{reply.likes}</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                   {item.replies.length > 2 ? (
@@ -585,7 +809,7 @@ export default function PostDetailPage() {
 
       <section className={styles.related}>
         <div className={styles.relatedTitle}>
-          <span><i className="fa-solid fa-sparkles" /></span> 相关推荐
+          <span><i className="fa-solid fa-thumbs-up" /></span> 相关推荐
         </div>
         <div className={styles.relatedList}>
           {related.length ? related.map((item) => (
@@ -609,21 +833,20 @@ export default function PostDetailPage() {
       </section>
 
       <footer className={styles.inputBar}>
-        {replyTo ? (
-          <div className={styles.replyHint}>
-            回复 @{replyTo.name}
-            <button type="button" onClick={() => setReplyTo(null)}>
-              <i className="fa-solid fa-xmark" />
-            </button>
-          </div>
-        ) : null}
         <input
+          ref={inputRef}
           className={styles.input}
           value={comment}
-          onChange={(event) => setComment(event.target.value)}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setComment(nextValue);
+            if (!nextValue.trim()) {
+              setReplyTo(null);
+            }
+          }}
           placeholder="说点什么..."
         />
-        <button className={styles.emojiBtn} type="button">
+        <button className={styles.emojiBtn} type="button" onClick={() => setEmojiOpen((current) => !current)}>
           <i className="fa-regular fa-face-smile" />
         </button>
         <button className={styles.sendBtn} type="button" disabled={!comment.trim() || commentSaving} onClick={() => void handleSubmitComment()}>
@@ -631,10 +854,24 @@ export default function PostDetailPage() {
         </button>
       </footer>
 
+      {emojiOpen ? (
+        <div className={styles.emojiPicker}>
+          {EMOJIS.map((emoji) => (
+            <button
+              className={styles.emojiButton}
+              key={emoji}
+              type="button"
+              onClick={() => insertEmoji(emoji)}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {shareOpen ? (
         <div className={styles.shareOverlay} onClick={() => setShareOpen(false)} role="presentation">
           <section className={styles.sharePanel} onClick={(event) => event.stopPropagation()} role="presentation">
-            <div className={styles.shareGrab} />
             <div className={styles.shareTitle}>分享到</div>
             <div className={styles.shareGrid}>
               {[
@@ -651,22 +888,7 @@ export default function PostDetailPage() {
                   className={styles.shareItem}
                   key={item.label}
                   type="button"
-                  onClick={() => {
-                    if (item.label === '复制链接') {
-                      void navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
-                      setShareOpen(false);
-                      return;
-                    }
-                    if (item.label === '收藏') {
-                      void handleToggleBookmark();
-                      setShareOpen(false);
-                      return;
-                    }
-                    if (item.label === '保存图片') {
-                      handleSaveImage();
-                      setShareOpen(false);
-                    }
-                  }}
+                  onClick={() => void handleShareAction(item.label)}
                 >
                   <span className={styles.shareItemIcon} style={{ background: item.bg, color: item.fg }}><i className={item.icon} /></span>
                   <em>{item.label}</em>
@@ -680,49 +902,41 @@ export default function PostDetailPage() {
         </div>
       ) : null}
 
-      {repostOpen ? (
-        <div className={styles.shareOverlay} onClick={closeRepostComposer} role="presentation">
-          <section className={styles.sharePanel} onClick={(event) => event.stopPropagation()} role="presentation">
-            <div className={styles.shareGrab} />
-            <div className={styles.shareTitle}>转发动态</div>
-            <div className={styles.repostLead}>
-              <span className={styles.repostLeadIcon}>
-                <i className="fa-solid fa-retweet" />
-              </span>
-              <div className={styles.repostLeadText}>
-                <strong>转发到猜友圈</strong>
-                <span>让朋友知道这条动态为什么值得看。</span>
-              </div>
+      {reportOpen ? (
+        <div className={styles.shareOverlay} onClick={() => !reportSaving && setReportOpen(false)} role="presentation">
+          <section className={styles.reportPanel} onClick={(event) => event.stopPropagation()} role="presentation">
+            <div className={styles.shareTitle}>举报动态</div>
+            <div className={styles.reportOptions}>
+              {REPORT_REASON_OPTIONS.map((item) => (
+                <button
+                  className={`${styles.reportOption} ${reportReason === item.value ? styles.reportOptionActive : ''}`}
+                  key={item.value}
+                  type="button"
+                  onClick={() => setReportReason(item.value)}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
-            <div className={styles.repostSummary}>
-              <div className={styles.repostSummaryLabel}>原动态</div>
-              <div className={styles.repostSummaryTitle}>{post.title || '未命名动态'}</div>
-              <div className={styles.repostSummaryMeta}>作者 · {post.author.name}</div>
-            </div>
-            <div className={styles.repostField}>
-              <textarea
-                autoFocus
-                className={styles.repostTextarea}
-                placeholder="这一条我为什么想转发？"
-                value={repostDraft}
-                onChange={(event) => setRepostDraft(event.target.value)}
-              />
-              <div className={styles.repostFieldMeta}>
-                <span>公开发布，所有人可见</span>
-                <span>{repostDraft.trim().length} 字</span>
-              </div>
-            </div>
-            <div className={styles.repostActions}>
-              <button className={styles.cancelBtn} type="button" onClick={closeRepostComposer}>
+            <textarea
+              className={styles.reportTextarea}
+              placeholder="补充说明（选填）"
+              value={reportDetail}
+              onChange={(event) => setReportDetail(event.target.value)}
+            />
+            <div className={styles.reportActions}>
+              <button className={styles.shareCancelBtn} type="button" disabled={reportSaving} onClick={() => setReportOpen(false)}>
                 取消
               </button>
-              <button className={styles.repostSubmitBtn} type="button" disabled={repostSaving} onClick={() => void handleRepostFromDetail()}>
-                {repostSaving ? '转发中' : '确认转发'}
+              <button className={styles.reportSubmitBtn} type="button" disabled={reportSaving} onClick={() => void handleSubmitReport()}>
+                {reportSaving ? '提交中' : '提交举报'}
               </button>
             </div>
           </section>
         </div>
       ) : null}
+
+      {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>
   );
 }

@@ -192,6 +192,7 @@
 | 表名 | 用途 |
 | --- | --- |
 | `post` | 社区动态主表 |
+| `product_interaction` | 商品互动关系表 |
 | `post_interaction` | 帖子互动关系表 |
 | `comment_interaction` | 评论互动关系表 |
 | `report_item` | 举报记录表 |
@@ -818,6 +819,28 @@
 | `scope` | 可见范围编码 |
 | `content` | 内容 |
 | `images` | 图片 JSON |
+
+### `product_interaction`
+
+用途：
+
+- 商品互动关系
+
+关键字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `user_id` | 用户 ID |
+| `product_id` | 商品 ID |
+| `interaction_type` | 互动类型编码 |
+
+说明：
+
+- 当前承接商品收藏和商品点赞
+- 不复用 `post_interaction`
+- 唯一约束：`(user_id, product_id, interaction_type)`
+- 如果页面要判断“我是否收藏/点赞了这个商品”，默认先看这张表
+- 如果只是查商品详情，不要把它误当成商品主数据表
 
 ### `post_interaction`
 

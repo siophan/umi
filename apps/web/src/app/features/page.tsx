@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { UserSummary } from '@joy/shared';
+import type { UserSummary } from '@umi/shared';
 
-import { fetchMe, fetchNotifications } from '../../lib/api';
+import { fetchMe } from '../../lib/api/auth';
+import { fetchNotifications } from '../../lib/api/notifications';
 import styles from './page.module.css';
 
 const myServices = [
@@ -191,7 +192,7 @@ export default function FeaturesPage() {
       </section>
 
       <footer className={styles.footer}>
-        <div className={styles.version}>优米 UMe v2.1.0</div>
+        <div className={styles.version}>Umi UMI v2.1.0</div>
         <div className={styles.links}>
           <button type="button">关于我们</button>
           <button type="button">用户协议</button>

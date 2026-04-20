@@ -1,14 +1,15 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import type { CommunityFeedItem, UserSearchItem } from '@joy/shared';
+import type { CommunityFeedItem, UserSearchItem } from '@umi/shared';
 
-import { fetchCommunityDiscovery, followUser, searchCommunity, searchUsers, unfollowUser } from '../../lib/api';
+import { fetchCommunityDiscovery, searchCommunity } from '../../lib/api/community';
+import { followUser, searchUsers, unfollowUser } from '../../lib/api/users';
 import styles from './page.module.css';
 
-type SearchFilter = 'all' | 'post' | 'guess' | 'user' | 'topic' | 'video';
+type SearchFilter = 'all' | 'post' | 'guess' | 'user';
 
 const HISTORY_KEY = 'cy_search_history';
 const filters = [
@@ -16,19 +17,6 @@ const filters = [
   { key: 'post', label: '动态' },
   { key: 'guess', label: '竞猜' },
   { key: 'user', label: '猜友' },
-  { key: 'topic', label: '话题' },
-  { key: 'video', label: '视频' },
-] as const;
-
-const fallbackHotSearches = [
-  { title: '德芙vs费列罗', desc: '3890人参与竞猜', tag: '热', kind: 'hotFire' as const },
-  { title: '马年年货王', desc: '坚果礼盒 vs 糕点系列', tag: '热', kind: 'hotFire' as const },
-  { title: '乐事新口味投票', desc: '番茄味 vs 黄瓜味', tag: '新', kind: 'hotNew' as const },
-  { title: '零食测评排行榜', desc: '2026年度十大品牌', tag: '热', kind: 'hotFire' as const },
-  { title: '卫龙 vs 源氏辣条', desc: '辣味巅峰对决', tag: '爆', kind: 'hotBoom' as const },
-  { title: '旺旺大礼包2026', desc: '马年限定版开箱', tag: '新', kind: 'hotNew' as const },
-  { title: 'PK战报', desc: '本周最强猜友排行', tag: '热', kind: 'hotFire' as const },
-  { title: '情人节竞猜', desc: '德芙限定礼盒口味', tag: '新', kind: 'hotNew' as const },
 ] as const;
 
 function formatNum(value: number) {
@@ -95,12 +83,6 @@ function postType(post: CommunityFeedItem): Exclude<SearchFilter, 'all' | 'user'
   if (post.guessInfo) {
     return 'guess';
   }
-  if ((post.tag || '').includes('视频')) {
-    return 'video';
-  }
-  if ((post.title || '').includes('#') || (post.desc || '').includes('#')) {
-    return 'topic';
-  }
   return 'post';
 }
 
@@ -117,7 +99,7 @@ function postTagClass(post: CommunityFeedItem) {
   return 'tagCommunity';
 }
 
-export default function CommunitySearchPage() {
+function CommunitySearchPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -189,7 +171,7 @@ export default function CommunitySearchPage() {
       } catch {
         if (!ignore) {
           setRecommendedUsers([]);
-          setHotSearches(fallbackHotSearches.map((item) => ({ ...item })));
+          setHotSearches([]);
         }
       } finally {
         if (!ignore) {
@@ -434,50 +416,58 @@ export default function CommunitySearchPage() {
             <div className={styles.sectionTitle}>
               <span><i className="fa-solid fa-fire" /></span> 热搜榜
             </div>
-            <div className={styles.hotList}>
-              {hotSearches.map((item, index) => (
-                <button className={styles.hotItem} key={item.title} type="button" onClick={() => doSearch(item.title)}>
-                  <div className={`${styles.hotRank} ${styles[`rank${index < 3 ? index + 1 : 4}` as const]}`}>
-                    {index + 1}
-                  </div>
-                  <div className={styles.hotText}>
-                    <div className={styles.hotItemTitle}>{item.title}</div>
-                    <div className={styles.hotItemDesc}>{item.desc}</div>
-                  </div>
-                  <span className={styles[item.kind]}>{item.tag}</span>
-                </button>
-              ))}
-            </div>
+            {hotSearches.length ? (
+              <div className={styles.hotList}>
+                {hotSearches.map((item, index) => (
+                  <button className={styles.hotItem} key={item.title} type="button" onClick={() => doSearch(item.title)}>
+                    <div className={`${styles.hotRank} ${styles[`rank${index < 3 ? index + 1 : 4}` as const]}`}>
+                      {index + 1}
+                    </div>
+                    <div className={styles.hotText}>
+                      <div className={styles.hotItemTitle}>{item.title}</div>
+                      <div className={styles.hotItemDesc}>{item.desc}</div>
+                    </div>
+                    <span className={styles[item.kind]}>{item.tag}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.sectionEmpty}>暂无热搜内容</div>
+            )}
           </section>
 
           <section className={styles.section}>
             <div className={styles.sectionTitle}>
               <span><i className="fa-solid fa-user-plus" /></span> 推荐关注
             </div>
-            <div className={styles.userScroll}>
-              {ready ? recommendedUsers.map((user) => {
-                const followed = user.relation === 'friend' || user.relation === 'following';
-                return (
-                  <button className={styles.userCard} key={user.id} type="button" onClick={() => router.push(`/user/${encodeURIComponent(user.uid)}`)}>
-                    <img src={user.avatar || '/legacy/images/mascot/mouse-main.png'} alt={user.name} />
-                    <div className={styles.userName}>
-                      {user.name}
-                      {user.shopVerified ? <i className="fa-solid fa-circle-check" /> : null}
-                    </div>
-                    <div className={styles.userDesc}>{userDesc(user)}</div>
-                    <span
-                      className={followed ? styles.followedBtn : styles.followBtn}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void toggleFollow(user);
-                      }}
-                    >
-                      {followSavingId === user.id ? '处理中' : followed ? '已关注' : '+ 关注'}
-                    </span>
-                  </button>
-                );
-              }) : null}
-            </div>
+            {ready && recommendedUsers.length ? (
+              <div className={styles.userScroll}>
+                {recommendedUsers.map((user) => {
+                  const followed = user.relation === 'friend' || user.relation === 'following';
+                  return (
+                    <button className={styles.userCard} key={user.id} type="button" onClick={() => router.push(`/user/${encodeURIComponent(user.uid)}`)}>
+                      <img src={user.avatar || '/legacy/images/mascot/mouse-main.png'} alt={user.name} />
+                      <div className={styles.userName}>
+                        {user.name}
+                        {user.shopVerified ? <i className="fa-solid fa-circle-check" /> : null}
+                      </div>
+                      <div className={styles.userDesc}>{userDesc(user)}</div>
+                      <span
+                        className={followed ? styles.followedBtn : styles.followBtn}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void toggleFollow(user);
+                        }}
+                      >
+                        {followSavingId === user.id ? '处理中' : followed ? '已关注' : '+ 关注'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={styles.sectionEmpty}>暂无推荐用户</div>
+            )}
           </section>
         </div>
       ) : (
@@ -568,5 +558,13 @@ export default function CommunitySearchPage() {
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>
+  );
+}
+
+export default function CommunitySearchPage() {
+  return (
+    <Suspense fallback={<main className={styles.page} />}>
+      <CommunitySearchPageInner />
+    </Suspense>
   );
 }

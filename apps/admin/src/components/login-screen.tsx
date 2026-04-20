@@ -21,7 +21,7 @@ export function LoginScreen({
     <div className="login-screen">
       <Card className="login-card" bordered={false}>
         <div className="login-card__header">
-          <div className="login-card__logo">JOY</div>
+          <div className="login-card__logo">UMI</div>
           <Typography.Title level={2}>管理后台登录</Typography.Title>
           <Typography.Paragraph type="secondary">
             仅后台管理员可进入。请使用后台用户名和密码登录。

@@ -70,6 +70,10 @@
   align-items: center;
   gap: 10px;
   padding: 12px 14px 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
 }
 
 .cardAuthor img {
@@ -392,9 +396,19 @@
 .commentAvatar {
   width: 32px;
   height: 32px;
-  flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.commentAvatarBtn,
+.commentNameBtn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.commentAvatarBtn {
+  flex-shrink: 0;
 }
 
 .commentBody {
@@ -409,6 +423,12 @@
 }
 
 .commentName {
+  color: #333;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.commentNameBtn {
   color: #333;
   font-size: 12px;
   font-weight: 700;
@@ -454,18 +474,25 @@
 }
 
 .replyHead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: #666;
   font-size: 11px;
-}
-
-.replyHead span {
-  font-weight: 700;
-  color: #333;
 }
 
 .replyHead em {
   font-style: normal;
   color: #aaa;
+}
+
+.replyNameBtn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #333;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .replyText {
@@ -475,10 +502,45 @@
   line-height: 1.5;
 }
 
-.replyMeta {
+.replyFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-top: 2px;
+}
+
+.replyMeta {
   color: #ccc;
   font-size: 10px;
+}
+
+.replyActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.replyActionBtn,
+.replyLikeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #999;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.replyActionBtn:active,
+.replyLikeBtn:active {
+  color: #ff5722;
+}
+
+.replyLikeBtn i {
+  font-size: 11px;
 }
 
 .replyMore {
@@ -621,7 +683,6 @@
   inset: auto 0 0;
   z-index: 30;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px));
@@ -630,26 +691,31 @@
   backdrop-filter: blur(20px);
 }
 
-.replyHint {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 2px 0;
-  color: #ff5722;
-  font-size: 12px;
-  font-weight: 700;
+.emojiPicker {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
-.replyHint button {
-  width: 24px;
-  height: 24px;
+.emojiButton {
+  padding: 6px;
   border: 0;
-  border-radius: 50%;
-  background: rgba(255, 87, 34, 0.08);
-  color: #ff5722;
-  font-size: 11px;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 24px;
+}
+
+.emojiButton:active {
+  background: #f0f0f0;
 }
 
 .input {
@@ -684,6 +750,10 @@
   font-size: 17px;
 }
 
+.emojiBtn:active {
+  color: #ff5722;
+}
+
 .sendBtn {
   padding: 6px 16px;
   border-radius: 16px;
@@ -713,14 +783,16 @@
   padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   border-radius: 16px 16px 0 0;
   background: #fff;
+  animation: shareUp 0.25s ease;
 }
 
-.shareGrab {
-  width: 36px;
-  height: 4px;
-  margin: 0 auto 16px;
-  border-radius: 2px;
-  background: rgba(0, 0, 0, 0.08);
+@keyframes shareUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 .shareTitle {
@@ -783,148 +855,70 @@
   background: #eee;
 }
 
-.repostLead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255, 112, 67, 0.12), rgba(255, 204, 128, 0.18));
-}
-
-.repostLeadIcon {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ff6d3a, #ff9800);
-  color: #fff;
-  font-size: 18px;
-  box-shadow: 0 10px 20px rgba(255, 109, 58, 0.2);
-}
-
-.repostLeadText {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.repostLeadText strong {
-  color: #1a1a1a;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.repostLeadText span {
-  color: #8a654e;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.repostSummary {
-  position: relative;
-  padding: 16px 16px 16px 18px;
-  border: 1px solid rgba(255, 152, 0, 0.12);
-  border-radius: 18px;
-  background: linear-gradient(180deg, #fffaf6, #fff3ea);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-.repostSummary::before {
-  content: '';
-  position: absolute;
-  top: 16px;
-  bottom: 16px;
-  left: 0;
-  width: 4px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ff7a45, #ffb74d);
-}
-
-.repostSummaryLabel {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255, 87, 34, 0.1);
-  color: #ff5722;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.repostSummaryTitle {
-  margin-top: 10px;
-  color: #1a1a1a;
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1.55;
-}
-
-.repostSummaryMeta {
-  margin-top: 6px;
-  color: #8a8a8a;
-  font-size: 12px;
-}
-
-.repostField {
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid rgba(255, 152, 0, 0.12);
-  border-radius: 18px;
-  background: linear-gradient(180deg, #fff, #fffaf7);
-}
-
-.repostTextarea {
+.reportPanel {
   width: 100%;
-  min-height: 112px;
+  max-width: 480px;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 16px 16px 0 0;
+  background: #fff;
+  animation: shareUp 0.25s ease;
+}
+
+.reportOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reportOption {
+  padding: 8px 14px;
+  border: 1px solid #e9e9e9;
+  border-radius: 999px;
+  background: #fff;
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.reportOptionActive {
+  border-color: rgba(255, 87, 34, 0.24);
+  background: rgba(255, 87, 34, 0.08);
+  color: #ff5722;
+}
+
+.reportTextarea {
+  width: 100%;
+  min-height: 104px;
+  margin-top: 14px;
+  padding: 12px 14px;
   border: 0;
-  background: transparent;
+  border-radius: 14px;
+  background: #f5f5f5;
   color: #1a1a1a;
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: 13px;
+  line-height: 1.6;
   resize: none;
   outline: none;
 }
 
-.repostTextarea::placeholder {
-  color: #b5a79a;
+.reportTextarea:focus {
+  background: #fff;
+  box-shadow: 0 0 0 1.5px #ff5722;
 }
 
-.repostField:focus-within {
-  border-color: rgba(255, 87, 34, 0.22);
-  box-shadow: 0 0 0 4px rgba(255, 87, 34, 0.06);
-}
-
-.repostFieldMeta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 152, 0, 0.1);
-  color: #a08978;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.repostActions {
+.reportActions {
   display: flex;
   gap: 10px;
   margin-top: 14px;
 }
 
-.repostActions .cancelBtn,
-.repostSubmitBtn {
+.reportActions .shareCancelBtn,
+.reportSubmitBtn {
   flex: 1;
   margin-top: 0;
 }
 
-.repostSubmitBtn {
+.reportSubmitBtn {
   height: 40px;
   border: 0;
   border-radius: 20px;
@@ -932,28 +926,34 @@
   color: #fff;
   font-size: 13px;
   font-weight: 700;
-  box-shadow: 0 6px 16px rgba(255, 87, 34, 0.28);
 }
 
-.repostSubmitBtn:disabled {
+.reportSubmitBtn:disabled {
   opacity: 0.45;
 }
 
-.cancelBtn {
-  width: 100%;
-  height: 42px;
-  margin-top: 16px;
-  border: 0;
-  border-radius: 21px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #8a7869;
-  font-size: 13px;
-  font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(232, 220, 210, 0.9);
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  z-index: 650;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(26, 26, 26, 0.9);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 @media (max-width: 420px) {
   .shareGrid {
     gap: 10px;
+  }
+
+  .emojiPicker {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }

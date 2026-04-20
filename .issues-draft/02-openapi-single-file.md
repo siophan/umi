@@ -20,4 +20,4 @@ BODY:
 - `modules/auth/openapi.ts`、`modules/community/openapi.ts`、`modules/guess/openapi.ts`…
 - `routes/openapi.ts` 只保留组装逻辑（信息、server 列表、把各模块的 paths / components 合并起来）。
 
-这样新增接口时，`router.ts` 和 `openapi.ts` 改动在同一个目录下；对应的 AGENTS.md 约束"改完 API 后至少跑一次 `pnpm --filter @joy/api typecheck`"也更容易走通。
+这样新增接口时，`router.ts` 和 `openapi.ts` 改动在同一个目录下；对应的 AGENTS.md 约束"改完 API 后至少跑一次 `pnpm --filter @umi/api typecheck`"也更容易走通。

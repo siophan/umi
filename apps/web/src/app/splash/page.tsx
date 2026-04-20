@@ -131,7 +131,7 @@ export default function SplashPage() {
             loop
             poster="/legacy/images/profile-banner.jpg"
           />
-          <img className={styles.backdrop} src="/legacy/images/profile-banner.jpg" alt="优米" />
+          <img className={styles.backdrop} src="/legacy/images/profile-banner.jpg" alt="Umi" />
         </div>
 
         <div className={`${styles.loadingScreen} ${uiReady ? styles.loadingHide : ''}`}>
@@ -140,7 +140,7 @@ export default function SplashPage() {
             <span className={styles.lc2}>趣</span>
             <span className={styles.lc3}>社</span>
           </div>
-          <div className={styles.loadingSub}>UMe</div>
+          <div className={styles.loadingSub}>UMI</div>
           <div className={styles.loadingBarWrap}>
             <div className={styles.loadingBar} style={{ width: `${progress}%` }} />
           </div>
@@ -201,7 +201,7 @@ export default function SplashPage() {
               <span className={`${styles.brandChar} ${styles.brandShow}`}>趣</span>
               <span className={`${styles.brandChar} ${styles.brandShow}`}>社</span>
             </div>
-            <div className={`${styles.brandEn} ${styles.brandEnShow}`}>UMe</div>
+            <div className={`${styles.brandEn} ${styles.brandEnShow}`}>UMI</div>
             <div className={`${styles.brandDivider} ${styles.brandDividerShow}`} />
             <div className={`${styles.slogan} ${styles.sloganShow}`}>
               <div className={styles.sloganMain}>竞猜赢好物 · 社交新玩法</div>
@@ -221,7 +221,7 @@ export default function SplashPage() {
               开始探索
               <i className="fa-solid fa-arrow-right" />
             </button>
-            <div className={`${styles.copyright} ${styles.copyrightShow}`}>© 2026 优米 UMe</div>
+            <div className={`${styles.copyright} ${styles.copyrightShow}`}>© 2026 Umi UMI</div>
           </div>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function SplashPage() {
           <div className={styles.rulesHeader}>
             <div className={styles.rulesIcon}>📜</div>
             <div className={styles.rulesTitle}>竞猜规则</div>
-            <div className={styles.rulesSubtitle}>GUESS RULES · 优米</div>
+            <div className={styles.rulesSubtitle}>GUESS RULES · Umi</div>
           </div>
           <div className={styles.rulesBody}>
             {rules.map((section, index) => (

@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
-import {
-  fetchGuessList,
-  fetchMe,
-  login,
-  sendCode,
-  setAuthToken,
-} from '../../lib/api';
+import { fetchMe, login, sendCode } from '../../lib/api/auth';
+import { fetchGuessList } from '../../lib/api/guesses';
+import { setAuthToken } from '../../lib/api/shared';
 import { apiBaseUrl } from '../../lib/env';
 import styles from './page.module.css';
 

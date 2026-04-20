@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import type { ProductSummary } from '@joy/shared';
+import type { ProductSummary } from '@umi/shared';
 
 export function ProductCard({ product }: { product: ProductSummary }) {
   return (

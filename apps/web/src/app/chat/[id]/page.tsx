@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
-import { fetchChatDetail, sendChatMessage } from '../../../lib/api';
+import { fetchChatDetail, sendChatMessage } from '../../../lib/api/chat';
 import styles from './page.module.css';
 
 type MessageItem = {
-  id: number;
+  key: string;
   from: 'me' | 'other';
   content: string;
   createdAt: string;
@@ -49,7 +49,7 @@ export default function ChatDetailPage() {
   const peerId = String(params?.id || '');
   const toastTimer = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const optimisticId = useRef(-1);
+  const optimisticId = useRef(0);
   const [value, setValue] = useState('');
   const [toast, setToast] = useState('');
   const [peer, setPeer] = useState<{ name: string; avatar: string }>({
@@ -74,7 +74,7 @@ export default function ChatDetailPage() {
           avatar: result.peer.avatar || '/legacy/images/mascot/mouse-happy.png',
         });
         setMessages(result.items.map((item) => ({
-          id: item.id,
+          key: item.id,
           from: item.from,
           content: item.content,
           createdAt: item.createdAt,
@@ -110,7 +110,7 @@ export default function ChatDetailPage() {
   }, [peerId]);
 
   useEffect(() => {
-    document.title = `${peer.name} - 优米`;
+    document.title = `${peer.name} - Umi`;
   }, [peer.name]);
 
   useEffect(() => {
@@ -141,19 +141,19 @@ export default function ChatDetailPage() {
       return;
     }
 
-    const tempId = optimisticId.current;
-    optimisticId.current -= 1;
+    const tempId = `temp-${optimisticId.current}`;
+    optimisticId.current += 1;
     const now = new Date().toISOString();
 
-    setMessages((current) => [...current, { id: tempId, from: 'me', content, createdAt: now }]);
+    setMessages((current) => [...current, { key: tempId, from: 'me', content, createdAt: now }]);
     setValue('');
     setSending(true);
 
     try {
       const next = await sendChatMessage(peerId, { content });
       setMessages((current) => current.map((item) => (
-        item.id === tempId
-          ? { id: next.id, from: next.from, content: next.content, createdAt: next.createdAt }
+        item.key === tempId
+          ? { key: next.id, from: next.from, content: next.content, createdAt: next.createdAt }
           : item
       )));
     } catch {
@@ -176,7 +176,7 @@ export default function ChatDetailPage() {
         {!peerId && ready ? <div className={styles.emptyHint}>无效的聊天</div> : null}
         {ready && peerId && messages.length === 0 ? <div className={styles.emptyHint}>暂无消息，说点什么吧~</div> : null}
         {messages.map((message, index) => (
-          <div key={message.id}>
+          <div key={message.key}>
             {shouldRenderTime(messages[index - 1]?.createdAt, message.createdAt) ? (
               <div className={styles.timeDivider}>{formatMessageTime(message.createdAt)}</div>
             ) : null}

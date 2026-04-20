@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { fetchGuessHistory } from '../../lib/api';
+import { fetchGuessHistory } from '../../lib/api/guesses';
 import styles from './page.module.css';
 
 type TabKey = 'all' | 'active' | 'won' | 'lost' | 'pk';

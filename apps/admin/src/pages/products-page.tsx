@@ -1,16 +1,17 @@
 import type { TableColumnsType } from 'antd';
+import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Card, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { fetchAdminCategories, type AdminCategoryItem } from '../lib/api/categories';
 import {
-  fetchAdminCategories,
   fetchAdminProducts,
-  type AdminCategoryItem,
   type AdminProduct,
 } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, productStatusMeta } from '../lib/format';
+import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
 
 interface ProductsPageProps {
   refreshToken?: number;
@@ -123,10 +124,10 @@ export function ProductsPage({ refreshToken = 0 }: ProductsPageProps) {
       title: '商品',
       dataIndex: 'name',
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <div>
           <Typography.Text strong>{record.name}</Typography.Text>
-          <Typography.Text type="secondary">{record.brand}</Typography.Text>
-        </Space>
+          <Typography.Text style={{ display: 'block' }} type="secondary">{record.brand}</Typography.Text>
+        </div>
       ),
     },
     {
@@ -197,18 +198,23 @@ export function ProductsPage({ refreshToken = 0 }: ProductsPageProps) {
         ]}
         onChange={(key) => setStatus(key as 'all' | AdminProduct['status'])}
       />
-      <Card>
-        <Table
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<AdminProduct>
+          cardBordered={false}
           rowKey="id"
-          columns={columns}
+          columns={columns as never}
+          columnsState={{}}
           dataSource={filteredProducts}
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => []}
           onRow={(record) => ({
             onClick: () => setSelected(record),
           })}
         />
-      </Card>
+      </ConfigProvider>
 
       <Drawer
         open={selected != null}
@@ -217,7 +223,7 @@ export function ProductsPage({ refreshToken = 0 }: ProductsPageProps) {
         onClose={() => setSelected(null)}
       >
         {selected ? (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <div style={{ display: 'grid', gap: 16, width: '100%' }}>
             <Descriptions column={1} size="small">
               <Descriptions.Item label="品牌">{selected.brand}</Descriptions.Item>
               <Descriptions.Item label="分类">{selected.category}</Descriptions.Item>
@@ -237,13 +243,13 @@ export function ProductsPage({ refreshToken = 0 }: ProductsPageProps) {
             </Descriptions>
 
             <Card title="标签" size="small">
-              <Space wrap>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {selected.tags.map((tag) => (
                   <Tag key={tag}>{tag}</Tag>
                 ))}
-              </Space>
+              </div>
             </Card>
-          </Space>
+          </div>
         ) : null}
       </Drawer>
     </div>

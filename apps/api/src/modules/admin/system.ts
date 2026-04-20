@@ -1,6 +1,30 @@
 import type mysql from 'mysql2/promise';
+import bcrypt from 'bcryptjs';
+import type {
+  AdminPermissionMutationResult,
+  AdminSystemUserMutationResult,
+  CreateAdminPermissionPayload,
+  CreateAdminSystemUserPayload,
+  ResetAdminSystemUserPasswordPayload,
+  UpdateAdminPermissionPayload,
+  UpdateAdminPermissionStatusPayload,
+  UpdateAdminPermissionStatusResult,
+  UpdateAdminRolePermissionsPayload,
+  UpdateAdminRolePermissionsResult,
+  UpdateAdminRoleStatusPayload,
+  UpdateAdminRoleStatusResult,
+  UpdateAdminSystemUserPayload,
+  UpdateAdminSystemUserStatusPayload,
+  UpdateAdminSystemUserStatusResult,
+} from '@umi/shared';
+import {
+  findAdminPermissionDefinitionByCode,
+  getAdminPermissionChildren,
+  toEntityId,
+} from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { ensureAdminPermissionCatalogSynced } from './permission-catalog';
 
 const ADMIN_STATUS_ACTIVE = 10;
 const ADMIN_STATUS_DISABLED = 90;
@@ -37,6 +61,7 @@ type AdminSystemUserRow = {
   created_at: Date | string;
   role_names: string | null;
   role_codes: string | null;
+  role_ids: string | null;
 };
 
 type AdminRoleRow = {
@@ -174,6 +199,7 @@ export interface AdminSystemUserItem {
   email: string | null;
   role: string;
   roleCodes: string[];
+  roleIds: string[];
   status: 'active' | 'disabled';
   lastLoginAt: string | null;
   createdAt: string;
@@ -193,7 +219,8 @@ export interface AdminRoleListItem {
   code: string;
   name: string;
   description: string | null;
-  scope: string;
+  permissionRange: string;
+  permissionModules: string[];
   memberCount: number;
   permissionCount: number;
   status: 'active' | 'disabled';
@@ -257,6 +284,29 @@ export interface AdminPermissionMatrixResult {
   };
 }
 
+export interface AdminPermissionListItem {
+  id: string;
+  code: string;
+  name: string;
+  module: string;
+  action: AdminPermissionAction;
+  parentId: string | null;
+  parentName: string | null;
+  status: 'active' | 'disabled';
+  sort: number;
+  assignedRoleCount: number;
+}
+
+export interface AdminPermissionListResult {
+  items: AdminPermissionListItem[];
+  summary: {
+    total: number;
+    active: number;
+    disabled: number;
+    modules: number;
+  };
+}
+
 function toNumber(value: number | string | null | undefined) {
   return Number(value ?? 0);
 }
@@ -276,12 +326,115 @@ function uniq<T>(items: T[]) {
   return Array.from(new Set(items));
 }
 
+function normalizeAdminUsername(value: string | null | undefined) {
+  const username = value?.trim() ?? '';
+  if (!username) {
+    throw new Error('系统用户名不能为空');
+  }
+
+  return username.slice(0, 50);
+}
+
+function normalizeAdminDisplayName(value: string | null | undefined) {
+  const displayName = value?.trim() ?? '';
+  if (!displayName) {
+    throw new Error('显示名称不能为空');
+  }
+
+  return displayName.slice(0, 50);
+}
+
+function normalizeOptionalContact(value: string | null | undefined, maxLength: number) {
+  const trimmed = value?.trim() ?? '';
+  return trimmed ? trimmed.slice(0, maxLength) : null;
+}
+
+function normalizeAdminPassword(value: string | null | undefined) {
+  const password = value ?? '';
+  if (password.length < 6) {
+    throw new Error('密码长度不能少于 6 位');
+  }
+
+  return password;
+}
+
+function normalizeAdminRoleIds(roleIds: Array<string | null | undefined>) {
+  const values = uniq(
+    roleIds
+      .map((item) => String(item ?? '').trim())
+      .filter(Boolean),
+  );
+
+  if (values.length === 0) {
+    throw new Error('请至少选择一个角色');
+  }
+
+  return values;
+}
+
+function normalizeAdminPermissionCode(value: string | null | undefined) {
+  const code = value?.trim() ?? '';
+  if (!code) {
+    throw new Error('权限编码不能为空');
+  }
+
+  return code.slice(0, 100);
+}
+
+function normalizeAdminPermissionName(value: string | null | undefined) {
+  const name = value?.trim() ?? '';
+  if (!name) {
+    throw new Error('权限名称不能为空');
+  }
+
+  return name.slice(0, 50);
+}
+
+function normalizeAdminPermissionModule(value: string | null | undefined) {
+  const module = value?.trim() ?? '';
+  if (!module) {
+    throw new Error('所属模块不能为空');
+  }
+
+  return module.slice(0, 50);
+}
+
+function normalizeAdminPermissionAction(
+  value: CreateAdminPermissionPayload['action'] | UpdateAdminPermissionPayload['action'],
+) {
+  if (value === 'view' || value === 'create' || value === 'edit' || value === 'manage') {
+    return value;
+  }
+
+  throw new Error('权限动作不合法');
+}
+
+function normalizeAdminPermissionParentId(value: string | null | undefined) {
+  const parentId = String(value ?? '').trim();
+  return parentId ? parentId : null;
+}
+
+function toPermissionActionCode(action: CreateAdminPermissionPayload['action'] | UpdateAdminPermissionPayload['action']) {
+  if (action === 'view') return ADMIN_ACTION_VIEW;
+  if (action === 'create') return ADMIN_ACTION_CREATE;
+  if (action === 'edit') return ADMIN_ACTION_EDIT;
+  return ADMIN_ACTION_MANAGE;
+}
+
 function mapAdminStatus(code: number | string): 'active' | 'disabled' {
   return Number(code ?? 0) === ADMIN_STATUS_DISABLED ? 'disabled' : 'active';
 }
 
 function mapRoleStatus(code: number | string): 'active' | 'disabled' {
   return Number(code ?? 0) === ADMIN_STATUS_DISABLED ? 'disabled' : 'active';
+}
+
+function mapPermissionStatus(code: number | string): 'active' | 'disabled' {
+  return Number(code ?? 0) === ADMIN_STATUS_DISABLED ? 'disabled' : 'active';
+}
+
+function toPermissionStatusCode(status: UpdateAdminPermissionStatusPayload['status']) {
+  return status === 'disabled' ? ADMIN_STATUS_DISABLED : PERMISSION_STATUS_ACTIVE;
 }
 
 function mapPermissionAction(code: number | string | null | undefined): AdminPermissionAction {
@@ -393,14 +546,17 @@ function mapChatStatus(riskLevel: AdminChatRiskLevel): AdminChatStatus {
   return 'normal';
 }
 
-function mapRoleScope(modules: string[]) {
+function mapRolePermissionRange(modules: string[]) {
   if (modules.length === 0) {
     return '未配置权限';
   }
   if (modules.includes('*')) {
     return '全局';
   }
-  return modules.join(' / ');
+  if (modules.length <= 2) {
+    return modules.join(' / ');
+  }
+  return `${modules[0]} / ${modules[1]} 等 ${modules.length} 个模块`;
 }
 
 function mapRoleModules(rawModules: string | null | undefined) {
@@ -422,7 +578,8 @@ async function fetchAdminSystemUsers() {
         au.last_login_at,
         au.created_at,
         GROUP_CONCAT(DISTINCT ar.name ORDER BY ar.sort ASC, ar.id ASC SEPARATOR ',') AS role_names,
-        GROUP_CONCAT(DISTINCT ar.code ORDER BY ar.sort ASC, ar.id ASC SEPARATOR ',') AS role_codes
+        GROUP_CONCAT(DISTINCT ar.code ORDER BY ar.sort ASC, ar.id ASC SEPARATOR ',') AS role_codes,
+        GROUP_CONCAT(DISTINCT CAST(ar.id AS CHAR) ORDER BY ar.sort ASC, ar.id ASC SEPARATOR ',') AS role_ids
       FROM admin_user au
       LEFT JOIN admin_user_role aur ON aur.admin_user_id = au.id
       LEFT JOIN admin_role ar ON ar.id = aur.role_id
@@ -440,6 +597,34 @@ async function fetchAdminSystemUsers() {
   );
 
   return rows as AdminSystemUserRow[];
+}
+
+async function findAdminSystemUserById(
+  db: mysql.Pool | mysql.PoolConnection,
+  adminUserId: string,
+) {
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        id,
+        username,
+        display_name,
+        phone_number,
+        email,
+        status,
+        last_login_at,
+        created_at,
+        NULL AS role_names,
+        NULL AS role_codes,
+        NULL AS role_ids
+      FROM admin_user
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [adminUserId],
+  );
+
+  return (rows[0] as AdminSystemUserRow | undefined) ?? null;
 }
 
 async function fetchAdminRolesWithStats() {
@@ -480,6 +665,207 @@ async function fetchAdminRolesWithStats() {
   return rows as AdminRoleRow[];
 }
 
+async function findAdminRoleById(
+  db: mysql.Pool | mysql.PoolConnection,
+  roleId: string,
+) {
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        id,
+        code,
+        name,
+        description,
+        status,
+        is_system,
+        sort,
+        created_at,
+        updated_at,
+        0 AS member_count,
+        0 AS permission_count,
+        NULL AS permission_modules
+      FROM admin_role
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [roleId],
+  );
+
+  return (rows[0] as AdminRoleRow | undefined) ?? null;
+}
+
+async function findAdminUserByUsername(
+  db: mysql.Pool | mysql.PoolConnection,
+  username: string,
+  excludeId?: string,
+) {
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id
+      FROM admin_user
+      WHERE username = ?
+      ${excludeId ? 'AND id <> ?' : ''}
+      LIMIT 1
+    `,
+    excludeId ? [username, excludeId] : [username],
+  );
+
+  return rows.length > 0;
+}
+
+async function findAdminUserByPhoneNumber(
+  db: mysql.Pool | mysql.PoolConnection,
+  phoneNumber: string,
+  excludeId?: string,
+) {
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id
+      FROM admin_user
+      WHERE phone_number = ?
+      ${excludeId ? 'AND id <> ?' : ''}
+      LIMIT 1
+    `,
+    excludeId ? [phoneNumber, excludeId] : [phoneNumber],
+  );
+
+  return rows.length > 0;
+}
+
+async function fetchActiveRolesByIds(
+  db: mysql.Pool | mysql.PoolConnection,
+  roleIds: string[],
+) {
+  const placeholders = roleIds.map(() => '?').join(', ');
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id
+      FROM admin_role
+      WHERE id IN (${placeholders})
+        AND status = ?
+    `,
+    [...roleIds, ROLE_STATUS_ACTIVE],
+  );
+
+  return rows.map((row) => String(row.id));
+}
+
+async function fetchActivePermissionsByIds(
+  db: mysql.Pool | mysql.PoolConnection,
+  permissionIds: string[],
+) {
+  if (permissionIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = permissionIds.map(() => '?').join(', ');
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id
+      FROM admin_permission
+      WHERE id IN (${placeholders})
+        AND status = ?
+    `,
+    [...permissionIds, PERMISSION_STATUS_ACTIVE],
+  );
+
+  return rows.map((row) => String(row.id));
+}
+
+async function fetchPermissionsByIds(
+  db: mysql.Pool | mysql.PoolConnection,
+  permissionIds: string[],
+) {
+  if (permissionIds.length === 0) {
+    return [] as Array<{ id: string; code: string }>;
+  }
+
+  const placeholders = permissionIds.map(() => '?').join(', ');
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id, code
+      FROM admin_permission
+      WHERE id IN (${placeholders})
+    `,
+    permissionIds,
+  );
+
+  return (rows as Array<{ id: number | string; code: string }>).map((row) => ({
+    id: String(row.id),
+    code: row.code,
+  }));
+}
+
+async function fetchActivePermissionIdsByCodes(
+  db: mysql.Pool | mysql.PoolConnection,
+  codes: string[],
+) {
+  if (codes.length === 0) {
+    return [] as string[];
+  }
+
+  const placeholders = codes.map(() => '?').join(', ');
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id, code
+      FROM admin_permission
+      WHERE code IN (${placeholders})
+        AND status = ?
+    `,
+    [...codes, PERMISSION_STATUS_ACTIVE],
+  );
+
+  return (rows as Array<{ id: number | string; code: string }>).map((row) =>
+    String(row.id),
+  );
+}
+
+async function expandRolePermissionIds(
+  db: mysql.Pool | mysql.PoolConnection,
+  permissionIds: string[],
+) {
+  const selectedPermissions = await fetchPermissionsByIds(db, permissionIds);
+  const expandedCodes = uniq(
+    selectedPermissions.flatMap((permission) => {
+      const definition = findAdminPermissionDefinitionByCode(permission.code);
+      if (!definition) {
+        return [permission.code];
+      }
+
+      const childCodes = getAdminPermissionChildren(definition.code).map(
+        (item) => item.code,
+      );
+      return [permission.code, ...childCodes];
+    }),
+  );
+
+  return fetchActivePermissionIdsByCodes(db, expandedCodes);
+}
+
+async function replaceAdminUserRoles(
+  db: mysql.PoolConnection,
+  adminUserId: string,
+  roleIds: string[],
+) {
+  await db.execute(
+    `
+      DELETE FROM admin_user_role
+      WHERE admin_user_id = ?
+    `,
+    [adminUserId],
+  );
+
+  for (const roleId of roleIds) {
+    await db.execute(
+      `
+        INSERT INTO admin_user_role (admin_user_id, role_id, created_at)
+        VALUES (?, ?, NOW())
+      `,
+      [adminUserId, roleId],
+    );
+  }
+}
+
 async function fetchAdminPermissionsByRole() {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -503,6 +889,80 @@ async function fetchAdminPermissionsByRole() {
   );
 
   return rows as AdminPermissionRow[];
+}
+
+async function fetchAdminPermissionRows() {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        ap.id,
+        ap.code,
+        ap.name,
+        ap.module,
+        ap.action,
+        ap.parent_id,
+        parent.name AS parent_name,
+        ap.status,
+        ap.sort,
+        COUNT(DISTINCT arp.role_id) AS assigned_role_count
+      FROM admin_permission ap
+      LEFT JOIN admin_permission parent ON parent.id = ap.parent_id
+      LEFT JOIN admin_role_permission arp ON arp.permission_id = ap.id
+      GROUP BY
+        ap.id,
+        ap.code,
+        ap.name,
+        ap.module,
+        ap.action,
+        ap.parent_id,
+        parent.name,
+        ap.status,
+        ap.sort
+      ORDER BY COALESCE(ap.module, '未分组') ASC, ap.sort ASC, ap.id ASC
+    `,
+  );
+
+  return rows as Array<
+    AdminPermissionRow & {
+      parent_name: string | null;
+      assigned_role_count: number | string;
+    }
+  >;
+}
+
+async function fetchAdminPermissionById(permissionId: string) {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id, code, name, module, action, parent_id, status, sort
+      FROM admin_permission
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [permissionId],
+  );
+
+  return (rows[0] as AdminPermissionRow | undefined) ?? null;
+}
+
+async function findAdminPermissionByCode(
+  db: mysql.Pool | mysql.PoolConnection,
+  code: string,
+  excludeId?: string,
+) {
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id
+      FROM admin_permission
+      WHERE code = ?
+      ${excludeId ? 'AND id <> ?' : ''}
+      LIMIT 1
+    `,
+    excludeId ? [code, excludeId] : [code],
+  );
+
+  return rows.length > 0;
 }
 
 async function fetchAdminNotificationBatches() {
@@ -674,6 +1134,7 @@ export async function getAdminSystemUsers(): Promise<AdminSystemUserListResult> 
     email: row.email ?? null,
     role: splitCsv(row.role_names).join(' / ') || '未分配角色',
     roleCodes: splitCsv(row.role_codes),
+    roleIds: splitCsv(row.role_ids),
     status: mapAdminStatus(row.status),
     lastLoginAt: toIsoString(row.last_login_at),
     createdAt: toIsoString(row.created_at) ?? new Date(0).toISOString(),
@@ -689,7 +1150,330 @@ export async function getAdminSystemUsers(): Promise<AdminSystemUserListResult> 
   };
 }
 
+export async function createAdminSystemUser(
+  payload: CreateAdminSystemUserPayload,
+): Promise<AdminSystemUserMutationResult> {
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const username = normalizeAdminUsername(payload.username);
+    const displayName = normalizeAdminDisplayName(payload.displayName);
+    const password = normalizeAdminPassword(payload.password);
+    const phoneNumber = normalizeOptionalContact(payload.phoneNumber, 20);
+    const email = normalizeOptionalContact(payload.email, 100);
+    const roleIds = normalizeAdminRoleIds(payload.roleIds);
+    const status = payload.status === 'disabled' ? ADMIN_STATUS_DISABLED : ADMIN_STATUS_ACTIVE;
+
+    if (await findAdminUserByUsername(connection, username)) {
+      throw new Error('系统用户名已存在');
+    }
+
+    if (phoneNumber && (await findAdminUserByPhoneNumber(connection, phoneNumber))) {
+      throw new Error('手机号已被其他系统用户占用');
+    }
+
+    const activeRoleIds = await fetchActiveRolesByIds(connection, roleIds);
+    if (activeRoleIds.length !== roleIds.length) {
+      throw new Error('存在无效角色或停用角色');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const [result] = await connection.execute<mysql.ResultSetHeader>(
+      `
+        INSERT INTO admin_user (
+          username,
+          password_hash,
+          display_name,
+          phone_number,
+          email,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+      `,
+      [username, passwordHash, displayName, phoneNumber, email, status],
+    );
+
+    const adminUserId = String(result.insertId);
+    await replaceAdminUserRoles(connection, adminUserId, activeRoleIds);
+    await connection.commit();
+
+    return { id: toEntityId(adminUserId) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function updateAdminSystemUser(
+  adminUserId: string,
+  payload: UpdateAdminSystemUserPayload,
+): Promise<AdminSystemUserMutationResult> {
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const user = await findAdminSystemUserById(connection, adminUserId);
+    if (!user) {
+      throw new Error('系统用户不存在');
+    }
+
+    const username = normalizeAdminUsername(payload.username);
+    const displayName = normalizeAdminDisplayName(payload.displayName);
+    const phoneNumber = normalizeOptionalContact(payload.phoneNumber, 20);
+    const email = normalizeOptionalContact(payload.email, 100);
+    const roleIds = normalizeAdminRoleIds(payload.roleIds);
+
+    if (await findAdminUserByUsername(connection, username, adminUserId)) {
+      throw new Error('系统用户名已存在');
+    }
+
+    if (
+      phoneNumber &&
+      (await findAdminUserByPhoneNumber(connection, phoneNumber, adminUserId))
+    ) {
+      throw new Error('手机号已被其他系统用户占用');
+    }
+
+    const activeRoleIds = await fetchActiveRolesByIds(connection, roleIds);
+    if (activeRoleIds.length !== roleIds.length) {
+      throw new Error('存在无效角色或停用角色');
+    }
+
+    await connection.execute(
+      `
+        UPDATE admin_user
+        SET username = ?,
+            display_name = ?,
+            phone_number = ?,
+            email = ?,
+            updated_at = NOW()
+        WHERE id = ?
+      `,
+      [username, displayName, phoneNumber, email, adminUserId],
+    );
+
+    await replaceAdminUserRoles(connection, adminUserId, activeRoleIds);
+    await connection.commit();
+
+    return { id: toEntityId(adminUserId) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function resetAdminSystemUserPassword(
+  adminUserId: string,
+  payload: ResetAdminSystemUserPasswordPayload,
+): Promise<AdminSystemUserMutationResult> {
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const user = await findAdminSystemUserById(connection, adminUserId);
+    if (!user) {
+      throw new Error('系统用户不存在');
+    }
+
+    const passwordHash = await bcrypt.hash(
+      normalizeAdminPassword(payload.newPassword),
+      10,
+    );
+
+    await connection.execute(
+      `
+        UPDATE admin_user
+        SET password_hash = ?,
+            updated_at = NOW()
+        WHERE id = ?
+      `,
+      [passwordHash, adminUserId],
+    );
+
+    await connection.commit();
+
+    return { id: toEntityId(adminUserId) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function updateAdminSystemUserStatus(
+  adminUserId: string,
+  payload: UpdateAdminSystemUserStatusPayload,
+  operatorAdminUserId: string,
+): Promise<UpdateAdminSystemUserStatusResult> {
+  const db = getDbPool();
+  const targetStatus = payload.status === 'disabled' ? ADMIN_STATUS_DISABLED : ADMIN_STATUS_ACTIVE;
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const user = await findAdminSystemUserById(connection, adminUserId);
+    if (!user) {
+      throw new Error('系统用户不存在');
+    }
+
+    if (adminUserId === operatorAdminUserId && targetStatus === ADMIN_STATUS_DISABLED) {
+      throw new Error('不能停用当前登录账号');
+    }
+
+    await connection.execute(
+      `
+        UPDATE admin_user
+        SET status = ?, updated_at = NOW()
+        WHERE id = ?
+      `,
+      [targetStatus, adminUserId],
+    );
+
+    await connection.commit();
+
+    return {
+      id: toEntityId(user.id),
+      status: payload.status,
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function updateAdminRoleStatus(
+  roleId: string,
+  payload: UpdateAdminRoleStatusPayload,
+): Promise<UpdateAdminRoleStatusResult> {
+  const db = getDbPool();
+  const targetStatus = payload.status === 'disabled' ? ADMIN_STATUS_DISABLED : ADMIN_STATUS_ACTIVE;
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const role = await findAdminRoleById(connection, roleId);
+    if (!role) {
+      throw new Error('角色不存在');
+    }
+
+    if (Boolean(role.is_system) && targetStatus === ADMIN_STATUS_DISABLED) {
+      throw new Error('系统内置角色不允许停用');
+    }
+
+    await connection.execute(
+      `
+        UPDATE admin_role
+        SET status = ?, updated_at = NOW()
+        WHERE id = ?
+      `,
+      [targetStatus, roleId],
+    );
+
+    await connection.commit();
+
+    return {
+      id: toEntityId(role.id),
+      status: payload.status,
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function updateAdminRolePermissions(
+  roleId: string,
+  payload: UpdateAdminRolePermissionsPayload,
+): Promise<UpdateAdminRolePermissionsResult> {
+  await ensureAdminPermissionCatalogSynced();
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const role = await findAdminRoleById(connection, roleId);
+    if (!role) {
+      throw new Error('角色不存在');
+    }
+
+    if (Number(role.status ?? 0) !== ROLE_STATUS_ACTIVE) {
+      throw new Error('停用角色不允许分配权限');
+    }
+
+    const permissionIds = uniq(
+      (payload.permissionIds ?? [])
+        .map((item) => String(item ?? '').trim())
+        .filter(Boolean),
+    );
+    const activeSelectedPermissionIds = await fetchActivePermissionsByIds(
+      connection,
+      permissionIds,
+    );
+
+    if (activeSelectedPermissionIds.length !== permissionIds.length) {
+      throw new Error('存在无效权限或停用权限');
+    }
+
+    const activePermissionIds = await expandRolePermissionIds(
+      connection,
+      activeSelectedPermissionIds,
+    );
+
+    await connection.execute(
+      `
+        DELETE FROM admin_role_permission
+        WHERE role_id = ?
+      `,
+      [roleId],
+    );
+
+    for (const permissionId of activePermissionIds) {
+      await connection.execute(
+        `
+          INSERT INTO admin_role_permission (role_id, permission_id, created_at)
+          VALUES (?, ?, NOW())
+        `,
+        [roleId, permissionId],
+      );
+    }
+
+    await connection.commit();
+
+    return {
+      id: toEntityId(role.id),
+      permissionIds: activePermissionIds.map((item) => toEntityId(item)),
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 export async function getAdminRoles(): Promise<AdminRoleListResult> {
+  await ensureAdminPermissionCatalogSynced();
   const rows = await fetchAdminRolesWithStats();
   const items = rows.map<AdminRoleListItem>((row) => {
     const modules = mapRoleModules(row.permission_modules);
@@ -699,7 +1483,8 @@ export async function getAdminRoles(): Promise<AdminRoleListResult> {
       code: row.code,
       name: row.name,
       description: row.description ?? null,
-      scope: mapRoleScope(modules),
+      permissionRange: mapRolePermissionRange(modules),
+      permissionModules: modules,
       memberCount: toNumber(row.member_count),
       permissionCount: toNumber(row.permission_count),
       status: mapRoleStatus(row.status),
@@ -722,6 +1507,7 @@ export async function getAdminRoles(): Promise<AdminRoleListResult> {
 }
 
 export async function getAdminPermissionsMatrix(): Promise<AdminPermissionMatrixResult> {
+  await ensureAdminPermissionCatalogSynced();
   const [roleRows, permissionRows] = await Promise.all([
     fetchAdminRolesWithStats(),
     fetchAdminPermissionsByRole(),
@@ -835,6 +1621,157 @@ export async function getAdminPermissionsMatrix(): Promise<AdminPermissionMatrix
         .filter((row) => Number(row.status ?? 0) === PERMISSION_STATUS_ACTIVE)
         .map((row) => String(row.id))
         .filter((value, index, array) => array.indexOf(value) === index).length,
+      },
+  };
+}
+
+export async function getAdminPermissions(): Promise<AdminPermissionListResult> {
+  await ensureAdminPermissionCatalogSynced();
+  const rows = await fetchAdminPermissionRows();
+  const items = rows.map<AdminPermissionListItem>((row) => ({
+    id: String(row.id),
+    code: row.code,
+    name: row.name,
+    module: row.module?.trim() || '未分组',
+    action: mapPermissionAction(row.action),
+    parentId: row.parent_id == null ? null : String(row.parent_id),
+    parentName: row.parent_name ?? null,
+    status: mapPermissionStatus(row.status),
+    sort: toNumber(row.sort),
+    assignedRoleCount: toNumber(row.assigned_role_count),
+  }));
+
+  return {
+    items,
+    summary: {
+      total: items.length,
+      active: items.filter((item) => item.status === 'active').length,
+      disabled: items.filter((item) => item.status === 'disabled').length,
+      modules: uniq(items.map((item) => item.module)).length,
     },
+  };
+}
+
+export async function createAdminPermission(
+  payload: CreateAdminPermissionPayload,
+): Promise<AdminPermissionMutationResult> {
+  const code = normalizeAdminPermissionCode(payload.code);
+  const name = normalizeAdminPermissionName(payload.name);
+  const module = normalizeAdminPermissionModule(payload.module);
+  const action = normalizeAdminPermissionAction(payload.action);
+  const parentId = normalizeAdminPermissionParentId(payload.parentId ? String(payload.parentId) : null);
+  const sort = toNumber(payload.sort ?? 0);
+  const status = toPermissionStatusCode(payload.status ?? 'active');
+  const db = getDbPool();
+
+  if (await findAdminPermissionByCode(db, code)) {
+    throw new Error('权限编码已存在');
+  }
+
+  if (parentId) {
+    const parent = await fetchAdminPermissionById(parentId);
+    if (!parent) {
+      throw new Error('父权限不存在');
+    }
+  }
+
+  const [result] = await db.execute<mysql.ResultSetHeader>(
+    `
+      INSERT INTO admin_permission (
+        code,
+        name,
+        module,
+        action,
+        parent_id,
+        status,
+        sort,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+    `,
+    [code, name, module, toPermissionActionCode(action), parentId, status, sort],
+  );
+
+  return {
+    id: toEntityId(result.insertId),
+  };
+}
+
+export async function updateAdminPermission(
+  permissionId: string,
+  payload: UpdateAdminPermissionPayload,
+): Promise<AdminPermissionMutationResult> {
+  const permission = await fetchAdminPermissionById(permissionId);
+
+  if (!permission) {
+    throw new Error('权限不存在');
+  }
+
+  const code = normalizeAdminPermissionCode(payload.code);
+  const name = normalizeAdminPermissionName(payload.name);
+  const module = normalizeAdminPermissionModule(payload.module);
+  const action = normalizeAdminPermissionAction(payload.action);
+  const parentId = normalizeAdminPermissionParentId(payload.parentId ? String(payload.parentId) : null);
+  const sort = toNumber(payload.sort ?? 0);
+  const db = getDbPool();
+
+  if (await findAdminPermissionByCode(db, code, permissionId)) {
+    throw new Error('权限编码已存在');
+  }
+
+  if (parentId) {
+    if (parentId === permissionId) {
+      throw new Error('父权限不能是自己');
+    }
+
+    const parent = await fetchAdminPermissionById(parentId);
+    if (!parent) {
+      throw new Error('父权限不存在');
+    }
+  }
+
+  await db.execute(
+    `
+      UPDATE admin_permission
+      SET
+        code = ?,
+        name = ?,
+        module = ?,
+        action = ?,
+        parent_id = ?,
+        sort = ?
+      WHERE id = ?
+    `,
+    [code, name, module, toPermissionActionCode(action), parentId, sort, permissionId],
+  );
+
+  return {
+    id: toEntityId(permission.id),
+  };
+}
+
+export async function updateAdminPermissionStatus(
+  permissionId: string,
+  payload: UpdateAdminPermissionStatusPayload,
+): Promise<UpdateAdminPermissionStatusResult> {
+  const permission = await fetchAdminPermissionById(permissionId);
+
+  if (!permission) {
+    throw new Error('权限不存在');
+  }
+
+  const db = getDbPool();
+  await db.execute(
+    `
+      UPDATE admin_permission
+      SET status = ?
+      WHERE id = ?
+    `,
+    [toPermissionStatusCode(payload.status), permissionId],
+  );
+
+  return {
+    id: toEntityId(permission.id),
+    status: payload.status,
   };
 }

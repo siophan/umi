@@ -358,6 +358,13 @@
 | `like` | `10` | 点赞 |
 | `bookmark` | `20` | 收藏 |
 
+### `product_interaction.interaction_type`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `favorite` | `10` | 收藏 |
+| `like` | `20` | 点赞 |
+
 ### `comment_interaction.interaction_type`
 
 | 原语义 | 编码 | 说明 |
@@ -409,6 +416,22 @@
 | `reviewing` | `20` | 处理中 |
 | `resolved` | `30` | 已处理完成 |
 | `rejected` | `40` | 已驳回 |
+
+### `report_item.target_type`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `post` | `10` | 社区动态 |
+
+### `report_item.reason_type`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `spam` | `10` | 垃圾广告 |
+| `explicit` | `20` | 低俗色情 |
+| `abuse` | `30` | 人身攻击 |
+| `false_info` | `40` | 虚假信息 |
+| `other` | `90` | 其他原因 |
 
 ### `report_item.handle_action`
 

@@ -33,4 +33,4 @@ BODY:
 - `order-fulfillment-page.tsx` → `orders-page.tsx`（已有）+ `fulfillment-page.tsx`
 - `marketing-page.tsx` → 按真实子模块拆（优惠券、签到、排行榜、邀请等）
 
-同一轮里要把路由、菜单 key、引用、空目录一起收完，保证 `pnpm --filter @joy/admin typecheck` 通过（AGENTS.md "不允许半拆"）。
+同一轮里要把路由、菜单 key、引用、空目录一起收完，保证 `pnpm --filter @umi/admin typecheck` 通过（AGENTS.md "不允许半拆"）。

@@ -1,4 +1,4 @@
-import type { OrderSummary } from '@joy/shared';
+import type { OrderSummary } from '@umi/shared';
 
 export function OrderCard({ order }: { order: OrderSummary }) {
   const item = order.items[0];

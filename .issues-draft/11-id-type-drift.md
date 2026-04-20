@@ -9,7 +9,7 @@ BODY:
 
 > 主键和主链路关联 ID 已整型化，不再使用字符串 ID
 
-但 `@joy/shared` 里导出的业务类型仍然用 `string`：
+但 `@umi/shared` 里导出的业务类型仍然用 `string`：
 
 - `UserSummary.id: string`（`packages/shared/src/domain.ts` / `api.ts`）
 - `ProductSummary.id: string`、`GuessSummary.id: string`、`OrderSummary.id: string` 等
@@ -27,7 +27,7 @@ BODY:
 
 先做一次明确决定（二选一并写进 AGENTS.md）：
 
-- **A. JSON 里 id 就是 number**：`@joy/shared` 把 `id: string` 改成 `id: number`；route path 参数解析时转成 `number`；并在所有 id 列上接受一个安全上限（`bigint` 范围里 id 实际值需要 < 2^53）。
+- **A. JSON 里 id 就是 number**：`@umi/shared` 把 `id: string` 改成 `id: number`；route path 参数解析时转成 `number`；并在所有 id 列上接受一个安全上限（`bigint` 范围里 id 实际值需要 < 2^53）。
 - **B. JSON 里 id 作为 string 传输但表达"整型 id"**：明确 `id: string` 的语义是"big-int-as-string"，同时在 OpenAPI 里标注 `format: int64` 或 `pattern: ^\d+$`。后端仍用 `BigInt` 处理，边界做 string↔bigint 转换。
 
 当前状态（类型 `string` + 用法像数字 id）是最糟糕的折中——两种策略都没落实。

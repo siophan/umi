@@ -1,12 +1,15 @@
 import type mysql from 'mysql2/promise';
 
-import type {
+import {
+  toEntityId,
+  toOptionalEntityId,
+  type
   AdminUserGuessListResult,
   AdminUserOrderListResult,
   GuessSummary,
   OrderItem,
   OrderSummary,
-} from '@joy/shared';
+} from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 
@@ -112,15 +115,15 @@ function buildGuessSummary(
   voteRows: GuessVoteRow[],
 ): GuessSummary {
   return {
-    id: String(row.id),
+    id: toEntityId(row.id),
     title: row.title,
     status: mapGuessStatus(row.status),
     reviewStatus: mapGuessReviewStatus(row.review_status),
     category: row.category || '未分类',
     endTime: new Date(row.end_time).toISOString(),
-    creatorId: String(row.creator_id),
+    creatorId: toEntityId(row.creator_id),
     product: {
-      id: String(row.product_id ?? ''),
+      id: toEntityId(row.product_id ?? 0),
       name: row.product_name || '未命名商品',
       brand: row.brand_name || '未知品牌',
       img: row.product_img || '',
@@ -191,8 +194,8 @@ function sanitizeOrderItem(row: OrderRow): OrderItem | null {
   }
 
   return {
-    id: String(row.item_id),
-    productId: String(row.product_id),
+    id: toEntityId(row.item_id),
+    productId: toEntityId(row.product_id),
     productName: row.product_name,
     productImg: row.product_img || '',
     skuText: null,
@@ -206,15 +209,15 @@ function mapOrderRows(rows: OrderRow[]): OrderSummary[] {
   const orderMap = new Map<string, OrderSummary>();
 
   for (const row of rows) {
-    const id = String(row.id);
+    const id = toEntityId(row.id);
     let order = orderMap.get(id);
 
     if (!order) {
       order = {
         id,
-        userId: String(row.user_id),
+        userId: toEntityId(row.user_id),
         orderType: row.guess_id ? 'guess' : 'shop',
-        guessId: row.guess_id ? String(row.guess_id) : null,
+        guessId: toOptionalEntityId(row.guess_id),
         guessTitle: row.guess_title || null,
         amount: Number(row.amount ?? 0) / 100,
         status: mapOrderStatus(

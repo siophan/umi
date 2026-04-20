@@ -1,4 +1,4 @@
-import type { GuessListResult, WarehouseListResult } from '@joy/shared';
+import type { GuessListResult, WarehouseListResult } from '@umi/shared';
 
 import { getJson } from './shared';
 
@@ -80,34 +80,6 @@ export interface AdminPkMatchItem {
   settledAt: string | null;
 }
 
-export interface AdminCategoryItem {
-  id: string;
-  bizType: 'brand' | 'shop' | 'product' | 'guess' | 'unknown';
-  bizTypeCode: number;
-  bizTypeLabel: '品牌分类' | '店铺经营分类' | '商品分类' | '竞猜分类' | '未知业务';
-  parentId: string | null;
-  parentName: string | null;
-  level: number;
-  path: string | null;
-  name: string;
-  iconUrl: string | null;
-  description: string | null;
-  sort: number;
-  status: 'active' | 'disabled';
-  statusLabel: '启用中' | '停用';
-  usageCount: number;
-  usageBreakdown: {
-    brands: number;
-    brandApplies: number;
-    brandProducts: number;
-    shops: number;
-    shopApplies: number;
-    guesses: number;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface AdminWarehouseStats {
   totalVirtual: number;
   totalPhysical: number;
@@ -120,16 +92,6 @@ type PaginatedListResult<T> = {
   pageSize: number;
 };
 
-type AdminCategoryListResult = {
-  items: AdminCategoryItem[];
-  summary: {
-    total: number;
-    active: number;
-    disabled: number;
-    byBizType: Record<string, number>;
-  };
-};
-
 export function fetchAdminProducts(query: { page?: number; pageSize?: number } = {}) {
   const search = new URLSearchParams();
   if (query.page != null) {
@@ -140,10 +102,6 @@ export function fetchAdminProducts(query: { page?: number; pageSize?: number } =
   }
   const suffix = search.size > 0 ? `?${search.toString()}` : '';
   return getJson<PaginatedListResult<AdminProduct>>(`/api/admin/products${suffix}`);
-}
-
-export function fetchAdminCategories() {
-  return getJson<AdminCategoryListResult>('/api/admin/categories');
 }
 
 export function fetchAdminGuesses() {

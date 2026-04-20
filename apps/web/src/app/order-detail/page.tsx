@@ -1,145 +1,136 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { OrderDetailResult } from '@umi/shared';
+
+import { confirmOrder, fetchOrderDetail } from '../../lib/api/orders';
 import styles from './page.module.css';
 
-type OrderStatus = 'pending' | 'shipped' | 'done' | 'refund';
-type TimelineStep = {
-  text: string;
-  time: string;
-  done: boolean;
-  active: boolean;
-  detail?: string;
-};
+function getStatusMeta(order: OrderDetailResult | null) {
+  if (!order) {
+    return { text: '', desc: '', cls: 'shipped' };
+  }
+  if (order.status === 'completed' || order.status === 'delivered') {
+    return { text: '已完成', desc: '交易完成，感谢您的购买', cls: 'done' };
+  }
+  if (order.status === 'refunded') {
+    return { text: '已退款', desc: '订单已退款完成', cls: 'refund' };
+  }
+  if (order.status === 'shipping') {
+    return { text: '已发货', desc: '包裹正在运送中', cls: 'shipped' };
+  }
+  if (order.status === 'paid') {
+    return { text: '待发货', desc: '商家正在准备商品', cls: 'shipped' };
+  }
+  if (order.status === 'cancelled') {
+    return { text: '已取消', desc: '订单已关闭', cls: 'refund' };
+  }
+  return { text: '待支付', desc: '等待支付完成', cls: 'shipped' };
+}
 
-const initialOrder = {
-  id: 'OD20260416001',
-  status: 'shipped' as OrderStatus,
-  statusText: '已发货',
-  statusDesc: '包裹正在运送中',
-  icon: '🚚',
-  bannerClass: 'shipped',
-  shopName: '乐事官方旗舰店',
-  product: {
-    name: '奥利奥原味夹心饼干 67g*3',
-    spec: '经典原味 / 3包装',
-    price: 0,
-    originalPrice: 26.8,
-    quantity: 1,
-    img: '/legacy/images/products/p002-oreo.jpg',
-    type: 'prize',
-    typeText: '🎯 竞猜获奖',
-  },
-  guessTitle: '世界杯冠军竞猜',
-  guessId: 'g001',
-  address: {
-    name: '零食猎人',
-    phone: '138****1808',
-    detail: '上海市浦东新区张江高科技园区 88 号 3 栋 1202 室',
-    tag: '默认',
-  },
-  express: {
-    company: '顺丰速运',
-    no: 'SF1234567890',
-    phone: '95338',
-    logs: [
-      { text: '快递员正在派送中，请保持电话畅通', time: '预计今天 12:00 前送达', active: true },
-      { text: '快件到达上海浦东分拨中心', time: '2026-04-16 21:36', done: true },
-      { text: '快件已从华东转运中心发出', time: '2026-04-16 23:10', done: true },
-    ],
-  },
-  priceRows: [
-    { label: '商品金额', value: '¥26.80' },
-    { label: '竞猜减免', value: '-¥26.80', discount: true },
-    { label: '运费', value: '包邮', free: true },
-    { label: '支付方式', value: '🎯 竞猜获奖(免费)' },
-  ],
-  coupon: {
-    amount: 26.8,
-    cond: '满29元可用',
-    tag: '竞猜补偿券',
-  },
-  infoRows: [
-    { label: '订单编号', value: 'OD20260416001', copy: true },
-    { label: '下单时间', value: '2026-04-16 18:42' },
-    { label: '支付时间', value: '2026-04-16 18:42' },
-    { label: '发货时间', value: '2026-04-16 20:15' },
-  ],
-  refundInfo: {
-    reason: '商品缺货，系统自动取消',
-    amount: '¥26.80',
-    status: '退款完成',
-  },
-};
-
-const shippedTimeline: TimelineStep[] = [
-  { text: '订单已创建', time: '2026-04-16 18:42', done: true, active: false, detail: '' },
-  { text: '支付成功', time: '2026-04-16 18:42', done: true, active: false, detail: '' },
-  { text: '商家发货', time: '2026-04-16 20:15', done: true, active: true, detail: '' },
-  { text: '确认收货', time: '', done: false, active: false, detail: '' },
-  { text: '交易完成', time: '', done: false, active: false, detail: '' },
-];
-
-export default function OrderDetailPage() {
+function OrderDetailPageInner() {
   const router = useRouter();
-  const [order, setOrder] = useState(initialOrder);
+  const searchParams = useSearchParams();
+  const [order, setOrder] = useState<OrderDetailResult | null>(null);
   const [toast, setToast] = useState('');
   const [logisticsOpen, setLogisticsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const showToast = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(''), 1800);
-  };
+  useEffect(() => {
+    let ignore = false;
 
-  const total = order.product.price === 0 ? '🎁 免费' : `¥${order.product.price.toFixed(2)}`;
-  const timeline: TimelineStep[] = order.status === 'done'
-    ? [
-        { text: '订单已创建', time: '2026-04-16 18:42', done: true, active: false, detail: '' },
-        { text: '支付成功', time: '2026-04-16 18:42', done: true, active: false, detail: '' },
-        { text: '商家发货', time: '2026-04-16 20:15', done: true, active: false, detail: '' },
-        { text: '确认收货', time: '2026-04-17 11:18', done: true, active: false, detail: '' },
-        { text: '交易完成', time: '2026-04-17 11:18', done: true, active: true, detail: '' },
-      ]
-    : shippedTimeline;
+    async function load() {
+      const orderId = searchParams.get('id');
+      if (!orderId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const result = await fetchOrderDetail(orderId);
+        if (!ignore) {
+          setOrder(result);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setToast(error instanceof Error ? error.message : '订单加载失败');
+          setOrder(null);
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timer = window.setTimeout(() => setToast(''), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const meta = getStatusMeta(order);
+  const firstItem = order?.items[0] || null;
+  const addressText = order?.address
+    ? `${order.address.province}${order.address.city}${order.address.district}${order.address.detail}`
+    : '';
+  const total = order ? `¥${order.amount.toFixed(2)}` : '¥0.00';
+  const timeline = useMemo(
+    () => (order?.logs.length ? order.logs : []),
+    [order],
+  );
+
+  if (loading) {
+    return <div className={styles.page} />;
+  }
+
+  if (!order || !firstItem) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.header}>
+          <button className={styles.back} type="button" onClick={() => router.back()}>
+            <i className="fa-solid fa-chevron-left" />
+          </button>
+          <div className={styles.title}>订单详情</div>
+          <div className={styles.headerRight} />
+        </header>
+        <section className={styles.card}>
+          <div className={styles.cardTitle}>订单不存在</div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button
-          className={styles.back}
-          type="button"
-          onClick={() => router.back()}
-        >
+        <button className={styles.back} type="button" onClick={() => router.back()}>
           <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.title}>订单详情</div>
         <div className={styles.headerRight}>
-          <button
-            className={styles.headerBtn}
-            type="button"
-            onClick={() => showToast('客服')}
-          >
+          <button className={styles.headerBtn} type="button" onClick={() => setToast('客服')}>
             <i className="fa-solid fa-headset" />
-          </button>
-          <button
-            className={styles.headerBtn}
-            type="button"
-            onClick={() => showToast('更多操作')}
-          >
-            <i className="fa-solid fa-ellipsis" />
           </button>
         </div>
       </header>
 
-      <section className={`${styles.banner} ${styles[order.bannerClass]}`}>
+      <section className={`${styles.banner} ${styles[meta.cls]}`}>
         <div className={styles.bannerMain}>
           <div className={styles.bannerIcon}>
             <i className="fa-solid fa-truck-fast" />
           </div>
           <div>
-            <div className={styles.bannerTitle}>{order.statusText}</div>
-            <div className={styles.bannerDesc}>{order.statusDesc}</div>
+            <div className={styles.bannerTitle}>{meta.text}</div>
+            <div className={styles.bannerDesc}>{meta.desc}</div>
           </div>
         </div>
         <div className={styles.bannerBg}>
@@ -153,125 +144,106 @@ export default function OrderDetailPage() {
           订单进度
         </div>
         <div className={styles.timeline}>
-          {timeline.map((item) => (
-            <div
-              key={item.text}
-              className={`${styles.timelineItem} ${item.done ? styles.done : ''} ${item.active ? styles.active : ''}`}
-            >
+          {timeline.map((item, index) => (
+            <div key={item.id} className={`${styles.timelineItem} ${styles.done} ${index === timeline.length - 1 ? styles.active : ''}`}>
               <div className={styles.dot}>
                 <span>•</span>
               </div>
-              <div className={styles.timelineText}>{item.text}</div>
-              <div className={styles.timelineTime}>{item.time}</div>
-              {item.detail ? (
-                <div className={styles.timelineDetail}>{item.detail}</div>
-              ) : null}
+              <div className={styles.timelineText}>{item.status}</div>
+              <div className={styles.timelineTime}>{item.createdAt.slice(0, 16).replace('T', ' ')}</div>
+              {item.note ? <div className={styles.timelineDetail}>{item.note}</div> : null}
             </div>
           ))}
         </div>
       </section>
 
-      <section className={styles.card}>
-        <div className={styles.cardTitle}>
-          <i className="fa-solid fa-truck-fast" />
-          物流信息
-        </div>
-        <button
-          className={styles.express}
-          type="button"
-          onClick={() => setLogisticsOpen(true)}
-        >
-          <div className={styles.expressIcon}>
+      {order.fulfillment ? (
+        <section className={styles.card}>
+          <div className={styles.cardTitle}>
             <i className="fa-solid fa-truck-fast" />
+            物流信息
           </div>
-          <div className={styles.expressInfo}>
-            <div className={styles.expressCompany}>
-              {order.express.company} <span>{order.express.no}</span>
+          <button className={styles.express} type="button" onClick={() => setLogisticsOpen(true)}>
+            <div className={styles.expressIcon}>
+              <i className="fa-solid fa-truck-fast" />
             </div>
-            <div className={styles.expressStatus}>
-              <i className="fa-solid fa-circle" />
-              {order.express.logs[0]?.text}
+            <div className={styles.expressInfo}>
+              <div className={styles.expressCompany}>
+                普通快递 <span>{order.fulfillment.trackingNo || '待分配运单'}</span>
+              </div>
+              <div className={styles.expressStatus}>
+                <i className="fa-solid fa-circle" />
+                {order.fulfillment.status === 'shipping' ? '物流运输中' : order.fulfillment.status === 'completed' ? '已签收' : '待发货'}
+              </div>
+              <div className={styles.expressNo}>收件人: {order.fulfillment.receiverName}</div>
             </div>
-            <div className={styles.expressNo}>客服电话: {order.express.phone}</div>
-          </div>
-          <div className={styles.expressArrow}>
-            <i className="fa-solid fa-chevron-right" />
-          </div>
-        </button>
-      </section>
+            <div className={styles.expressArrow}>
+              <i className="fa-solid fa-chevron-right" />
+            </div>
+          </button>
+        </section>
+      ) : null}
 
-      <section className={styles.card}>
-        <div className={styles.cardTitle}>
-          <i className="fa-solid fa-location-dot" />
-          收货地址
-        </div>
-        <div className={styles.address}>
-          <div className={styles.addressIcon}>
+      {order.address ? (
+        <section className={styles.card}>
+          <div className={styles.cardTitle}>
             <i className="fa-solid fa-location-dot" />
+            收货地址
           </div>
-          <div className={styles.addressInfo}>
-            <div className={styles.addressName}>
-              {order.address.name}
-              <span>{order.address.phone}</span>
-              <span className={styles.addressTag}>{order.address.tag}</span>
+          <div className={styles.address}>
+            <div className={styles.addressIcon}>
+              <i className="fa-solid fa-location-dot" />
             </div>
-            <div className={styles.addressDetail}>{order.address.detail}</div>
+            <div className={styles.addressInfo}>
+              <div className={styles.addressName}>
+                {order.address.name}
+                <span>{order.address.phone}</span>
+                {order.address.tag ? <span className={styles.addressTag}>{order.address.tag}</span> : null}
+              </div>
+              <div className={styles.addressDetail}>{addressText}</div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className={styles.card}>
-        <button
-          className={styles.shopRow}
-          type="button"
-          onClick={() => showToast('进入店铺')}
-        >
+        <button className={styles.shopRow} type="button" onClick={() => setToast('进入店铺')}>
           <div className={styles.shopIcon}>
             <i className="fa-solid fa-crown" />
           </div>
-          <div className={styles.shopName}>{order.shopName}</div>
+          <div className={styles.shopName}>{order.orderType === 'guess' ? '竞猜奖励' : '店铺订单'}</div>
           <div className={styles.arrow}>
             <i className="fa-solid fa-chevron-right" />
           </div>
         </button>
 
         <div className={styles.product}>
-          <img alt={order.product.name} src={order.product.img} />
+          <img alt={firstItem.productName} src={firstItem.productImg} />
           <div className={styles.productInfo}>
-            <div className={styles.productName}>{order.product.name}</div>
-            <div className={styles.productSpec}>{order.product.spec}</div>
+            <div className={styles.productName}>{firstItem.productName}</div>
+            <div className={styles.productSpec}>{firstItem.skuText || '默认规格'}</div>
             <div className={styles.productBottom}>
-              <span className={styles.productType}>{order.product.typeText}</span>
-              <span
-                className={`${styles.productPrice} ${order.product.price === 0 ? styles.free : ''}`}
-              >
-                {order.product.price === 0
-                  ? '🎁 免费'
-                  : (
-                    <>
-                      <small>¥</small>
-                      {order.product.price.toFixed(1)}
-                    </>
-                  )}
+              <span className={styles.productType}>{order.orderType === 'guess' ? '🎯 竞猜奖励' : '🛒 商城购买'}</span>
+              <span className={styles.productPrice}>
+                <small>¥</small>
+                {firstItem.unitPrice.toFixed(1)}
               </span>
             </div>
           </div>
         </div>
 
-        <button
-          className={styles.guessInfo}
-          type="button"
-          onClick={() => router.push(`/guess/${order.guessId}`)}
-        >
-          <div className={styles.guessIcon}>🎯</div>
-          <div className={styles.guessText}>
-            <div className={styles.guessLabel}>关联竞猜</div>
-            <div className={styles.guessTitle}>{order.guessTitle}</div>
-          </div>
-          <div className={styles.guessArrow}>
-            <i className="fa-solid fa-chevron-right" />
-          </div>
-        </button>
+        {order.guessId && order.guessTitle ? (
+          <button className={styles.guessInfo} type="button" onClick={() => router.push(`/guess/${order.guessId}`)}>
+            <div className={styles.guessIcon}>🎯</div>
+            <div className={styles.guessText}>
+              <div className={styles.guessLabel}>关联竞猜</div>
+              <div className={styles.guessTitle}>{order.guessTitle}</div>
+            </div>
+            <div className={styles.guessArrow}>
+              <i className="fa-solid fa-chevron-right" />
+            </div>
+          </button>
+        ) : null}
       </section>
 
       <section className={styles.card}>
@@ -284,186 +256,117 @@ export default function OrderDetailPage() {
             <div className={styles.couponIcon}>🎫</div>
             <div className={styles.couponInfo}>
               <div className={styles.couponAmount}>¥{order.coupon.amount.toFixed(1)}</div>
-              <div className={styles.couponCond}>{order.coupon.cond}</div>
+              <div className={styles.couponCond}>{order.coupon.condition || order.coupon.name}</div>
             </div>
-            <div className={styles.couponTag}>{order.coupon.tag}</div>
+            <div className={styles.couponTag}>{order.coupon.name}</div>
           </div>
         ) : null}
-        {order.priceRows.map((row) => (
-          <div key={row.label} className={styles.priceRow}>
-            <span className={styles.priceLabel}>{row.label}</span>
-            <span
-              className={`${styles.priceValue} ${row.discount ? styles.discount : ''} ${row.free ? styles.freeValue : ''}`}
-            >
-              {row.value}
-            </span>
-          </div>
-        ))}
+        <div className={styles.priceRow}>
+          <span className={styles.priceLabel}>商品金额</span>
+          <span className={styles.priceValue}>¥{order.originalAmount.toFixed(2)}</span>
+        </div>
+        <div className={styles.priceRow}>
+          <span className={styles.priceLabel}>优惠金额</span>
+          <span className={`${styles.priceValue} ${styles.discount}`}>-¥{order.couponDiscount.toFixed(2)}</span>
+        </div>
+        <div className={styles.priceRow}>
+          <span className={styles.priceLabel}>运费</span>
+          <span className={`${styles.priceValue} ${styles.freeValue}`}>包邮</span>
+        </div>
         <div className={styles.priceTotal}>
           <span>实付款：</span>
           <strong>{total}</strong>
         </div>
       </section>
 
-      {order.status === 'refund' ? (
-        <section className={styles.card}>
-          <div className={styles.cardTitle}>
-            <i className="fa-solid fa-rotate-left" />
-            退款详情
-          </div>
-          <div className={styles.refundInfo}>
-            <div className={styles.refundRow}>
-              <span className={styles.refundLabel}>退款原因</span>
-              <span className={styles.refundValue}>{order.refundInfo.reason}</span>
-            </div>
-            <div className={styles.refundRow}>
-              <span className={styles.refundLabel}>退款金额</span>
-              <span className={styles.refundValue}>{order.refundInfo.amount}</span>
-            </div>
-            <div className={styles.refundRow}>
-              <span className={styles.refundLabel}>退款状态</span>
-              <span className={styles.refundValue}>{order.refundInfo.status}</span>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
       <section className={styles.card}>
         <div className={styles.cardTitle}>
           <i className="fa-solid fa-file-lines" />
           订单信息
         </div>
-        {order.infoRows.map((row) => (
-          <div key={row.label} className={styles.infoRow}>
-            <span className={styles.infoLabel}>{row.label}</span>
-            <span
-              className={`${styles.infoValue} ${row.copy ? styles.copy : ''}`}
-              onClick={() => row.copy && showToast(`✅ 已复制: ${row.value}`)}
-            >
-              {row.value}
-              {row.copy ? <i className="fa-regular fa-copy" /> : null}
-            </span>
+        <div className={styles.infoRow}>
+          <span className={styles.infoLabel}>订单编号</span>
+          <span className={`${styles.infoValue} ${styles.copy}`} onClick={() => setToast(`已复制: ${order.orderSn}`)}>
+            {order.orderSn}
+            <i className="fa-regular fa-copy" />
+          </span>
+        </div>
+        <div className={styles.infoRow}>
+          <span className={styles.infoLabel}>下单时间</span>
+          <span className={styles.infoValue}>{order.createdAt.slice(0, 16).replace('T', ' ')}</span>
+        </div>
+        {order.fulfillment?.shippedAt ? (
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>发货时间</span>
+            <span className={styles.infoValue}>{order.fulfillment.shippedAt.slice(0, 16).replace('T', ' ')}</span>
           </div>
-        ))}
+        ) : null}
       </section>
-
-      {order.status === 'done' ? (
-        <section className={styles.card}>
-          <div className={styles.cardTitle}>
-            <i className="fa-solid fa-star" />
-            商品评价
-          </div>
-          <button className={styles.rating} type="button" onClick={() => showToast('📝 评价功能即将上线')}>
-            <div className={styles.ratingStars}>
-              <i className="fa-regular fa-star" />
-              <i className="fa-regular fa-star" />
-              <i className="fa-regular fa-star" />
-              <i className="fa-regular fa-star" />
-              <i className="fa-regular fa-star" />
-            </div>
-            <div className={styles.ratingText}>去评价，赢积分</div>
-            <div className={styles.ratingArrow}>
-              <i className="fa-solid fa-chevron-right" />
-            </div>
-          </button>
-        </section>
-      ) : null}
 
       <footer className={styles.bottom}>
         <div className={styles.bottomLeft}>
-          <button
-            className={styles.bottomIcon}
-            type="button"
-            onClick={() => showToast('联系客服')}
-          >
+          <button className={styles.bottomIcon} type="button" onClick={() => setToast('联系客服')}>
             <i className="fa-solid fa-headset" />
             <span>客服</span>
           </button>
-          <button
-            className={styles.bottomIcon}
-            type="button"
-            onClick={() => showToast('进入店铺')}
-          >
+          <button className={styles.bottomIcon} type="button" onClick={() => setToast('进入店铺')}>
             <i className="fa-solid fa-store" />
             <span>店铺</span>
           </button>
         </div>
+        <button className={styles.btnOutline} type="button" onClick={() => setToast(order.fulfillment ? '查看物流' : '订单处理中')}>
+          {order.fulfillment ? '查看物流' : '订单处理中'}
+        </button>
         <button
-          className={styles.btnOutline}
+          className={styles.btnPrimary}
           type="button"
-          onClick={() => {
-            if (order.status === 'shipped') {
-              setLogisticsOpen(true);
+          onClick={async () => {
+            if (order.status === 'shipping' || order.status === 'delivered') {
+              try {
+                await confirmOrder(order.id);
+                setOrder((current) => (current ? { ...current, status: 'completed' } : current));
+                setToast('✅ 已确认收货');
+              } catch (error) {
+                setToast(error instanceof Error ? error.message : '确认收货失败');
+              }
               return;
             }
-            if (order.status === 'done' || order.status === 'refund') {
-              showToast('正在跳转...');
+            if (order.status === 'completed' && firstItem?.productId) {
+              router.push(`/product/${encodeURIComponent(firstItem.productId)}`);
               return;
             }
-            showToast('取消订单申请已提交');
+            setToast('订单处理中');
           }}
         >
-          {order.status === 'shipped'
-            ? '查看物流'
-            : order.status === 'done' || order.status === 'refund'
-              ? '再来一单'
-              : '取消订单'}
+          {order.status === 'shipping' || order.status === 'delivered' ? '确认收货' : order.status === 'completed' ? '评价' : '提醒发货'}
         </button>
-        {order.status !== 'refund' ? (
-          <button
-            className={styles.btnPrimary}
-            type="button"
-            onClick={() => {
-              if (order.status === 'done') {
-                showToast('📝 评价功能即将上线');
-                return;
-              }
-              if (order.status === 'shipped') {
-                setOrder((current) => ({
-                  ...current,
-                  status: 'done',
-                  statusText: '已完成',
-                  statusDesc: '交易完成，感谢您的购买',
-                  bannerClass: 'done',
-                  infoRows: [
-                    ...current.infoRows,
-                    { label: '完成时间', value: '2026-04-17 11:18' },
-                  ],
-                }));
-                showToast('✅ 已确认收货');
-                return;
-              }
-              showToast('✅ 已提醒卖家尽快发货');
-            }}
-          >
-            {order.status === 'shipped' ? '确认收货' : order.status === 'done' ? '评价' : '催发货'}
-          </button>
-        ) : null}
       </footer>
 
-      {logisticsOpen ? (
+      {logisticsOpen && order.fulfillment ? (
         <div className={styles.modalOverlay} onClick={() => setLogisticsOpen(false)} role="presentation">
           <div className={styles.modal} onClick={(event) => event.stopPropagation()} role="presentation">
             <div className={styles.modalHandle} />
             <div className={styles.modalTitle}>📦 物流详情</div>
             <div className={styles.logisticsHeader}>
               <div>
-                <div className={styles.logisticsCompany}>{order.express.company}</div>
-                <div className={styles.logisticsNo}>{order.express.no}</div>
+                <div className={styles.logisticsCompany}>普通快递</div>
+                <div className={styles.logisticsNo}>{order.fulfillment.trackingNo || '待分配运单号'}</div>
               </div>
-              <button type="button" className={styles.copyBtn} onClick={() => showToast(`✅ 已复制: ${order.express.no}`)}>
-                <i className="fa-regular fa-copy" />
-                复制
-              </button>
+              {order.fulfillment.trackingNo ? (
+                <button type="button" className={styles.copyBtn} onClick={() => setToast(`已复制: ${order.fulfillment?.trackingNo}`)}>
+                  <i className="fa-regular fa-copy" />
+                  复制
+                </button>
+              ) : null}
             </div>
-            {order.express.logs.map((log) => (
-              <div key={`${log.text}-${log.time}`} className={styles.logisticsItem}>
-                <div className={`${styles.logisticsDot} ${log.active ? styles.logisticsActive : styles.logisticsDone}`}>
-                  <i className={`fa-solid ${log.active ? 'fa-location-dot' : 'fa-check'}`} />
+            {timeline.map((log, index) => (
+              <div key={log.id} className={styles.logisticsItem}>
+                <div className={`${styles.logisticsDot} ${index === timeline.length - 1 ? styles.logisticsActive : styles.logisticsDone}`}>
+                  <i className={`fa-solid ${index === timeline.length - 1 ? 'fa-location-dot' : 'fa-check'}`} />
                 </div>
                 <div>
-                  <div className={styles.logisticsText}>{log.text}</div>
-                  <div className={styles.logisticsTime}>{log.time}</div>
+                  <div className={styles.logisticsText}>{log.status}</div>
+                  <div className={styles.logisticsTime}>{log.createdAt.slice(0, 16).replace('T', ' ')}</div>
                 </div>
               </div>
             ))}
@@ -473,5 +376,13 @@ export default function OrderDetailPage() {
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </div>
+  );
+}
+
+export default function OrderDetailPage() {
+  return (
+    <Suspense fallback={<div className={styles.page} />}>
+      <OrderDetailPageInner />
+    </Suspense>
   );
 }

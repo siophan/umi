@@ -1,17 +1,36 @@
 import type {
+  BrandId,
+  CategoryId,
+  ChatMessageId,
   CoinLedgerEntry,
+  EntityId,
+  GuessId,
   GuessSummary,
+  NotificationId,
   OrderSummary,
+  ProductId,
   ProductSummary,
+  ShopId,
+  UserId,
   UserSummary,
   WarehouseItem,
 } from './domain';
 
 export interface ApiEnvelope<T> {
-  success: boolean;
+  success: true;
   data: T;
   message?: string;
 }
+
+export interface ApiErrorEnvelope {
+  success: false;
+  code: string;
+  message: string;
+  status: number;
+  fields?: Record<string, string>;
+}
+
+export type ApiResponse<T> = ApiEnvelope<T> | ApiErrorEnvelope;
 
 export type AuthMethod = 'code' | 'password';
 export type SmsBizType = 'register' | 'login' | 'reset_password';
@@ -29,13 +48,13 @@ export interface LoginResult {
 }
 
 export interface AdminRoleItem {
-  id: string;
+  id: EntityId;
   code: string;
   name: string;
 }
 
 export interface AdminProfile {
-  id: string;
+  id: EntityId;
   username: string;
   displayName: string;
   phoneNumber?: string | null;
@@ -43,6 +62,7 @@ export interface AdminProfile {
   status: 'active' | 'disabled';
   roles: AdminRoleItem[];
   permissions: string[];
+  permissionModules: string[];
 }
 
 export interface AdminLoginPayload {
@@ -85,6 +105,120 @@ export interface ChangePasswordResult {
   success: true;
 }
 
+export type AdminCategoryBizTypeCode = 10 | 20 | 30 | 40;
+export type AdminCategoryStatusValue = 'active' | 'disabled';
+
+export interface CreateAdminCategoryPayload {
+  bizTypeCode: AdminCategoryBizTypeCode;
+  parentId?: CategoryId | null;
+  name: string;
+  iconUrl?: string | null;
+  description?: string | null;
+  sort?: number;
+  status?: AdminCategoryStatusValue;
+}
+
+export interface UpdateAdminCategoryPayload {
+  name: string;
+  iconUrl?: string | null;
+  description?: string | null;
+  sort?: number;
+}
+
+export interface UpdateAdminCategoryStatusPayload {
+  status: AdminCategoryStatusValue;
+}
+
+export interface UpdateAdminCategoryResult {
+  id: CategoryId;
+  status: AdminCategoryStatusValue;
+}
+
+export interface UpdateAdminSystemUserStatusPayload {
+  status: 'active' | 'disabled';
+}
+
+export interface UpdateAdminSystemUserStatusResult {
+  id: EntityId;
+  status: 'active' | 'disabled';
+}
+
+export interface CreateAdminSystemUserPayload {
+  username: string;
+  password: string;
+  displayName: string;
+  phoneNumber?: string | null;
+  email?: string | null;
+  roleIds: EntityId[];
+  status?: 'active' | 'disabled';
+}
+
+export interface UpdateAdminSystemUserPayload {
+  username: string;
+  displayName: string;
+  phoneNumber?: string | null;
+  email?: string | null;
+  roleIds: EntityId[];
+}
+
+export interface ResetAdminSystemUserPasswordPayload {
+  newPassword: string;
+}
+
+export interface AdminSystemUserMutationResult {
+  id: EntityId;
+}
+
+export interface UpdateAdminRoleStatusPayload {
+  status: 'active' | 'disabled';
+}
+
+export interface UpdateAdminRoleStatusResult {
+  id: EntityId;
+  status: 'active' | 'disabled';
+}
+
+export interface UpdateAdminRolePermissionsPayload {
+  permissionIds: EntityId[];
+}
+
+export interface UpdateAdminRolePermissionsResult {
+  id: EntityId;
+  permissionIds: EntityId[];
+}
+
+export interface UpdateAdminPermissionStatusPayload {
+  status: 'active' | 'disabled';
+}
+
+export interface UpdateAdminPermissionStatusResult {
+  id: EntityId;
+  status: 'active' | 'disabled';
+}
+
+export interface CreateAdminPermissionPayload {
+  code: string;
+  name: string;
+  module: string;
+  action: 'view' | 'create' | 'edit' | 'manage';
+  parentId?: EntityId | null;
+  sort?: number;
+  status?: 'active' | 'disabled';
+}
+
+export interface UpdateAdminPermissionPayload {
+  code: string;
+  name: string;
+  module: string;
+  action: 'view' | 'create' | 'edit' | 'manage';
+  parentId?: EntityId | null;
+  sort?: number;
+}
+
+export interface AdminPermissionMutationResult {
+  id: EntityId;
+}
+
 export interface UpdateMePayload {
   name?: string;
   avatar?: string | null;
@@ -97,7 +231,7 @@ export interface UpdateMePayload {
 }
 
 export interface MePostItem {
-  id: string;
+  id: EntityId;
   title: string;
   desc: string;
   tag: string | null;
@@ -124,14 +258,14 @@ export interface PublicUserActivityResult {
 }
 
 export interface CommunityFeedGuessInfo {
-  id: string;
+  id: GuessId;
   options: [string, string];
   participants: number;
   pcts: [number, number];
 }
 
 export interface CommunityFeedItem {
-  id: string;
+  id: EntityId;
   title: string;
   desc: string;
   tag: string | null;
@@ -145,7 +279,7 @@ export interface CommunityFeedItem {
   liked: boolean;
   bookmarked: boolean;
   author: {
-    id: string;
+    id: UserId;
     uid: string;
     name: string;
     avatar?: string | null;
@@ -158,8 +292,10 @@ export interface CommunityFeedResult {
   items: CommunityFeedItem[];
 }
 
+export type CommunityCommentSort = 'hot' | 'newest';
+
 export interface CommunityCommentItem {
-  id: string;
+  id: EntityId;
   authorName: string;
   authorUid: string;
   authorAvatar?: string | null;
@@ -176,18 +312,23 @@ export interface CommunityPostDetailResult {
   related: CommunityFeedItem[];
 }
 
+export interface CreateCommunityReportPayload {
+  reasonType: 10 | 20 | 30 | 40 | 90;
+  reasonDetail?: string | null;
+}
+
 export interface CreateCommunityPostPayload {
   content: string;
   tag?: string | null;
   scope?: 'public' | 'followers' | 'private';
-  guessId?: string | null;
+  guessId?: GuessId | null;
   location?: string | null;
   images?: string[];
 }
 
 export interface CreateCommunityCommentPayload {
   content: string;
-  parentId?: string | null;
+  parentId?: EntityId | null;
 }
 
 export interface CommunitySearchResult {
@@ -206,6 +347,48 @@ export interface CommunityDiscoveryResult {
   hotTopics: CommunityDiscoveryTopic[];
 }
 
+export interface BannerItem {
+  id: EntityId;
+  position: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+  targetType: 'guess' | 'post' | 'product' | 'shop' | 'external';
+  targetId: EntityId | null;
+  actionUrl: string | null;
+  sort: number;
+  targetPath: string | null;
+  guess: GuessSummary | null;
+}
+
+export interface BannerListResult {
+  items: BannerItem[];
+}
+
+export type RankingType = 'winRate' | 'guessWins' | 'inviteCount';
+export type RankingPeriodType = 'daily' | 'weekly' | 'monthly' | 'allTime';
+
+export interface RankingItem {
+  rank: number;
+  userId: UserId;
+  nickname: string;
+  avatar: string | null;
+  level: number;
+  value: string;
+  score: number;
+  type: RankingType;
+  periodType: RankingPeriodType;
+  periodValue: string;
+}
+
+export interface RankingListResult {
+  items: RankingItem[];
+  total: number;
+  type: RankingType;
+  periodType: RankingPeriodType;
+  periodValue: string;
+}
+
 export interface MeSummaryResult {
   activeOrderCount: number;
   warehouseItemCount: number;
@@ -213,7 +396,7 @@ export interface MeSummaryResult {
 }
 
 export interface NotificationItem {
-  id: number;
+  id: NotificationId;
   type: 'guess' | 'social' | 'system' | 'order';
   read: boolean;
   title: string;
@@ -226,7 +409,7 @@ export interface NotificationListResult {
 }
 
 export interface SocialUserItem {
-  id: string;
+  id: UserId;
   uid: string;
   name: string;
   avatar?: string | null;
@@ -250,7 +433,7 @@ export interface SocialOverviewResult {
 }
 
 export interface UserSearchItem {
-  id: string;
+  id: UserId;
   uid: string;
   name: string;
   avatar?: string | null;
@@ -270,7 +453,7 @@ export interface UserSearchResult {
 }
 
 export interface ChatConversationItem {
-  userId: string;
+  userId: UserId;
   name: string;
   avatar?: string | null;
   unreadCount: number;
@@ -283,10 +466,10 @@ export interface ChatConversationListResult {
 }
 
 export interface ChatMessageItem {
-  id: number;
+  id: ChatMessageId;
   from: 'me' | 'other';
-  senderId: string;
-  receiverId: string;
+  senderId: UserId;
+  receiverId: UserId;
   content: string;
   read: boolean;
   createdAt: string;
@@ -342,14 +525,14 @@ export interface UpdateUserBanPayload {
 }
 
 export interface UpdateUserBanResult {
-  id: string;
+  id: UserId;
   banned: boolean;
 }
 
 export interface ProductFeedItem {
-  id: string;
+  id: ProductId;
   name: string;
-  categoryId: string | null;
+  categoryId: CategoryId | null;
   category: string;
   price: number;
   originalPrice: number;
@@ -368,13 +551,14 @@ export interface ProductFeedItem {
   tags: string[];
   collab: string | null;
   isNew: boolean;
+  favorited: boolean;
 }
 
 export interface ProductCategoryItem {
-  id: string;
+  id: CategoryId;
   name: string;
   iconUrl: string | null;
-  parentId: string | null;
+  parentId: CategoryId | null;
   level: number;
   sort: number;
   count: number;
@@ -383,6 +567,127 @@ export interface ProductCategoryItem {
 export interface ProductListResult {
   items: ProductFeedItem[];
   categories: ProductCategoryItem[];
+}
+
+export type SearchTab = 'all' | 'product' | 'guess';
+export type SearchSort = 'default' | 'sales' | 'price-asc' | 'price-desc' | 'rating';
+
+export interface SearchHotKeywordItem {
+  keyword: string;
+  rank: number;
+  badge: '' | '热' | '新' | '↑';
+  source: 'product' | 'guess';
+}
+
+export interface SearchHotResult {
+  items: SearchHotKeywordItem[];
+}
+
+export interface SearchSuggestItem {
+  text: string;
+  type: 'product' | 'guess' | 'brand';
+}
+
+export interface SearchSuggestResult {
+  query: string;
+  items: SearchSuggestItem[];
+}
+
+export interface SearchResult {
+  query: string;
+  tab: SearchTab;
+  sort: SearchSort;
+  products: {
+    items: ProductFeedItem[];
+    total: number;
+  };
+  guesses: {
+    items: GuessSummary[];
+    total: number;
+  };
+}
+
+export interface CartItem {
+  id: EntityId;
+  productId: ProductId;
+  shopId: ShopId | null;
+  brand: string;
+  shop: string;
+  shopLogo: string;
+  name: string;
+  specs: string;
+  img: string;
+  price: number;
+  originalPrice: number;
+  quantity: number;
+  checked: boolean;
+  stock: number;
+  status: 'active' | 'unavailable';
+}
+
+export interface CartListResult {
+  items: CartItem[];
+}
+
+export interface AddCartItemPayload {
+  productId: ProductId;
+  quantity?: number;
+  specs?: string | null;
+  checked?: boolean;
+}
+
+export interface UpdateCartItemPayload {
+  quantity?: number;
+  checked?: boolean;
+}
+
+export interface CartMutationResult {
+  success: true;
+  id: EntityId;
+}
+
+export interface UserAddressItem {
+  id: EntityId;
+  name: string;
+  phone: string;
+  province: string;
+  city: string;
+  district: string;
+  detail: string;
+  tag: string | null;
+  isDefault: boolean;
+}
+
+export interface AddressListResult {
+  items: UserAddressItem[];
+}
+
+export interface AddressPayload {
+  name: string;
+  phone: string;
+  province: string;
+  city: string;
+  district: string;
+  detail: string;
+  tag?: string | null;
+  isDefault?: boolean;
+}
+
+export interface CouponListItem {
+  id: EntityId;
+  couponNo: string;
+  name: string;
+  amount: number;
+  type: 'amount' | 'percent' | 'shipping';
+  condition: string;
+  expireAt: string | null;
+  status: 'unused' | 'locked' | 'used' | 'expired';
+  sourceType: number;
+  source: string;
+}
+
+export interface CouponListResult {
+  items: CouponListItem[];
 }
 
 export interface GuessHistoryStats {
@@ -395,8 +700,8 @@ export interface GuessHistoryStats {
 }
 
 export interface GuessHistoryActiveItem {
-  betId: string;
-  guessId: string;
+  betId: EntityId;
+  guessId: GuessId;
   title: string;
   participants: number;
   endTime: string;
@@ -406,8 +711,8 @@ export interface GuessHistoryActiveItem {
 }
 
 export interface GuessHistoryRecordItem {
-  betId: string;
-  guessId: string;
+  betId: EntityId;
+  guessId: GuessId;
   title: string;
   date: string;
   choiceText: string;
@@ -417,8 +722,8 @@ export interface GuessHistoryRecordItem {
 }
 
 export interface GuessHistoryPkItem {
-  betId: string;
-  guessId: string;
+  betId: EntityId;
+  guessId: GuessId;
   title: string;
   outcome: 'won' | 'lost';
   leftName: string;
@@ -435,8 +740,89 @@ export interface GuessHistoryResult {
   pk: GuessHistoryPkItem[];
 }
 
+export interface LiveGuessSummary {
+  id: GuessId;
+  title: string;
+  category: string | null;
+  options: string[];
+  odds: number[];
+  pcts: number[];
+  endTime: string | null;
+}
+
+export interface LiveListItem {
+  id: EntityId;
+  title: string;
+  imageUrl: string | null;
+  status: string | null;
+  startTime: string | null;
+  hostId: UserId | null;
+  hostName: string;
+  hostAvatar: string | null;
+  viewers: number;
+  guessCount: number;
+  participants: number;
+  currentGuess: LiveGuessSummary | null;
+}
+
+export interface LiveListResult {
+  items: LiveListItem[];
+}
+
+export type LiveDetailResult = LiveListItem;
+
 export interface OrderListResult {
   items: OrderSummary[];
+}
+
+export interface CreateOrderPayload {
+  source: 'product' | 'cart';
+  addressId: EntityId;
+  couponId?: EntityId | null;
+  paymentMethod?: 'wechat' | 'alipay';
+  note?: string | null;
+  productId?: ProductId;
+  quantity?: number;
+  cartItemIds?: EntityId[];
+}
+
+export interface CreateOrderResult {
+  id: EntityId;
+}
+
+export interface ConfirmOrderResult {
+  success: true;
+  id: EntityId;
+  status: 'completed';
+}
+
+export interface OrderDetailResult extends OrderSummary {
+  orderSn: string;
+  originalAmount: number;
+  couponDiscount: number;
+  address: UserAddressItem | null;
+  coupon: CouponListItem | null;
+  fulfillment: {
+    id: EntityId;
+    status: 'pending' | 'processing' | 'shipping' | 'completed' | 'cancelled';
+    receiverName: string;
+    phoneNumber: string;
+    province: string;
+    city: string;
+    district: string;
+    detailAddress: string;
+    shippingType: number | null;
+    shippingFee: number;
+    trackingNo: string | null;
+    shippedAt: string | null;
+    completedAt: string | null;
+  } | null;
+  logs: Array<{
+    id: EntityId;
+    status: string;
+    note: string | null;
+    createdAt: string;
+  }>;
 }
 
 export interface WarehouseListResult {
@@ -445,13 +831,14 @@ export interface WarehouseListResult {
 
 export interface ProductDetailResult {
   product: ProductSummary & {
-    shopId: string | null;
+    shopId: ShopId | null;
     shopName: string | null;
     images: string[];
     originalPrice: number;
     stock: number;
     tags: string[];
     description: string;
+    favorited: boolean;
   };
   activeGuess: GuessSummary | null;
   warehouseItems: WarehouseItem[];
@@ -459,15 +846,15 @@ export interface ProductDetailResult {
 }
 
 export interface MyShopBrandAuthItem {
-  id: string;
-  brandId?: string;
+  id: EntityId;
+  brandId?: BrandId;
   brandName: string;
   status: string;
   createdAt: string;
 }
 
 export interface MyShopProductItem {
-  id: string;
+  id: ProductId;
   name: string;
   brand: string | null;
   price: number;
@@ -476,15 +863,15 @@ export interface MyShopProductItem {
 }
 
 export interface ShopCategoryOption {
-  id: string;
+  id: CategoryId;
   name: string;
 }
 
 export interface ShopApplicationItem {
-  id: string;
+  id: EntityId;
   applyNo: string;
   shopName: string;
-  categoryId: string | null;
+  categoryId: CategoryId | null;
   categoryName: string | null;
   reason: string | null;
   status: 'pending' | 'approved' | 'rejected';
@@ -496,7 +883,7 @@ export interface ShopApplicationItem {
 export interface ShopStatusResult {
   status: 'none' | 'pending' | 'rejected' | 'active';
   shop: {
-    id: string;
+    id: ShopId;
     name: string;
     status: string;
   } | null;
@@ -506,19 +893,19 @@ export interface ShopStatusResult {
 
 export interface SubmitShopApplicationPayload {
   shopName: string;
-  categoryId: string;
+  categoryId: CategoryId;
   reason: string;
 }
 
 export interface SubmitShopApplicationResult {
-  id: string;
+  id: EntityId;
   applyNo: string;
   status: 'pending';
 }
 
 export interface MyShopResult {
   shop: {
-    id: string;
+    id: ShopId;
     name: string;
     category: string | null;
     description: string | null;
@@ -534,16 +921,16 @@ export interface MyShopResult {
 }
 
 export interface PublicShopGuessItem {
-  id: string;
+  id: GuessId;
   title: string;
   votes: number[];
   options: string[];
-  relatedProductId: string | null;
+  relatedProductId: ProductId | null;
 }
 
 export interface PublicShopDetailResult {
   shop: {
-    id: string;
+    id: ShopId;
     name: string;
     category: string | null;
     description: string | null;
@@ -557,7 +944,7 @@ export interface PublicShopDetailResult {
     brandAuthCount: number;
   } | null;
   products: Array<{
-    id: string;
+    id: ProductId;
     name: string;
     price: number;
     originalPrice: number;
@@ -572,7 +959,7 @@ export interface PublicShopDetailResult {
 }
 
 export interface AvailableBrandItem {
-  id: string;
+  id: BrandId;
   name: string;
   logo: string | null;
   category: string | null;
@@ -587,19 +974,19 @@ export interface BrandAuthOverviewResult {
 }
 
 export interface SubmitBrandAuthApplicationPayload {
-  brandId: string;
+  brandId: BrandId;
   reason: string;
   license?: string | null;
 }
 
 export interface SubmitBrandAuthApplicationResult {
-  id: string;
+  id: EntityId;
   status: string;
 }
 
 export interface BrandProductItem {
-  id: string;
-  brandId: string;
+  id: ProductId;
+  brandId: BrandId;
   brandName: string;
   name: string;
   category: string | null;
@@ -614,8 +1001,8 @@ export interface BrandProductListResult {
 }
 
 export interface AddShopProductsPayload {
-  brandId: string;
-  brandProductIds: string[];
+  brandId: BrandId;
+  brandProductIds: ProductId[];
 }
 
 export interface AddShopProductsResult {

@@ -42,8 +42,8 @@
 
 - workspace 已完成初始化并通过 `pnpm typecheck`
 - `apps/api` 已从最小骨架推进到多模块真实读写，Swagger 入口为 `/docs`
-- `apps/web` 已覆盖旧静态页主要用户路径，`mall / me / community / user / friends / notifications / chat / shop / guess / product` 等高频页已多轮收口
-- `apps/admin` 已有管理台壳层和模块面板骨架
+- `apps/web` 已覆盖旧静态页主要用户路径，`mall / cart / me / community / user / friends / notifications / chat / shop / guess / product` 等高频页已多轮收口
+- `apps/admin` 已完成路由拆分、单页单文件收口和按业务 API 拆分，具备 `dashboard / users / products / guesses / orders / warehouse / system / marketing` 等页面骨架
 - `packages/shared` 已抽出领域类型、状态枚举和 API 契约
 
 ## 已落地模块
@@ -56,39 +56,51 @@
 - `POST /api/auth/send-code`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
-- `GET /api/auth/me`
-- `PUT /api/auth/me`
-- `GET /api/auth/me/activity`
-- `GET /api/auth/me/summary`
-- `GET /api/auth/users/search`
-- `GET /api/auth/users/:id`
-- `GET /api/auth/users/:id/activity`
-- `POST /api/auth/users/:id/follow`
-- `DELETE /api/auth/users/:id/follow`
-- `GET /api/auth/notifications`
-- `POST /api/auth/notifications/read-all`
-- `POST /api/auth/notifications/:id/read`
-- `GET /api/auth/social`
-- `GET /api/auth/chats`
-- `GET /api/auth/chats/:userId`
-- `POST /api/auth/chats/:userId`
-- `GET /api/auth/community/feed`
-- `GET /api/auth/community/discovery`
-- `GET /api/auth/community/search`
-- `POST /api/auth/community/posts`
-- `POST /api/auth/community/posts/:id/repost`
-- `GET /api/auth/community/posts/:id`
-- `POST /api/auth/community/posts/:id/comments`
-- `POST /api/auth/community/posts/:id/like`
-- `DELETE /api/auth/community/posts/:id/like`
-- `POST /api/auth/community/posts/:id/bookmark`
-- `DELETE /api/auth/community/posts/:id/bookmark`
+- `POST /api/auth/change-password`
+- `POST /api/auth/logout`
+- `GET /api/users/me`
+- `PUT /api/users/me`
+- `GET /api/users/me/activity`
+- `GET /api/users/me/summary`
+- `GET /api/users/search`
+- `GET /api/users/:id`
+- `GET /api/users/:id/activity`
+- `POST /api/users/:id/follow`
+- `DELETE /api/users/:id/follow`
+- `GET /api/notifications`
+- `POST /api/notifications/read-all`
+- `POST /api/notifications/:id/read`
+- `GET /api/social`
+- `POST /api/social/requests/:id/accept`
+- `POST /api/social/requests/:id/reject`
+- `GET /api/chats`
+- `GET /api/chats/:userId`
+- `POST /api/chats/:userId`
+- `GET /api/community/feed`
+- `GET /api/community/discovery`
+- `GET /api/community/search`
+- `POST /api/community/posts`
+- `POST /api/community/posts/:id/repost`
+- `GET /api/community/posts/:id`
+- `POST /api/community/posts/:id/comments`
+- `POST /api/community/comments/:id/like`
+- `DELETE /api/community/comments/:id/like`
+- `POST /api/community/posts/:id/like`
+- `DELETE /api/community/posts/:id/like`
+- `POST /api/community/posts/:id/bookmark`
+- `DELETE /api/community/posts/:id/bookmark`
 - `GET /api/guesses`
 - `GET /api/guesses/:id`
 - `GET /api/guesses/user/history`
 - `GET /api/guesses/:id/stats`
 - `GET /api/products`
 - `GET /api/products/:id`
+- `POST /api/products/:id/favorite`
+- `DELETE /api/products/:id/favorite`
+- `GET /api/cart`
+- `POST /api/cart/items`
+- `PUT /api/cart/items/:id`
+- `DELETE /api/cart/items/:id`
 - `GET /api/orders`
 - `GET /api/orders/:id`
 - `GET /api/shops/me`
@@ -103,11 +115,23 @@
 - `GET /api/warehouse/physical`
 - `GET /api/warehouse/admin/stats`
 - `GET /api/admin/dashboard/stats`
+- `POST /api/admin/auth/login`
+- `GET /api/admin/auth/me`
+- `POST /api/admin/auth/logout`
+- `POST /api/admin/auth/change-password`
 - `GET /api/admin/users`
 - `GET /api/admin/guesses`
 - `GET /api/admin/orders`
 
-当前状态不是“接口全是 demo”。用户端高频链路里，认证、个人资料、通知、聊天、社交、社区、竞猜列表/详情、商品列表/搜索/详情、订单列表、仓库、店铺申请与品牌授权都已经有真实接口承接；仍然偏 demo 的主要是 Admin、订单详情和部分次级业务页。
+当前状态不是“接口全是 demo”。用户端高频链路里，认证、个人资料、通知、聊天、社交、社区、竞猜列表/详情、商品列表/搜索/详情、商品收藏、购物车、订单列表、仓库、店铺申请与品牌授权都已经有真实接口承接；仍然偏 demo 的主要是 Admin、订单详情和部分次级业务页。
+
+## API 契约约定
+
+- OpenAPI 装配入口是 `apps/api/src/routes/openapi.ts`，业务 `paths / schemas` 已拆到 `apps/api/src/routes/openapi/`
+- monorepo workspace 包名统一使用 `@umi/*`
+- JSON 主键统一按 `@umi/shared` 的 `EntityId` 传输，语义是 `bigint-as-string`
+- 错误响应统一走 `ApiErrorEnvelope`
+- 受保护用户接口优先使用 `requireUser`，后台接口优先使用 `requireAdmin`
 
 ### Web
 
@@ -153,9 +177,9 @@ pnpm dev
 单独启动：
 
 ```bash
-pnpm --filter @joy/api dev
-pnpm --filter @joy/web dev
-pnpm --filter @joy/admin dev
+pnpm --filter @umi/api dev
+pnpm --filter @umi/web dev
+pnpm --filter @umi/admin dev
 ```
 
 ## 当前约束
@@ -165,12 +189,12 @@ pnpm --filter @joy/admin dev
 - 不在数据库层依赖外键，引用关系由应用层维护
 - 资金、订单、竞猜、仓库链路优先于次要功能
 - `apps/api` 的在线调试入口统一使用 `/docs`
-- 新增或修改 API 时，同步更新 `apps/api/src/routes/openapi.ts`
+- 新增或修改 API 时，同步更新 `apps/api/src/routes/openapi/` 对应模块和装配入口
 
 ## 下一阶段
 
 1. 继续把剩余次级页面从 demo / fallback 收到真实接口
 2. 在 `apps/api` 继续补事务、权限、状态校验和写操作闭环
-3. 清理社区、商城活动位、订单详情等页面的残留占位交互或前端派生展示
+3. 清理社区、商城活动位、订单详情等页面的残留占位交互或前端派生展示，继续把 `mall` 的活动位/标签派生收口成更稳定的数据源
 4. 在 `apps/admin` 接竞猜审核、开奖、订单履约
 5. 继续补文档，保证新线程不按旧状态误判

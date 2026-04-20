@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { NotificationItem } from '@joy/shared';
+import type { NotificationItem } from '@umi/shared';
 
-import { fetchNotifications, markAllNotificationsRead, markNotificationRead } from '../../lib/api';
+import { fetchNotifications, markAllNotificationsRead, markNotificationRead } from '../../lib/api/notifications';
 import styles from './page.module.css';
 
 const icons: Record<'guess' | 'social' | 'system' | 'order', string> = {

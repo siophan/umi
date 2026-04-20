@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import type mysql from 'mysql2/promise';
-import type { GuessHistoryResult, GuessListResult, GuessSummary, ProductSummary } from '@joy/shared';
+import { toEntityId, type GuessHistoryResult, type GuessListResult, type GuessSummary, type ProductSummary } from '@umi/shared';
 
+import { getRequestUser, requireUser } from '../../lib/auth';
+import { HttpError, asyncHandler } from '../../lib/errors';
 import { getDbPool } from '../../lib/db';
 import { ok } from '../../lib/http';
-import { getUserByToken } from '../auth/store';
 
 export const guessRouter: ExpressRouter = Router();
 
@@ -36,10 +37,6 @@ type GuessRow = {
   product_guess_price: number | string | null;
 };
 
-function getBearerToken(authorization?: string) {
-  return authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
-}
-
 type GuessBetRow = {
   id: number | string;
   guess_id: number | string;
@@ -53,6 +50,10 @@ type GuessBetRow = {
   guess_end_time: Date | string;
   result_text: string | null;
 };
+
+function getRouteParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? '';
+}
 
 type GuessOptionRow = {
   guess_id: number | string;
@@ -151,7 +152,7 @@ function buildGuessSummary(
   voteRows: GuessVoteRow[],
 ): GuessSummary {
   const product: ProductSummary = {
-    id: String(row.product_id ?? ''),
+    id: toEntityId(row.product_id ?? 0),
     name: row.product_name || '未命名商品',
     brand: row.brand_name || '未知品牌',
     img: row.product_img || '',
@@ -162,13 +163,13 @@ function buildGuessSummary(
   };
 
   return {
-    id: String(row.id),
+    id: toEntityId(row.id),
     title: row.title,
     status: mapGuessStatus(row.status),
     reviewStatus: mapGuessReviewStatus(row.review_status),
     category: row.category || '热门',
     endTime: new Date(row.end_time).toISOString(),
-    creatorId: String(row.creator_id),
+    creatorId: toEntityId(row.creator_id),
     product,
     options: options.map((option) => ({
       id: `${String(row.id)}-${Number(option.option_index)}`,
@@ -194,9 +195,10 @@ function buildGuessSummary(
   };
 }
 
-async function getGuessRows(whereSql = '', params: Array<string | number> = []) {
+async function getGuessRows(whereSql = '', params: Array<string | number> = [], limit?: number) {
   const db = getDbPool();
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const sqlParams = typeof limit === 'number' ? [...params, limit] : params;
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         g.id,
@@ -220,8 +222,9 @@ async function getGuessRows(whereSql = '', params: Array<string | number> = []) 
       LEFT JOIN category c ON c.id = bp.category_id
       ${whereSql}
       ORDER BY g.created_at DESC, g.id DESC
+      ${typeof limit === 'number' ? 'LIMIT ?' : ''}
     `,
-    params,
+    sqlParams,
   );
 
   return rows as GuessRow[];
@@ -327,8 +330,8 @@ async function getUserHistoryResult(userId: string, userName: string): Promise<G
         0,
       );
       return {
-        betId: String(row.id),
-        guessId: String(row.guess_id),
+        betId: toEntityId(row.id),
+        guessId: toEntityId(row.guess_id),
         title: row.guess_title,
         participants: participantsByGuess.get(String(row.guess_id)) ?? 0,
         endTime: new Date(row.guess_end_time).toISOString(),
@@ -346,8 +349,8 @@ async function getUserHistoryResult(userId: string, userName: string): Promise<G
     const options = optionsByGuess.get(String(row.guess_id)) || [];
     const outcome: GuessHistoryResult['history'][number]['outcome'] = Number(row.status) === BET_WON ? 'won' : 'lost';
     return {
-      betId: String(row.id),
-      guessId: String(row.guess_id),
+      betId: toEntityId(row.id),
+      guessId: toEntityId(row.guess_id),
       title: row.guess_title,
       date: new Date(row.created_at).toISOString().slice(0, 10),
       choiceText: getChoiceText(row, options),
@@ -363,8 +366,8 @@ async function getUserHistoryResult(userId: string, userName: string): Promise<G
       const options = optionsByGuess.get(String(row.guess_id)) || [];
       const outcome: GuessHistoryResult['pk'][number]['outcome'] = Number(row.status) === BET_WON ? 'won' : 'lost';
       return {
-        betId: String(row.id),
-        guessId: String(row.guess_id),
+        betId: toEntityId(row.id),
+        guessId: toEntityId(row.guess_id),
         title: row.guess_title,
         outcome,
         leftName: userName,
@@ -392,39 +395,46 @@ async function getUserHistoryResult(userId: string, userName: string): Promise<G
   };
 }
 
-async function handleUserHistoryRequest(
-  request: { headers: { authorization?: string } },
-  response: {
-    status: (code: number) => { json: (body: { success: false; message: string }) => void };
-  },
-  done: (result: GuessHistoryResult) => void,
-) {
-  const token = getBearerToken(request.headers.authorization);
-  const user = token ? await getUserByToken(token) : null;
+guessRouter.get(
+  '/user/history',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await getUserHistoryResult(user.id, user.name));
+  }),
+);
 
-  if (!user) {
-    response.status(401).json({ success: false, message: '请先登录' });
-    return;
-  }
+guessRouter.get(
+  '/my-bets',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await getUserHistoryResult(user.id, user.name));
+  }),
+);
 
-  done(await getUserHistoryResult(user.id, user.name));
-}
-
-guessRouter.get('/user/history', async (request, response) => {
-  await handleUserHistoryRequest(request, response, (result) => ok(response, result));
-});
-
-guessRouter.get('/my-bets', async (request, response) => {
-  await handleUserHistoryRequest(request, response, (result) => ok(response, result));
-});
-
-guessRouter.get('/', async (_request, response) => {
-  const rows = await getGuessRows('WHERE g.review_status = ? AND g.status IN (?, ?, ?)', [
+guessRouter.get('/', async (request, response) => {
+  const query = typeof request.query.q === 'string' ? request.query.q.trim() : '';
+  const requestedLimit =
+    typeof request.query.limit === 'string' ? Number.parseInt(request.query.limit, 10) : NaN;
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), 100)
+    : undefined;
+  const whereClauses = ['g.review_status = ?', 'g.status IN (?, ?, ?)'];
+  const params: Array<string | number> = [
     REVIEW_APPROVED,
     GUESS_PENDING_REVIEW,
     GUESS_ACTIVE,
     GUESS_SETTLED,
-  ]);
+  ];
+
+  if (query) {
+    const like = `%${query}%`;
+    whereClauses.push('(g.title LIKE ? OR p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)');
+    params.push(like, like, like, like);
+  }
+
+  const rows = await getGuessRows(`WHERE ${whereClauses.join(' AND ')}`, params, limit);
   const guessIds = rows.map((row) => String(row.id));
   const [options, votes] = await Promise.all([getGuessOptionRows(guessIds), getGuessVoteRows(guessIds)]);
   const optionsByGuess = new Map<string, GuessOptionRow[]>();
@@ -449,35 +459,42 @@ guessRouter.get('/', async (_request, response) => {
   ok(response, { items });
 });
 
-guessRouter.get('/:id', async (request, response) => {
-  const rows = await getGuessRows('WHERE g.id = ?', [request.params.id]);
-  const row = rows[0];
+guessRouter.get(
+  '/:id',
+  asyncHandler(async (request, response) => {
+    const rows = await getGuessRows('WHERE g.id = ?', [getRouteParam(request.params.id)]);
+    const row = rows[0];
 
-  if (!row) {
-    response.status(404).json({ success: false, message: 'Guess not found' });
-    return;
-  }
+    if (!row) {
+      throw new HttpError(404, 'GUESS_NOT_FOUND', 'Guess not found');
+    }
 
-  const [options, votes] = await Promise.all([
-    getGuessOptionRows([String(row.id)]),
-    getGuessVoteRows([String(row.id)]),
-  ]);
+    const [options, votes] = await Promise.all([
+      getGuessOptionRows([String(row.id)]),
+      getGuessVoteRows([String(row.id)]),
+    ]);
 
-  ok(response, buildGuessSummary(row, options, votes));
-});
+    ok(response, buildGuessSummary(row, options, votes));
+  }),
+);
 
-guessRouter.get('/:id/stats', async (request, response) => {
-  const rows = await getGuessRows('WHERE g.id = ?', [request.params.id]);
-  const row = rows[0];
+guessRouter.get(
+  '/:id/stats',
+  asyncHandler(async (request, response) => {
+    const rows = await getGuessRows('WHERE g.id = ?', [getRouteParam(request.params.id)]);
+    const row = rows[0];
 
-  if (!row) {
-    response.status(404).json({ success: false, message: 'Guess not found' });
-    return;
-  }
+    if (!row) {
+      throw new HttpError(404, 'GUESS_NOT_FOUND', 'Guess not found');
+    }
 
-  const votes = await getGuessVoteRows([String(row.id)]);
-  ok(response, {
-    totalVotes: votes.reduce((sum, option) => sum + Number(option.vote_count ?? 0), 0),
-    optionCount: votes.length,
-  });
-});
+    const votes = await getGuessVoteRows([String(row.id)]);
+    ok(response, {
+      totalVotes: votes.reduce(
+        (sum, option) => sum + Number(option.vote_count ?? 0),
+        0,
+      ),
+      optionCount: votes.length,
+    });
+  }),
+);

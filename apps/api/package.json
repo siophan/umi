@@ -1,5 +1,5 @@
 {
-  "name": "@joy/api",
+  "name": "@umi/api",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@joy/shared": "workspace:*",
+    "@umi/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

@@ -1,17 +1,21 @@
 import { createHmac } from 'node:crypto';
+import type { NextFunction, Request, Response } from 'express';
 
 import bcrypt from 'bcryptjs';
 import type mysql from 'mysql2/promise';
 
+import { toEntityId } from '@umi/shared';
 import type {
   AdminLoginPayload,
   AdminLoginResult,
   AdminProfile,
   ChangePasswordPayload,
-} from '@joy/shared';
+} from '@umi/shared';
 
 import { env } from '../../env';
 import { getDbPool } from '../../lib/db';
+import { HttpError } from '../../lib/errors';
+import { ensureAdminPermissionCatalogSynced } from './permission-catalog';
 
 const ADMIN_STATUS_ACTIVE = 10;
 const ADMIN_STATUS_DISABLED = 90;
@@ -36,6 +40,7 @@ type AdminRoleRow = {
 
 type AdminPermissionRow = {
   code: string;
+  module: string | null;
 };
 
 type AdminTokenPayload = {
@@ -157,7 +162,7 @@ async function fetchAdminRoles(adminUserId: string) {
   );
 
   return (rows as AdminRoleRow[]).map((row) => ({
-    id: String(row.id),
+    id: toEntityId(row.id),
     code: row.code,
     name: row.name,
   }));
@@ -167,7 +172,7 @@ async function fetchAdminPermissions(adminUserId: string) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
-      SELECT DISTINCT ap.code
+      SELECT DISTINCT ap.code, ap.module
       FROM admin_user_role aur
       INNER JOIN admin_role ar ON ar.id = aur.role_id
       INNER JOIN admin_role_permission arp ON arp.role_id = ar.id
@@ -180,22 +185,31 @@ async function fetchAdminPermissions(adminUserId: string) {
     [adminUserId, ROLE_STATUS_ACTIVE, PERMISSION_STATUS_ACTIVE],
   );
 
-  return (rows as AdminPermissionRow[]).map((row) => row.code);
+  return rows as AdminPermissionRow[];
 }
 
 async function sanitizeAdminUser(row: AdminUserRow): Promise<AdminProfile> {
-  const roles = await fetchAdminRoles(String(row.id));
-  const permissions = await fetchAdminPermissions(String(row.id));
+  await ensureAdminPermissionCatalogSynced();
+  const adminUserId = toEntityId(row.id);
+  const roles = await fetchAdminRoles(adminUserId);
+  const permissions = await fetchAdminPermissions(adminUserId);
 
   return {
-    id: String(row.id),
+    id: adminUserId,
     username: row.username,
     displayName: row.display_name || row.username,
     phoneNumber: row.phone_number,
     email: row.email,
     status: mapAdminStatus(Number(row.status ?? 0)),
     roles,
-    permissions,
+    permissions: permissions.map((item) => item.code),
+    permissionModules: Array.from(
+      new Set(
+        permissions
+          .map((item) => item.module?.trim() || '')
+          .filter(Boolean),
+      ),
+    ),
   };
 }
 
@@ -244,7 +258,7 @@ export async function adminLogin(
   );
 
   const token = signAdminPayload({
-    adminUserId: String(user.id),
+    adminUserId: String(toEntityId(user.id)),
     exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
   });
 
@@ -308,13 +322,47 @@ export async function logoutAdminByToken(_token: string) {
   return { success: true as const };
 }
 
-export async function requireAdminByAuthorization(authorization?: string) {
+async function resolveAdmin(
+  authorization?: string,
+): Promise<AdminProfile | null> {
   const token = getBearerToken(authorization);
-  const user = token ? await getAdminByToken(token) : null;
+  return token ? getAdminByToken(token) : null;
+}
+
+export async function requireAdminByAuthorization(authorization?: string) {
+  const user = await resolveAdmin(authorization);
 
   if (!user) {
     return { ok: false as const, status: 401, message: '请先登录' };
   }
 
   return { ok: true as const, user };
+}
+
+export async function requireAdmin(
+  request: Request,
+  _response: Response,
+  next: NextFunction,
+) {
+  try {
+    const user = await resolveAdmin(request.headers.authorization);
+
+    if (!user) {
+      next(new HttpError(401, 'ADMIN_AUTH_REQUIRED', '请先登录'));
+      return;
+    }
+
+    request.adminUser = user;
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+export function getRequestAdmin(request: Request): AdminProfile {
+  if (!request.adminUser) {
+    throw new HttpError(401, 'ADMIN_AUTH_REQUIRED', '请先登录');
+  }
+
+  return request.adminUser;
 }

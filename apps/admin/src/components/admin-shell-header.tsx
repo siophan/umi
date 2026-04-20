@@ -6,7 +6,7 @@ import {
   ReloadOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import type { AdminProfile } from '@joy/shared';
+import type { AdminProfile } from '@umi/shared';
 import { Avatar, Breadcrumb, Dropdown, Tooltip, Typography } from 'antd';
 import type { ReactNode } from 'react';
 

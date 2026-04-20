@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { GuessOption, GuessSummary } from '@joy/shared';
+import type { GuessOption, GuessSummary } from '@umi/shared';
 
-import { fetchGuess } from '../../../lib/api';
+import { fetchGuess } from '../../../lib/api/guesses';
 import styles from './page.module.css';
 
 const participants = [

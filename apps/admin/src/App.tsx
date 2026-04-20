@@ -1,4 +1,4 @@
-import type { AdminProfile, ChangePasswordPayload } from '@joy/shared';
+import type { AdminProfile, ChangePasswordPayload } from '@umi/shared';
 import {
   ConfigProvider,
   Form,
@@ -11,7 +11,8 @@ import {
   message,
 } from 'antd';
 import type { MenuProps } from 'antd';
-import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminShellHeader } from './components/admin-shell-header';
 import {
@@ -26,68 +27,52 @@ import {
 import { LoginScreen } from './components/login-screen';
 import {
   findAdminPageMeta,
+  filterAdminMenuTreeByAccess,
+  findFirstAccessibleAdminPath,
   getAdminMenuTree,
+  isAdminPathAccessible,
 } from './lib/admin-navigation';
-import { ContentSystemPage } from './pages/content-system-page';
+import { BrandAppliesPage } from './pages/brand-applies-page';
+import { BrandLibraryPage } from './pages/brand-library-page';
+import { BrandsPage } from './pages/brands-page';
+import { CategoriesPage } from './pages/categories-page';
+import { CommunityCommentsPage } from './pages/community-comments-page';
+import { CommunityPostsPage } from './pages/community-posts-page';
+import { CommunityReportsPage } from './pages/community-reports-page';
 import { DashboardPage } from './pages/dashboard-page';
-import { MarketingPage } from './pages/marketing-page';
-import { OrderFulfillmentPage } from './pages/order-fulfillment-page';
-import { ProductGuessPage } from './pages/product-guess-page';
-import { ProductsPage } from './pages/products-page';
+import { EquityPage } from './pages/equity-page';
+import { FriendGuessesPage } from './pages/friend-guesses-page';
+import { GuessCreatePage } from './pages/guess-create-page';
 import { GuessesPage } from './pages/guesses-page';
+import { LiveDanmakuPage } from './pages/live-danmaku-page';
+import { LiveListPage } from './pages/live-list-page';
+import { MarketingBannersPage } from './pages/marketing-banners-page';
+import { MarketingCheckinPage } from './pages/marketing-checkin-page';
+import { MarketingCouponsPage } from './pages/marketing-coupons-page';
+import { MarketingInvitePage } from './pages/marketing-invite-page';
+import { OrderLogisticsPage } from './pages/order-logistics-page';
 import { OrdersPage } from './pages/orders-page';
-import { UserMerchantPage } from './pages/user-merchant-page';
+import { OrderTransactionsPage } from './pages/order-transactions-page';
+import { PermissionsPage } from './pages/permissions-page';
+import { PkMatchesPage } from './pages/pk-matches-page';
+import { ProductAuthPage } from './pages/product-auth-page';
+import { ProductAuthRecordsPage } from './pages/product-auth-records-page';
+import { ProductsPage } from './pages/products-page';
+import { RolesPage } from './pages/roles-page';
+import { ShopAppliesPage } from './pages/shop-applies-page';
+import { ShopBrandAuthAppliesPage } from './pages/shop-brand-auth-applies-page';
+import { ShopBrandAuthRecordsPage } from './pages/shop-brand-auth-records-page';
+import { ShopProductsPage } from './pages/shop-products-page';
+import { ShopsPage } from './pages/shops-page';
+import { SystemChatsPage } from './pages/system-chats-page';
+import { SystemNotificationsPage } from './pages/system-notifications-page';
+import { SystemRankingsPage } from './pages/system-rankings-page';
+import { SystemUsersPage } from './pages/system-users-page';
 import { UsersPage } from './pages/users-page';
 import { WarehousePage } from './pages/warehouse-page';
+import { WarehouseConsignPage } from './pages/warehouse-consign-page';
 
 const DASHBOARD_PATH = '/dashboard';
-const USERS_LIST_PATH = '/users/list';
-const PRODUCTS_LIST_PATH = '/products/list';
-const GUESSES_LIST_PATH = '/guesses/list';
-const ORDERS_LIST_PATH = '/orders/list';
-const USER_MERCHANT_PATHS = new Set([
-  '/shops/list',
-  '/shops/apply',
-  '/shops/brand-auth',
-  '/shops/brand-auth/records',
-  '/shops/products',
-  '/brands/list',
-  '/brands/apply',
-  '/product-auth/list',
-  '/product-auth/records',
-] as const);
-const PRODUCT_GUESS_PATHS = new Set([
-  '/products/brands',
-  '/guesses/create',
-  '/guesses/friends',
-  '/pk',
-] as const);
-const ORDER_FULFILLMENT_PATHS = new Set([
-  '/orders/transactions',
-  '/orders/logistics',
-  '/warehouse/consign',
-] as const);
-const MARKETING_PATHS = new Set([
-  '/equity',
-  '/marketing/banners',
-  '/marketing/coupons',
-  '/marketing/checkin',
-  '/marketing/invite',
-  '/system/rankings',
-] as const);
-const CONTENT_SYSTEM_PATHS = new Set([
-  '/community/posts',
-  '/community/comments',
-  '/community/reports',
-  '/live/list',
-  '/live/danmaku',
-  '/system/chats',
-  '/system/users',
-  '/system/roles',
-  '/users/permissions',
-  '/system/categories',
-  '/system/notifications',
-] as const);
 const PATH_ALIASES: Record<string, string> = {
   '/users': '/users/list',
   '/products': '/products/list',
@@ -103,6 +88,46 @@ const PATH_ALIASES: Record<string, string> = {
 const MENU_TREE = getAdminMenuTree();
 const SIDER_WIDTH = 256;
 const SIDER_COLLAPSED_WIDTH = 64;
+const PAGE_COMPONENTS: Record<string, ComponentType<{ refreshToken?: number }>> = {
+  '/brands/apply': BrandAppliesPage,
+  '/brands/list': BrandsPage,
+  '/community/comments': CommunityCommentsPage,
+  '/community/posts': CommunityPostsPage,
+  '/community/reports': CommunityReportsPage,
+  '/dashboard': DashboardPage,
+  '/equity': EquityPage,
+  '/guesses/create': GuessCreatePage,
+  '/guesses/friends': FriendGuessesPage,
+  '/guesses/list': GuessesPage,
+  '/live/danmaku': LiveDanmakuPage,
+  '/live/list': LiveListPage,
+  '/marketing/banners': MarketingBannersPage,
+  '/marketing/checkin': MarketingCheckinPage,
+  '/marketing/coupons': MarketingCouponsPage,
+  '/marketing/invite': MarketingInvitePage,
+  '/orders/list': OrdersPage,
+  '/orders/logistics': OrderLogisticsPage,
+  '/orders/transactions': OrderTransactionsPage,
+  '/pk': PkMatchesPage,
+  '/product-auth/list': ProductAuthPage,
+  '/product-auth/records': ProductAuthRecordsPage,
+  '/products/brands': BrandLibraryPage,
+  '/products/list': ProductsPage,
+  '/shops/apply': ShopAppliesPage,
+  '/shops/brand-auth': ShopBrandAuthAppliesPage,
+  '/shops/brand-auth/records': ShopBrandAuthRecordsPage,
+  '/shops/list': ShopsPage,
+  '/shops/products': ShopProductsPage,
+  '/system/categories': CategoriesPage,
+  '/system/chats': SystemChatsPage,
+  '/system/notifications': SystemNotificationsPage,
+  '/system/roles': RolesPage,
+  '/system/rankings': SystemRankingsPage,
+  '/system/users': SystemUsersPage,
+  '/users/permissions': PermissionsPage,
+  '/users/list': UsersPage,
+  '/warehouse/consign': WarehouseConsignPage,
+};
 const ADMIN_THEME = {
   token: {
     colorPrimary: '#1677ff',
@@ -215,6 +240,33 @@ export function App() {
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AdminProfile | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const accessibleMenuTree = useMemo(
+    () => (currentUser ? filterAdminMenuTreeByAccess(MENU_TREE, currentUser) : []),
+    [currentUser],
+  );
+  const firstAccessiblePath = useMemo(
+    () => findFirstAccessibleAdminPath(accessibleMenuTree),
+    [accessibleMenuTree],
+  );
+  const activePathAccessible = useMemo(
+    () => (currentUser ? isAdminPathAccessible(activePath, currentUser) : false),
+    [activePath, currentUser],
+  );
+  const visiblePath = activePathAccessible
+    ? activePath
+    : firstAccessiblePath ?? activePath;
+  const activeMenuParentKeys = useMemo(
+    () => findMenuOpenKeys(accessibleMenuTree, visiblePath),
+    [accessibleMenuTree, visiblePath],
+  );
+  const activeMeta = findAdminPageMeta(visiblePath);
+  const menuItems = useMemo(() => toMenuItems(accessibleMenuTree), [accessibleMenuTree]);
+  const breadcrumbItems = [
+    ...(activeMeta.parentName ? [{ title: activeMeta.parentName }] : []),
+    { title: activeMeta.name },
+  ];
+  const pageRefreshToken = refreshNonce;
+  const ActivePage = PAGE_COMPONENTS[visiblePath];
 
   useEffect(() => {
     const syncFromHash = () => {
@@ -273,11 +325,28 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    const nextKeys = findMenuOpenKeys(MENU_TREE, activePath);
     setMenuOpenKeys((currentKeys) =>
-      sameKeys(currentKeys, nextKeys) ? currentKeys : nextKeys,
+      sameKeys(currentKeys, activeMenuParentKeys)
+        ? currentKeys
+        : Array.from(new Set([...currentKeys, ...activeMenuParentKeys])),
     );
-  }, [activePath]);
+  }, [activeMenuParentKeys]);
+
+  useEffect(() => {
+    if (!authenticated || !currentUser) {
+      return;
+    }
+
+    if (firstAccessiblePath && activePath !== visiblePath) {
+      window.location.hash = visiblePath;
+    }
+  }, [
+    activePath,
+    authenticated,
+    currentUser,
+    firstAccessiblePath,
+    visiblePath,
+  ]);
 
   async function handleLogin(values: { username: string; password: string }) {
     setLoginLoading(true);
@@ -378,22 +447,29 @@ export function App() {
     );
   }
 
-  const activeMeta = findAdminPageMeta(activePath);
-  const menuItems = toMenuItems(MENU_TREE);
-  const breadcrumbItems = [
-    ...(activeMeta.parentName ? [{ title: activeMeta.parentName }] : []),
-    { title: activeMeta.name },
-  ];
-  const pageRefreshToken = refreshNonce;
+  if (!firstAccessiblePath) {
+    return (
+      <ConfigProvider theme={ADMIN_THEME}>
+        {contextHolder}
+        <div className="login-screen login-screen--loading">
+          <Result
+            status="403"
+            title="暂无可访问页面"
+            subTitle="当前账号未分配可访问菜单对应的系统权限。"
+          />
+        </div>
+      </ConfigProvider>
+    );
+  }
 
   return (
     <ConfigProvider theme={ADMIN_THEME}>
       {contextHolder}
 
-      <Layout className="joy-admin-layout">
+      <Layout className="umi-admin-layout">
         <Layout.Sider
           breakpoint="lg"
-          className="joy-admin-sider"
+          className="umi-admin-sider"
           collapsed={collapsed}
           collapsedWidth={SIDER_COLLAPSED_WIDTH}
           theme="dark"
@@ -409,7 +485,7 @@ export function App() {
             )}
           </a>
           <Menu
-            className="joy-admin-menu"
+            className="umi-admin-menu"
             inlineCollapsed={collapsed}
             inlineIndent={16}
             items={menuItems}
@@ -425,12 +501,12 @@ export function App() {
               }
             }}
             openKeys={collapsed ? [] : menuOpenKeys}
-            selectedKeys={[activePath]}
+            selectedKeys={[visiblePath]}
             theme="dark"
           />
         </Layout.Sider>
 
-        <Layout className="joy-admin-main">
+        <Layout className="umi-admin-main">
           <AdminShellHeader
             breadcrumbItems={breadcrumbItems}
             collapsed={collapsed}
@@ -443,103 +519,19 @@ export function App() {
             onRefresh={() => void handleRefresh()}
           />
 
-          <div className="joy-admin-page">
-            {activePath === DASHBOARD_PATH ? (
-              <DashboardPage refreshToken={pageRefreshToken} />
-            ) : activePath === USERS_LIST_PATH ? (
-              <UsersPage refreshToken={pageRefreshToken} />
-            ) : activePath === PRODUCTS_LIST_PATH ? (
-              <ProductsPage refreshToken={pageRefreshToken} />
-            ) : activePath === GUESSES_LIST_PATH ? (
-              <GuessesPage refreshToken={pageRefreshToken} />
-            ) : activePath === ORDERS_LIST_PATH ? (
-              <OrdersPage refreshToken={pageRefreshToken} />
-            ) : activePath === '/warehouse/virtual' ||
-              activePath === '/warehouse/physical' ? (
+          <div className="umi-admin-page">
+            {!activePathAccessible && visiblePath === activePath ? (
+              <Result status="403" title="无页面权限" subTitle={activePath} />
+            ) : ActivePage ? (
+              <ActivePage refreshToken={pageRefreshToken} />
+            ) : visiblePath === '/warehouse/virtual' ||
+              visiblePath === '/warehouse/physical' ? (
               <WarehousePage
                 refreshToken={pageRefreshToken}
-                warehouseType={activePath === '/warehouse/virtual' ? 'virtual' : 'physical'}
-              />
-            ) : USER_MERCHANT_PATHS.has(
-                activePath as (typeof USER_MERCHANT_PATHS extends Set<infer T> ? T : never),
-              ) ? (
-              <UserMerchantPage
-                path={
-                  activePath as
-                    | '/shops/list'
-                    | '/shops/apply'
-                    | '/shops/brand-auth'
-                    | '/shops/brand-auth/records'
-                    | '/shops/products'
-                    | '/brands/list'
-                    | '/brands/apply'
-                    | '/product-auth/list'
-                    | '/product-auth/records'
-                }
-                refreshToken={pageRefreshToken}
-              />
-            ) : PRODUCT_GUESS_PATHS.has(
-                activePath as (typeof PRODUCT_GUESS_PATHS extends Set<infer T> ? T : never),
-              ) ? (
-              <ProductGuessPage
-                path={
-                  activePath as
-                    | '/products/brands'
-                    | '/guesses/create'
-                    | '/guesses/friends'
-                    | '/pk'
-                }
-                refreshToken={pageRefreshToken}
-              />
-            ) : ORDER_FULFILLMENT_PATHS.has(
-                activePath as (typeof ORDER_FULFILLMENT_PATHS extends Set<infer T> ? T : never),
-              ) ? (
-              <OrderFulfillmentPage
-                path={
-                  activePath as
-                    | '/orders/transactions'
-                    | '/orders/logistics'
-                    | '/warehouse/consign'
-                }
-                refreshToken={pageRefreshToken}
-              />
-            ) : MARKETING_PATHS.has(
-                activePath as (typeof MARKETING_PATHS extends Set<infer T> ? T : never),
-              ) ? (
-              <MarketingPage
-                path={
-                  activePath as
-                    | '/equity'
-                    | '/marketing/banners'
-                    | '/marketing/coupons'
-                    | '/marketing/checkin'
-                    | '/marketing/invite'
-                    | '/system/rankings'
-                }
-                refreshToken={pageRefreshToken}
-              />
-            ) : CONTENT_SYSTEM_PATHS.has(
-                activePath as (typeof CONTENT_SYSTEM_PATHS extends Set<infer T> ? T : never),
-              ) ? (
-              <ContentSystemPage
-                path={
-                  activePath as
-                    | '/community/posts'
-                    | '/community/comments'
-                    | '/community/reports'
-                    | '/live/list'
-                    | '/live/danmaku'
-                    | '/system/chats'
-                    | '/system/users'
-                    | '/system/roles'
-                    | '/users/permissions'
-                    | '/system/categories'
-                    | '/system/notifications'
-                }
-                refreshToken={pageRefreshToken}
+                warehouseType={visiblePath === '/warehouse/virtual' ? 'virtual' : 'physical'}
               />
             ) : (
-              <Result status="404" title="页面未配置" subTitle={activePath} />
+              <Result status="404" title="页面未配置" subTitle={visiblePath} />
             )}
           </div>
         </Layout>

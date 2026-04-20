@@ -1,13 +1,13 @@
 .page {
   min-height: 100vh;
-  background: #f5f5f8;
-  padding-bottom: 24px;
+  padding-bottom: 32px;
+  background: #fff;
 }
 
 .header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 30;
   display: flex;
   align-items: center;
   height: 48px;
@@ -17,14 +17,14 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.back,
-.action {
+.back {
   width: 32px;
   height: 32px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 50%;
   background: transparent;
   color: #333;
+  font-size: 15px;
 }
 
 .title {
@@ -34,144 +34,191 @@
   font-weight: 700;
 }
 
-.tags {
+.headerActions {
+  width: 32px;
+  height: 32px;
+}
+
+.actionBtn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #333;
+  font-size: 15px;
+}
+
+.tagScroll {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding: 12px 16px;
-  background: #fff;
   scrollbar-width: none;
 }
 
-.tag,
-.tagActive {
-  flex: none;
-  border: 0;
-  background: transparent;
-  padding: 0;
+.tagScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tag {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border: 1px solid #f0f0f0;
+  border-radius: 20px;
+  background: #fff;
+  color: #666;
   font-size: 12px;
   font-weight: 500;
-  color: #666;
 }
 
-.tagActive {
-  color: #ff5722;
-  font-weight: 700;
+.tag.active {
+  border-color: rgba(255, 107, 53, 0.3);
+  background: rgba(255, 107, 53, 0.08);
+  color: #ff6b35;
+  box-shadow: 0 0 12px rgba(255, 107, 53, 0.15);
 }
 
-.section {
-  margin-top: 8px;
+.sectionHeader {
+  padding: 0 16px 12px;
 }
 
 .sectionTitle {
-  padding: 0 16px 12px;
   font-size: 15px;
   font-weight: 800;
   color: #1a1a1a;
 }
 
-.featured {
-  position: relative;
+.featuredWrap {
   margin: 0 16px;
-  overflow: hidden;
-  border-radius: 20px;
-  padding: 0;
-  border: 0;
+}
+
+.liveCard {
+  position: relative;
   display: block;
-  width: calc(100% - 32px);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 20px;
   background: transparent;
   text-align: left;
 }
 
-.featuredImg {
+.liveCard img {
+  display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  display: block;
 }
 
-.overlay {
+.liveOverlay {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 14px;
-  background: linear-gradient(transparent 45%, rgba(0, 0, 0, 0.74));
+  padding: 12px;
+  background: linear-gradient(transparent 50%, rgba(0, 0, 0, 0.7));
 }
 
-.overlayTop {
+.liveTop {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
 }
 
 .liveTag,
-.viewerTag {
+.liveViewers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
   border-radius: 999px;
-  padding: 4px 10px;
+  color: #fff;
   font-size: 12px;
   font-weight: 700;
+}
+
+.liveTagLive {
+  background: #f44336;
+}
+
+.liveTagUpcoming {
+  background: #2196f3;
+}
+
+.liveTagReplay {
+  background: #666;
+}
+
+.liveViewers {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.liveBottom {
   color: #fff;
 }
 
-.liveTag { background: #f44336; }
-.liveTagLive { background: #f44336; }
-.viewerTag { background: rgba(0, 0, 0, 0.48); }
-
-.overlayBottom { color: #fff; }
-
-.featuredTitle {
-  font-size: 18px;
-  font-weight: 800;
+.liveTitle {
+  font-size: 16px;
+  font-weight: 700;
 }
 
-.hostRow {
+.liveHost {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  font-size: 13px;
+  font-size: 14px;
+  opacity: 0.9;
 }
 
-.hostRow img {
+.liveHost img {
   width: 24px;
   height: 24px;
-  border-radius: 999px;
+  border-radius: 50%;
 }
 
-.hostRow em {
+.liveHostMeta {
   margin-left: auto;
-  font-style: normal;
-  opacity: 0.84;
+  font-size: 11px;
 }
 
-.grid {
+.divider {
+  height: 8px;
+  margin: 16px 0 0;
+  background: #f5f5f5;
+}
+
+.liveGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   padding: 0 16px;
 }
 
-.card {
+.liveMini {
   position: relative;
-  overflow: hidden;
-  border-radius: 16px;
-  padding: 0;
-  border: 0;
   display: block;
   width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 16px;
   background: transparent;
   text-align: left;
 }
 
-.card img {
+.liveMini img {
+  display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  display: block;
 }
 
-.cardInfo {
+.liveMiniInfo {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -181,19 +228,20 @@
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
 }
 
-.cardTitle {
+.liveMiniTitle {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
-.cardMeta {
+.liveMiniViewers {
   margin-top: 4px;
   font-size: 10px;
-  opacity: 0.78;
+  opacity: 0.7;
 }
 
-.divider {
-  height: 8px;
-  margin-top: 16px;
-  background: #ededf0;
+.state {
+  padding: 24px 16px;
+  color: #999;
+  font-size: 13px;
+  text-align: center;
 }

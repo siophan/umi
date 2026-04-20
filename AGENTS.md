@@ -64,7 +64,7 @@
 - 不允许“换个名字继续聚合”。如果本质还是中心分发器、全局数据装配、总类型兜一切，就算改名也算违规。
 - 不允许页面继续依赖“业务域总数据对象”做渲染。页面必须自己拿自己的数据，自己管理 `loading / issue / pagination / filters`，而不是吃外层拼好的总 payload。
 - 不允许留死代码、死目录、空目录。旧实现不用了就立即删除，不能保留 `legacy-*`、`admin-page-data` 之类残骸等后面再说。
-- 不允许“半拆”。如果开始拆某一层，就要把引用、类型、构建、空目录、残留文件一起收完，至少保证 `pnpm --filter @joy/admin typecheck` 通过。
+- 不允许“半拆”。如果开始拆某一层，就要把引用、类型、构建、空目录、残留文件一起收完，至少保证 `pnpm --filter @umi/admin typecheck` 通过。
 - 后台页面优先按“单页单文件”组织。不要再为了省事把多个路由长期塞进一个页面文件里；如果暂时合并，只能作为短期过渡，并且下一步要继续拆掉。
 
 ## Architecture Pass Rules
@@ -290,6 +290,10 @@
 - 不要默认 `content_interaction` 还存在，当前是 `post_interaction`
 - 不要把老系统“普通用户登录后靠 `user.role=admin` 进入后台”当成新系统事实
 - 不要默认数据库任务第一步就是查 MySQL；先查 `umi/docs/`
+- 不要把用户一句明确要求，自己扩展成一串“你以为更合理”的子任务
+- 当用户要的结果很明确、但实现路径或范围不明确时，不要自己脑补复杂方案；先按最直接实现落地，存在风险或歧义再和用户确认
+- 不要因为自己觉得“顺手一起改更完整”就擅自扩大改动范围；超出用户当前要求的扩展项必须先确认
+- 不要把简单问题想复杂；先检查是不是一处明确配置、一个开关、一个条件判断就能解决
 
 ## DB Access Policy
 
@@ -310,10 +314,15 @@
 
 - `apps/api` 的在线调试入口是 `/docs`
 - OpenAPI 原始文档是 `/openapi.json`
-- 接口文档实现位置是 `apps/api/src/routes/openapi.ts`
-- 后续线程如果新增或修改 `apps/api` 路由、请求参数、返回结构，必须同步更新 `openapi.ts`
+- OpenAPI 装配入口是 `apps/api/src/routes/openapi.ts`
+- 业务域 `paths / schemas / tags / shared helpers` 已拆到 `apps/api/src/routes/openapi/`
+- monorepo workspace 包名统一使用 `@umi/*`
+- 后续线程如果新增或修改 `apps/api` 路由、请求参数、返回结构，必须同步更新对应 `openapi/` 模块；涉及装配时再改 `openapi.ts`
 - 不单独维护其他零散接口表，默认以 Swagger 为当前 API 测试入口
-- 改完 API 后至少跑一次 `pnpm --filter @joy/api typecheck`
+- 改完 API 后至少跑一次 `pnpm --filter @umi/api typecheck`
+- JSON 主键契约统一按 `@umi/shared` 的 `EntityId` 处理，语义是 `bigint-as-string`
+- 错误响应统一走 `ApiErrorEnvelope`，后端优先抛 `HttpError`
+- 受保护用户接口优先使用 `requireUser`，后台接口优先使用 `requireAdmin`
 
 ## How To Work
 
@@ -322,5 +331,7 @@
 1. 先判断任务是不是 `umi/` 当前工作区任务。
 2. 如果涉及数据库，先读 `umi/docs/db.md` 和 `umi/docs/status-codes.md`。
 3. 如果需要对照老实现，再去看根目录 `backend/`、`admin/`、`frontend/`。
-4. 如果任务涉及 `apps/api` 接口，顺手检查 `/docs` 对应的 `openapi.ts` 是否需要同步更新。
+4. 如果任务涉及 `apps/api` 接口，顺手检查 `/docs` 对应的 `openapi/` 业务模块和装配入口是否需要同步更新。
 5. 没有明确要求时，不要把根目录旧文档当作当前事实来源。
+6. 如果用户目标已经很明确，优先直接完成目标本身，不要先去做“你认为相关”的外围重构或风格统一。
+7. 如果改动方案存在多种合理解释，且结果会明显影响用户预期，先用一句话确认，不要自行猜测。

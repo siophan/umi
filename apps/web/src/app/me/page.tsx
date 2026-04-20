@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { UserSearchItem } from '@joy/shared';
+import type { UserSearchItem } from '@umi/shared';
 
-import { clearAuthToken, fetchMe, fetchMeActivity, fetchMeSummary, logout, searchUsers } from '../../lib/api';
+import { fetchMe, logout } from '../../lib/api/auth';
+import { clearAuthToken } from '../../lib/api/shared';
+import { fetchMeActivity, fetchMeSummary, searchUsers } from '../../lib/api/users';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 
@@ -414,7 +416,7 @@ export default function MePage() {
         <section className={styles.cover}>
           <div className={styles.topbar}>
             <div className={styles.brand}>
-              优米
+              Umi
             </div>
             <div className={styles.actions}>
               <button type="button" aria-label="消息" onClick={() => router.push('/chat')}>
@@ -649,9 +651,9 @@ export default function MePage() {
                     <span className={styles.settingsItemText}>意见反馈</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
-                  <button className={styles.settingsItem} type="button" onClick={() => setToast('关于优米 v2.6.0')}>
+                  <button className={styles.settingsItem} type="button" onClick={() => setToast('关于Umi v2.6.0')}>
                     <span className={`${styles.settingsItemIcon} ${styles.iconSlate}`}><i className="fa-solid fa-circle-info" /></span>
-                    <span className={styles.settingsItemText}>关于优米</span>
+                    <span className={styles.settingsItemText}>关于Umi</span>
                     <span className={styles.settingsItemVal}>v2.6.0</span>
                     <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                   </button>
@@ -684,7 +686,7 @@ export default function MePage() {
               </div>
 
               <div className={styles.settingsFooter}>
-                <div className={styles.settingsVersion}>优米 v2.6.0 · Made with ❤️</div>
+                <div className={styles.settingsVersion}>Umi v2.6.0 · Made with ❤️</div>
               </div>
             </aside>
           </div>

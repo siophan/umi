@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ProductCategoryItem, ProductFeedItem } from '@joy/shared';
+import type { ProductCategoryItem, ProductFeedItem } from '@umi/shared';
 
-import { fetchProductList } from '../lib/api';
+import { fetchCart } from '../lib/api/cart';
+import { favoriteProduct, fetchProductList, unfavoriteProduct } from '../lib/api/products';
 
 type MallTab = 'recommend' | 'seckill' | 'new' | 'category' | 'sale';
 type MallSort = 'default' | 'salesDesc' | 'priceAsc' | 'priceDesc' | 'discountDesc';
@@ -22,10 +23,6 @@ type CollabVisual = {
   badge: string;
   cta: string;
   textOnly: boolean;
-};
-
-type HeroParticipant = {
-  src: string;
 };
 
 const collabVisuals: CollabVisual[] = [
@@ -83,24 +80,24 @@ function getCategoryEmoji(label: string) {
 }
 
 function splitCollabLabel(item: ProductFeedItem) {
-  const collabText = item.collab?.trim() || `${item.brand} × 优米`;
+  const collabText = item.collab?.trim() || `${item.brand} × ${item.category}`;
   const parts = collabText.split(/\s*[×xX✕]\s*/);
   return {
     left: parts[0] || item.brand,
-    right: (parts[1] || 'JOY').toUpperCase(),
+    right: parts[1] || item.category,
   };
 }
 
 function buildCollabTitle(item: ProductFeedItem) {
-  return item.collab?.trim() || `${item.brand.toUpperCase()} × JOY`;
+  return item.collab?.trim() || `${item.brand} · ${item.category}`;
 }
 
 function splitDisplayCollab(item: ProductFeedItem) {
-  const title = buildCollabTitle(item);
+  const title = item.collab?.trim() || `${item.brand} × ${item.category}`;
   const parts = title.split(/\s*[×xX✕]\s*/);
   return {
-    left: parts[0] || item.brand.toUpperCase(),
-    right: parts[1] || 'JOY',
+    left: parts[0] || item.brand,
+    right: parts[1] || item.category,
   };
 }
 
@@ -111,7 +108,7 @@ function buildCollabSubtitle(item: ProductFeedItem) {
 function buildBrandLogoText(brand: string) {
   const normalized = brand.trim().toUpperCase();
   if (!normalized) {
-    return 'JOY';
+    return 'UMI';
   }
   if (/^[A-Z]+$/.test(normalized) && normalized.length <= 4) {
     return normalized.split('').join('·');
@@ -127,84 +124,6 @@ function buildBrandAvatarText(brand: string) {
   return trimmed.slice(0, 1).toUpperCase();
 }
 
-function buildBrandAvatarUrl(brand: string) {
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(brand)}&backgroundColor=e53935`;
-}
-
-function normalizeBrandKey(brand: string) {
-  return brand.trim().toUpperCase().replace(/[^A-Z0-9\u4E00-\u9FA5]+/g, '');
-}
-
-function buildHeroBrandName(item: ProductFeedItem) {
-  const brandKey = normalizeBrandKey(item.brand);
-  const aliasMap: Record<string, string> = {
-    MAC: 'MAC 魅可',
-    DIOR: 'DIOR 迪奥',
-    CHANEL: 'CHANEL 香奈儿',
-    LANCOME: 'LANCOME 兰蔻',
-    YSL: 'YSL 圣罗兰',
-    ESTEELAUDER: 'ESTEE LAUDER 雅诗兰黛',
-    CELINE: 'CELINE',
-    VERSACE: 'VERSACE',
-  };
-
-  if (aliasMap[brandKey]) {
-    return aliasMap[brandKey];
-  }
-  if (/[\u4E00-\u9FA5]/.test(item.brand)) {
-    return item.brand;
-  }
-  if (item.category.includes('美妆') || item.category.includes('护肤') || item.name.includes('口红')) {
-    return `${item.brand.toUpperCase()} 品牌馆`;
-  }
-  return `${item.brand} 优选`;
-}
-
-function buildHeroSampleText(item: ProductFeedItem) {
-  if (item.name.includes('口红') || item.name.includes('唇')) {
-    return '1.8g 试用装';
-  }
-  if (item.category.includes('美妆') || item.category.includes('护肤')) {
-    return '体验装';
-  }
-  if (item.category.includes('食品') || item.category.includes('饮料') || item.category.includes('零食')) {
-    return '尝鲜装';
-  }
-  if (item.category.includes('潮玩') || item.category.includes('盲盒')) {
-    return '限量周边';
-  }
-  if (item.category.includes('数码')) {
-    return '热门体验礼';
-  }
-  return '精选体验装';
-}
-
-function buildHeroPrizeName(item: ProductFeedItem) {
-  if (item.name.includes('口红') || item.name.includes('唇')) {
-    return '正装口红';
-  }
-  if (item.category.includes('美妆') || item.category.includes('护肤')) {
-    return '正装礼盒';
-  }
-  if (item.category.includes('食品') || item.category.includes('饮料') || item.category.includes('零食')) {
-    return '零食大礼包';
-  }
-  if (item.category.includes('潮玩') || item.category.includes('盲盒')) {
-    return '限定盲盒';
-  }
-  if (item.category.includes('数码')) {
-    return '新品套装';
-  }
-  return '正装商品';
-}
-
-function buildHeroParticipants(item: ProductFeedItem, bannerItem: ProductFeedItem | null, collabItem: ProductFeedItem | null): HeroParticipant[] {
-  const avatarSeeds = ['Taylor', 'Swift', 'Ruby', 'Velvet', 'Woo', 'Scarlet'];
-  return avatarSeeds.map((seed) => ({
-    src: `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(seed)}`,
-  }));
-}
-
 function buildHeroProgress(item: ProductFeedItem) {
   const base = item.sales + item.stock;
   if (base <= 0) {
@@ -213,40 +132,16 @@ function buildHeroProgress(item: ProductFeedItem) {
   return Math.min(96, Math.max(18, Math.round((item.sales / base) * 100)));
 }
 
-function buildHeroRemainingText(endAt: number | null, now: number) {
-  if (!endAt) {
-    return '--';
-  }
-  const diff = endAt - now;
-  if (diff <= 0) {
-    return '已结束';
-  }
-  const dayCount = Math.floor(diff / 86400000);
-  const hourCount = Math.floor((diff % 86400000) / 3600000);
-  const minuteCount = Math.floor((diff % 3600000) / 60000);
-  const secondCount = Math.floor((diff % 60000) / 1000);
-
-  if (dayCount > 0) {
-    return `${dayCount}天 ${String(hourCount).padStart(2, '0')}小时`;
-  }
-
-  return `${String(hourCount).padStart(2, '0')}:${String(minuteCount).padStart(2, '0')}:${String(secondCount).padStart(2, '0')}`;
-}
-
 function buildHeroPrimaryLine(item: ProductFeedItem) {
-  return `支付 ¥${formatPrice(item.guessPrice)} 享 ${buildHeroSampleText(item)} + 品牌礼遇`;
+  return `竞猜价 ¥${formatPrice(item.guessPrice)} · 原价 ¥${formatPrice(item.price)}`;
 }
 
 function buildHeroSecondaryLine(item: ProductFeedItem) {
-  return `参与抽奖赢取 ¥${formatPrice(item.price)} ${buildHeroPrizeName(item)}（共100份）`;
+  return `${item.category} · ${item.shopName || item.brand} · 已售 ${formatSales(item.sales)}`;
 }
 
 function buildBannerSubtitle(item: ProductFeedItem) {
-  return `猜对${item.brand}人气好物，赢${item.tags[0] || '新品礼盒'}🎁`;
-}
-
-function buildHeroPromoSecondary(item: ProductFeedItem) {
-  return `抽<span class="p-tag">正装</span> <span class="p-yen">¥</span><span class="p-val">${formatPrice(item.price)}</span>`;
+  return `${item.category} · ${item.brand} · 已售${formatSales(item.sales)}`;
 }
 
 function buildGridHeight(item: ProductFeedItem, index: number) {
@@ -260,38 +155,51 @@ function applyLegacyGridMeta(items: ProductFeedItem[]) {
   }));
 }
 
+function applyFavoritedState(items: ProductFeedItem[], productId: string, favorited: boolean) {
+  return items.map((item) => (item.id === productId ? { ...item, favorited } : item));
+}
+
 export function MallHome() {
   const router = useRouter();
   const [mallItems, setMallItems] = useState<ProductFeedItem[]>([]);
   const [productCategories, setProductCategories] = useState<ProductCategoryItem[]>([]);
   const [categoryItems, setCategoryItems] = useState<Record<string, ProductFeedItem[]>>({});
+  const [cartCount, setCartCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [feedAnimating, setFeedAnimating] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<MallTab>('recommend');
   const [contentTab, setContentTab] = useState<MallTab>('recommend');
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSort, setActiveSort] = useState<MallSort>('default');
-  const [seckillSeconds, setSeckillSeconds] = useState(2 * 3600 + 59 * 60 + 48);
-  const [countdownNow, setCountdownNow] = useState(Date.now());
 
   useEffect(() => {
     let ignore = false;
 
     async function load() {
       try {
-        const result = await fetchProductList(50);
+        const [result, cartResult] = await Promise.allSettled([fetchProductList(50), fetchCart()]);
         if (!ignore) {
-          setMallItems(applyLegacyGridMeta(result.items));
-          setProductCategories(result.categories);
+          if (result.status === 'fulfilled') {
+            setMallItems(applyLegacyGridMeta(result.value.items));
+            setProductCategories(result.value.categories);
+          } else {
+            setMallItems([]);
+            setProductCategories([]);
+          }
+          if (cartResult.status === 'fulfilled') {
+            setCartCount(cartResult.value.items.length);
+          } else {
+            setCartCount(0);
+          }
         }
       } catch {
         if (!ignore) {
           setMallItems([]);
           setProductCategories([]);
+          setCartCount(0);
         }
       } finally {
         if (!ignore) {
@@ -305,33 +213,6 @@ export function MallHome() {
       ignore = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (contentTab !== 'seckill') return undefined;
-    const initial = 2 * 3600 + 59 * 60 + 48;
-    setSeckillSeconds(initial);
-    let total = initial;
-    const timer = window.setInterval(() => {
-      total -= 1;
-      if (total <= 0) {
-        window.clearInterval(timer);
-        setSeckillSeconds(0);
-        return;
-      }
-      setSeckillSeconds(total);
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [contentTab]);
-
-  useEffect(() => {
-    if (contentTab !== 'recommend') {
-      return undefined;
-    }
-    const timer = window.setInterval(() => {
-      setCountdownNow(Date.now());
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [contentTab]);
 
   useEffect(() => {
     setFeedAnimating(true);
@@ -372,20 +253,6 @@ export function MallHome() {
     const ranked = categoryOptions.filter((item) => item.key !== 'all' && item.count > 0);
     return (ranked.length ? ranked : categoryOptions.filter((item) => item.key !== 'all')).slice(0, 6);
   }, [categoryOptions]);
-
-  const recommendBaseItems = useMemo(
-    () =>
-      [...mallItems].sort((left, right) => {
-        if (right.sales !== left.sales) {
-          return right.sales - left.sales;
-        }
-        if (right.rating !== left.rating) {
-          return right.rating - left.rating;
-        }
-        return right.discountAmount - left.discountAmount;
-      }),
-    [mallItems],
-  );
 
   const activeCategoryItems = activeCategory === 'all' ? mallItems : (categoryItems[activeCategory] ?? []);
 
@@ -479,7 +346,7 @@ export function MallHome() {
     const explicit = mallItems.filter((item) =>
       Boolean(item.collab) || item.tags.some((tag) => tag.includes('联名') || tag.includes('限定') || tag.includes('活动')),
     );
-    return explicit.length ? explicit : mallItems.slice(0, 4);
+    return explicit;
   }, [mallItems]);
   const gridStartIndex = contentTab === 'recommend' ? 1 : 0;
   const totalGridItems = filteredItems.slice(gridStartIndex);
@@ -487,14 +354,7 @@ export function MallHome() {
   const visibleGridItems = shouldPaginate && !showAll ? totalGridItems.slice(0, 11) : totalGridItems;
   const hasMore = shouldPaginate && totalGridItems.length > visibleGridItems.length;
   const hasLoadedMore = shouldPaginate && showAll;
-  const useInlinePairGrid = contentTab !== 'recommend' && visibleGridItems.length > 0 && visibleGridItems.length <= 2;
-
-  const seckillCountdown = useMemo(() => {
-    const hours = Math.floor(seckillSeconds / 3600);
-    const minutes = Math.floor((seckillSeconds % 3600) / 60);
-    const seconds = seckillSeconds % 60;
-    return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0'));
-  }, [seckillSeconds]);
+  const useInlinePairGrid = contentTab === 'sale' && visibleGridItems.length === 2;
 
   function updateSort(sort: MallSort) {
     setActiveSort(sort);
@@ -532,12 +392,28 @@ export function MallHome() {
     setShowAll(false);
   }
 
-  function toggleFavorite(productId: string) {
-    setFavoriteIds((current) => (
-      current.includes(productId)
-        ? current.filter((item) => item !== productId)
-        : [...current, productId]
-    ));
+  async function toggleFavorite(productId: string, nextFavorited: boolean) {
+    setMallItems((current) => applyFavoritedState(current, productId, nextFavorited));
+    setCategoryItems((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([key, items]) => [key, applyFavoritedState(items, productId, nextFavorited)]),
+      ),
+    );
+
+    try {
+      if (nextFavorited) {
+        await favoriteProduct(productId);
+      } else {
+        await unfavoriteProduct(productId);
+      }
+    } catch {
+      setMallItems((current) => applyFavoritedState(current, productId, !nextFavorited));
+      setCategoryItems((current) =>
+        Object.fromEntries(
+          Object.entries(current).map(([key, items]) => [key, applyFavoritedState(items, productId, !nextFavorited)]),
+        ),
+      );
+    }
   }
 
   const tabBanner =
@@ -545,9 +421,7 @@ export function MallHome() {
       <div className="m-tab-banner" style={{ background: 'linear-gradient(135deg,#FF3D00,#FF6D00)' }}>
         <span className="mtb-icon">⚡</span>
         <span className="mtb-text">限时秒杀 · {filteredItems.length}款折扣商品</span>
-        <span className="mtb-countdown" id="mSeckillTimer">
-          <span>{seckillCountdown[0]}</span>:<span>{seckillCountdown[1]}</span>:<span>{seckillCountdown[2]}</span>
-        </span>
+        <span className="mtb-tag">最高省{maxDiscount}%</span>
       </div>
     ) : contentTab === 'new' ? (
       <div className="m-tab-banner" style={{ background: 'linear-gradient(135deg,#00C853,#64DD17)' }}>
@@ -569,7 +443,8 @@ export function MallHome() {
     ) : null;
 
   function renderGridCard(item: ProductFeedItem, index: number) {
-    const liked = favoriteIds.includes(item.id);
+    const liked = item.favorited;
+    const cardHeight = useInlinePairGrid ? 152 : buildGridHeight(item, index);
 
     return (
       <article
@@ -578,14 +453,14 @@ export function MallHome() {
         onClick={() => router.push(`/product/${item.id}`)}
         style={{ animationDelay: `${index * 0.04}s` }}
       >
-        <div className="m-card-img" style={{ height: buildGridHeight(item, index) }}>
+        <div className="m-card-img" style={{ height: cardHeight }}>
           <img alt={item.name} src={item.img || '/legacy/images/products/p001-lays.jpg'} />
           <button
             className={`m-card-fav ${liked ? 'liked' : ''}`}
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              toggleFavorite(item.id);
+              void toggleFavorite(item.id, !liked);
             }}
           >
             <i className={liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
@@ -658,19 +533,16 @@ export function MallHome() {
     });
 
   const heroNames = featuredItem ? splitCollabLabel(featuredItem) : null;
-  const heroParticipants = featuredItem ? buildHeroParticipants(featuredItem, bannerItem, collabPool[0] ?? null) : [];
-  const heroEndsAt = useMemo(() => {
-    if (!featuredItem) {
-      return null;
-    }
-    return Date.now() + 86400000 * 2 + 36000000;
-  }, [featuredItem?.id]);
+  const heroProgress = featuredItem ? buildHeroProgress(featuredItem) : 0;
+  const heroMeta = featuredItem
+    ? [...new Set([featuredItem.category, featuredItem.shopName, featuredItem.collab].filter((value): value is string => Boolean(value?.trim())))]
+    : [];
 
   return (
     <main className="mall-home">
       <div className="m-nav">
         <div className="m-logo">
-          <span className="m-logo-main">优米</span>
+          <span className="m-logo-main">Umi</span>
           <span className="m-logo-sub">优选</span>
         </div>
         <div className="m-search" onClick={() => router.push('/search?from=mall')} role="button" tabIndex={0}>
@@ -683,7 +555,7 @@ export function MallHome() {
           </button>
           <button className="m-ico" type="button" onClick={() => router.push('/cart')}>
             <i className="fa-solid fa-cart-shopping" />
-            <span className="m-ico-badge">5</span>
+            {cartCount > 0 ? <span className="m-ico-badge">{Math.min(cartCount, 99)}</span> : null}
           </button>
         </div>
       </div>
@@ -770,13 +642,9 @@ export function MallHome() {
             </div>
             <div className="m-hero-info" onClick={() => router.push(`/product/${featuredItem.id}`)}>
               <div className="m-hero-brand-row">
-                <img
-                  alt={featuredItem.brand}
-                  className="m-hero-brand-av"
-                  src={buildBrandAvatarUrl(featuredItem.brand)}
-                />
+                <div className="m-hero-brand-av">{buildBrandAvatarText(featuredItem.brand)}</div>
                 <div className="m-hero-brand-text">
-                  <div className="m-hero-brand-name">{buildHeroBrandName(featuredItem)}</div>
+                  <div className="m-hero-brand-name">{featuredItem.brand}</div>
                   <div className="m-hero-brand-sub">{featuredItem.name}</div>
                 </div>
               </div>
@@ -785,19 +653,16 @@ export function MallHome() {
                 <div><span className="dicon">✅</span> {buildHeroSecondaryLine(featuredItem)}</div>
               </div>
               <div className="m-hero-progress">
-                <span>已参与：{buildHeroProgress(featuredItem)}%</span>
+                <span>已售 {formatSales(featuredItem.sales)}</span>
                 <div className="m-hero-bar">
-                  <div className="m-hero-bar-fill" style={{ width: `${buildHeroProgress(featuredItem)}%` }} />
+                  <div className="m-hero-bar-fill" style={{ width: `${heroProgress}%` }} />
                 </div>
-                <span>距离结束：{buildHeroRemainingText(heroEndsAt, countdownNow)}</span>
+                <span>库存 {formatSales(featuredItem.stock)}</span>
               </div>
-              <div className="m-hero-people">
-                <div className="m-hero-avatars">
-                  {heroParticipants.map((participant, index) => (
-                    <img alt={`participant-${index + 1}`} key={`${participant.src}-${index}`} src={participant.src} />
-                  ))}
-                </div>
-                <span className="m-hero-people-text">{formatSales(featuredItem.sales)}+ 人已参与</span>
+              <div className="m-hero-meta">
+                {heroMeta.map((value, index) => (
+                  <span className="m-hero-meta-chip" key={`${value}-${index}`}>{value}</span>
+                ))}
               </div>
             </div>
           </section>

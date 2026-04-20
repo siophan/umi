@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { OrderSummary } from '@joy/shared';
+import type { OrderSummary } from '@umi/shared';
 
-import { fetchOrders } from '../../lib/api';
+import { confirmOrder, fetchOrders } from '../../lib/api/orders';
 import { MobileShell } from '../../components/mobile-shell';
 import styles from './page.module.css';
 
@@ -99,10 +99,10 @@ function getShopIcon(order: OrderSummary) {
 
 function getExpressText(order: OrderSummary) {
   if (order.status === 'shipping') {
-    return '顺丰 7890 · 运输中';
+    return '物流运输中';
   }
   if (order.status === 'delivered') {
-    return '中通 4321 · 派送中';
+    return '待确认收货';
   }
   return '';
 }
@@ -174,28 +174,38 @@ export default function OrdersPage() {
     toastTimer.current = window.setTimeout(() => setToast(null), 1800);
   };
 
-  const handleAction = (order: OrderSummary, action: OrderAction) => {
+  const handleAction = async (order: OrderSummary, action: OrderAction) => {
     if (action.text === '查看物流' || action.text === '查看详情') {
       router.push(`/order-detail?id=${encodeURIComponent(order.id)}`);
       return;
     }
     if (action.text === '再来一单') {
+      const productId = order.items[0]?.productId;
+      if (!productId) {
+        triggerToast('订单中没有可复购商品');
+        return;
+      }
       triggerToast('正在跳转到商品页...');
-      window.setTimeout(() => router.push('/product-detail'), 240);
+      window.setTimeout(() => router.push(`/product/${encodeURIComponent(productId)}`), 240);
       return;
     }
     if (action.text === '确认收货') {
-      triggerToast('✅ 已确认收货，感谢购买！');
-      setOrders((current) =>
-        current.map((entry) =>
-          entry.id === order.id
-            ? {
-                ...entry,
-                status: 'completed',
-              }
-            : entry,
-        ),
-      );
+      try {
+        await confirmOrder(order.id);
+        triggerToast('✅ 已确认收货，感谢购买！');
+        setOrders((current) =>
+          current.map((entry) =>
+            entry.id === order.id
+              ? {
+                  ...entry,
+                  status: 'completed',
+                }
+              : entry,
+          ),
+        );
+      } catch (error) {
+        triggerToast(error instanceof Error ? error.message : '确认收货失败');
+      }
       return;
     }
     if (action.text === '联系卖家') {
@@ -207,7 +217,12 @@ export default function OrdersPage() {
       return;
     }
     if (action.text === '评价') {
-      triggerToast('📝 评价功能即将上线');
+      const productId = order.items[0]?.productId;
+      if (productId) {
+        router.push(`/product/${encodeURIComponent(productId)}`);
+        return;
+      }
+      triggerToast('暂无可评价商品');
       return;
     }
     triggerToast(action.text);

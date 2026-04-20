@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fetchMe, login, sendCode, setAuthToken } from "../../lib/api";
+import { fetchMe, login, sendCode } from "../../lib/api/auth";
+import { setAuthToken } from "../../lib/api/shared";
 import styles from "./page.module.css";
 
 type Method = "code" | "pwd";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [method, setMethod] = useState<Method>("code");
@@ -191,7 +192,7 @@ export default function LoginPage() {
           </div>
           <div className={styles.brandBg} />
           <div className={styles.brandInner}>
-            <div className={styles.brandLogo}>优米</div>
+            <div className={styles.brandLogo}>Umi</div>
             <p className={styles.brandDesc}>{brandDesc}</p>
           </div>
         </section>
@@ -374,5 +375,13 @@ export default function LoginPage() {
 
       <div className={`${styles.toast} ${toast ? styles.toastShow : ""}`}>{toast}</div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className={styles.page} />}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

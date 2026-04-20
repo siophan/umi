@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { fetchShopDetail } from '../../../lib/api';
+import { fetchShopDetail } from '../../../lib/api/shops';
 import styles from './page.module.css';
 
 type TabKey = 'all' | 'hot' | 'guess' | 'new';
@@ -31,7 +31,7 @@ function createInitialsAvatar(seed: string) {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-export default function ShopDetailPage({ params }: { params: { id: string } }) {
+function ShopDetailPageInner() {
   const routeParams = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,7 +59,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const shopId = typeof routeParams?.id === 'string' ? routeParams.id : params.id;
+  const shopId = typeof routeParams?.id === 'string' ? routeParams.id : '';
 
   useEffect(() => {
     let ignore = false;
@@ -101,7 +101,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
               : '金牌商家',
       }
     : {
-        full: decodeURIComponent(searchParams.get('brand') || params.id || '店铺'),
+        full: decodeURIComponent(searchParams.get('brand') || shopId || '店铺'),
         desc: '品质保证 · 正品行货',
         city: '中国',
         fans: '0',
@@ -200,7 +200,7 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
   }, []);
 
   useEffect(() => {
-    document.title = `${meta.full} - 优米`;
+    document.title = `${meta.full} - UMI`;
   }, [meta.full]);
 
   function toggleFollow() {
@@ -718,5 +718,13 @@ export default function ShopDetailPage({ params }: { params: { id: string } }) {
       </footer>
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </div>
+  );
+}
+
+export default function ShopDetailPage() {
+  return (
+    <Suspense fallback={<main className={styles.page} />}>
+      <ShopDetailPageInner />
+    </Suspense>
   );
 }

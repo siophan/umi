@@ -1,7 +1,7 @@
 'use client';
 
+import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
 import styles from './page.module.css';
 
 const product = {
@@ -44,7 +44,7 @@ const friends = [
   },
 ];
 
-export default function GuessOrderPage() {
+function GuessOrderPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const choice = Number(searchParams.get('choice') || 0);
@@ -313,5 +313,13 @@ export default function GuessOrderPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function GuessOrderPage() {
+  return (
+    <Suspense fallback={<div className={styles.page} />}>
+      <GuessOrderPageInner />
+    </Suspense>
   );
 }

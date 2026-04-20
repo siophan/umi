@@ -33,7 +33,7 @@ interface AdminSearchBarProps {
   extra?: ReactNode;
 }
 
-const SEARCH_THEME = {
+export const SEARCH_THEME = {
   inherit: false,
   token: {
     colorPrimary: '#1677ff',
@@ -82,7 +82,7 @@ export function AdminSearchPanel({
 
   return (
     <ConfigProvider theme={SEARCH_THEME}>
-      <ProCard className="admin-search-panel" style={{ marginBottom: 16 }}>
+      <ProCard className="admin-search-panel">
         <Form form={form} layout="inline" onFinish={onSearch} style={{ width: '100%' }}>
           <Row gutter={[16, 8]} style={{ width: '100%' }} align="bottom">
             {visibleItems.map((item, index) => (
@@ -137,7 +137,7 @@ export function AdminSearchBar({
 }: AdminSearchBarProps) {
   return (
     <ConfigProvider theme={SEARCH_THEME}>
-      <ProCard className="admin-search-panel" style={{ marginBottom: 16 }}>
+      <ProCard className="admin-search-panel">
         <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
           <Input.Search
             allowClear

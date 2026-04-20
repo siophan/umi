@@ -1,7 +1,8 @@
-import type { WarehouseItem } from '@joy/shared';
+import type { WarehouseItem } from '@umi/shared';
 import type { TableColumnsType } from 'antd';
+import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, Card, Descriptions, Drawer, Form, Input, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
+import { Alert, ConfigProvider, Descriptions, Drawer, Form, Input, Segmented, Select, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
@@ -11,6 +12,7 @@ import {
   type AdminWarehouseStats,
 } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, warehouseStatusMeta } from '../lib/format';
+import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
 
 interface WarehousePageProps {
   refreshToken?: number;
@@ -204,18 +206,23 @@ export function WarehousePage({
         ]}
         onChange={(key) => setStatus(key as 'all' | WarehouseItem['status'])}
       />
-      <Card>
-        <Table
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<WarehouseItem>
+          cardBordered={false}
           rowKey="id"
-          columns={columns}
+          columns={columns as never}
+          columnsState={{}}
           dataSource={filteredItems}
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => []}
           onRow={(record) => ({
             onClick: () => setSelected(record),
           })}
         />
-      </Card>
+      </ConfigProvider>
 
       <Drawer
         open={selected != null}
@@ -224,7 +231,7 @@ export function WarehousePage({
         onClose={() => setSelected(null)}
       >
         {selected ? (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <div style={{ display: 'grid', gap: 16, width: '100%' }}>
             <Descriptions column={1} size="small">
               <Descriptions.Item label="用户 ID">{selected.userId}</Descriptions.Item>
               <Descriptions.Item label="仓型">
@@ -244,7 +251,7 @@ export function WarehousePage({
                 {selected.estimateDays ?? '-'}
               </Descriptions.Item>
             </Descriptions>
-          </Space>
+          </div>
         ) : null}
       </Drawer>
     </div>

@@ -1,12 +1,14 @@
-import type { OrderSummary } from '@joy/shared';
+import type { OrderSummary } from '@umi/shared';
 import type { TableColumnsType } from 'antd';
+import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, Card, Descriptions, Drawer, Form, Input, Select, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Card, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import { fetchAdminOrders } from '../lib/api/orders';
 import { formatAmount, formatDateTime, orderStatusMeta } from '../lib/format';
+import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
 
 interface OrdersPageProps {
   refreshToken?: number;
@@ -167,18 +169,23 @@ export function OrdersPage({ refreshToken = 0 }: OrdersPageProps) {
         ]}
         onChange={(key) => setStatus(key as 'all' | OrderSummary['status'])}
       />
-      <Card>
-        <Table
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<OrderSummary>
+          cardBordered={false}
           rowKey="id"
-          columns={columns}
+          columns={columns as never}
+          columnsState={{}}
           dataSource={filteredOrders}
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => []}
           onRow={(record) => ({
             onClick: () => setSelected(record),
           })}
         />
-      </Card>
+      </ConfigProvider>
 
       <Drawer
         open={selected != null}
@@ -187,7 +194,7 @@ export function OrdersPage({ refreshToken = 0 }: OrdersPageProps) {
         onClose={() => setSelected(null)}
       >
         {selected ? (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <div style={{ display: 'grid', gap: 16, width: '100%' }}>
             <Descriptions column={1} size="small">
               <Descriptions.Item label="用户 ID">{selected.userId}</Descriptions.Item>
               <Descriptions.Item label="竞猜标题">
@@ -207,23 +214,23 @@ export function OrdersPage({ refreshToken = 0 }: OrdersPageProps) {
             </Descriptions>
 
             <Card title="订单明细" size="small">
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              <div style={{ display: 'grid', gap: 12, width: '100%' }}>
                 {selected.items.map((item) => (
                   <div className="detail-line" key={item.id}>
-                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                      <Space direction="vertical" size={0}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <div>
                         <Typography.Text strong>{item.productName}</Typography.Text>
-                        <Typography.Text type="secondary">
+                        <Typography.Text style={{ display: 'block' }} type="secondary">
                           x{item.quantity}
                         </Typography.Text>
-                      </Space>
+                      </div>
                       <Typography.Text>{formatAmount(item.itemAmount)}</Typography.Text>
-                    </Space>
+                    </div>
                   </div>
                 ))}
-              </Space>
+              </div>
             </Card>
-          </Space>
+          </div>
         ) : null}
       </Drawer>
     </div>

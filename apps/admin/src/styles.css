@@ -44,21 +44,21 @@ a {
   text-decoration: none;
 }
 
-.joy-admin-layout {
+.umi-admin-layout {
   min-height: 100vh;
 }
 
-.joy-admin-layout .ant-layout {
+.umi-admin-layout .ant-layout {
   min-height: 100vh !important;
   background: #f3f5f8 !important;
 }
 
-.joy-admin-main {
+.umi-admin-main {
   flex: 1;
   min-width: 0;
 }
 
-.joy-admin-page {
+.umi-admin-page {
   background: #f3f5f8 !important;
   min-height: calc(100vh - 48px);
   overflow-y: auto;
@@ -82,54 +82,54 @@ a {
   margin: 0 !important;
 }
 
-.joy-admin-layout .ant-card:not(.admin-search-panel),
-.joy-admin-layout .ant-table-wrapper,
-.joy-admin-layout .ant-table,
-.joy-admin-layout .ant-table-container,
-.joy-admin-layout .ant-list,
-.joy-admin-layout .ant-descriptions,
-.joy-admin-layout .ant-modal-content,
-.joy-admin-layout .ant-drawer-content,
-.joy-admin-layout .ant-popover-inner,
-.joy-admin-layout .ant-dropdown .ant-dropdown-menu {
+.umi-admin-layout .ant-card:not(.admin-search-panel),
+.umi-admin-layout .ant-table-wrapper,
+.umi-admin-layout .ant-table,
+.umi-admin-layout .ant-table-container,
+.umi-admin-layout .ant-list,
+.umi-admin-layout .ant-descriptions,
+.umi-admin-layout .ant-modal-content,
+.umi-admin-layout .ant-drawer-content,
+.umi-admin-layout .ant-popover-inner,
+.umi-admin-layout .ant-dropdown .ant-dropdown-menu {
   background: #ffffff !important;
   color: #1b2130 !important;
 }
 
-.joy-admin-layout .ant-card:not(.admin-search-panel) .ant-card-head,
-.joy-admin-layout .ant-card:not(.admin-search-panel) .ant-card-body,
-.joy-admin-layout .ant-table-thead > tr > th,
-.joy-admin-layout .ant-table-tbody > tr > td,
-.joy-admin-layout .ant-list-item,
-.joy-admin-layout .ant-list-item-meta-title,
-.joy-admin-layout .ant-list-item-meta-description,
-.joy-admin-layout .ant-statistic,
-.joy-admin-layout .ant-statistic-content,
-.joy-admin-layout .ant-typography,
-.joy-admin-layout .ant-page-header,
-.joy-admin-layout .ant-page-header-heading,
-.joy-admin-layout .ant-page-header-content,
-.joy-admin-layout .ant-descriptions-item-label,
-.joy-admin-layout .ant-descriptions-item-content {
+.umi-admin-layout .ant-card:not(.admin-search-panel) .ant-card-head,
+.umi-admin-layout .ant-card:not(.admin-search-panel) .ant-card-body,
+.umi-admin-layout .ant-table-thead > tr > th,
+.umi-admin-layout .ant-table-tbody > tr > td,
+.umi-admin-layout .ant-list-item,
+.umi-admin-layout .ant-list-item-meta-title,
+.umi-admin-layout .ant-list-item-meta-description,
+.umi-admin-layout .ant-statistic,
+.umi-admin-layout .ant-statistic-content,
+.umi-admin-layout .ant-typography,
+.umi-admin-layout .ant-page-header,
+.umi-admin-layout .ant-page-header-heading,
+.umi-admin-layout .ant-page-header-content,
+.umi-admin-layout .ant-descriptions-item-label,
+.umi-admin-layout .ant-descriptions-item-content {
   color: #1b2130 !important;
 }
 
-.joy-admin-layout .ant-typography.ant-typography-secondary,
-.joy-admin-layout .ant-statistic-content-suffix,
-.joy-admin-layout .ant-statistic-content-prefix,
-.joy-admin-layout .ant-list-item-meta-description,
-.joy-admin-layout .ant-page-header-footer,
-.joy-admin-layout .ant-descriptions-item-label {
+.umi-admin-layout .ant-typography.ant-typography-secondary,
+.umi-admin-layout .ant-statistic-content-suffix,
+.umi-admin-layout .ant-statistic-content-prefix,
+.umi-admin-layout .ant-list-item-meta-description,
+.umi-admin-layout .ant-page-header-footer,
+.umi-admin-layout .ant-descriptions-item-label {
   color: #64748b !important;
 }
 
-.joy-admin-sider {
+.umi-admin-sider {
   background: #141422 !important;
   border-right: 0;
   box-shadow: none !important;
 }
 
-.joy-admin-sider .ant-layout-sider-children {
+.umi-admin-sider .ant-layout-sider-children {
   display: flex;
   flex-direction: column;
   background: #141422;
@@ -169,7 +169,7 @@ a {
   min-width: 0;
 }
 
-.joy-admin-sider .app-sider-brand__title {
+.umi-admin-sider .app-sider-brand__title {
   display: block;
   margin: 0;
   color: #ffffff !important;
@@ -178,32 +178,32 @@ a {
   line-height: 1.15;
 }
 
-.joy-admin-sider.ant-layout-sider-collapsed .app-sider-brand {
+.umi-admin-sider.ant-layout-sider-collapsed .app-sider-brand {
   justify-content: center;
   padding-inline: 0;
 }
 
-.joy-admin-menu {
+.umi-admin-menu {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-bottom: 12px;
 }
 
-.joy-admin-sider .ant-menu,
-.joy-admin-menu.ant-menu {
+.umi-admin-sider .ant-menu,
+.umi-admin-menu.ant-menu {
   background: #141422 !important;
   border-inline-end: 0 !important;
 }
 
-.joy-admin-sider .ant-menu-inline,
-.joy-admin-sider .ant-menu-vertical {
+.umi-admin-sider .ant-menu-inline,
+.umi-admin-sider .ant-menu-vertical {
   padding-inline: 8px;
   padding-top: 4px;
 }
 
-.joy-admin-sider .ant-menu-item,
-.joy-admin-sider .ant-menu-submenu-title {
+.umi-admin-sider .ant-menu-item,
+.umi-admin-sider .ant-menu-submenu-title {
   width: auto;
   margin-inline: 0 !important;
   margin-block: 4px;
@@ -214,105 +214,105 @@ a {
     color 0.2s ease !important;
 }
 
-.joy-admin-sider .ant-menu-sub.ant-menu-inline {
+.umi-admin-sider .ant-menu-sub.ant-menu-inline {
   background: transparent !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
 
-.joy-admin-sider .ant-menu-item .anticon,
-.joy-admin-sider .ant-menu-submenu-title .anticon,
-.joy-admin-sider .ant-menu-item .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-submenu-title .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-title-content {
+.umi-admin-sider .ant-menu-item .anticon,
+.umi-admin-sider .ant-menu-submenu-title .anticon,
+.umi-admin-sider .ant-menu-item .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-submenu-title .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-title-content {
   color: inherit !important;
 }
 
-.joy-admin-sider .ant-menu-item .anticon,
-.joy-admin-sider .ant-menu-submenu-title .anticon,
-.joy-admin-sider .ant-menu-item .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-submenu-title .ant-menu-item-icon {
+.umi-admin-sider .ant-menu-item .anticon,
+.umi-admin-sider .ant-menu-submenu-title .anticon,
+.umi-admin-sider .ant-menu-item .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-submenu-title .ant-menu-item-icon {
   font-size: 14px;
 }
 
-.joy-admin-sider .ant-menu-title-content {
+.umi-admin-sider .ant-menu-title-content {
   font-size: 14px;
 }
 
-.joy-admin-sider .ant-menu-item:not(.ant-menu-item-selected):hover .ant-menu-title-content,
-.joy-admin-sider .ant-menu-submenu:not(.ant-menu-submenu-open):not(.ant-menu-submenu-selected) > .ant-menu-submenu-title:hover .ant-menu-title-content {
+.umi-admin-sider .ant-menu-item:not(.ant-menu-item-selected):hover .ant-menu-title-content,
+.umi-admin-sider .ant-menu-submenu:not(.ant-menu-submenu-open):not(.ant-menu-submenu-selected) > .ant-menu-submenu-title:hover .ant-menu-title-content {
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.joy-admin-sider .ant-menu-item:not(.ant-menu-item-selected):hover,
-.joy-admin-sider .ant-menu-submenu:not(.ant-menu-submenu-open):not(.ant-menu-submenu-selected) > .ant-menu-submenu-title:hover {
+.umi-admin-sider .ant-menu-item:not(.ant-menu-item-selected):hover,
+.umi-admin-sider .ant-menu-submenu:not(.ant-menu-submenu-open):not(.ant-menu-submenu-selected) > .ant-menu-submenu-title:hover {
   background: rgba(255, 255, 255, 0.07) !important;
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.joy-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title {
+.umi-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title {
   background: rgba(22, 119, 255, 0.16) !important;
   color: #ffffff !important;
 }
 
-.joy-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title .anticon,
-.joy-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title span[role='img'],
-.joy-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title .ant-menu-title-content {
+.umi-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title .anticon,
+.umi-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title span[role='img'],
+.umi-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title .ant-menu-title-content {
   color: #ffffff !important;
 }
 
-.joy-admin-sider .ant-menu-item-selected {
+.umi-admin-sider .ant-menu-item-selected {
   background: #1677ff !important;
   color: #ffffff !important;
 }
 
-.joy-admin-sider .ant-menu-item-selected .anticon,
-.joy-admin-sider .ant-menu-item-selected span[role='img'],
-.joy-admin-sider .ant-menu-item-selected .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-item-selected .ant-menu-title-content {
+.umi-admin-sider .ant-menu-item-selected .anticon,
+.umi-admin-sider .ant-menu-item-selected span[role='img'],
+.umi-admin-sider .ant-menu-item-selected .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-item-selected .ant-menu-title-content {
   color: #ffffff !important;
 }
 
-.joy-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title {
+.umi-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title {
   background: rgba(22, 119, 255, 0.16) !important;
   color: #ffffff !important;
 }
 
-.joy-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title .anticon,
-.joy-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title span[role='img'],
-.joy-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-title-content {
+.umi-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title .anticon,
+.umi-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title span[role='img'],
+.umi-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-title-content {
   color: #ffffff !important;
 }
 
-.joy-admin-sider .ant-menu-title-content {
+.umi-admin-sider .ant-menu-title-content {
   font-weight: 500;
 }
 
-.joy-admin-sider .ant-menu-submenu .ant-menu-item,
-.joy-admin-sider .ant-menu-submenu .ant-menu-submenu-title {
+.umi-admin-sider .ant-menu-submenu .ant-menu-item,
+.umi-admin-sider .ant-menu-submenu .ant-menu-submenu-title {
   width: auto;
 }
 
-.joy-admin-sider.ant-layout-sider-collapsed .ant-menu-inline-collapsed > .ant-menu-item,
-.joy-admin-sider.ant-layout-sider-collapsed .ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
+.umi-admin-sider.ant-layout-sider-collapsed .ant-menu-inline-collapsed > .ant-menu-item,
+.umi-admin-sider.ant-layout-sider-collapsed .ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
   width: auto;
   margin-inline: 0 !important;
 }
 
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-item-selected .anticon,
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-item-selected span[role='img'],
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-item-selected .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-item-active .anticon,
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-item-active span[role='img'],
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-item-active .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-selected > .ant-menu-submenu-title .anticon,
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-selected > .ant-menu-submenu-title span[role='img'],
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon,
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-open > .ant-menu-submenu-title .anticon,
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-open > .ant-menu-submenu-title span[role='img'],
-.joy-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-open > .ant-menu-submenu-title .ant-menu-item-icon {
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-item-selected .anticon,
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-item-selected span[role='img'],
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-item-selected .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-item-active .anticon,
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-item-active span[role='img'],
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-item-active .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-selected > .ant-menu-submenu-title .anticon,
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-selected > .ant-menu-submenu-title span[role='img'],
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon,
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-open > .ant-menu-submenu-title .anticon,
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-open > .ant-menu-submenu-title span[role='img'],
+.umi-admin-sider .ant-menu-inline-collapsed .ant-menu-submenu-open > .ant-menu-submenu-title .ant-menu-item-icon {
   color: #ffffff !important;
 }
 
@@ -591,10 +591,6 @@ a {
   height: 100%;
 }
 
-.metric-card {
-  min-width: 200px;
-}
-
 .module-card .ant-typography {
   margin-bottom: 0;
 }
@@ -620,10 +616,6 @@ a {
 }
 
 @media (max-width: 768px) {
-  .metric-card {
-    width: 100%;
-  }
-
   .app-header {
     padding-right: 12px;
   }

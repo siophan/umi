@@ -3,10 +3,11 @@ import type {
   GuessSummary,
   OrderSummary,
   UserSummary,
-} from '@joy/shared';
+} from '@umi/shared';
 import type { TableColumnsType } from 'antd';
+import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, Avatar, Card, Descriptions, Drawer, Form, Input, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Avatar, Card, ConfigProvider, Descriptions, Drawer, Form, Input, Table, Tag, Typography } from 'antd';
 import { Button, Empty, Spin, Tabs, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -27,6 +28,7 @@ import {
   fetchAdminUserOrders,
   updateAdminUserBan,
 } from '../lib/api/users';
+import { ADMIN_LIST_TABLE_THEME } from './shared/admin-page-tools';
 
 interface UsersPageProps {
   refreshToken?: number;
@@ -323,12 +325,12 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
       title: '订单',
       dataIndex: 'id',
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <div>
           <Typography.Text strong>#{record.id}</Typography.Text>
-          <Typography.Text type="secondary">
+          <Typography.Text style={{ display: 'block' }} type="secondary">
             {record.guessTitle ?? record.items[0]?.productName ?? '普通订单'}
           </Typography.Text>
-        </Space>
+        </div>
       ),
     },
     {
@@ -357,12 +359,12 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
       title: '竞猜',
       dataIndex: 'title',
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <div>
           <Typography.Text strong>{record.title}</Typography.Text>
-          <Typography.Text type="secondary">
+          <Typography.Text style={{ display: 'block' }} type="secondary">
             {record.product.name}
           </Typography.Text>
-        </Space>
+        </div>
       ),
     },
     {
@@ -390,13 +392,13 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
       title: '用户',
       dataIndex: 'name',
       render: (_, record) => (
-        <Space size={12}>
+        <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
           <Avatar src={record.avatar}>{record.name.slice(0, 1)}</Avatar>
-          <Space direction="vertical" size={0}>
+          <div>
             <Typography.Text strong>{record.name}</Typography.Text>
-            <Typography.Text type="secondary">UID {record.uid}</Typography.Text>
-          </Space>
-        </Space>
+            <Typography.Text style={{ display: 'block' }} type="secondary">UID {record.uid}</Typography.Text>
+          </div>
+        </div>
       ),
     },
     {
@@ -415,10 +417,10 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
       dataIndex: 'level',
       render: (_, record) =>
         record.level ? (
-          <Space direction="vertical" size={0}>
+          <div>
             <Typography.Text>Lv.{record.level}</Typography.Text>
-            <Typography.Text type="secondary">{record.title ?? '未设置头衔'}</Typography.Text>
-          </Space>
+            <Typography.Text style={{ display: 'block' }} type="secondary">{record.title ?? '未设置头衔'}</Typography.Text>
+          </div>
         ) : (
           '-'
         ),
@@ -427,12 +429,12 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
       title: '竞猜',
       dataIndex: 'totalGuess',
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <div>
           <Typography.Text>{formatNumber(record.totalGuess ?? 0)} 场</Typography.Text>
-          <Typography.Text type="secondary">
+          <Typography.Text style={{ display: 'block' }} type="secondary">
             胜率 {formatPercent(record.winRate)}
           </Typography.Text>
-        </Space>
+        </div>
       ),
     },
     {
@@ -440,12 +442,12 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
       dataIndex: 'shopName',
       render: (_, record) =>
         record.shopName ? (
-          <Space direction="vertical" size={0}>
+          <div>
             <Typography.Text>{record.shopName}</Typography.Text>
-            <Typography.Text type="secondary">
+            <Typography.Text style={{ display: 'block' }} type="secondary">
               {record.shopVerified ? '已认证店铺' : '店铺资料待完善'}
             </Typography.Text>
-          </Space>
+          </div>
         ) : (
           <Typography.Text type="secondary">-</Typography.Text>
         ),
@@ -534,12 +536,15 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
         }}
       />
 
-      <Card>
-        <Table
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<UserSummary>
+          cardBordered={false}
           rowKey="id"
-          columns={columns}
+          columns={columns as never}
+          columnsState={{}}
           dataSource={visibleUsers}
           loading={listLoading}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
           pagination={{
             current: page,
             pageSize,
@@ -559,8 +564,10 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
               items_per_page: '条/页',
             },
           }}
+          search={false}
+          toolBarRender={() => []}
         />
-      </Card>
+      </ConfigProvider>
 
       <Drawer
         open={selectedId != null}
@@ -573,17 +580,17 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
             <Spin />
           </div>
         ) : selected ? (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Space size={12}>
+          <div style={{ display: 'grid', gap: 16, width: '100%' }}>
+            <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
               <Avatar size={56} src={selected.avatar}>
                 {selected.name.slice(0, 1)}
               </Avatar>
-              <Space direction="vertical" size={2}>
+              <div style={{ display: 'grid', gap: 2 }}>
                 <Typography.Text strong>{selected.name}</Typography.Text>
                 <Typography.Text type="secondary">
                   {selected.phone}
                 </Typography.Text>
-              </Space>
+              </div>
               <div style={{ marginLeft: 'auto' }}>
                 <Button
                   danger={!selected.banned}
@@ -593,7 +600,7 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
                   {selected.banned ? '解除封禁' : '封禁用户'}
                 </Button>
               </div>
-            </Space>
+            </div>
 
             {detailIssue ? (
               <Alert
@@ -722,7 +729,7 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
                 },
               ]}
             />
-          </Space>
+          </div>
         ) : (
           <Empty description="用户详情不存在" />
         )}

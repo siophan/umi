@@ -1,4 +1,4 @@
-import { Alert, Card, Col, Empty, List, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, Card, Col, Empty, List, Progress, Row, Statistic, Tag, Typography } from 'antd';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
@@ -170,60 +170,60 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
             extra={<Tag color="blue">数据生成 {formatDateTime(generatedAt)}</Tag>}
           >
             {renderSection(
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              <div style={{ display: 'grid', gap: 12, width: '100%' }}>
                 {stats.trend.length === 0 ? (
                   <Empty description="暂无趋势数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : stats.trend.map((item) => (
                   <Card key={item.date} size="small">
-                    <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                      <Space align="center" style={{ justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'grid', gap: 8, width: '100%' }}>
+                      <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                         <Typography.Text strong>{item.date}</Typography.Text>
                         <Typography.Text type="secondary">
                           GMV {formatAmount(item.gmv)}
                         </Typography.Text>
-                      </Space>
+                      </div>
 
                       <div>
-                        <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                           <Typography.Text type="secondary">投注</Typography.Text>
                           <Typography.Text>{formatNumber(item.bets)}</Typography.Text>
-                        </Space>
+                        </div>
                         <Progress percent={ratio(item.bets, maxTrendBets)} showInfo={false} strokeColor="#1677ff" />
                       </div>
 
                       <div>
-                        <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                           <Typography.Text type="secondary">订单</Typography.Text>
                           <Typography.Text>{formatNumber(item.orders)}</Typography.Text>
-                        </Space>
+                        </div>
                         <Progress percent={ratio(item.orders, maxTrendOrders)} showInfo={false} strokeColor="#fa8c16" />
                       </div>
 
                       <div>
-                        <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                           <Typography.Text type="secondary">新增用户</Typography.Text>
                           <Typography.Text>{formatNumber(item.users)}</Typography.Text>
-                        </Space>
+                        </div>
                         <Progress percent={ratio(item.users, maxTrendUsers)} showInfo={false} strokeColor="#52c41a" />
                       </div>
 
                       <div>
-                        <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                           <Typography.Text type="secondary">GMV</Typography.Text>
                           <Typography.Text>{formatAmount(item.gmv)}</Typography.Text>
-                        </Space>
+                        </div>
                         <Progress percent={ratio(item.gmv, maxTrendGmv)} showInfo={false} strokeColor="#722ed1" />
                       </div>
-                    </Space>
+                    </div>
                   </Card>
                 ))}
-              </Space>,
+              </div>,
             )}
           </Card>
         </Col>
 
         <Col xs={24} xl={10}>
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <div style={{ display: 'grid', gap: 16, width: '100%' }}>
             <Card title="待处理队列">
               {renderSection(
                 <List
@@ -233,10 +233,10 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
                     <List.Item>
                       <List.Item.Meta
                         title={
-                          <Space>
+                          <div style={{ alignItems: 'center', display: 'inline-flex', gap: 8 }}>
                             <Typography.Text strong>{item.title}</Typography.Text>
                             <Tag color={item.tone}>{formatNumber(item.count)}</Tag>
-                          </Space>
+                          </div>
                         }
                         description={item.description}
                       />
@@ -248,40 +248,40 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
 
             <Card title="订单状态分布">
               {renderSection(
-                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <div style={{ display: 'grid', gap: 12, width: '100%' }}>
                   {stats.orderDistribution.length === 0 ? (
                     <Empty description="暂无订单分布" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   ) : stats.orderDistribution.map((item) => (
                     <div key={item.type}>
-                      <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                         <Typography.Text>{item.type}</Typography.Text>
                         <Typography.Text>{formatNumber(item.value)}</Typography.Text>
-                      </Space>
+                      </div>
                       <Progress percent={ratio(item.value, totalOrderDistribution)} showInfo={false} />
                     </div>
                   ))}
-                </Space>,
+                </div>,
               )}
             </Card>
 
             <Card title="竞猜分类分布">
               {renderSection(
-                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <div style={{ display: 'grid', gap: 12, width: '100%' }}>
                   {stats.guessCategories.length === 0 ? (
                     <Empty description="暂无分类分布" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   ) : stats.guessCategories.map((item) => (
                     <div key={item.type}>
-                      <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                         <Typography.Text>{item.type}</Typography.Text>
                         <Typography.Text>{formatNumber(item.value)}</Typography.Text>
-                      </Space>
+                      </div>
                       <Progress percent={ratio(item.value, totalGuessCategories)} showInfo={false} strokeColor="#722ed1" />
                     </div>
                   ))}
-                </Space>,
+                </div>,
               )}
             </Card>
-          </Space>
+          </div>
         </Col>
       </Row>
 
@@ -296,20 +296,20 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
                   <List.Item>
                     <List.Item.Meta
                       title={
-                        <Space>
+                        <div style={{ alignItems: 'center', display: 'inline-flex', gap: 8 }}>
                           <Tag color={index < 3 ? 'gold' : 'default'}>#{index + 1}</Tag>
                           <Typography.Text strong>{item.title}</Typography.Text>
-                        </Space>
+                        </div>
                       }
                       description={
-                        <Space direction="vertical" size={4}>
+                        <div style={{ display: 'grid', gap: 4 }}>
                           <Typography.Text type="secondary">
                             {item.category} · {formatNumber(item.participants)} 人参与 · 奖池 {formatAmount(item.poolAmount)}
                           </Typography.Text>
                           <Typography.Text type="secondary">
                             截止 {formatDateTime(item.endTime)}
                           </Typography.Text>
-                        </Space>
+                        </div>
                       }
                     />
                   </List.Item>
@@ -329,13 +329,13 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
                   <List.Item>
                     <List.Item.Meta
                       title={
-                        <Space>
+                        <div style={{ alignItems: 'center', display: 'inline-flex', gap: 8 }}>
                           <Tag color={index < 3 ? 'blue' : 'default'}>#{index + 1}</Tag>
                           <Typography.Text strong>{item.name}</Typography.Text>
                           <Tag color={productStatusMeta[item.status as keyof typeof productStatusMeta]?.color ?? 'default'}>
                             {productStatusMeta[item.status as keyof typeof productStatusMeta]?.label ?? item.status}
                           </Tag>
-                        </Space>
+                        </div>
                       }
                       description={
                         <Typography.Text type="secondary">

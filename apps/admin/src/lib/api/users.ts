@@ -6,7 +6,7 @@ import type {
   UpdateUserBanResult,
   UserListResult,
   UserSummary,
-} from '@joy/shared';
+} from '@umi/shared';
 
 import { getJson, putJson } from './shared';
 

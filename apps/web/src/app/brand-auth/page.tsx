@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { fetchBrandAuthOverview, submitBrandAuthApplication } from '../../lib/api';
+import { fetchBrandAuthOverview, submitBrandAuthApplication } from '../../lib/api/shops';
 import styles from './page.module.css';
 
 const brandLogoMap: Record<string, string> = {
@@ -36,7 +36,7 @@ export default function BrandAuthPage() {
     mine: [],
     available: [],
   });
-  const [currentBrandId, setCurrentBrandId] = useState<string | null>(null);
+  const [currentBrandId, setCurrentBrandId] = useState<Awaited<ReturnType<typeof fetchBrandAuthOverview>>['available'][number]['id'] | null>(null);
   const [reason, setReason] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -106,7 +106,7 @@ export default function BrandAuthPage() {
 
     try {
       setSubmitting(true);
-      await submitBrandAuthApplication({
+      const created = await submitBrandAuthApplication({
         brandId: currentBrand.id,
         reason: reason.trim(),
       });
@@ -116,10 +116,10 @@ export default function BrandAuthPage() {
         mine: [
           ...current.mine,
           {
-            id: `pending-${currentBrand.id}`,
+            id: created.id,
             brandId: currentBrand.id,
             brandName: currentBrand.name,
-            status: 'pending',
+            status: created.status,
             createdAt: new Date().toISOString(),
           },
         ],

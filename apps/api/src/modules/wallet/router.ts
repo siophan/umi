@@ -2,11 +2,12 @@ import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import type mysql from 'mysql2/promise';
 
-import type { CoinLedgerEntry } from '@joy/shared';
+import { toEntityId, toOptionalEntityId, type CoinLedgerEntry } from '@umi/shared';
 
+import { getRequestUser, requireUser } from '../../lib/auth';
+import { asyncHandler } from '../../lib/errors';
 import { getDbPool } from '../../lib/db';
 import { ok } from '../../lib/http';
-import { getUserByToken } from '../auth/store';
 
 export const walletRouter: ExpressRouter = Router();
 
@@ -18,10 +19,6 @@ const LEDGER_TYPE_MAP: Record<number, CoinLedgerEntry['type']> = {
   50: 'adjust',
   60: 'init',
 };
-
-function getBearerToken(authorization?: string) {
-  return authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
-}
 
 type LedgerRow = {
   id: number | string;
@@ -38,42 +35,39 @@ type LedgerRow = {
 function sanitizeLedger(row: LedgerRow): CoinLedgerEntry {
   const code = Number(row.type ?? 0);
   return {
-    id: String(row.id),
-    userId: String(row.user_id),
+    id: toEntityId(row.id),
+    userId: toEntityId(row.user_id),
     type: LEDGER_TYPE_MAP[code] || 'adjust',
     amount: Number(row.amount ?? 0),
     balanceAfter: Number(row.balance_after ?? 0),
     sourceType: row.source_type === null ? '' : String(row.source_type),
-    sourceId: row.source_id === null ? '' : String(row.source_id),
+    sourceId: toOptionalEntityId(row.source_id),
     note: row.note || '',
     createdAt: new Date(row.created_at).toISOString(),
   };
 }
 
-walletRouter.get('/ledger', async (request, response) => {
-  const token = getBearerToken(request.headers.authorization);
-  const user = token ? await getUserByToken(token) : null;
+walletRouter.get(
+  '/ledger',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const db = getDbPool();
+    const [ledgerRows] = await db.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id, user_id, type, amount, balance_after, source_type, source_id, note, created_at
+        FROM coin_ledger
+        WHERE user_id = ?
+        ORDER BY created_at DESC, id DESC
+        LIMIT 100
+      `,
+      [user.id],
+    );
 
-  if (!user) {
-    response.status(401).json({ success: false, message: '请先登录' });
-    return;
-  }
-
-  const db = getDbPool();
-  const [ledgerRows] = await db.execute<mysql.RowDataPacket[]>(
-    `
-      SELECT id, user_id, type, amount, balance_after, source_type, source_id, note, created_at
-      FROM coin_ledger
-      WHERE user_id = ?
-      ORDER BY created_at DESC, id DESC
-      LIMIT 100
-    `,
-    [user.id],
-  );
-
-  const items = ledgerRows.map((row) => sanitizeLedger(row as LedgerRow));
-  ok(response, {
-    balance: items[0]?.balanceAfter ?? 0,
-    items,
-  });
-});
+    const items = ledgerRows.map((row) => sanitizeLedger(row as LedgerRow));
+    ok(response, {
+      balance: items[0]?.balanceAfter ?? 0,
+      items,
+    });
+  }),
+);

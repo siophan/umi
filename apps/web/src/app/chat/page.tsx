@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { fetchChats } from '../../lib/api';
+import { fetchChats } from '../../lib/api/chat';
 import styles from './page.module.css';
 
 function formatChatTime(value: string) {

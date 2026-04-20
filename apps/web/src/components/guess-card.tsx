@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import type { GuessSummary } from '@joy/shared';
+import type { GuessSummary } from '@umi/shared';
 
 export function GuessCard({ guess }: { guess: GuessSummary }) {
   const totalVotes = guess.options.reduce((sum, option) => sum + option.voteCount, 0);

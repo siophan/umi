@@ -5,7 +5,7 @@ import type {
   ChangePasswordPayload,
   ChangePasswordResult,
   LogoutResult,
-} from '@joy/shared';
+} from '@umi/shared';
 
 import {
   clearAuthToken,

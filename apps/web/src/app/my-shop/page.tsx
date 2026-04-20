@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { fetchMyShop, fetchShopStatus, submitShopApplication } from '../../lib/api';
+import type { CategoryId } from '@umi/shared';
+import { fetchMyShop, fetchShopStatus, submitShopApplication } from '../../lib/api/shops';
 import styles from './page.module.css';
 
 const actions = [
@@ -81,7 +82,7 @@ export default function MyShopPage() {
   const [shopData, setShopData] = useState<ShopData>(initialShopData);
   const [form, setForm] = useState({
     shopName: '',
-    categoryId: '',
+    categoryId: '' as CategoryId | '',
     reason: '',
   });
 
@@ -359,7 +360,7 @@ export default function MyShopPage() {
               id="shopName"
               className={styles.formInput}
               maxLength={24}
-              placeholder="例如：Joy 零食铺"
+              placeholder="例如：Umi 零食铺"
               value={form.shopName}
               onChange={(event) => setForm((current) => ({ ...current, shopName: event.target.value }))}
             />
@@ -370,7 +371,7 @@ export default function MyShopPage() {
               id="categoryId"
               className={styles.formSelect}
               value={form.categoryId}
-              onChange={(event) => setForm((current) => ({ ...current, categoryId: event.target.value }))}
+              onChange={(event) => setForm((current) => ({ ...current, categoryId: event.target.value as typeof current.categoryId }))}
             >
               <option value="">请选择经营分类</option>
               {shopStatus.categories.map((item) => (

@@ -13,12 +13,12 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@joy/shared": ["packages/shared/src/index.ts"],
-      "@joy/shared/*": ["packages/shared/src/*"],
-      "@joy/config": ["packages/config/src/index.ts"],
-      "@joy/config/*": ["packages/config/*"],
-      "@joy/db": ["packages/db/src/index.ts"],
-      "@joy/db/*": ["packages/db/*"]
+      "@umi/shared": ["packages/shared/src/index.ts"],
+      "@umi/shared/*": ["packages/shared/src/*"],
+      "@umi/config": ["packages/config/src/index.ts"],
+      "@umi/config/*": ["packages/config/*"],
+      "@umi/db": ["packages/db/src/index.ts"],
+      "@umi/db/*": ["packages/db/*"]
     }
   }
 }
