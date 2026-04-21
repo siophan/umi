@@ -2,6 +2,7 @@ import type {
   AdminShopDetailResult,
   CreateAdminBrandPayload,
   CreateAdminBrandResult,
+  RevokeAdminBrandAuthRecordResult,
   ReviewAdminBrandAuthApplyPayload,
   ReviewAdminBrandAuthApplyResult,
   ReviewAdminShopApplyPayload,
@@ -211,6 +212,13 @@ export function fetchAdminBrandAuthRecords() {
       { total: number; byStatus: Record<string, number>; byScope: Record<string, number> }
     >
   >('/api/admin/brands/auth-records');
+}
+
+export function revokeAdminBrandAuthRecord(id: string) {
+  return putJson<RevokeAdminBrandAuthRecordResult, Record<string, never>>(
+    `/api/admin/brands/auth-records/${id}/revoke`,
+    {},
+  );
 }
 
 export function fetchAdminShopProducts() {

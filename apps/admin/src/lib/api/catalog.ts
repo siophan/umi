@@ -1,6 +1,15 @@
-import type { GuessListResult, WarehouseListResult } from '@umi/shared';
+import type {
+  CreateAdminBrandProductPayload,
+  CreateAdminBrandProductResult,
+  GuessListResult,
+  ReviewAdminGuessPayload,
+  ReviewAdminGuessResult,
+  UpdateAdminBrandProductPayload,
+  UpdateAdminBrandProductResult,
+  WarehouseListResult,
+} from '@umi/shared';
 
-import { getJson } from './shared';
+import { getJson, postJson, putJson } from './shared';
 
 export interface AdminProduct {
   id: string;
@@ -25,9 +34,13 @@ export interface AdminBrandLibraryItem {
   brandId: string | null;
   brandName: string;
   productName: string;
+  categoryId: string | null;
   category: string;
   guidePrice: number;
+  supplyPrice: number;
   status: 'active' | 'disabled';
+  description: string | null;
+  createdAt: string;
   updatedAt: string;
   imageUrl: string | null;
   productCount: number;
@@ -108,6 +121,13 @@ export function fetchAdminGuesses() {
   return getJson<GuessListResult>('/api/admin/guesses');
 }
 
+export function reviewAdminGuess(id: string, payload: ReviewAdminGuessPayload) {
+  return putJson<ReviewAdminGuessResult, ReviewAdminGuessPayload>(
+    `/api/admin/guesses/${id}/review`,
+    payload,
+  );
+}
+
 export function fetchAdminBrandLibrary(query: { page?: number; pageSize?: number } = {}) {
   const search = new URLSearchParams();
   if (query.page != null) {
@@ -119,6 +139,23 @@ export function fetchAdminBrandLibrary(query: { page?: number; pageSize?: number
   const suffix = search.size > 0 ? `?${search.toString()}` : '';
   return getJson<PaginatedListResult<AdminBrandLibraryItem>>(
     `/api/admin/products/brand-library${suffix}`,
+  );
+}
+
+export function createAdminBrandProduct(payload: CreateAdminBrandProductPayload) {
+  return postJson<CreateAdminBrandProductResult, CreateAdminBrandProductPayload>(
+    '/api/admin/products/brand-library',
+    payload,
+  );
+}
+
+export function updateAdminBrandProduct(
+  id: string,
+  payload: UpdateAdminBrandProductPayload,
+) {
+  return putJson<UpdateAdminBrandProductResult, UpdateAdminBrandProductPayload>(
+    `/api/admin/products/brand-library/${id}`,
+    payload,
   );
 }
 

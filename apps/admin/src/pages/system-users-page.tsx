@@ -22,6 +22,7 @@ import {
   AdminStatusTabs,
   SEARCH_THEME,
 } from '../components/admin-list-controls';
+import { fetchMe } from '../lib/api/auth';
 import {
   createAdminSystemUser,
   fetchAdminRoles,
@@ -74,6 +75,8 @@ export function SystemUsersPage({ refreshToken = 0 }: SystemUsersPageProps) {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
+  const [roleIssue, setRoleIssue] = useState<string | null>(null);
+  const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
   const [filters, setFilters] = useState<SystemUserFilters>({});
   const [status, setStatus] = useState<'all' | AdminSystemUserItem['status']>('all');
   const [selected, setSelected] = useState<AdminSystemUserItem | null>(null);
@@ -84,13 +87,28 @@ export function SystemUsersPage({ refreshToken = 0 }: SystemUsersPageProps) {
   async function loadPage() {
     setLoading(true);
     setIssue(null);
+    setRoleIssue(null);
     try {
-      const [usersResult, rolesResult] = await Promise.all([
+      const [usersResult, rolesResult] = await Promise.allSettled([
         fetchAdminSystemUsers(),
         fetchAdminRoles(),
       ]);
-      setUsers(usersResult.items);
-      setRoles(rolesResult.items);
+
+      if (usersResult.status === 'fulfilled') {
+        setUsers(usersResult.value.items);
+      } else {
+        setUsers([]);
+        setRoles([]);
+        setIssue(usersResult.reason instanceof Error ? usersResult.reason.message : '系统用户加载失败');
+        return;
+      }
+
+      if (rolesResult.status === 'fulfilled') {
+        setRoles(rolesResult.value.items);
+      } else {
+        setRoles([]);
+        setRoleIssue(rolesResult.reason instanceof Error ? rolesResult.reason.message : '角色列表加载失败');
+      }
     } catch (error) {
       setUsers([]);
       setRoles([]);
@@ -102,6 +120,29 @@ export function SystemUsersPage({ refreshToken = 0 }: SystemUsersPageProps) {
 
   useEffect(() => {
     void loadPage();
+  }, [refreshToken]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadCurrentAdmin() {
+      try {
+        const me = await fetchMe();
+        if (alive) {
+          setCurrentAdminId(me.id);
+        }
+      } catch {
+        if (alive) {
+          setCurrentAdminId(null);
+        }
+      }
+    }
+
+    void loadCurrentAdmin();
+
+    return () => {
+      alive = false;
+    };
   }, [refreshToken]);
 
   const activeRoleOptions = useMemo(
@@ -116,14 +157,22 @@ export function SystemUsersPage({ refreshToken = 0 }: SystemUsersPageProps) {
   );
 
   const roleFilterOptions = useMemo(
-    () =>
-      roles
-        .filter((item) => item.status === 'active')
+    () => {
+      const referencedRoleCodes = new Set(users.flatMap((item) => item.roleCodes));
+      return roles
+        .filter((item) => item.status === 'active' || referencedRoleCodes.has(item.code))
+        .sort((left, right) => {
+          if (left.status !== right.status) {
+            return left.status === 'active' ? -1 : 1;
+          }
+          return left.name.localeCompare(right.name, 'zh-CN');
+        })
         .map((item) => ({
-          label: item.name,
+          label: item.status === 'active' ? item.name : `${item.name}（已停用）`,
           value: item.code,
-        })),
-    [roles],
+        }));
+    },
+    [roles, users],
   );
 
   const filteredUsers = useMemo(
@@ -220,21 +269,25 @@ export function SystemUsersPage({ refreshToken = 0 }: SystemUsersPageProps) {
           <Button size="small" type="link" onClick={() => openPasswordModal(record)}>
             重置密码
           </Button>
-          <Popconfirm
-            title={record.status === 'active' ? '停用账号' : '启用账号'}
-            description={
-              record.status === 'active'
-                ? '停用后该后台账号将无法登录管理后台。'
-                : '确认重新启用该后台账号？'
-            }
-            okText="确认"
-            cancelText="取消"
-            onConfirm={() => void handleToggleStatus(record)}
-          >
-            <Button size="small" type="link">
-              {record.status === 'active' ? '停用' : '启用'}
-            </Button>
-          </Popconfirm>
+          {record.id === currentAdminId && record.status === 'active' ? (
+            <Typography.Text type="secondary">当前账号</Typography.Text>
+          ) : (
+            <Popconfirm
+              title={record.status === 'active' ? '停用账号' : '启用账号'}
+              description={
+                record.status === 'active'
+                  ? '停用后该后台账号将无法登录管理后台。'
+                  : '确认重新启用该后台账号？'
+              }
+              okText="确认"
+              cancelText="取消"
+              onConfirm={() => void handleToggleStatus(record)}
+            >
+              <Button size="small" type="link">
+                {record.status === 'active' ? '停用' : '启用'}
+              </Button>
+            </Popconfirm>
+          )}
         </div>
       ),
     },
@@ -351,6 +404,7 @@ export function SystemUsersPage({ refreshToken = 0 }: SystemUsersPageProps) {
     <div className="page-stack">
       {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
+      {roleIssue ? <Alert showIcon type="warning" message={roleIssue} /> : null}
 
       <AdminSearchPanel
         form={form}

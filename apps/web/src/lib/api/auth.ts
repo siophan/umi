@@ -8,6 +8,8 @@ import type {
   SendCodeResult,
   UpdateMePayload,
   UserSummary,
+  VerifyCodePayload,
+  VerifyCodeResult,
 } from '@umi/shared';
 
 import { getJson, postJson, putJson } from './shared';
@@ -18,6 +20,10 @@ export async function login(payload: LoginPayload) {
 
 export async function sendCode(payload: SendCodePayload) {
   return postJson<SendCodeResult, SendCodePayload>('/api/auth/send-code', payload);
+}
+
+export async function verifyCode(payload: VerifyCodePayload) {
+  return postJson<VerifyCodeResult, VerifyCodePayload>('/api/auth/verify-code', payload);
 }
 
 export async function register(payload: RegisterPayload) {

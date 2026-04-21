@@ -52,6 +52,24 @@ export const authPaths = {
       },
     },
   },
+  '/api/auth/verify-code': {
+    post: {
+      tags: ['Auth'],
+      summary: '校验验证码',
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/VerifyCodePayload',
+      }),
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            verified: { type: 'boolean', example: true },
+          },
+        }),
+        400: errorResponse(400, '验证码校验失败'),
+      },
+    },
+  },
   '/api/auth/register': {
     post: {
       tags: ['Auth'],

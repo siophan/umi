@@ -978,6 +978,53 @@ export async function reviewAdminBrandAuthApply(applyId, payload) {
         connection.release();
     }
 }
+export async function revokeAdminBrandAuthRecord(authId) {
+    const db = getDbPool();
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [authRows] = await connection.execute(`
+        SELECT id, shop_id, brand_id, status
+        FROM shop_brand_auth
+        WHERE id = ?
+        LIMIT 1
+      `, [authId]);
+        const auth = authRows[0];
+        if (!auth) {
+            throw new Error('品牌授权记录不存在');
+        }
+        if (Number(auth.status ?? 0) !== AUTH_STATUS_ACTIVE) {
+            throw new Error('当前授权不可撤销');
+        }
+        await connection.execute(`
+        UPDATE shop_brand_auth
+        SET
+          status = ?,
+          expired_at = CURRENT_TIMESTAMP(3),
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+      `, [AUTH_STATUS_REVOKED, authId]);
+        await connection.execute(`
+        UPDATE product p
+        INNER JOIN brand_product bp ON bp.id = p.brand_product_id
+        SET
+          p.status = ?,
+          p.updated_at = CURRENT_TIMESTAMP(3)
+        WHERE p.shop_id = ?
+          AND bp.brand_id = ?
+          AND p.status = ?
+      `, [PRODUCT_STATUS_OFF_SHELF, auth.shop_id, auth.brand_id, PRODUCT_STATUS_ACTIVE]);
+        await connection.commit();
+        return { id: toEntityId(auth.id), status: 'revoked' };
+    }
+    catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally {
+        connection.release();
+    }
+}
 export async function getAdminShopProducts() {
     const db = getDbPool();
     const [rows] = await db.execute(`

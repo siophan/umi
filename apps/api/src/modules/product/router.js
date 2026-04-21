@@ -173,6 +173,8 @@ async function getProductById(productId) {
         p.image_url,
         p.images,
         p.tags,
+        p.sales,
+        p.rating,
         p.stock,
         p.status,
         p.shop_id,
@@ -421,7 +423,7 @@ async function getRecommendations(product) {
           OR (p.shop_id IS NOT NULL AND p.shop_id = ?)
         )
       ORDER BY p.created_at DESC, p.id DESC
-      LIMIT 3
+      LIMIT 6
     `, [product.id, product.brand_id ?? 0, product.shop_id ?? 0]);
     return rows.map((row) => ({
         id: toEntityId(row.id),
@@ -432,6 +434,42 @@ async function getRecommendations(product) {
         guessPrice: Number(row.guess_price ?? row.price ?? 0) / 100,
         category: row.category || '未分类',
         status: Number(row.status ?? 0) === 10 ? 'active' : String(row.status),
+    }));
+}
+async function getRecentProductReviews(productId) {
+    const db = getDbPool();
+    let rows;
+    try {
+        [rows] = await db.execute(`
+        SELECT
+          pr.id,
+          pr.user_id,
+          pr.rating,
+          pr.content,
+          pr.created_at,
+          up.name AS user_name,
+          up.avatar_url AS user_avatar
+        FROM product_review pr
+        LEFT JOIN user_profile up ON up.user_id = pr.user_id
+        WHERE pr.product_id = ?
+        ORDER BY pr.created_at DESC, pr.id DESC
+        LIMIT 3
+      `, [productId]);
+    }
+    catch (error) {
+        const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
+        if (code === 'ER_NO_SUCH_TABLE') {
+            return [];
+        }
+        throw error;
+    }
+    return rows.map((row) => ({
+        id: toEntityId(row.id),
+        userName: row.user_name?.trim() || `用户${String(row.user_id)}`,
+        userAvatar: row.user_avatar?.trim() || null,
+        rating: Math.max(1, Math.min(5, Math.trunc(Number(row.rating) || 5))),
+        content: row.content?.trim() || null,
+        createdAt: new Date(row.created_at).toISOString(),
     }));
 }
 async function getProductCategories() {
@@ -468,7 +506,7 @@ productRouter.get('/:id', optionalUser, asyncHandler(async (request, response) =
     if (!product) {
         throw new HttpError(404, 'PRODUCT_NOT_FOUND', '商品不存在');
     }
-    const [activeGuess, warehouseItems, recommendations, favoritedProductIds] = await Promise.all([
+    const [activeGuess, warehouseItems, recommendations, favoritedProductIds, reviews] = await Promise.all([
         getActiveGuess(productId, product),
         request.user
             ? getWarehouseItems(request.user.id, productId)
@@ -477,6 +515,7 @@ productRouter.get('/:id', optionalUser, asyncHandler(async (request, response) =
         request.user
             ? getFavoritedProductIdSet(request.user.id, [productId])
             : Promise.resolve(new Set()),
+        getRecentProductReviews(productId),
     ]);
     const images = [product.image_url, ...safeJsonArray(product.images)].filter((item, index, array) => typeof item === 'string' &&
         item.trim().length > 0 &&
@@ -496,6 +535,8 @@ productRouter.get('/:id', optionalUser, asyncHandler(async (request, response) =
             images,
             originalPrice: Number(product.original_price ?? product.price ?? 0) / 100,
             stock: Number(product.stock ?? 0),
+            sales: Number(product.sales ?? 0),
+            rating: Number(product.rating ?? 0),
             tags: safeJsonArray(product.tags),
             description: `${product.brand_name || '品牌'} ${product.name}，支持直购、竞猜和仓库换购。`,
             favorited: favoritedProductIds.has(productId),
@@ -503,6 +544,7 @@ productRouter.get('/:id', optionalUser, asyncHandler(async (request, response) =
         activeGuess,
         warehouseItems,
         recommendations,
+        reviews,
     };
     ok(response, result);
 }));

@@ -25,6 +25,19 @@ export const authSchemas = {
       },
     },
   },
+  VerifyCodePayload: {
+    type: 'object',
+    required: ['phone', 'code', 'bizType'],
+    properties: {
+      phone: { type: 'string', example: '13800138000' },
+      code: { type: 'string', example: '123456' },
+      bizType: {
+        type: 'string',
+        enum: ['register', 'login', 'reset_password'],
+        example: 'register',
+      },
+    },
+  },
   RegisterPayload: {
     type: 'object',
     required: ['phone', 'code', 'password', 'name'],

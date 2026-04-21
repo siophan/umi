@@ -105,10 +105,10 @@ type AdminNotificationRow = {
   target_type: number | string | null;
   target_id: number | string | null;
   action_url: string | null;
+  batch_created_at: Date | string;
   recipient_count: number | string;
   read_count: number | string;
   unread_count: number | string;
-  first_created_at: Date | string;
   last_created_at: Date | string;
 };
 
@@ -400,6 +400,7 @@ export interface AdminPermissionListItem {
   status: 'active' | 'disabled';
   sort: number;
   assignedRoleCount: number;
+  isBuiltIn: boolean;
 }
 
 export interface AdminPermissionListResult {
@@ -747,8 +748,14 @@ async function fetchAdminRolesWithStats() {
         ar.created_at,
         ar.updated_at,
         COUNT(DISTINCT aur.admin_user_id) AS member_count,
-        COUNT(DISTINCT arp.permission_id) AS permission_count,
-        GROUP_CONCAT(DISTINCT COALESCE(ap.module, '未分组') ORDER BY ap.sort ASC, ap.id ASC SEPARATOR ',') AS permission_modules
+        COUNT(DISTINCT CASE
+          WHEN ap.status = ${PERMISSION_STATUS_ACTIVE} THEN arp.permission_id
+          ELSE NULL
+        END) AS permission_count,
+        GROUP_CONCAT(DISTINCT CASE
+          WHEN ap.status = ${PERMISSION_STATUS_ACTIVE} THEN COALESCE(ap.module, '未分组')
+          ELSE NULL
+        END ORDER BY ap.sort ASC, ap.id ASC SEPARATOR ',') AS permission_modules
       FROM admin_role ar
       LEFT JOIN admin_user_role aur ON aur.role_id = ar.id
       LEFT JOIN admin_role_permission arp ON arp.role_id = ar.id
@@ -1070,6 +1077,83 @@ async function findAdminPermissionByCode(
   return rows.length > 0;
 }
 
+async function wouldCreatePermissionCycle(permissionId: string, parentId: string) {
+  let currentId: string | null = parentId;
+  const visited = new Set<string>();
+
+  while (currentId) {
+    if (currentId === permissionId) {
+      return true;
+    }
+    if (visited.has(currentId)) {
+      return true;
+    }
+    visited.add(currentId);
+    const node = await fetchAdminPermissionById(currentId);
+    currentId = node?.parent_id == null ? null : String(node.parent_id);
+  }
+
+  return false;
+}
+
+async function fetchAdminPermissionTreeRows(
+  db: mysql.Pool | mysql.PoolConnection,
+) {
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id, parent_id
+      FROM admin_permission
+    `,
+  );
+
+  return rows as Array<{
+    id: number | string;
+    parent_id: number | string | null;
+  }>;
+}
+
+async function collectAdminPermissionDescendantIds(
+  db: mysql.Pool | mysql.PoolConnection,
+  permissionId: string,
+) {
+  const rows = await fetchAdminPermissionTreeRows(db);
+  const childrenByParent = new Map<string, string[]>();
+
+  for (const row of rows) {
+    if (row.parent_id == null) {
+      continue;
+    }
+
+    const parentId = String(row.parent_id);
+    const currentChildren = childrenByParent.get(parentId) ?? [];
+    currentChildren.push(String(row.id));
+    childrenByParent.set(parentId, currentChildren);
+  }
+
+  const descendants: string[] = [];
+  const queue = [...(childrenByParent.get(permissionId) ?? [])];
+  const seen = new Set(queue);
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    if (!currentId) {
+      continue;
+    }
+
+    descendants.push(currentId);
+
+    for (const childId of childrenByParent.get(currentId) ?? []) {
+      if (seen.has(childId)) {
+        continue;
+      }
+      seen.add(childId);
+      queue.push(childId);
+    }
+  }
+
+  return descendants;
+}
+
 async function fetchAdminNotificationBatches() {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -1078,6 +1162,7 @@ async function fetchAdminNotificationBatches() {
         SHA2(
           CONCAT_WS(
             '#',
+            COALESCE(DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s.%f'), ''),
             COALESCE(CAST(type AS CHAR), ''),
             COALESCE(title, ''),
             COALESCE(content, ''),
@@ -1093,14 +1178,15 @@ async function fetchAdminNotificationBatches() {
         target_type,
         target_id,
         action_url,
+        MIN(created_at) AS batch_created_at,
         COUNT(*) AS recipient_count,
         SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) AS read_count,
         SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) AS unread_count,
-        MIN(created_at) AS first_created_at,
         MAX(created_at) AS last_created_at
       FROM notification
       GROUP BY
         notification_key,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s.%f'),
         title,
         content,
         type,
@@ -1160,6 +1246,7 @@ export async function getAdminNotifications(): Promise<AdminNotificationListResu
   const items = rows.map<AdminNotificationItem>((row) => ({
     id: row.notification_key,
     title: row.title || '系统通知',
+    content: row.content ?? null,
     audience: mapNotificationAudience(row.target_type),
     type: mapNotificationType(row.type),
     status: 'sent',
@@ -1169,7 +1256,7 @@ export async function getAdminNotifications(): Promise<AdminNotificationListResu
     recipientCount: toNumber(row.recipient_count),
     readCount: toNumber(row.read_count),
     unreadCount: toNumber(row.unread_count),
-    createdAt: toIsoString(row.first_created_at) ?? new Date(0).toISOString(),
+    createdAt: toIsoString(row.batch_created_at) ?? new Date(0).toISOString(),
     sentAt: toIsoString(row.last_created_at) ?? new Date(0).toISOString(),
   }));
 
@@ -1210,6 +1297,7 @@ export async function createAdminNotification(
 
   const db = getDbPool();
   const connection = await db.getConnection();
+  const batchCreatedAt = new Date();
 
   try {
     await connection.beginTransaction();
@@ -1237,9 +1325,9 @@ export async function createAdminNotification(
             created_at,
             updated_at
           )
-          VALUES (?, ?, ?, ?, ?, NULL, ?, 0, NOW(), NOW())
+          VALUES (?, ?, ?, ?, ?, NULL, ?, 0, ?, ?)
         `,
-        [userId, type, title, content, targetType, payload.actionUrl?.trim() || null],
+        [userId, type, title, content, targetType, payload.actionUrl?.trim() || null, batchCreatedAt, batchCreatedAt],
       );
     }
 
@@ -1892,6 +1980,7 @@ export async function getAdminPermissions(): Promise<AdminPermissionListResult> 
     status: mapPermissionStatus(row.status),
     sort: toNumber(row.sort),
     assignedRoleCount: toNumber(row.assigned_role_count),
+    isBuiltIn: findAdminPermissionDefinitionByCode(row.code) != null,
   }));
 
   return {
@@ -1960,6 +2049,10 @@ export async function updateAdminPermission(
     throw new Error('权限不存在');
   }
 
+  if (findAdminPermissionDefinitionByCode(permission.code)) {
+    throw new Error('系统内置权限不允许编辑');
+  }
+
   const code = normalizeAdminPermissionCode(payload.code);
   const name = normalizeAdminPermissionName(payload.name);
   const module = normalizeAdminPermissionModule(payload.module);
@@ -1980,6 +2073,10 @@ export async function updateAdminPermission(
     const parent = await fetchAdminPermissionById(parentId);
     if (!parent) {
       throw new Error('父权限不存在');
+    }
+
+    if (await wouldCreatePermissionCycle(permissionId, parentId)) {
+      throw new Error('父权限不能是自己的子权限');
     }
   }
 
@@ -2014,14 +2111,31 @@ export async function updateAdminPermissionStatus(
   }
 
   const db = getDbPool();
-  await db.execute(
-    `
-      UPDATE admin_permission
-      SET status = ?
-      WHERE id = ?
-    `,
-    [toPermissionStatusCode(payload.status), permissionId],
-  );
+  const targetStatus = toPermissionStatusCode(payload.status);
+
+  if (payload.status === 'disabled') {
+    const descendantIds = await collectAdminPermissionDescendantIds(db, permissionId);
+    const affectedIds = [permissionId, ...descendantIds];
+    const placeholders = affectedIds.map(() => '?').join(', ');
+
+    await db.execute(
+      `
+        UPDATE admin_permission
+        SET status = ?
+        WHERE id IN (${placeholders})
+      `,
+      [targetStatus, ...affectedIds],
+    );
+  } else {
+    await db.execute(
+      `
+        UPDATE admin_permission
+        SET status = ?
+        WHERE id = ?
+      `,
+      [targetStatus, permissionId],
+    );
+  }
 
   return {
     id: toEntityId(permission.id),

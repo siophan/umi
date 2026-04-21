@@ -40,9 +40,6 @@ function ShopDetailPageInner() {
   const [reloadToken, setReloadToken] = useState(0);
   const [tab, setTab] = useState<TabKey>('all');
   const [filter, setFilter] = useState<FilterKey>('default');
-  const [followed, setFollowed] = useState(false);
-  const [shopFavorited, setShopFavorited] = useState(false);
-  const [likedProducts, setLikedProducts] = useState<string[]>([]);
   const [navSolid, setNavSolid] = useState(false);
   const [toast, setToast] = useState('');
   const [priceAsc, setPriceAsc] = useState(true);
@@ -122,13 +119,6 @@ function ShopDetailPageInner() {
     () => shopProducts.reduce((sum, item) => sum + item.sales, 0),
     [shopProducts],
   );
-  const avgRating = useMemo(() => {
-    if (!shopProducts.length) return '4.8';
-    return (
-      shopProducts.reduce((sum, item) => sum + item.rating, 0) /
-      shopProducts.length
-    ).toFixed(1);
-  }, [shopProducts]);
 
   const showAll = tab === 'all';
   const showHot = tab === 'hot';
@@ -170,35 +160,6 @@ function ShopDetailPageInner() {
   useEffect(() => {
     document.title = `${meta?.full || '店铺详情'} - UMI`;
   }, [meta?.full]);
-
-  function toggleFollow() {
-    setFollowed((current) => {
-      const next = !current;
-      showToast(next ? '✅ 关注成功' : '已取消关注');
-      return next;
-    });
-  }
-
-  function toggleShopFavorite() {
-    setShopFavorited((current) => {
-      const next = !current;
-      showToast(next ? '⭐ 收藏成功' : '取消收藏');
-      return next;
-    });
-  }
-
-  function toggleCardFav(event: React.MouseEvent<HTMLButtonElement>, productId: string) {
-    event.preventDefault();
-    event.stopPropagation();
-    setLikedProducts((current) => {
-      if (current.includes(productId)) {
-        return current.filter((item) => item !== productId);
-      }
-
-      showToast('❤️ 已收藏');
-      return [...current, productId];
-    });
-  }
 
   function jumpToMainContent(nextTab: TabKey) {
     setTab(nextTab);
@@ -307,13 +268,6 @@ function ShopDetailPageInner() {
               </div>
               <div className={styles.heroDesc}>{meta.desc}</div>
             </div>
-            <button
-              type="button"
-              className={`${styles.followBtn} ${followed ? styles.followed : ''}`}
-              onClick={toggleFollow}
-            >
-              {followed ? '已关注' : '+ 关注'}
-            </button>
           </div>
 
           <div className={styles.heroStats}>
@@ -326,10 +280,6 @@ function ShopDetailPageInner() {
                 {formatNum(totalSales)}
               </div>
               <div className={styles.heroLbl}>总销量</div>
-            </div>
-            <div className={styles.heroStat}>
-              <div className={styles.heroVal}>{avgRating}</div>
-              <div className={styles.heroLbl}>商品均分</div>
             </div>
             <div className={styles.heroStat}>
               <div className={styles.heroVal}>{meta.fans}</div>
@@ -491,13 +441,6 @@ function ShopDetailPageInner() {
                           ? '🔥 热销'
                           : '品牌'}
                     </span>
-                    <button
-                      type="button"
-                      className={`${styles.fav} ${likedProducts.includes(item.id) ? styles.favLiked : ''}`}
-                      onClick={(event) => toggleCardFav(event, item.id)}
-                    >
-                      <i className={`${likedProducts.includes(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart`} />
-                    </button>
                   </div>
                   <div className={styles.productBody}>
                     <div className={styles.productName}>{item.name}</div>
@@ -607,13 +550,6 @@ function ShopDetailPageInner() {
                           ? '🔥 热销'
                           : '品牌'}
                     </span>
-                    <button
-                      type="button"
-                      className={`${styles.fav} ${likedProducts.includes(item.id) ? styles.favLiked : ''}`}
-                      onClick={(event) => toggleCardFav(event, item.id)}
-                    >
-                      <i className={`${likedProducts.includes(item.id) ? 'fa-solid' : 'fa-regular'} fa-heart`} />
-                    </button>
                   </div>
                   <div className={styles.productBody}>
                     <div className={styles.productName}>{item.name}</div>
@@ -641,30 +577,7 @@ function ShopDetailPageInner() {
       </main>
 
       <footer className={styles.bottomBar}>
-        <button
-          className={`${styles.bottomIcon} ${shopFavorited ? styles.bottomIconFavOn : ''}`}
-          type="button"
-          onClick={toggleShopFavorite}
-        >
-          <span><i className={`${shopFavorited ? 'fa-solid' : 'fa-regular'} fa-heart`} /></span>
-          收藏
-        </button>
-        <button
-          className={styles.bottomIcon}
-          type="button"
-          onClick={() => showToast('💬 正在接入客服...')}
-        >
-          <span><i className="fa-regular fa-comment-dots" /></span>
-          客服
-        </button>
         <div className={styles.bottomButtons}>
-          <button
-            className={styles.chatBtn}
-            type="button"
-            onClick={() => showToast('💬 正在接入店铺客服...')}
-          >
-            <i className="fa-regular fa-comment-dots" style={{ fontSize: 14 }} /> 聊一聊
-          </button>
           <button
             className={styles.primaryBtn}
             type="button"

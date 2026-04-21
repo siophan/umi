@@ -7,6 +7,7 @@ import type {
   RegisterPayload,
   ResetPasswordPayload,
   SendCodePayload,
+  VerifyCodePayload,
 } from '@umi/shared';
 
 import { getBearerToken, getRequestUser, requireUser } from '../../lib/auth';
@@ -19,6 +20,7 @@ import {
   register,
   resetPassword,
   sendCode,
+  verifyCode,
 } from './store';
 
 export const authRouter: ExpressRouter = Router();
@@ -49,6 +51,21 @@ authRouter.post(
     async (request, response) => {
       const body = request.body as SendCodePayload;
       ok(response, await sendCode(body.phone, body.bizType));
+    },
+  ),
+);
+
+authRouter.post(
+  '/verify-code',
+  withErrorBoundary(
+    {
+      status: 400,
+      code: 'AUTH_VERIFY_CODE_FAILED',
+      message: '验证码校验失败',
+    },
+    async (request, response) => {
+      const body = request.body as VerifyCodePayload;
+      ok(response, await verifyCode(body.phone, body.code, body.bizType));
     },
   ),
 );

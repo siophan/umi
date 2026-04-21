@@ -9,7 +9,7 @@
 .nav {
   position: fixed;
   inset: 0 0 auto;
-  z-index: 30;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -33,6 +33,12 @@
   background: rgba(0, 0, 0, 0.25);
   color: #fff;
   font-size: 14px;
+  backdrop-filter: blur(6px);
+  transition: all 0.2s ease;
+}
+
+.navBtn:active {
+  transform: scale(0.9);
 }
 
 .navScrolled .navBtn {
@@ -46,6 +52,10 @@
   color: #fff;
   font-size: 14px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
   opacity: 0;
   transition: opacity 0.25s ease;
 }
@@ -155,6 +165,7 @@
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .priceMain small {
@@ -205,6 +216,9 @@
   color: #fff;
   font-size: 9px;
   font-weight: 700;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
 }
 
 .selfBadge {
@@ -243,10 +257,8 @@
 .promoStrip {
   display: flex;
   gap: 6px;
-  padding: 8px 12px;
-  margin: 0 -12px;
+  padding: 8px 0 0;
   overflow-x: auto;
-  background: #fff;
   border-top: 0.5px solid #f0f0f0;
   scrollbar-width: none;
 }
@@ -266,6 +278,11 @@
   background: #f8f8fa;
   color: #666;
   font-size: 11px;
+}
+
+.promoChip:active {
+  background: #f0f0f2;
+  transform: scale(0.97);
 }
 
 .promoChip i {
@@ -322,6 +339,10 @@
   color: #999;
   font-size: 12px;
   font-weight: 600;
+}
+
+.modeTab:active {
+  transform: scale(0.97);
 }
 
 .modeIcon {
@@ -501,9 +522,20 @@
   margin-bottom: 6px;
   overflow: hidden;
   background: #fff;
+  animation: fadeUp 0.3s ease forwards;
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .panelInner {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: fadeUp 0.3s ease forwards;
   padding: 10px 12px;
 }
 
@@ -523,6 +555,10 @@
   font-weight: 700;
 }
 
+.panelTitle i {
+  font-size: 12px;
+}
+
 .panelTitle span {
   color: #bbb;
   font-size: 10px;
@@ -537,6 +573,11 @@
   background: transparent;
   color: #999;
   font-size: 11px;
+  cursor: pointer;
+}
+
+.panelMore:active {
+  color: #666;
 }
 
 .guessHero {
@@ -771,9 +812,37 @@
   text-align: center;
 }
 
+.guessMore:active {
+  opacity: 0.6;
+}
+
 .guessMore i {
   margin-left: 3px;
   font-size: 8px;
+}
+
+.countdownBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.countdownBox {
+  min-width: 34px;
+  padding: 7px 0;
+  border-radius: 8px;
+  background: #fff5ec;
+  color: #e64a19;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.countdownSep {
+  color: #e64a19;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .recItem {
@@ -865,6 +934,7 @@
   color: rgba(255, 255, 255, 0.75);
   font-size: 10px;
   font-weight: 600;
+  letter-spacing: 1px;
 }
 
 .directPrice,
@@ -875,6 +945,7 @@
   font-size: 26px;
   font-weight: 900;
   line-height: 1.1;
+  letter-spacing: -1px;
 }
 
 .directPrice small,
@@ -927,6 +998,12 @@
   border: 1px dashed #d6deff;
   border-radius: 8px;
   background: #f5f7ff;
+  transition: all 0.15s ease;
+}
+
+.couponCard:active {
+  border-color: #4e6ae6;
+  transform: scale(0.97);
 }
 
 .couponCard strong {
@@ -1002,6 +1079,11 @@
 .compareCardGreen {
   border-color: #c8f0d8;
   background: #f0fff7;
+}
+
+.compareCard:active,
+.compareCardGreen:active {
+  transform: scale(0.97);
 }
 
 .compareCard span,
@@ -1085,6 +1167,28 @@
   font-size: 12px;
 }
 
+.exchangeCoverTip {
+  padding: 6px 0 8px;
+  color: #00875a;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.exchangeCoverTip i {
+  margin-right: 4px;
+}
+
+.inventorySummary {
+  margin-bottom: 8px;
+  color: #999;
+  font-size: 10px;
+}
+
+.inventorySummary strong {
+  color: #00875a;
+}
+
 .inventoryList {
   padding: 10px;
   border-radius: 8px;
@@ -1130,6 +1234,71 @@
   font-weight: 700;
 }
 
+.inventoryMore {
+  width: 100%;
+  padding: 6px 0 0;
+  border: 0;
+  background: transparent;
+  color: #00875a;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.inventoryMore:active {
+  opacity: 0.6;
+}
+
+.inventoryMore i {
+  margin-left: 3px;
+  font-size: 8px;
+}
+
+.planBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f0fff4, #e8f5e9);
+}
+
+.planIcon {
+  font-size: 18px;
+}
+
+.planBody {
+  flex: 1;
+}
+
+.planTitle {
+  color: #2e7d32;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.planDesc {
+  margin-top: 1px;
+  color: #666;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.planCta {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2dc88a, #00875a);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.planCta:active {
+  filter: brightness(0.9);
+}
+
 .flowSteps {
   display: flex;
   gap: 4px;
@@ -1162,6 +1331,42 @@
   font-size: 9px;
   font-weight: 500;
   line-height: 1.2;
+}
+
+.flowServiceRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+  color: #00875a;
+  font-size: 9px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.flowServiceRow span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.flowLeadRow {
+  margin-top: 6px;
+  padding: 6px 0;
+  color: #bbb;
+  font-size: 10px;
+  text-align: center;
+}
+
+.flowLeadRow button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .detailText {
@@ -1257,6 +1462,9 @@
 }
 
 .recommendTitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   padding: 10px 12px 0;
   color: #1a1a1a;
   font-size: 13px;
@@ -1274,6 +1482,10 @@
   display: block;
   color: inherit;
   text-decoration: none;
+}
+
+.recommendItem:active {
+  opacity: 0.8;
 }
 
 .recommendImg {
@@ -1303,7 +1515,7 @@
 .bottomBar {
   position: fixed;
   inset: auto 0 0;
-  z-index: 32;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: 0;
@@ -1330,21 +1542,31 @@
   border: 0;
   background: transparent;
   color: #999;
+  flex-shrink: 0;
+  position: relative;
   text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.barIcon i {
+  color: #888;
+  font-size: 19px;
+  transition: all 0.2s ease;
+}
+
+.barIcon:active i {
+  transform: scale(0.82);
 }
 
 .barIcon span {
-  font-size: 19px;
-  color: #888;
-}
-
-.barIcon em {
-  font-style: normal;
+  color: #999;
   font-size: 9px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
 }
 
-.barIconFavActive span,
-.barIconFavActive em {
+.barIconFavActive i,
+.barIconFavActive span {
   color: #ff3b5c;
 }
 
@@ -1355,30 +1577,36 @@
   border-radius: 22px;
 }
 
-.barSub {
-  flex: 0.42;
-  height: 44px;
-  border: 0;
-  border-radius: 22px 0 0 22px;
-  background: #2a2a2a;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+.barSub,
+.barPrimary {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 44px;
+  border: 0;
+  border-radius: 0;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition: all 0.12s ease;
+}
+
+.barSub:active,
+.barPrimary:active {
+  filter: brightness(0.92);
+}
+
+.barSub {
+  flex: 0.42;
+  border-radius: 22px 0 0 22px;
+  background: #2a2a2a;
   gap: 4px;
 }
 
 .barPrimary {
   flex: 0.58;
-  height: 44px;
-  border: 0;
   border-radius: 0 22px 22px 0;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
 }
 
 .barPrimaryDirect {
@@ -1417,6 +1645,17 @@
   max-height: 88vh;
   background: #fff;
   border-radius: 16px 16px 0 0;
+  animation: exchangeSheetUp 0.35s cubic-bezier(0.32, 0.72, 0.32, 1);
+}
+
+@keyframes exchangeSheetUp {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 .exchangeHeader {
@@ -1441,6 +1680,10 @@
   background: #f0f0f2;
   color: #999;
   font-size: 14px;
+}
+
+.exchangeHeader button:active {
+  transform: scale(0.9);
 }
 
 .exchangeTarget {
@@ -1474,6 +1717,38 @@
   font-weight: 800;
 }
 
+.exchangeTarget strong small {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.exchangeTarget strong em {
+  margin-left: 4px;
+  color: #bbb;
+  font-size: 10px;
+  font-style: normal;
+  text-decoration: line-through;
+}
+
+.exchangeTargetTags {
+  display: flex;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.exchangeTargetTags span {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #fff3e0;
+  color: #e65100;
+  font-size: 9px;
+}
+
+.exchangeTargetTagGreen {
+  background: #e8f5e9 !important;
+  color: #2e7d32 !important;
+}
+
 .exchangeTarget p {
   margin: 3px 0 0;
   color: #999;
@@ -1495,15 +1770,75 @@
   font-weight: 700;
 }
 
+.exchangePlan {
+  padding: 10px 16px;
+}
+
+.exchangePlanCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #ffe0b2;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff8e1, #fff3e0);
+}
+
+.exchangePlanIcon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffb300, #ff8f00);
+  color: #fff;
+  font-size: 12px;
+}
+
+.exchangePlanInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.exchangePlanLabel {
+  color: #e65100;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.exchangePlanDesc {
+  margin-top: 1px;
+  color: #666;
+  font-size: 11px;
+}
+
 .exchangePlanBtn {
-  margin-bottom: 10px;
   padding: 5px 12px;
   border: 0;
   border-radius: 14px;
-  background: linear-gradient(135deg, #2dc88a, #00875a);
+  background: linear-gradient(135deg, #ffb300, #ff8f00);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.exchangePlanBtn:active {
+  filter: brightness(0.9);
+}
+
+.exchangeBodyTitle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.exchangeBodyTitle i {
+  color: #ff6b00;
+  font-size: 10px;
 }
 
 .exchangeCard,
@@ -1519,11 +1854,37 @@
   border-radius: 10px;
   background: #fff;
   text-align: left;
+  transition: all 0.2s ease;
+}
+
+.exchangeCard:active,
+.exchangeCardSelected:active {
+  transform: scale(0.98);
 }
 
 .exchangeCardSelected {
   border-color: #00875a;
   background: #f0fff4;
+}
+
+.exchangeCardCheck {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ddd;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 9px;
+}
+
+.exchangeCardSelected .exchangeCardCheck {
+  border-color: #00875a;
+  background: #00875a;
 }
 
 .exchangeCard img,
@@ -1555,10 +1916,30 @@
   font-size: 9px;
 }
 
+.exchangeCardRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
 .exchangeCardPrice {
   color: #00875a;
   font-size: 12px;
   font-weight: 800;
+}
+
+.exchangeCardPrice small {
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.exchangeCardSource {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #ede7f6;
+  color: #7c4dff;
+  font-size: 9px;
 }
 
 .exchangeFooter {
@@ -1575,9 +1956,33 @@
   margin-bottom: 8px;
 }
 
+.exchangeWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  background: #fff8e1;
+  color: #e65100;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.exchangeWarn strong {
+  color: #bf360c;
+}
+
 .exchangeSummary div {
   flex: 1;
   text-align: center;
+}
+
+.exchangeDivider {
+  width: 1px;
+  height: 24px;
+  background: #f0f0f0;
 }
 
 .exchangeSummary span {
@@ -1594,6 +1999,14 @@
   font-weight: 800;
 }
 
+.exchangeSummaryAccent {
+  color: #ff2442 !important;
+}
+
+.exchangeSummaryGreen {
+  color: #00875a !important;
+}
+
 .exchangeConfirm {
   width: 100%;
   height: 42px;
@@ -1603,6 +2016,102 @@
   color: #fff;
   font-size: 14px;
   font-weight: 700;
+}
+
+.exchangeConfirm:active {
+  transform: scale(0.97);
+  filter: brightness(0.9);
+}
+
+.exchangeConfirmDialog {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exchangeConfirmCard {
+  position: relative;
+  z-index: 1;
+  width: 290px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #fff;
+  text-align: center;
+  animation: exchangeConfirmPop 0.35s cubic-bezier(0.32, 0.72, 0.32, 1);
+}
+
+@keyframes exchangeConfirmPop {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.exchangeConfirmIcon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffa726, #ff7043);
+  color: #fff;
+  font-size: 20px;
+}
+
+.exchangeConfirmTitle {
+  margin-bottom: 6px;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.exchangeConfirmDesc {
+  margin-bottom: 14px;
+  color: #666;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.exchangeConfirmDesc strong {
+  color: #bf360c;
+}
+
+.exchangeConfirmBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.exchangeConfirmBtns button {
+  flex: 1;
+  height: 36px;
+  border: 0;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.exchangeConfirmBtns button:first-child {
+  background: #f0f0f2;
+  color: #666;
+}
+
+.exchangeConfirmBtns button:last-child {
+  background: linear-gradient(135deg, #ffa726, #ff7043);
+  color: #fff;
+}
+
+.exchangeConfirmBtns button:active {
+  transform: scale(0.96);
 }
 
 .toast {

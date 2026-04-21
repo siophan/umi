@@ -90,7 +90,6 @@ function tagMeta(tag: AddressTag) {
 export default function AddressPage() {
   const router = useRouter();
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
-  const [manageMode, setManageMode] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -292,13 +291,7 @@ export default function AddressPage() {
           <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.title}>收货地址</div>
-        {empty ? (
-          <div className={styles.headerSpacer} />
-        ) : (
-          <button className={styles.manageBtn} type="button" onClick={() => setManageMode((value) => !value)}>
-            {manageMode ? '完成' : '管理'}
-          </button>
-        )}
+        <div className={styles.headerSpacer} />
       </header>
 
       {loadError ? (

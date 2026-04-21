@@ -1,5 +1,13 @@
 import type mysql from 'mysql2/promise';
-import { toEntityId, toOptionalEntityId, type GuessListResult, type GuessSummary, type ProductSummary } from '@umi/shared';
+import {
+  toEntityId,
+  toOptionalEntityId,
+  type GuessListResult,
+  type GuessSummary,
+  type ProductSummary,
+  type ReviewAdminGuessPayload,
+  type ReviewAdminGuessResult,
+} from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 
@@ -12,6 +20,11 @@ const GUESS_SCOPE_FRIENDS = 20;
 
 const REVIEW_PENDING = 10;
 const REVIEW_APPROVED = 30;
+const REVIEW_REJECTED = 40;
+
+const REVIEW_ACTION_SUBMIT = 10;
+const REVIEW_ACTION_APPROVE = 20;
+const REVIEW_ACTION_REJECT = 30;
 
 const INVITATION_PENDING = 10;
 const INVITATION_ACCEPTED = 30;
@@ -163,6 +176,12 @@ export interface AdminPkMatchListResult {
   items: AdminPkMatchItem[];
 }
 
+type GuessReviewRow = {
+  id: number | string;
+  status: number | string;
+  review_status: number | string;
+};
+
 function toNumber(value: number | string | null | undefined) {
   return Number(value ?? 0);
 }
@@ -229,6 +248,35 @@ function mapGuessReviewStatus(code: number | string): GuessSummary['reviewStatus
     return 'approved';
   }
   return 'rejected';
+}
+
+function normalizeGuessReviewStatus(status: string | null | undefined) {
+  if (status === 'approved' || status === 'rejected') {
+    return status;
+  }
+
+  throw new Error('审核状态不合法');
+}
+
+function normalizeGuessRejectReason(
+  status: 'approved' | 'rejected',
+  rejectReason: string | null | undefined,
+) {
+  const value = rejectReason?.trim() ?? '';
+  if (status === 'rejected' && !value) {
+    throw new Error('请填写拒绝原因');
+  }
+
+  return value ? value.slice(0, 200) : null;
+}
+
+function ensureGuessPendingReview(row: GuessReviewRow) {
+  if (
+    Number(row.status ?? 0) !== GUESS_PENDING_REVIEW ||
+    Number(row.review_status ?? 0) !== REVIEW_PENDING
+  ) {
+    throw new Error('竞猜当前不可审核');
+  }
 }
 
 function mapFriendGuessStatus(
@@ -484,6 +532,81 @@ export async function getAdminGuesses(): Promise<GuessListResult> {
       buildGuessSummary(row, optionsByGuess.get(String(row.id)) || [], voteCountMap),
     ),
   };
+}
+
+export async function reviewAdminGuess(
+  guessId: string,
+  reviewerId: string,
+  payload: ReviewAdminGuessPayload,
+): Promise<ReviewAdminGuessResult> {
+  const status = normalizeGuessReviewStatus(payload.status);
+  const rejectReason = normalizeGuessRejectReason(status, payload.rejectReason);
+  const nextGuessStatus = status === 'approved' ? GUESS_ACTIVE : GUESS_REJECTED;
+  const nextReviewStatus = status === 'approved' ? REVIEW_APPROVED : REVIEW_REJECTED;
+  const action = status === 'approved' ? REVIEW_ACTION_APPROVE : REVIEW_ACTION_REJECT;
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [guessRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id, status, review_status
+        FROM guess
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [guessId],
+    );
+    const guess = guessRows[0] as GuessReviewRow | undefined;
+
+    if (!guess) {
+      throw new Error('竞猜不存在');
+    }
+
+    ensureGuessPendingReview(guess);
+
+    await connection.execute(
+      `
+        UPDATE guess
+        SET
+          status = ?,
+          review_status = ?,
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+      `,
+      [nextGuessStatus, nextReviewStatus, guessId],
+    );
+
+    await connection.execute(
+      `
+        INSERT INTO guess_review_log (
+          guess_id,
+          reviewer_id,
+          action,
+          from_status,
+          to_status,
+          note,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      `,
+      [guessId, reviewerId, action, Number(guess.status ?? 0), nextGuessStatus, rejectReason],
+    );
+
+    await connection.commit();
+
+    return {
+      id: toEntityId(guess.id),
+      status,
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 async function getFriendGuessRows() {

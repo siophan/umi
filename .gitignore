@@ -14,3 +14,4 @@ pnpm-lock.yaml
 .codexignore
 skills
 tests-results
+*.tsbuildinfo

@@ -67,3 +67,13 @@
 | Fixer 自测结果 | 待补 |
 | Verifier 复测结果 | 待补 |
 | 修复提交/变更 | 待补 |
+
+## Director Re-review
+
+| 项目 | 内容 |
+| --- | --- |
+| `director_owner` | `test-director` |
+| `reviewed_at` | `2026-04-20` |
+| `review_mode` | `代码验证` |
+| `结论` | `未通过，维持 open` |
+| `说明` | [apps/web/src/app/post/[id]/page.tsx:584](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/post/[id]/page.tsx:584) 到 [apps/web/src/app/post/[id]/page.tsx:592](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/post/[id]/page.tsx:592) 的顶栏仍只有返回、标题、更多按钮；作者头像和名称仍在正文卡片 [apps/web/src/app/post/[id]/page.tsx:595](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/post/[id]/page.tsx:595) 到 [apps/web/src/app/post/[id]/page.tsx:616](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/post/[id]/page.tsx:616)。同时 [apps/web/src/lib/api/users.ts:37](/Users/ezreal/Downloads/joy/umi/apps/web/src/lib/api/users.ts:37) 到 [apps/web/src/lib/api/users.ts:41](/Users/ezreal/Downloads/joy/umi/apps/web/src/lib/api/users.ts:41) 虽已有关注接口，但当前详情页没有接入关注 CTA。原问题未修复。 |

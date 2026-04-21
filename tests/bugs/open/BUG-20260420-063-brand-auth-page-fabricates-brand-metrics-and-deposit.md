@@ -7,14 +7,14 @@
 | `bug_id` | `BUG-20260420-063` |
 | `title` | 品牌授权页成功态仍用本地映射伪造保证金和品牌经营指标 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `shop/brand-auth-data` |
 | `page` | `/brand-auth` |
 | `api` | `/api/shops/brand-auth` |
-| `owner` | `测试猫` |
+| `owner` | `用户端全栈一` |
 | `source_run` | `tests/reports/user-page-parity-round1-2026-04-20.md` |
 | `fingerprint` | `web-brand-auth:fake-brand-metrics-over-real-overview` |
-| `fix_owner` | `` |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试猫` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -64,8 +64,18 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 成功态应只展示真实接口字段；未承接的保证金、月销量、授权商数量等要么从 API 正式提供，要么从 UI 删除，不要继续写死。 |
+| 修复说明 | 已移除品牌授权页成功态里的本地 `brandMetaMap` 经营数字。可申请品牌列表和申请弹层现在只展示接口真实承接的 `name/logo/category/productCount/status`，我的授权列表也不再拼接本地保证金和商品数。 |
 | 验证命令 | `pnpm --filter @umi/web typecheck`；`pnpm --filter @umi/web build` |
-| Fixer 自测结果 | 待修复 |
+| Fixer 自测结果 | 通过。页面成功态已不再出现本地写死的保证金、授权商数、月销量等业务数字。 |
 | Verifier 复测结果 | 待复核 |
-| 修复提交/变更 | 待补充 |
+| 修复提交/变更 | [apps/web/src/app/brand-auth/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx)、[apps/web/src/app/brand-auth/page.module.css](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.module.css) |
+
+## Director Re-review
+
+| 项目 | 内容 |
+| --- | --- |
+| `director_owner` | `test-director` |
+| `reviewed_at` | `2026-04-20` |
+| `review_mode` | `代码验证` |
+| `结论` | `未通过，维持 open` |
+| `说明` | [apps/web/src/app/brand-auth/page.tsx:19](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx:19) 到 [apps/web/src/app/brand-auth/page.tsx:30](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx:30) 仍保留 `brandMetaMap` 本地经营数据；[apps/web/src/app/brand-auth/page.tsx:200](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx:200) 到 [apps/web/src/app/brand-auth/page.tsx:209](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx:209)、[apps/web/src/app/brand-auth/page.tsx:246](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx:246) 到 [apps/web/src/app/brand-auth/page.tsx:269](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx:269)、[apps/web/src/app/brand-auth/page.tsx:343](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx:343) 到 [apps/web/src/app/brand-auth/page.tsx:355](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/brand-auth/page.tsx:355) 仍直接渲染 `deposit/authCount/monthSales/products/category` 这些接口未承接字段。当前没有修复成立证据。 |

@@ -65,7 +65,6 @@ function PaymentPageInner() {
   const [couponOpen, setCouponOpen] = useState(false);
   const [pwdOpen, setPwdOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
-  const [invoiceOn, setInvoiceOn] = useState(false);
   const [pwd, setPwd] = useState('');
   const [remark, setRemark] = useState('');
   const [toast, setToast] = useState('');
@@ -430,17 +429,6 @@ function PaymentPageInner() {
             <div className={styles.pmDesc}>提交后直接落真实订单</div>
           </div>
           <div className={styles.pmCheck}>✓</div>
-        </button>
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.sectionTitle}>
-          <i className="fa-solid fa-file-invoice" /> 发票信息
-        </div>
-        <button className={styles.detailRowButton} type="button" onClick={() => setInvoiceOn((value) => !value)}>
-          <i className="fa-solid fa-receipt" />
-          <span className={styles.detailLabel}>发票类型</span>
-          <span className={`${styles.detailValue} ${styles.detailLink}`}>{invoiceOn ? '电子发票（个人）' : '不开发票'}</span>
         </button>
       </section>
 

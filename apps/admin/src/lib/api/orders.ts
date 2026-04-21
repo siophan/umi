@@ -1,6 +1,77 @@
-import type { OrderListResult } from '@umi/shared';
+import type { OrderItem } from '@umi/shared';
 
 import { getJson } from './shared';
+
+export interface AdminOrderRecord {
+  id: string;
+  orderSn: string | null;
+  userId: string;
+  user: {
+    id: string;
+    uidCode: string | null;
+    phoneNumber: string | null;
+    name: string | null;
+    avatarUrl: string | null;
+  };
+  orderType: 'guess_reward' | 'shop_order' | null;
+  orderTypeCode: number | null;
+  guessId: string | null;
+  guessTitle: string | null;
+  amount: number;
+  originalAmount: number;
+  couponDiscount: number;
+  status:
+    | 'pending'
+    | 'paid'
+    | 'shipping'
+    | 'delivered'
+    | 'completed'
+    | 'refund_pending'
+    | 'refunded'
+    | 'cancelled';
+  createdAt: string;
+  address: {
+    id: string;
+    name: string | null;
+    phoneNumber: string | null;
+    province: string | null;
+    city: string | null;
+    district: string | null;
+    detail: string | null;
+  } | null;
+  fulfillment: {
+    id: string;
+    fulfillmentSn: string | null;
+    typeCode: number | null;
+    statusCode: number | null;
+    receiverName: string | null;
+    phoneNumber: string | null;
+    detailAddress: string | null;
+    shippingType: 'express' | 'same_city' | 'self_pickup' | 'unknown';
+    shippingFee: number;
+    totalAmount: number;
+    trackingNo: string | null;
+    shippedAt: string | null;
+    completedAt: string | null;
+    createdAt: string | null;
+  } | null;
+  refund: {
+    id: string;
+    refundNo: string | null;
+    statusCode: number | null;
+    refundAmount: number;
+    reason: string | null;
+    requestedAt: string | null;
+    completedAt: string | null;
+  } | null;
+  items: Array<
+    OrderItem & {
+      specs: string | null;
+      originalUnitPrice: number;
+      couponDiscount: number;
+    }
+  >;
+}
 
 export interface AdminTransactionRow {
   id: string;
@@ -68,7 +139,7 @@ export interface AdminConsignRow {
 }
 
 export function fetchAdminOrders() {
-  return getJson<OrderListResult>('/api/admin/orders');
+  return getJson<{ items: AdminOrderRecord[] }>('/api/admin/orders');
 }
 
 export function fetchAdminTransactions() {

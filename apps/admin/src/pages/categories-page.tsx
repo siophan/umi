@@ -156,6 +156,7 @@ export function CategoriesPage({ refreshToken = 0 }: CategoriesPageProps) {
         .filter((item) =>
           watchedBizTypeCode ? item.bizTypeCode === watchedBizTypeCode : true,
         )
+        .filter((item) => item.status === 'active')
         .map((item) => ({
           label: `${item.name}${item.parentName ? ` / ${item.parentName}` : ''}`,
           value: item.id,

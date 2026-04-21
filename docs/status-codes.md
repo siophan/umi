@@ -2,7 +2,7 @@
 
 ## 目的
 
-这份文档统一定义 `joy-dev` 当前数据库使用的数字状态编码。
+这份文档统一定义本地测试库 `joy-test` 当前使用的数字状态编码。
 
 约定：
 
@@ -270,6 +270,28 @@
 | `coupon` | `20` | 优惠券奖励 |
 | `physical` | `30` | 实物 / 仓库奖励 |
 
+### `checkin_reward_config.status`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `active` | `10` | 启用 |
+| `disabled` | `90` | 停用 |
+
+### `invite_reward_config.inviter_reward_type` / `invite_reward_config.invitee_reward_type`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `coin` | `10` | 零食币奖励 |
+| `coupon` | `20` | 优惠券奖励 |
+| `physical` | `30` | 实物 / 仓库奖励 |
+
+### `invite_reward_config.status`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `active` | `10` | 启用 |
+| `disabled` | `90` | 停用 |
+
 ### `achievement_config.type`
 
 | 原语义 | 编码 | 说明 |
@@ -388,6 +410,13 @@
 | `product` | `30` | 跳转到商品 |
 | `shop` | `40` | 跳转到店铺 |
 | `external` | `90` | 外部链接 |
+
+### `banner.status`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `active` | `10` | 轮播启用 |
+| `disabled` | `90` | 轮播停用 |
 
 ### `notification.target_type`
 
@@ -534,7 +563,7 @@
 | `exchange` | `30` | 兑换入仓 |
 | `manual` | `40` | 手工入仓 |
 
-### `equity_log.sub_type`
+### `equity_log.type`
 
 | 原语义 | 编码 | 说明 |
 | --- | --- | --- |
@@ -542,6 +571,20 @@
 | `use` | `20` | 使用 |
 | `expire` | `30` | 过期 |
 | `adjust` | `40` | 调整 |
+
+### `equity_log.sub_type`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `category` | `10` | 类目权益金 |
+| `exchange` | `20` | 换购权益金 |
+| `general` | `30` | 通兑资产 |
+
+### `equity_log.source_type`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `admin_adjust` | `40` | 后台调账 |
 
 ## 审核、结算、操作
 

@@ -512,6 +512,10 @@ export const commercePaths = {
                             type: 'array',
                             items: { type: 'object', additionalProperties: true },
                         },
+                        reviews: {
+                            type: 'array',
+                            items: { type: 'object', additionalProperties: true },
+                        },
                     },
                 }),
                 404: errorResponse(404, '商品不存在'),

@@ -174,6 +174,130 @@ export const adminPaths = {
             },
         },
     },
+    '/api/admin/community/posts': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台社区动态列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'title', in: 'query', schema: { type: 'string', example: '今天这双会不会继续涨' } },
+                { name: 'author', in: 'query', schema: { type: 'string', example: '乐事不服榜' } },
+                { name: 'tag', in: 'query', schema: { type: 'string', example: '球鞋' } },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminCommunityPostListResult' }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/community/posts/{id}': {
+        delete: {
+            tags: ['Admin'],
+            summary: '管理台删除社区动态',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '动态 ID')],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/DeleteAdminCommunityPostResult' }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '动态不存在'),
+            },
+        },
+    },
+    '/api/admin/community/comments': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台社区评论列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'content', in: 'query', schema: { type: 'string', example: '我觉得还会涨' } },
+                { name: 'author', in: 'query', schema: { type: 'string', example: '鞋柜研究所' } },
+                { name: 'postTitle', in: 'query', schema: { type: 'string', example: '今天这双会不会继续涨' } },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminCommunityCommentListResult' }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/community/comments/{id}': {
+        delete: {
+            tags: ['Admin'],
+            summary: '管理台删除社区评论',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '评论 ID')],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/DeleteAdminCommunityCommentResult' }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '评论不存在'),
+            },
+        },
+    },
+    '/api/admin/community/reports': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台举报记录列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'reporter', in: 'query', schema: { type: 'string', example: '举报用户' } },
+                {
+                    name: 'reasonType',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['spam', 'explicit', 'abuse', 'false_info', 'other'],
+                        example: 'spam',
+                    },
+                },
+                { name: 'targetKeyword', in: 'query', schema: { type: 'string', example: '今天这双会不会继续涨' } },
+                {
+                    name: 'status',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['pending', 'reviewing', 'resolved', 'rejected'],
+                        example: 'pending',
+                    },
+                },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminCommunityReportListResult' }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/community/reports/{id}': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台处理举报记录',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '举报记录 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminCommunityReportPayload',
+            }),
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/UpdateAdminCommunityReportResult' }),
+                400: errorResponse(400, '举报处理失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '举报记录不存在'),
+            },
+        },
+    },
+    '/api/admin/lives': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台直播列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'title', in: 'query', schema: { type: 'string', example: '今晚聊聊球鞋行情' } },
+                { name: 'host', in: 'query', schema: { type: 'string', example: '乐事不服榜' } },
+                { name: 'guessTitle', in: 'query', schema: { type: 'string', example: 'Panda 本周会不会继续涨价' } },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminLiveRoomListResult' }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
     '/api/admin/users': {
         get: {
             tags: ['Admin'],
@@ -285,6 +409,25 @@ export const adminPaths = {
             },
         },
     },
+    '/api/admin/guesses/{id}/review': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台审核竞猜',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '竞猜 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/ReviewAdminGuessPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/ReviewAdminGuessResult',
+                }),
+                400: errorResponse(400, '竞猜审核失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '竞猜不存在'),
+            },
+        },
+    },
     '/api/admin/orders': {
         get: {
             tags: ['Admin'],
@@ -362,6 +505,47 @@ export const adminPaths = {
                     },
                 }),
                 401: errorResponse(401, '请先登录'),
+            },
+        },
+        post: {
+            tags: ['Admin'],
+            summary: '新增品牌商品',
+            security: bearerSecurity,
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/CreateAdminBrandProductPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/CreateAdminBrandProductResult',
+                }),
+                400: errorResponse(400, '新增品牌商品失败'),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/products/brand-library/{id}': {
+        put: {
+            tags: ['Admin'],
+            summary: '编辑品牌商品',
+            security: bearerSecurity,
+            parameters: [
+                {
+                    name: 'id',
+                    in: 'path',
+                    required: true,
+                    schema: { type: 'string', example: '108' },
+                },
+            ],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminBrandProductPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/UpdateAdminBrandProductResult',
+                }),
+                400: errorResponse(400, '编辑品牌商品失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '品牌商品不存在'),
             },
         },
     },
@@ -442,6 +626,492 @@ export const adminPaths = {
                     },
                 }),
                 401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/equity': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台权益金账户列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
+                { name: 'pageSize', in: 'query', schema: { type: 'integer', example: 10 } },
+                { name: 'userId', in: 'query', schema: { type: 'string', example: '1001' } },
+                { name: 'userName', in: 'query', schema: { type: 'string', example: '张三' } },
+                { name: 'phone', in: 'query', schema: { type: 'string', example: '13800138000' } },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminEquityListResult' }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/equity/{id}': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台权益金账户详情',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '用户 ID')],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminEquityDetailResult' }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '权益金账户不存在'),
+            },
+        },
+    },
+    '/api/admin/equity/adjust': {
+        post: {
+            tags: ['Admin'],
+            summary: '管理台权益金调账',
+            security: bearerSecurity,
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/AdjustAdminEquityPayload',
+            }),
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdjustAdminEquityResult' }),
+                400: errorResponse(400, '权益金调账失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '用户不存在'),
+            },
+        },
+    },
+    '/api/admin/banners': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台轮播列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'title', in: 'query', schema: { type: 'string', example: 'Panda' } },
+                { name: 'position', in: 'query', schema: { type: 'string', example: 'home_hero' } },
+                {
+                    name: 'targetType',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['guess', 'post', 'product', 'shop', 'external'],
+                        example: 'guess',
+                    },
+                },
+                {
+                    name: 'status',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['all', 'active', 'scheduled', 'paused', 'ended'],
+                        example: 'active',
+                    },
+                },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminBannerListResult' }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+        post: {
+            tags: ['Admin'],
+            summary: '管理台新增轮播',
+            security: bearerSecurity,
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/CreateAdminBannerPayload',
+            }),
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/CreateAdminBannerResult' }),
+                400: errorResponse(400, '轮播创建失败'),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/banners/{id}': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台编辑轮播',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '轮播 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminBannerPayload',
+            }),
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/UpdateAdminBannerResult' }),
+                400: errorResponse(400, '轮播更新失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '轮播不存在'),
+            },
+        },
+        delete: {
+            tags: ['Admin'],
+            summary: '管理台删除轮播',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '轮播 ID')],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/DeleteAdminBannerResult' }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '轮播不存在'),
+            },
+        },
+    },
+    '/api/admin/banners/{id}/status': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台更新轮播状态',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '轮播 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminBannerStatusPayload',
+            }),
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/UpdateAdminBannerStatusResult' }),
+                400: errorResponse(400, '轮播状态更新失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '轮播不存在'),
+            },
+        },
+    },
+    '/api/admin/checkin/rewards': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台签到奖励配置列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'dayNo', in: 'query', schema: { type: 'integer', example: 7 } },
+                {
+                    name: 'rewardType',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['coin', 'coupon', 'physical'],
+                        example: 'coupon',
+                    },
+                },
+                { name: 'title', in: 'query', schema: { type: 'string', example: '第 7 天大奖' } },
+                {
+                    name: 'status',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['all', 'active', 'disabled'],
+                        example: 'active',
+                    },
+                },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminCheckinRewardConfigListResult' }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+        post: {
+            tags: ['Admin'],
+            summary: '新增签到奖励配置',
+            security: bearerSecurity,
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/CreateAdminCheckinRewardConfigPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/CreateAdminCheckinRewardConfigResult',
+                }),
+                400: errorResponse(400, '签到奖励创建失败'),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/checkin/rewards/{id}': {
+        put: {
+            tags: ['Admin'],
+            summary: '编辑签到奖励配置',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '签到奖励配置 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminCheckinRewardConfigPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/UpdateAdminCheckinRewardConfigResult',
+                }),
+                400: errorResponse(400, '签到奖励更新失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '签到奖励配置不存在'),
+            },
+        },
+    },
+    '/api/admin/checkin/rewards/{id}/status': {
+        put: {
+            tags: ['Admin'],
+            summary: '更新签到奖励配置状态',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '签到奖励配置 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminCheckinRewardConfigStatusPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/UpdateAdminCheckinRewardConfigStatusResult',
+                }),
+                400: errorResponse(400, '签到奖励状态更新失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '签到奖励配置不存在'),
+            },
+        },
+    },
+    '/api/admin/invites/config': {
+        get: {
+            tags: ['Admin'],
+            summary: '获取邀请奖励配置',
+            security: bearerSecurity,
+            responses: {
+                200: successResponse({
+                    anyOf: [
+                        { $ref: '#/components/schemas/AdminInviteRewardConfigItem' },
+                        { type: 'null' },
+                    ],
+                }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+        put: {
+            tags: ['Admin'],
+            summary: '保存邀请奖励配置',
+            security: bearerSecurity,
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminInviteRewardConfigPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/UpdateAdminInviteRewardConfigResult',
+                }),
+                400: errorResponse(400, '邀请奖励配置保存失败'),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/invites/records': {
+        get: {
+            tags: ['Admin'],
+            summary: '邀请记录列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'inviter', in: 'query', schema: { type: 'string', example: '张三' } },
+                { name: 'invitee', in: 'query', schema: { type: 'string', example: '李四' } },
+                { name: 'inviteCode', in: 'query', schema: { type: 'string', example: 'INVITE101' } },
+            ],
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/AdminInviteRecordListResult',
+                }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/rankings': {
+        get: {
+            tags: ['Admin'],
+            summary: '后台排行榜结果列表',
+            security: bearerSecurity,
+            parameters: [
+                {
+                    name: 'boardType',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['guessWins', 'winRate', 'inviteCount'],
+                        example: 'guessWins',
+                    },
+                },
+                {
+                    name: 'periodType',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['daily', 'weekly', 'monthly', 'allTime'],
+                        example: 'daily',
+                    },
+                },
+                {
+                    name: 'periodValue',
+                    in: 'query',
+                    schema: { type: 'string', example: '20260421' },
+                },
+                {
+                    name: 'topUser',
+                    in: 'query',
+                    schema: { type: 'string', example: 'DOACgEkT' },
+                },
+            ],
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/AdminRankingListResult',
+                }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/rankings/{boardType}/{periodType}/{periodValue}': {
+        get: {
+            tags: ['Admin'],
+            summary: '后台某一期排行榜明细',
+            security: bearerSecurity,
+            parameters: [
+                {
+                    name: 'boardType',
+                    in: 'path',
+                    required: true,
+                    schema: {
+                        type: 'string',
+                        enum: ['guessWins', 'winRate', 'inviteCount'],
+                        example: 'guessWins',
+                    },
+                },
+                {
+                    name: 'periodType',
+                    in: 'path',
+                    required: true,
+                    schema: {
+                        type: 'string',
+                        enum: ['daily', 'weekly', 'monthly', 'allTime'],
+                        example: 'daily',
+                    },
+                },
+                {
+                    name: 'periodValue',
+                    in: 'path',
+                    required: true,
+                    schema: { type: 'string', example: '20260421' },
+                },
+            ],
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/AdminRankingDetailResult',
+                }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/coupons': {
+        get: {
+            tags: ['Admin'],
+            summary: '优惠券模板列表',
+            security: bearerSecurity,
+            parameters: [
+                { name: 'name', in: 'query', schema: { type: 'string', example: '新客券' } },
+                { name: 'code', in: 'query', schema: { type: 'string', example: 'TPL_WELCOME_10' } },
+                {
+                    name: 'type',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['cash', 'discount', 'shipping'],
+                        example: 'cash',
+                    },
+                },
+                {
+                    name: 'scopeType',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['platform', 'shop'],
+                        example: 'platform',
+                    },
+                },
+                {
+                    name: 'status',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['all', 'active', 'scheduled', 'paused', 'disabled', 'ended'],
+                        example: 'active',
+                    },
+                },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminCouponListResult' }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+        post: {
+            tags: ['Admin'],
+            summary: '新增优惠券模板',
+            security: bearerSecurity,
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/CreateAdminCouponTemplatePayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/CreateAdminCouponTemplateResult',
+                }),
+                400: errorResponse(400, '优惠券模板创建失败'),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/coupons/{id}': {
+        put: {
+            tags: ['Admin'],
+            summary: '编辑优惠券模板',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '优惠券模板 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminCouponTemplatePayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/UpdateAdminCouponTemplateResult',
+                }),
+                400: errorResponse(400, '优惠券模板更新失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '优惠券模板不存在'),
+            },
+        },
+    },
+    '/api/admin/coupons/{id}/status': {
+        put: {
+            tags: ['Admin'],
+            summary: '更新优惠券模板状态',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '优惠券模板 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminCouponTemplateStatusPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/UpdateAdminCouponTemplateStatusResult',
+                }),
+                400: errorResponse(400, '优惠券状态更新失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '优惠券模板不存在'),
+            },
+        },
+    },
+    '/api/admin/coupons/{id}/batches': {
+        get: {
+            tags: ['Admin'],
+            summary: '优惠券发券批次列表',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '优惠券模板 ID')],
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/AdminCouponGrantBatchListResult',
+                }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '优惠券模板不存在'),
+            },
+        },
+    },
+    '/api/admin/coupons/{id}/grants': {
+        post: {
+            tags: ['Admin'],
+            summary: '创建发券批次',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '优惠券模板 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/CreateAdminCouponGrantBatchPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/CreateAdminCouponGrantBatchResult',
+                }),
+                400: errorResponse(400, '发券失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '优惠券模板不存在'),
             },
         },
     },
@@ -618,6 +1288,22 @@ export const adminPaths = {
             },
         },
     },
+    '/api/admin/brands/auth-records/{id}/revoke': {
+        put: {
+            tags: ['Admin'],
+            summary: '撤销品牌授权记录',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '品牌授权记录 ID')],
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/RevokeAdminBrandAuthRecordResult',
+                }),
+                400: errorResponse(400, '撤销品牌授权失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '品牌授权记录不存在'),
+            },
+        },
+    },
     '/api/admin/shops/products': {
         get: {
             tags: ['Admin'],
@@ -644,7 +1330,18 @@ export const adminPaths = {
                 200: successResponse({
                     type: 'object',
                     properties: {
-                        items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                        items: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    title: { type: 'string' },
+                                    content: { type: 'string', nullable: true },
+                                },
+                                additionalProperties: true,
+                            },
+                        },
                         summary: { type: 'object', additionalProperties: true },
                         basis: { type: 'string', example: '按通知内容聚合后的已发送批次视图' },
                     },

@@ -1,16 +1,12 @@
 import type { WarehouseItem } from '@umi/shared';
-import type { TableColumnsType } from 'antd';
+import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Segmented, Select, Tag, Typography } from 'antd';
+import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import {
-  fetchAdminWarehouseItems,
-  fetchWarehouseStats,
-  type AdminWarehouseStats,
-} from '../lib/api/catalog';
+import { fetchAdminWarehouseItems } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, warehouseStatusMeta } from '../lib/format';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
@@ -19,7 +15,19 @@ interface WarehousePageProps {
   warehouseType: 'virtual' | 'physical';
 }
 
-type WarehouseFilter = 'all' | 'virtual' | 'physical';
+const virtualSourceTypeOptions = [
+  { label: '竞猜奖励', value: '竞猜奖励' },
+  { label: '订单入仓', value: '订单入仓' },
+  { label: '兑换入仓', value: '兑换入仓' },
+  { label: '手工入仓', value: '手工入仓' },
+];
+
+const physicalSourceTypeOptions = [
+  { label: '商家发货', value: '商家发货' },
+  { label: '竞猜奖励', value: '竞猜奖励' },
+  { label: '仓库商品', value: '仓库商品' },
+  { label: '仓库调入', value: '仓库调入' },
+];
 
 export function WarehousePage({
   refreshToken = 0,
@@ -29,16 +37,11 @@ export function WarehousePage({
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [items, setItems] = useState<WarehouseItem[]>([]);
-  const [stats, setStats] = useState<AdminWarehouseStats>({
-    totalVirtual: 0,
-    totalPhysical: 0,
-  });
   const [filters, setFilters] = useState<{
     productName?: string;
     sourceType?: string;
     userId?: string;
   }>({});
-  const [scope, setScope] = useState<WarehouseFilter>('all');
   const [status, setStatus] = useState<'all' | WarehouseItem['status']>('all');
   const [form] = Form.useForm<{ productName?: string; sourceType?: string; userId?: string }>();
 
@@ -49,20 +52,15 @@ export function WarehousePage({
       setLoading(true);
       setIssue(null);
       try {
-        const [statsResult, itemsResult] = await Promise.all([
-          fetchWarehouseStats(),
-          fetchAdminWarehouseItems(warehouseType),
-        ]);
+        const itemsResult = await fetchAdminWarehouseItems(warehouseType);
         if (!alive) {
           return;
         }
-        setStats(statsResult);
         setItems(itemsResult.items);
       } catch (error) {
         if (!alive) {
           return;
         }
-        setStats({ totalVirtual: 0, totalPhysical: 0 });
         setItems([]);
         setIssue(error instanceof Error ? error.message : '仓库列表加载失败');
       } finally {
@@ -80,10 +78,12 @@ export function WarehousePage({
   }, [refreshToken, warehouseType]);
 
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
-      if (scope !== 'all' && item.warehouseType !== scope) {
-        return false;
-      }
+    const visibleItems =
+      warehouseType === 'physical'
+        ? items.filter((item) => item.status !== 'consigning' && item.status !== 'completed')
+        : items;
+
+    return visibleItems.filter((item) => {
       if (status !== 'all' && item.status !== status) {
         return false;
       }
@@ -104,71 +104,126 @@ export function WarehousePage({
       }
       return true;
     });
-  }, [filters, items, scope, status]);
+  }, [filters, items, status, warehouseType]);
 
-  const sourceTypeOptions = useMemo(
-    () =>
-      Array.from(new Set(items.map((item) => item.sourceType).filter(Boolean))).map((value) => ({
-        label: value,
-        value,
-      })),
-    [items],
-  );
+  const sourceTypeOptions = warehouseType === 'virtual' ? virtualSourceTypeOptions : physicalSourceTypeOptions;
 
-  const columns: TableColumnsType<WarehouseItem> = [
-    {
-      title: '商品',
-      dataIndex: 'productName',
-      render: (value: string) => <Typography.Text strong>{value}</Typography.Text>,
-    },
-    {
-      title: '用户 ID',
-      dataIndex: 'userId',
-    },
-    {
-      title: '仓型',
-      dataIndex: 'warehouseType',
-      render: (value: WarehouseItem['warehouseType']) => (
-        <Tag color={value === 'virtual' ? 'processing' : 'purple'}>
-          {value === 'virtual' ? '虚拟仓' : '实体仓'}
-        </Tag>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      render: (value: WarehouseItem['status']) => (
-        <Tag color={warehouseStatusMeta[value].color}>
-          {warehouseStatusMeta[value].label}
-        </Tag>
-      ),
-    },
-    {
-      title: '数量',
-      dataIndex: 'quantity',
-    },
-    {
-      title: '寄售价',
-      dataIndex: 'consignPrice',
-      render: (value) => (value ? formatAmount(value) : '-'),
-    },
-    {
-      title: '入库时间',
-      dataIndex: 'createdAt',
-      render: (value) => formatDateTime(value),
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 100,
-      fixed: 'right',
-      render: (_, record) => (
-        <Button size="small" type="link" onClick={() => setSelected(record)}>
-          查看
-        </Button>
-      ),
-    },
-  ];
+  const columns = useMemo<ProColumns<WarehouseItem>[]>(() => {
+    const baseColumns: ProColumns<WarehouseItem>[] = [
+      {
+        title: '商品',
+        dataIndex: 'productName',
+        width: 240,
+        render: (_, record) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {record.productImg ? (
+              <img
+                src={record.productImg}
+                alt={record.productName}
+                style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }}
+              />
+            ) : null}
+            <Typography.Text strong>{record.productName}</Typography.Text>
+          </div>
+        ),
+      },
+      {
+        title: '用户 ID',
+        dataIndex: 'userId',
+        width: 160,
+      },
+      {
+        title: '数量',
+        dataIndex: 'quantity',
+        width: 100,
+      },
+      {
+        title: '来源',
+        dataIndex: 'sourceType',
+        width: 140,
+      },
+      {
+        title: '状态',
+        dataIndex: 'status',
+        width: 120,
+        render: (_, record) => (
+          <Tag color={warehouseStatusMeta[record.status].color}>
+            {warehouseStatusMeta[record.status].label}
+          </Tag>
+        ),
+      },
+      {
+        title: '入库时间',
+        dataIndex: 'createdAt',
+        width: 180,
+        render: (_, record) => formatDateTime(record.createdAt),
+      },
+      {
+        title: '操作',
+        key: 'actions',
+        width: 100,
+        fixed: 'right',
+        valueType: 'option',
+        render: (_, record) => (
+          <Button size="small" type="link" onClick={() => setSelected(record)}>
+            查看
+          </Button>
+        ),
+      },
+    ];
+
+    if (warehouseType === 'virtual') {
+      baseColumns.splice(
+        3,
+        0,
+        {
+          title: '单价',
+          dataIndex: 'price',
+          width: 120,
+          render: (_, record) => formatAmount((record.price ?? 0) * 100),
+        },
+        {
+          title: '总价值',
+          key: 'totalAmount',
+          width: 130,
+          render: (_, record) => formatAmount((record.price ?? 0) * record.quantity * 100),
+        },
+      );
+    } else {
+      baseColumns.splice(
+        3,
+        0,
+        {
+          title: '原价值',
+          dataIndex: 'price',
+          width: 120,
+          render: (_, record) => formatAmount((record.price ?? 0) * 100),
+        },
+      );
+    }
+
+    return baseColumns;
+  }, [warehouseType]);
+
+  const statusItems = useMemo(() => {
+    if (warehouseType === 'virtual') {
+      return [
+        { key: 'all', label: '全部', count: items.length },
+        { key: 'stored', label: '在库', count: items.filter((item) => item.status === 'stored').length },
+        { key: 'locked', label: '冻结中', count: items.filter((item) => item.status === 'locked').length },
+        { key: 'converted', label: '已转换', count: items.filter((item) => item.status === 'converted').length },
+      ];
+    }
+
+    const pageItems = items.filter((item) => item.status !== 'consigning' && item.status !== 'completed');
+
+    return [
+      { key: 'all', label: '全部', count: pageItems.length },
+      { key: 'stored', label: '在库', count: pageItems.filter((item) => item.status === 'stored').length },
+      { key: 'shipping', label: '配送中', count: pageItems.filter((item) => item.status === 'shipping').length },
+      { key: 'delivered', label: '已送达', count: pageItems.filter((item) => item.status === 'delivered').length },
+    ];
+  }, [items, warehouseType]);
 
   return (
     <div className="page-stack">
@@ -181,20 +236,8 @@ export function WarehousePage({
         onReset={() => {
           form.resetFields();
           setFilters({});
-          setScope('all');
           setStatus('all');
         }}
-        extra={
-          <Segmented<WarehouseFilter>
-            options={[
-              { label: '全部仓型', value: 'all' },
-              { label: '虚拟仓', value: 'virtual' },
-              { label: '实体仓', value: 'physical' },
-            ]}
-            value={scope}
-            onChange={setScope}
-          />
-        }
       >
         <Form.Item name="productName">
           <Input placeholder="商品名称" allowClear />
@@ -208,13 +251,7 @@ export function WarehousePage({
       </AdminSearchPanel>
       <AdminStatusTabs
         activeKey={status}
-        items={[
-          { key: 'all', label: '全部', count: filteredItems.length },
-          { key: 'stored', label: '已入仓', count: items.filter((item) => item.status === 'stored').length },
-          { key: 'locked', label: '锁定', count: items.filter((item) => item.status === 'locked').length },
-          { key: 'consigning', label: '寄售中', count: items.filter((item) => item.status === 'consigning').length },
-          { key: 'completed', label: '已完成', count: items.filter((item) => item.status === 'completed').length },
-        ]}
+        items={statusItems}
         onChange={(key) => setStatus(key as 'all' | WarehouseItem['status'])}
       />
       <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
@@ -235,16 +272,16 @@ export function WarehousePage({
       <Drawer
         open={selected != null}
         width={440}
-        title={selected?.productName}
+        title={warehouseType === 'virtual' ? '虚拟仓详情' : '实体仓详情'}
         onClose={() => setSelected(null)}
       >
         {selected ? (
           <div style={{ display: 'grid', gap: 16, width: '100%' }}>
             <Descriptions column={1} size="small">
+              <Descriptions.Item label="商品">{selected.productName}</Descriptions.Item>
+              <Descriptions.Item label="商品 ID">{selected.productId}</Descriptions.Item>
               <Descriptions.Item label="用户 ID">{selected.userId}</Descriptions.Item>
-              <Descriptions.Item label="仓型">
-                {selected.warehouseType === 'virtual' ? '虚拟仓' : '实体仓'}
-              </Descriptions.Item>
+              <Descriptions.Item label="仓型">{selected.warehouseType === 'virtual' ? '虚拟仓' : '实体仓'}</Descriptions.Item>
               <Descriptions.Item label="状态">
                 <Tag color={warehouseStatusMeta[selected.status].color}>
                   {warehouseStatusMeta[selected.status].label}
@@ -252,12 +289,17 @@ export function WarehousePage({
               </Descriptions.Item>
               <Descriptions.Item label="来源">{selected.sourceType}</Descriptions.Item>
               <Descriptions.Item label="数量">{selected.quantity}</Descriptions.Item>
-              <Descriptions.Item label="寄售价">
-                {selected.consignPrice ? formatAmount(selected.consignPrice) : '-'}
+              <Descriptions.Item label={selected.warehouseType === 'virtual' ? '单价' : '原价值'}>
+                {formatAmount((selected.price ?? 0) * 100)}
               </Descriptions.Item>
-              <Descriptions.Item label="预计天数">
-                {selected.estimateDays ?? '-'}
-              </Descriptions.Item>
+              {selected.warehouseType === 'virtual' ? (
+                <Descriptions.Item label="总价值">
+                  {formatAmount((selected.price ?? 0) * selected.quantity * 100)}
+                </Descriptions.Item>
+              ) : null}
+              {selected.warehouseType === 'physical' ? (
+                <Descriptions.Item label="入库时间">{formatDateTime(selected.createdAt)}</Descriptions.Item>
+              ) : null}
             </Descriptions>
           </div>
         ) : null}

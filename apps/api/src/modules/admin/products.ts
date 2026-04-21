@@ -1,4 +1,11 @@
 import type mysql from 'mysql2/promise';
+import { toEntityId } from '@umi/shared';
+import type {
+  CreateAdminBrandProductPayload,
+  CreateAdminBrandProductResult,
+  UpdateAdminBrandProductPayload,
+  UpdateAdminBrandProductResult,
+} from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 
@@ -44,8 +51,12 @@ type AdminBrandLibraryRow = {
   id: number | string;
   brand_id: number | string | null;
   name: string;
+  category_id: number | string | null;
   guide_price: number | string | null;
+  supply_price: number | string | null;
+  description: string | null;
   status: number | string;
+  created_at: Date | string;
   updated_at: Date | string;
   default_img: string | null;
   brand_name: string | null;
@@ -95,9 +106,13 @@ export interface AdminBrandLibraryItem {
   brandId: string | null;
   brandName: string;
   productName: string;
+  categoryId: string | null;
   category: string;
   guidePrice: number;
+  supplyPrice: number;
   status: AdminBrandLibraryStatus;
+  description: string | null;
+  createdAt: string;
   updatedAt: string;
   imageUrl: string | null;
   productCount: number;
@@ -280,9 +295,13 @@ function sanitizeAdminBrandLibrary(row: AdminBrandLibraryRow): AdminBrandLibrary
     brandId: row.brand_id == null ? null : String(row.brand_id),
     brandName: row.brand_name || '未知品牌',
     productName: row.name,
+    categoryId: row.category_id == null ? null : String(row.category_id),
     category: row.category_name || '未分类',
     guidePrice: toNumber(row.guide_price),
+    supplyPrice: toNumber(row.supply_price),
     status: resolveBrandLibraryStatus(row),
+    description: row.description ?? null,
+    createdAt: formatDateTime(row.created_at),
     updatedAt: formatDateTime(row.updated_at),
     imageUrl: row.default_img,
     productCount: Math.max(0, toNumber(row.product_count)),
@@ -478,8 +497,12 @@ export async function getAdminBrandLibrary(
           bp.id,
           bp.brand_id,
           bp.name,
+          bp.category_id,
           bp.guide_price,
+          bp.supply_price,
+          bp.description,
           bp.status,
+          bp.created_at,
           bp.updated_at,
           bp.default_img,
           b.name AS brand_name,
@@ -496,8 +519,12 @@ export async function getAdminBrandLibrary(
           bp.id,
           bp.brand_id,
           bp.name,
+          bp.category_id,
           bp.guide_price,
+          bp.supply_price,
+          bp.description,
           bp.status,
+          bp.created_at,
           bp.updated_at,
           bp.default_img,
           b.name,
@@ -519,4 +546,251 @@ export async function getAdminBrandLibrary(
     page,
     pageSize,
   };
+}
+
+function normalizeBrandProductStatus(status: string | null | undefined) {
+  if (status === 'disabled') {
+    return BRAND_PRODUCT_STATUS_DISABLED;
+  }
+
+  return BRAND_PRODUCT_STATUS_ACTIVE;
+}
+
+function normalizeAdminBrandProductPayload(
+  payload: CreateAdminBrandProductPayload | UpdateAdminBrandProductPayload,
+) {
+  const name = payload.name.trim();
+  const brandId = payload.brandId;
+  const categoryId = payload.categoryId;
+  const guidePrice = Math.round(Number(payload.guidePrice ?? 0));
+  const supplyPrice =
+    payload.supplyPrice == null ? null : Math.round(Number(payload.supplyPrice));
+  const defaultImg = payload.defaultImg?.trim() || null;
+  const description = payload.description?.trim() || null;
+
+  if (!name) {
+    throw new Error('品牌商品名称不能为空');
+  }
+  if (!brandId) {
+    throw new Error('请选择品牌');
+  }
+  if (!categoryId) {
+    throw new Error('请选择类目');
+  }
+  if (!Number.isInteger(guidePrice) || guidePrice < 0) {
+    throw new Error('指导价不合法');
+  }
+  if (supplyPrice != null && (!Number.isInteger(supplyPrice) || supplyPrice < 0)) {
+    throw new Error('供货价不合法');
+  }
+
+  return {
+    name,
+    brandId,
+    categoryId,
+    guidePrice,
+    supplyPrice,
+    defaultImg,
+    description,
+  };
+}
+
+export async function createAdminBrandProduct(
+  payload: CreateAdminBrandProductPayload,
+): Promise<CreateAdminBrandProductResult> {
+  const normalized = normalizeAdminBrandProductPayload(payload);
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [brandRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id
+        FROM brand
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [normalized.brandId],
+    );
+
+    if ((brandRows as mysql.RowDataPacket[]).length === 0) {
+      throw new Error('品牌不存在');
+    }
+
+    const [categoryRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id
+        FROM category
+        WHERE id = ?
+          AND biz_type = 30
+        LIMIT 1
+      `,
+      [normalized.categoryId],
+    );
+
+    if ((categoryRows as mysql.RowDataPacket[]).length === 0) {
+      throw new Error('品牌商品类目不存在');
+    }
+
+    const [duplicateRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id
+        FROM brand_product
+        WHERE brand_id = ?
+          AND name = ?
+        LIMIT 1
+      `,
+      [normalized.brandId, normalized.name],
+    );
+
+    if ((duplicateRows as mysql.RowDataPacket[]).length > 0) {
+      throw new Error('品牌商品名称已存在');
+    }
+
+    const [result] = await connection.execute<mysql.ResultSetHeader>(
+      `
+        INSERT INTO brand_product (
+          brand_id,
+          name,
+          category_id,
+          guide_price,
+          supply_price,
+          default_img,
+          description,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      `,
+      [
+        normalized.brandId,
+        normalized.name,
+        normalized.categoryId,
+        normalized.guidePrice,
+        normalized.supplyPrice,
+        normalized.defaultImg,
+        normalized.description,
+        normalizeBrandProductStatus(payload.status),
+      ],
+    );
+
+    await connection.commit();
+    return { id: toEntityId(result.insertId) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function updateAdminBrandProduct(
+  brandProductId: string,
+  payload: UpdateAdminBrandProductPayload,
+): Promise<UpdateAdminBrandProductResult> {
+  const normalized = normalizeAdminBrandProductPayload(payload);
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [productRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id
+        FROM brand_product
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [brandProductId],
+    );
+
+    if ((productRows as mysql.RowDataPacket[]).length === 0) {
+      throw new Error('品牌商品不存在');
+    }
+
+    const [brandRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id
+        FROM brand
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [normalized.brandId],
+    );
+
+    if ((brandRows as mysql.RowDataPacket[]).length === 0) {
+      throw new Error('品牌不存在');
+    }
+
+    const [categoryRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id
+        FROM category
+        WHERE id = ?
+          AND biz_type = 30
+        LIMIT 1
+      `,
+      [normalized.categoryId],
+    );
+
+    if ((categoryRows as mysql.RowDataPacket[]).length === 0) {
+      throw new Error('品牌商品类目不存在');
+    }
+
+    const [duplicateRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id
+        FROM brand_product
+        WHERE brand_id = ?
+          AND name = ?
+          AND id <> ?
+        LIMIT 1
+      `,
+      [normalized.brandId, normalized.name, brandProductId],
+    );
+
+    if ((duplicateRows as mysql.RowDataPacket[]).length > 0) {
+      throw new Error('品牌商品名称已存在');
+    }
+
+    await connection.execute(
+      `
+        UPDATE brand_product
+        SET
+          brand_id = ?,
+          name = ?,
+          category_id = ?,
+          guide_price = ?,
+          supply_price = ?,
+          default_img = ?,
+          description = ?,
+          status = ?,
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+      `,
+      [
+        normalized.brandId,
+        normalized.name,
+        normalized.categoryId,
+        normalized.guidePrice,
+        normalized.supplyPrice,
+        normalized.defaultImg,
+        normalized.description,
+        normalizeBrandProductStatus(payload.status),
+        brandProductId,
+      ],
+    );
+
+    await connection.commit();
+    return { id: toEntityId(brandProductId) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }

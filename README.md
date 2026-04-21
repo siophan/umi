@@ -8,6 +8,7 @@
 
 - [AGENTS.md](AGENTS.md)
 - [docs/db.md](docs/db.md)
+- [docs/schema-reference.md](docs/schema-reference.md)
 - [docs/status-codes.md](docs/status-codes.md)
 
 ## 目标
@@ -26,7 +27,7 @@
 | `apps/admin`      | 管理台应用，React + Vite       |
 | `apps/api`        | 后端服务，Express + TypeScript |
 | `packages/shared` | 共享类型、状态枚举、API 契约   |
-| `packages/db`     | 数据库相关资产和结构说明       |
+| `packages/db`     | 数据库 docs-first 说明与待重建资产 |
 | `packages/config` | 共享工程配置                   |
 | `docs`            | 路线图和架构文档               |
 

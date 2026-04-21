@@ -132,3 +132,38 @@ export function postJson<TResponse, TPayload>(path: string, payload: TPayload) {
 export function putJson<TResponse, TPayload>(path: string, payload: TPayload) {
   return sendJson<TResponse, TPayload>('PUT', path, payload);
 }
+
+export async function deleteJson<TResponse>(path: string): Promise<TResponse> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      method: 'DELETE',
+      signal: controller.signal,
+      headers: getAuthToken()
+        ? {
+            Authorization: `Bearer ${getAuthToken()}`,
+          }
+        : undefined,
+    });
+
+    const data = (await response.json()) as ApiEnvelope<TResponse>;
+    if (!response.ok) {
+      throw new ApiRequestError(
+        path,
+        response.status,
+        data.message || `请求失败: ${path}`,
+      );
+    }
+
+    return data.data;
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new ApiRequestError(path, 408, '请求超时，请稍后重试');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}

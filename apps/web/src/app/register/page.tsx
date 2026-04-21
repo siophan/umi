@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fetchMe, register, sendCode } from "../../lib/api/auth";
+import { fetchMe, register, sendCode, verifyCode } from "../../lib/api/auth";
 import { setAuthToken } from "../../lib/api/shared";
 import styles from "./page.module.css";
 
@@ -34,10 +34,12 @@ function RegisterPageInner() {
   const [selectedAvatar, setSelectedAvatar] = useState(0);
   const [strength, setStrength] = useState(0);
   const [toast, setToast] = useState("");
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [codeVerified, setCodeVerified] = useState(false);
 
   const redirect = searchParams.get("redirect") || "/";
   const phoneValid = /^1\d{10}$/.test(phone);
-  const step1Ready = phoneValid && code.trim().length >= 4;
+  const step1Ready = phoneValid && code.trim().length >= 4 && !verifyingCode;
   const step2Ready = password.length >= 6 && password === confirmPassword;
   const step3Ready = name.trim().length >= 2;
 
@@ -94,6 +96,10 @@ function RegisterPageInner() {
 
   const handlePhone = (value: string) => setPhone(value.replace(/\D/g, "").slice(0, 11));
 
+  useEffect(() => {
+    setCodeVerified(false);
+  }, [phone, code]);
+
   const handleSendCode = async () => {
     if (!phoneValid) {
       showToast("请输入正确的手机号");
@@ -122,6 +128,12 @@ function RegisterPageInner() {
       return;
     }
 
+    if (!codeVerified) {
+      showToast("请先完成手机验证");
+      setStep(1);
+      return;
+    }
+
     if (!step3Ready) {
       showToast("请完善昵称");
       return;
@@ -142,6 +154,29 @@ function RegisterPageInner() {
       }, 700);
     } catch (error) {
       showToast(error instanceof Error ? error.message : "注册失败");
+    }
+  };
+
+  const handleVerifyStepOne = async () => {
+    if (!phoneValid) {
+      showToast("请输入正确的手机号");
+      return;
+    }
+    if (code.trim().length < 4) {
+      showToast("请输入验证码");
+      return;
+    }
+
+    try {
+      setVerifyingCode(true);
+      await verifyCode({ phone, code, bizType: "register" });
+      setCodeVerified(true);
+      setStep(2);
+    } catch (error) {
+      setCodeVerified(false);
+      showToast(error instanceof Error ? error.message : "验证码校验失败");
+    } finally {
+      setVerifyingCode(false);
     }
   };
 
@@ -227,7 +262,14 @@ function RegisterPageInner() {
                   {countdown > 0 ? `${countdown}s` : "获取验证码"}
                 </button>
               </div>
-              <button className={styles.submitBtn} type="button" disabled={!step1Ready} onClick={() => setStep(2)}>
+              <button
+                className={styles.submitBtn}
+                type="button"
+                disabled={!step1Ready}
+                onClick={() => {
+                  void handleVerifyStepOne();
+                }}
+              >
                 <span>下一步</span>
                 <i className="fa-solid fa-arrow-right" />
               </button>

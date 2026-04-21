@@ -1,8 +1,10 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
+  outputFileTracingRoot: path.join(__dirname, '../..'),
   async rewrites() {
     return [
       {

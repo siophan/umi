@@ -1,68 +1,153 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select } from 'antd';
-import { useMemo, useState } from 'react';
+import type { AdminLiveRoomItem, AdminLiveRoomListResult } from '@umi/shared';
+import {
+  Alert,
+  Button,
+  ConfigProvider,
+  Descriptions,
+  Drawer,
+  Form,
+  Input,
+  Tag,
+  Typography,
+} from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { fetchAdminLiveRooms } from '../lib/api/content';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
-import { buildOptions } from '../lib/admin-filter-options';
+import { formatDateTime, formatNumber } from '../lib/format';
 
 interface LiveListPageProps {
   refreshToken?: number;
 }
 
-type LiveRoomRow = {
-  id: string;
-  room: string;
-  host: string;
-  viewers: number;
-  status: '直播中' | '已结束';
-};
-
 type LiveFilters = {
-  room?: string;
+  title?: string;
   host?: string;
+  guessTitle?: string;
 };
 
-const rows: LiveRoomRow[] = [
-  { id: 'live-1', room: '直播间 01', host: '主播 Panda', viewers: 842, status: '直播中' },
-  { id: 'live-2', room: '直播间 08', host: '主播 Seven', viewers: 0, status: '已结束' },
-];
+type LiveStatusFilter = 'all' | AdminLiveRoomItem['status'];
+
+function getStatusColor(status: AdminLiveRoomItem['status']) {
+  if (status === 'live') return 'error';
+  if (status === 'upcoming') return 'processing';
+  return 'default';
+}
 
 export function LiveListPage({ refreshToken = 0 }: LiveListPageProps) {
   const [searchForm] = Form.useForm<LiveFilters>();
+  const [result, setResult] = useState<AdminLiveRoomListResult>({
+    items: [],
+    summary: { total: 0, live: 0, upcoming: 0, ended: 0 },
+  });
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<LiveFilters>({});
-  const [status, setStatus] = useState<'all' | LiveRoomRow['status']>('all');
-  const [selected, setSelected] = useState<LiveRoomRow | null>(null);
+  const [status, setStatus] = useState<LiveStatusFilter>('all');
+  const [selected, setSelected] = useState<AdminLiveRoomItem | null>(null);
 
-  const filteredRows = useMemo(
+  useEffect(() => {
+    let alive = true;
+
+    async function loadLives() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const next = await fetchAdminLiveRooms(filters);
+        if (!alive) {
+          return;
+        }
+        setResult(next);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setResult({
+          items: [],
+          summary: { total: 0, live: 0, upcoming: 0, ended: 0 },
+        });
+        setIssue(error instanceof Error ? error.message : '直播列表加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadLives();
+
+    return () => {
+      alive = false;
+    };
+  }, [filters, refreshToken]);
+
+  const rows = useMemo(
     () =>
-      rows.filter((record) => {
-        if (status !== 'all' && record.status !== status) {
-          return false;
-        }
-        if (filters.room && !record.room.toLowerCase().includes(filters.room.trim().toLowerCase())) {
-          return false;
-        }
-        if (filters.host && record.host !== filters.host) {
+      result.items.filter((item) => {
+        if (status !== 'all' && item.status !== status) {
           return false;
         }
         return true;
       }),
-    [filters.host, filters.room, status],
+    [result.items, status],
   );
 
-  const columns: ProColumns<LiveRoomRow>[] = [
-    { title: '直播间', dataIndex: 'room', width: 220 },
-    { title: '主播', dataIndex: 'host', width: 180 },
-    { title: '观看人数', dataIndex: 'viewers', width: 120 },
-    { title: '状态', dataIndex: 'status', width: 120 },
+  const columns: ProColumns<AdminLiveRoomItem>[] = [
+    {
+      title: '直播间',
+      width: 280,
+      render: (_, record) => (
+        <div>
+          <Typography.Text strong>{record.title}</Typography.Text>
+          <Typography.Text style={{ display: 'block' }} type="secondary">
+            {record.currentGuessTitle || '当前未挂载竞猜'}
+          </Typography.Text>
+        </div>
+      ),
+    },
+    {
+      title: '主播',
+      width: 180,
+      render: (_, record) => (
+        <div>
+          <Typography.Text>{record.hostName}</Typography.Text>
+          <Typography.Text style={{ display: 'block' }} type="secondary">
+            {record.hostUid || (record.hostId ? `用户 ID ${record.hostId}` : '未知主播')}
+          </Typography.Text>
+        </div>
+      ),
+    },
+    {
+      title: '状态',
+      width: 120,
+      render: (_, record) => <Tag color={getStatusColor(record.status)}>{record.statusLabel}</Tag>,
+    },
+    {
+      title: '竞猜数',
+      dataIndex: 'guessCount',
+      width: 100,
+      render: (_, record) => formatNumber(record.guessCount),
+    },
+    {
+      title: '参与人数',
+      dataIndex: 'participantCount',
+      width: 120,
+      render: (_, record) => formatNumber(record.participantCount),
+    },
+    {
+      title: '开始时间',
+      dataIndex: 'startTime',
+      width: 180,
+      render: (_, record) => (record.startTime ? formatDateTime(record.startTime) : '-'),
+    },
     {
       title: '操作',
       key: 'actions',
       width: 100,
       fixed: 'right',
-      valueType: 'option',
       render: (_, record) => (
         <Button size="small" type="link" onClick={() => setSelected(record)}>
           查看
@@ -73,6 +158,8 @@ export function LiveListPage({ refreshToken = 0 }: LiveListPageProps) {
 
   return (
     <div className="page-stack">
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
+
       <AdminSearchPanel
         form={searchForm}
         onSearch={() => setFilters(searchForm.getFieldsValue())}
@@ -82,31 +169,36 @@ export function LiveListPage({ refreshToken = 0 }: LiveListPageProps) {
           setStatus('all');
         }}
       >
-        <Form.Item name="room">
-          <Input allowClear placeholder="直播间名称" />
+        <Form.Item name="title">
+          <Input allowClear placeholder="直播标题" />
         </Form.Item>
         <Form.Item name="host">
-          <Select allowClear options={buildOptions(rows, 'host')} placeholder="主播" />
+          <Input allowClear placeholder="主播" />
+        </Form.Item>
+        <Form.Item name="guessTitle">
+          <Input allowClear placeholder="当前竞猜" />
         </Form.Item>
       </AdminSearchPanel>
 
       <AdminStatusTabs
         activeKey={status}
         items={[
-          { key: 'all', label: '全部', count: rows.length },
-          { key: '直播中', label: '直播中', count: rows.filter((item) => item.status === '直播中').length },
-          { key: '已结束', label: '已结束', count: rows.filter((item) => item.status === '已结束').length },
+          { key: 'all', label: '全部', count: result.summary.total },
+          { key: 'live', label: '直播中', count: result.summary.live },
+          { key: 'upcoming', label: '预告中', count: result.summary.upcoming },
+          { key: 'ended', label: '已结束', count: result.summary.ended },
         ]}
-        onChange={(key) => setStatus(key as typeof status)}
+        onChange={(key) => setStatus(key as LiveStatusFilter)}
       />
 
       <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
-        <ProTable<LiveRoomRow>
+        <ProTable<AdminLiveRoomItem>
           cardBordered={false}
           rowKey="id"
           columns={columns}
           columnsState={{}}
-          dataSource={filteredRows}
+          dataSource={rows}
+          loading={loading}
           options={{ reload: true, density: true, fullScreen: false, setting: true }}
           pagination={{ defaultPageSize: 10, showSizeChanger: true }}
           search={false}
@@ -114,13 +206,41 @@ export function LiveListPage({ refreshToken = 0 }: LiveListPageProps) {
         />
       </ConfigProvider>
 
-      <Drawer open={selected != null} title="直播间详情" width={460} onClose={() => setSelected(null)}>
+      <Drawer
+        open={selected != null}
+        title="直播详情"
+        width={560}
+        onClose={() => setSelected(null)}
+      >
         {selected ? (
           <Descriptions column={1} size="small">
-            <Descriptions.Item label="直播间">{selected.room}</Descriptions.Item>
-            <Descriptions.Item label="主播">{selected.host}</Descriptions.Item>
-            <Descriptions.Item label="观看人数">{selected.viewers}</Descriptions.Item>
-            <Descriptions.Item label="状态">{selected.status}</Descriptions.Item>
+            <Descriptions.Item label="直播标题">{selected.title}</Descriptions.Item>
+            <Descriptions.Item label="主播">{selected.hostName}</Descriptions.Item>
+            <Descriptions.Item label="主播 UID">
+              {selected.hostUid || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="状态">{selected.statusLabel}</Descriptions.Item>
+            <Descriptions.Item label="原始状态码">
+              {selected.rawStatusCode ?? '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="当前竞猜">
+              {selected.currentGuessTitle || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="竞猜数">
+              {formatNumber(selected.guessCount)}
+            </Descriptions.Item>
+            <Descriptions.Item label="参与人数">
+              {formatNumber(selected.participantCount)}
+            </Descriptions.Item>
+            <Descriptions.Item label="开始时间">
+              {selected.startTime ? formatDateTime(selected.startTime) : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {formatDateTime(selected.createdAt)}
+            </Descriptions.Item>
+            <Descriptions.Item label="更新时间">
+              {formatDateTime(selected.updatedAt)}
+            </Descriptions.Item>
           </Descriptions>
         ) : null}
       </Drawer>

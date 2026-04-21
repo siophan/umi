@@ -230,8 +230,9 @@
 | 对象 | 场景 | 断言重点 | 类型 | 优先级 | 当前状态 |
 | --- | --- | --- | --- | --- | --- |
 | `docs/db.md` | 表结构一致性 | 当前文档与本地 `joy-test` 结构一致 | Schema | P0 | Manual |
+| `docs/schema-reference.md` | 字段口径一致性 | 当前字段、类型、索引和约束说明可覆盖主链路表结构 | Schema | P0 | Manual |
 | `docs/status-codes.md` | 编码一致性 | 当前文档与代码映射一致 | Schema | P0 | Manual |
-| `packages/db/sql/*` | SQL 变更可执行 | 新 SQL 在本地可运行 | Schema | P0 | Manual |
+| `packages/db/README.md` + `packages/db/sql/README.md` | DB 资产口径一致性 | 明确 `@umi/db` 当前为 docs-first 状态，且 `packages/db/sql/` 不被误当成完整恢复源 | Schema | P0 | Manual |
 | 关键表 | 唯一键/索引 | 关键唯一约束存在 | Schema | P1 | Manual |
 | 字段长度 | 业务号长度 | `uid_code/order_sn/fulfillment_sn` 限制被遵守 | Schema | P1 | Partial |
 

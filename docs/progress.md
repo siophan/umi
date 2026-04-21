@@ -1,6 +1,6 @@
 # 项目进度
 
-最后更新：2026-04-20
+最后更新：2026-04-21
 
 本文档只记录当前仓库代码能直接确认的事实，不写无法从代码、脚本或构建结果直接证明的判断。
 
@@ -19,10 +19,10 @@
 | --- | --- | --- |
 | Monorepo 工程底座 | `已完成` | 根目录已形成 `pnpm workspace + turbo`，包含 `apps/web`、`apps/admin`、`apps/api`、`packages/shared`、`packages/db`、`packages/config` |
 | 用户端 `apps/web` | `进行中` | `apps/web/src/app` 下当前有 `57` 个 `page.tsx` 页面文件，且已存在 `20` 个 API client 文件 |
-| 管理台 `apps/admin` | `进行中` | `apps/admin/src/pages` 下当前有 `40` 个页面文件，`apps/admin/src/lib/api` 下有 `9` 个 API client 文件 |
-| 后端 `apps/api` | `进行中` | `apps/api/src/modules` 下当前有 `20` 个 `router.ts` 路由入口和 `46` 个 TypeScript 模块文件 |
+| 管理台 `apps/admin` | `进行中` | `apps/admin/src/pages` 下当前有 `40` 个页面文件，`apps/admin/src/lib/api` 下有 `15` 个 API client 文件 |
+| 后端 `apps/api` | `进行中` | `apps/api/src/modules` 下当前有 `20` 个 `router.ts` 路由入口和 `52` 个 TypeScript 模块文件 |
 | 共享契约 `packages/shared` | `已完成` | 当前包含 `api.ts`、`domain.ts`、`status.ts`、`admin-permissions.ts`、`index.ts` 五个共享源码文件 |
-| 数据库资产 `packages/db` | `进行中` | 当前包含 `20` 个 SQL 文件，但尚未形成统一 migration 体系 |
+| 数据库资产 `packages/db` | `进行中` | 当前已清理失真旧 SQL，保留 docs-first 说明，但尚未重建覆盖当前 `joy-test` 的完整 migration / schema 资产 |
 
 ## 全局统筹判断
 
@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | 整体完成度 | `65%` | 页面覆盖已较完整，但“后台可运营闭环 + 测试覆盖 + 未收口链路”仍明显拖分 |
 | 用户端 | `70%` | 高频主链路大多已存在真实 API 接入，但仍有 `8` 个静态/本地态页面，且 `invite`、`checkin` 链路未闭环 |
-| 管理后台 | `60%` | 核心列表和权限体系已成型，但仍有 `10` 个静态/本地态页面，营销、内容、直播后台仍不算真实运营闭环 |
+| 管理后台 | `65%` | 核心列表和权限体系已成型，内容治理与直播列表已接入真实后台接口；当前主要还剩 `弹幕管理` 这类边界页和大量页面专项测试未补 |
 | 后端 API | `75%` | `apps/api/src/app.ts` 已注册 `20` 个业务模块，主资源域较完整，但仍有缺失路由和部分后台业务闭环不足 |
 | 测试覆盖 | `50%` | 已有一批 API integration/smoke，但绝大多数页面级测试缺失，营销和治理后台专项测试不足 |
 | 部署准备 | `70%` | 工程底座、部署文档和构建链路已具备基础交付条件，但功能闭环不足仍会影响“上线后可运营程度” |
@@ -41,7 +41,7 @@
 
 - 这个项目已经过了“纯壳子/纯 demo”阶段，进入“高频链路可用、低频链路和运营后台继续收口”的阶段。
 - 影响整体完成度的主因不再是页面数量，而是：
-  - 后台静态页仍多
+  - 仍有少量后台边界页未形成真实数据闭环
   - 前后端链路未完全闭环
   - 老系统对齐仍有不少页面未核对
   - 自动化测试仍偏 API 层，页面级覆盖不足
@@ -61,8 +61,8 @@
 
 - 当前没有 workspace 级 `typecheck` 阻塞，工程健康的主问题已从“编不过”转向“业务闭环不完整”。
 - 当前最影响交付的阻塞点是：
-  - 用户端 `invite`、`checkin` 页面已直连接口，但 `apps/api/src/app.ts` 中未见对应 router 注册
-  - 管理后台营销、内容、直播多页仍是本地表格或静态态，不能按真实后台闭环计算
+  - 用户端 `invite`、`checkin` 页面已直连接口，但当前 `apps/api/src/app.ts` 中未见对应 router 注册
+  - 管理后台 `弹幕管理` 仍未承接真实存储链路
   - 大量页面仍缺页面级专项测试，当前测试重心主要在 API integration / smoke
   - 仍有不少页面的 `老系统对齐状态` 只能保守标成 `未核对`
 
@@ -186,12 +186,16 @@
 
 ### 数据接入现状
 
-当前 `apps/admin/src/lib/api` 下共有 `9` 个 API client 文件：
+当前 `apps/admin/src/lib/api` 下共有 `13` 个 API client 文件：
 
 - `auth`
 - `catalog`
 - `categories`
+- `checkin`
 - `dashboard`
+- `equity`
+- `invite`
+- `marketing`
 - `merchant`
 - `orders`
 - `shared`
@@ -204,11 +208,13 @@
 - 用户页
 - 店铺页、开店审核页（店铺列表已支持启用/暂停/关闭，且已关闭店铺可重新启用；开店审核已支持通过/拒绝审核）
 - 品牌管理页（已支持直接新增/编辑品牌，不再保留品牌入驻审核页）
-- 品牌授权申请页（已支持通过/拒绝审核）
+- 轮播管理页（已支持列表、详情、新增、编辑、启停、删除）
+- 品牌授权页（已支持申请审核、授权记录查看、撤销授权）
 - 品牌商品、商品列表
-- 竞猜列表、好友竞猜、PK 对战、创建竞猜
-- 订单列表、交易流水、物流、寄售
-- 仓库页、寄售页
+- 竞猜列表、好友竞猜、PK 对战、创建竞猜（竞猜列表已支持通过/拒绝审核）
+- 订单列表、交易流水、物流、寄售（交易流水已补流水号/订单号/用户/渠道搜索和详情查看）
+- 权益金管理（已直连 `equity_account / equity_log`，支持账户详情与后台调账）
+- 仓库页、寄售页（虚拟仓已补状态 Tabs、商品/用户/来源搜索与详情展示；实体仓已按单页边界去掉寄售状态；寄售市场已补交易单号/卖家/订单号搜索和结算信息）
 - 系统通知、系统聊天、系统用户
 - 角色、权限、分类、系统通知（角色已支持新增/编辑/改状态/分配权限；系统通知已支持发送通知）
 
@@ -285,7 +291,7 @@
 - 商品、品牌商品
 - 竞猜、好友竞猜、PK
 - 订单、交易流水、物流、寄售
-- 店铺、开店申请、品牌、品牌申请、品牌授权申请、品牌授权记录
+- 店铺、开店申请、品牌、品牌申请、品牌授权
 - 店铺商品
 - 系统通知、系统聊天
 
@@ -332,35 +338,28 @@
 
 当前可直接确认：
 
-- 共有 `20` 个 SQL 文件
-- 已覆盖的资产包括：
-  - `auth_session`
-  - `sms_verification_code`
-  - `chat_conversation`
-  - `brand_product`
-  - `shop_brand_auth`
-  - `product_review`
-  - `user_profile`
-  - `user_stats`
-  - `uid_code`
+- 旧 SQL 资产已经清理，避免继续误导后续线程按旧模型恢复数据库
+- 当前 `packages/db/sql/` 只保留说明文件
+- 当前数据库事实仍以 `docs/db.md`、`docs/schema-reference.md`、`docs/status-codes.md` 为准
+- 还没有重建出覆盖当前 `joy-test` 事实的完整 schema / migration / seed 资产
 
-但从目录结构看，当前仍是 SQL 资产集合，不是统一 migration 系统。
+这说明 `packages/db` 当前已经从“失真 SQL 集合”回退成安全状态，但仍不是统一 migration 系统。
 
 ## 当前最大缺口
 
 | 优先级 | 缺口 | 代码事实 |
 | --- | --- | --- |
 | P0 | 用户端 `invite` / `checkin` 链路未闭环 | 前端页面已直接请求接口，但当前 `apps/api/src/app.ts` 中未见对应 router 注册 |
-| P0 | 管理后台仍有 `10` 个静态/本地态页面 | 主要集中在 `#/marketing/*`、`#/community/*`、`#/live/*`、`#/system/rankings` |
+| P1 | 管理后台 `#/live/danmaku` 仍是明确边界页 | 当前系统未承接直播弹幕持久化表，无法做真实后台管理 |
 | P1 | 用户端仍有 `8` 个静态/本地态页面 | 主要包括 `/terms`、`/privacy`、`/guess-order`、`/novice-guess`、`/create`、`/create-user`、`/ai-demo`、`/splash` |
 | P1 | 页面级自动化测试覆盖不足 | 当前强项仍是 API integration / smoke，大多数 `apps/web`、`apps/admin` 页面未见专项测试 |
-| P1 | `packages/db` 仍不是统一迁移体系 | 当前以 SQL 文件资产为主，未形成统一 migration runner |
+| P1 | `packages/db` 仍不是统一迁移体系 | 当前已清理失真 SQL，但仍未重建覆盖当前 `joy-test` 的完整 migration runner / schema 资产 |
 | P1 | 构建警告仍未清理 | Next 多 lockfile warning 与 Admin 大 chunk warning 仍存在 |
 
 ## 下一步建议
 
 1. 优先补齐 `invite`、`checkin` 的后端承接或明确下线页面入口，先收掉“前端已接、后端未见”的伪闭环。
-2. 优先把 `apps/admin` 的营销、内容、直播后台从静态表格推进到真实接口闭环。
+2. 优先补 `apps/admin` 剩余边界页和页面级专项测试，尤其是直播弹幕真实链路缺口。
 3. 继续按页面重要性清理 `apps/web` 中的静态页、兼容页和仅本地态页面，先收口 `/novice-guess`、`/create`、`/create-user` 等高感知页面。
 4. 给已成型的高频页补页面级或链路级自动化测试，至少优先覆盖首页、商城、订单、后台审核和通知发送。
-5. 如果后续继续强化数据库演进流程，再把 `packages/db` 从 SQL 资产集合推进到统一 migration 方案。
+5. 由 DBA 先基于 `umi/docs/` 重建一套和当前 `joy-test` 对齐的 schema / migration / seed 资产，再决定是否推进统一 migration runner。

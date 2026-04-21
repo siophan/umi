@@ -1,3 +1,0 @@
-ALTER TABLE `user`
-  MODIFY COLUMN `birthday` DATE NULL COMMENT '生日';
-

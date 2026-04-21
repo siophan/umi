@@ -28,6 +28,7 @@ import { getJson, postJson, putJson } from './shared';
 export interface AdminNotificationItem {
   id: string;
   title: string;
+  content: string | null;
   audience: 'all_users' | 'order_users' | 'guess_users' | 'post_users' | 'chat_users' | 'targeted_users';
   type: 'system' | 'order' | 'guess' | 'social';
   status: 'sent';
@@ -134,6 +135,7 @@ export interface AdminPermissionItem {
   status: 'active' | 'disabled';
   sort: number;
   assignedRoleCount: number;
+  isBuiltIn: boolean;
 }
 
 type AdminNotificationListResult = {

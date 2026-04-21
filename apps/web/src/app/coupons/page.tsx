@@ -10,7 +10,6 @@ import styles from './page.module.css';
 export default function CouponsPage() {
   const router = useRouter();
   const [tab, setTab] = useState<CouponListItem['status']>('unused');
-  const [toast, setToast] = useState('');
   const [couponsData, setCouponsData] = useState<CouponListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,16 +41,10 @@ export default function CouponsPage() {
     };
   }, [reloadToken]);
 
-  useEffect(() => {
-    if (!toast) {
-      return;
-    }
-    const timer = window.setTimeout(() => setToast(''), 1800);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
   const coupons = useMemo(() => couponsData.filter((item) => item.status === tab), [couponsData, tab]);
   const availableCount = couponsData.filter((item) => item.status === 'unused').length;
+  const summaryCount = error ? '--' : loading ? '...' : `${availableCount}`;
+  const summaryLabel = error ? '优惠券读取失败' : '可用优惠券';
 
   return (
     <main className={styles.page}>
@@ -64,8 +57,8 @@ export default function CouponsPage() {
       </header>
 
       <section className={styles.summary}>
-        <div className={styles.count}>{availableCount}</div>
-        <div className={styles.label}>可用优惠券</div>
+        <div className={styles.count}>{summaryCount}</div>
+        <div className={styles.label}>{summaryLabel}</div>
       </section>
 
       <nav className={styles.tabs}>
@@ -114,7 +107,7 @@ export default function CouponsPage() {
               </div>
               <div className={styles.action}>
                 {coupon.status === 'unused' ? (
-                  <button className={styles.useBtn} type="button" onClick={() => setToast('去使用')}>
+                  <button className={styles.useBtn} type="button" onClick={() => router.push('/mall')}>
                     使用
                   </button>
                 ) : null}
@@ -130,8 +123,6 @@ export default function CouponsPage() {
           </div>
         )}
       </section>
-
-      <div className={`${styles.toast} ${toast ? styles.toastShow : ''}`}>{toast}</div>
     </main>
   );
 }

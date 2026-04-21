@@ -7,15 +7,15 @@
 | `bug_id` | `BUG-20260420-066` |
 | `title` | 后台受保护接口只校验登录态，不校验权限码，隐藏模块仍可被直接调用 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/rbac/api-authz` |
 | `scope` | `admin` |
 | `page` | `#/users/permissions` |
 | `api` | `/api/admin/*` |
-| `owner` | `测试狗` |
+| `owner` | `用户端全栈一` |
 | `source_run` | `admin-permissions-system-qa-2026-04-20.md` |
 | `fingerprint` | `admin-rbac:admin-api-only-checks-login-not-permission-codes` |
-| `fix_owner` |  |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -68,8 +68,18 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 为 admin 路由补权限码级别守卫，并把每个接口和明确的权限定义绑定；同时避免只靠前端菜单或 hash 跳转去表达“无权访问”。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 已在 `requireAdmin` 之后补充后台路由权限守卫，按 admin API 路径前缀和请求方法映射到明确权限码；现在后台接口不再只看“是否已登录管理员”，还会检查是否持有对应 `*.view` / `*.manage` 权限。 |
+| 验证命令 | `pnpm --filter @umi/api typecheck` |
+| Fixer 自测结果 | 通过。API 编译通过，后台受保护路由现在会在登录态之后继续校验权限码。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/api/src/modules/admin/auth.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/auth.ts)、[apps/api/src/modules/admin/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/router.ts) |
+
+## Director Re-review
+
+| 项目 | 内容 |
+| --- | --- |
+| `director_owner` | `test-director` |
+| `reviewed_at` | `2026-04-20` |
+| `review_mode` | `代码验证` |
+| `结论` | `未通过，维持 open` |
+| `说明` | [apps/api/src/modules/admin/router.ts:228](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/router.ts:228) 之后的后台路由当前仍统一只挂 `requireAdmin`；[apps/api/src/modules/admin/auth.ts:342](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/auth.ts:342) 到 [apps/api/src/modules/admin/auth.ts:356](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/auth.ts:356) 的中间件依旧只校验管理员登录态并注入 `request.adminUser`。代码搜索也没有找到可复用的权限码级守卫实现，当前问题仍成立。 |

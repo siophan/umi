@@ -58,7 +58,6 @@ import { ProductsPage } from './pages/products-page';
 import { RolesPage } from './pages/roles-page';
 import { ShopAppliesPage } from './pages/shop-applies-page';
 import { ShopBrandAuthAppliesPage } from './pages/shop-brand-auth-applies-page';
-import { ShopBrandAuthRecordsPage } from './pages/shop-brand-auth-records-page';
 import { ShopProductsPage } from './pages/shop-products-page';
 import { ShopsPage } from './pages/shops-page';
 import { SystemChatsPage } from './pages/system-chats-page';
@@ -108,7 +107,7 @@ const PAGE_COMPONENTS: Record<string, ComponentType<{ refreshToken?: number }>> 
   '/products/list': ProductsPage,
   '/shops/apply': ShopAppliesPage,
   '/shops/brand-auth': ShopBrandAuthAppliesPage,
-  '/shops/brand-auth/records': ShopBrandAuthRecordsPage,
+  '/shops/brand-auth/records': ShopBrandAuthAppliesPage,
   '/shops/list': ShopsPage,
   '/shops/products': ShopProductsPage,
   '/system/categories': CategoriesPage,

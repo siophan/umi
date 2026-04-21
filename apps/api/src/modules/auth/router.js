@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getBearerToken, getRequestUser, requireUser } from '../../lib/auth';
 import { withErrorBoundary } from '../../lib/errors';
 import { ok } from '../../lib/http';
-import { changePassword, login, logoutByToken, register, resetPassword, sendCode, } from './store';
+import { changePassword, login, logoutByToken, register, resetPassword, sendCode, verifyCode, } from './store';
 export const authRouter = Router();
 authRouter.post('/login', withErrorBoundary({
     status: 400,
@@ -19,6 +19,14 @@ authRouter.post('/send-code', withErrorBoundary({
 }, async (request, response) => {
     const body = request.body;
     ok(response, await sendCode(body.phone, body.bizType));
+}));
+authRouter.post('/verify-code', withErrorBoundary({
+    status: 400,
+    code: 'AUTH_VERIFY_CODE_FAILED',
+    message: '验证码校验失败',
+}, async (request, response) => {
+    const body = request.body;
+    ok(response, await verifyCode(body.phone, body.code, body.bizType));
 }));
 authRouter.post('/register', withErrorBoundary({
     status: 400,

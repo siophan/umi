@@ -275,6 +275,11 @@ export function SystemNotificationsPage({
         {selected ? (
           <Descriptions column={1} size="small">
             <Descriptions.Item label="通知标题">{selected.title}</Descriptions.Item>
+            <Descriptions.Item label="通知正文">
+              <Typography.Paragraph style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}>
+                {selected.content || '-'}
+              </Typography.Paragraph>
+            </Descriptions.Item>
             <Descriptions.Item label="消息类型">
               {TYPE_LABELS[selected.type]}
             </Descriptions.Item>

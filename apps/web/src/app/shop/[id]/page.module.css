@@ -257,30 +257,6 @@
   -webkit-line-clamp: 2;
 }
 
-.followBtn {
-  flex-shrink: 0;
-  padding: 8px 24px;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.followBtn:active {
-  transform: scale(0.96);
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.followed {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.6);
-}
-
 .heroStats {
   display: flex;
   margin-top: 18px;
@@ -625,28 +601,6 @@
   background: linear-gradient(135deg, #c5922e, #8b6914);
 }
 
-.fav {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ccc;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.favLiked {
-  color: #ff2442;
-}
-
 .productBody {
   padding: 10px;
 }
@@ -861,39 +815,12 @@
   backdrop-filter: saturate(180%) blur(20px);
 }
 
-.bottomIcon {
-  display: flex;
-  width: 44px;
-  flex-shrink: 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  border: 0;
-  background: transparent;
-  color: #999;
-  font-size: 9px;
-  cursor: pointer;
-}
-
-.bottomIcon span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 19px;
-}
-
-.bottomIconFavOn,
-.bottomIconFavOn span {
-  color: #ff2442;
-}
-
 .bottomButtons {
   display: flex;
   flex: 1;
   gap: 8px;
 }
 
-.chatBtn,
 .primaryBtn {
   flex: 1;
   display: flex;
@@ -909,14 +836,8 @@
   transition: all 0.15s ease;
 }
 
-.chatBtn:active,
 .primaryBtn:active {
   transform: scale(0.97);
-}
-
-.chatBtn {
-  background: #f0f0f2;
-  color: #0f0f0f;
 }
 
 .primaryBtn {

@@ -2,13 +2,31 @@ import type { GuessSummary } from '@umi/shared';
 import type { TableColumnsType } from 'antd';
 import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, Button, Card, ConfigProvider, Descriptions, Drawer, Form, Input, List, Progress, Select, Tag, Typography } from 'antd';
+import {
+  Alert,
+  Button,
+  Card,
+  ConfigProvider,
+  Descriptions,
+  Drawer,
+  Form,
+  Input,
+  List,
+  Modal,
+  Popconfirm,
+  Progress,
+  Select,
+  Tag,
+  Typography,
+  message,
+} from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
-import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { AdminSearchPanel, AdminStatusTabs, SEARCH_THEME } from '../components/admin-list-controls';
 import { fetchAdminCategories, type AdminCategoryItem } from '../lib/api/categories';
 import {
   fetchAdminGuesses,
+  reviewAdminGuess,
 } from '../lib/api/catalog';
 import { formatAmount, formatDateTime, guessReviewStatusMeta, guessStatusMeta } from '../lib/format';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
@@ -18,6 +36,7 @@ interface GuessesPageProps {
 }
 
 export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
+  const [messageApi, contextHolder] = message.useMessage();
   const [selected, setSelected] = useState<GuessSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
@@ -30,6 +49,10 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
   }>({});
   const [status, setStatus] = useState<'all' | 'pending_review' | GuessSummary['status']>('all');
   const [form] = Form.useForm<{ title?: string; category?: string; brand?: string }>();
+  const [rejectForm] = Form.useForm<{ rejectReason: string }>();
+  const [actionSeed, setActionSeed] = useState(0);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<GuessSummary | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -66,7 +89,7 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
     return () => {
       alive = false;
     };
-  }, [refreshToken]);
+  }, [actionSeed, refreshToken]);
 
   const filteredGuesses = useMemo(() => {
     return guesses.filter((guess) => {
@@ -168,18 +191,81 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
     {
       title: '操作',
       key: 'actions',
-      width: 100,
+      width: 180,
       fixed: 'right',
       render: (_, record) => (
-        <Button size="small" type="link" onClick={() => setSelected(record)}>
-          查看
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button size="small" type="link" onClick={() => setSelected(record)}>
+            查看
+          </Button>
+          {record.reviewStatus === 'pending' ? (
+            <>
+              <Popconfirm
+                okButtonProps={{ loading: reviewingId === record.id }}
+                title="确认通过该竞猜审核？"
+                onConfirm={() => void handleApprove(record.id)}
+              >
+                <Button size="small" type="link">
+                  通过
+                </Button>
+              </Popconfirm>
+              <Button size="small" type="link" danger onClick={() => openRejectModal(record)}>
+                拒绝
+              </Button>
+            </>
+          ) : null}
+        </div>
       ),
     },
   ];
 
+  function openRejectModal(record: GuessSummary) {
+    rejectForm.setFieldsValue({ rejectReason: '' });
+    setRejectTarget(record);
+  }
+
+  async function handleApprove(id: string) {
+    setReviewingId(id);
+    try {
+      await reviewAdminGuess(id, { status: 'approved' });
+      messageApi.success('竞猜审核已通过');
+      setRejectTarget(null);
+      setActionSeed((value) => value + 1);
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '竞猜审核失败');
+    } finally {
+      setReviewingId(null);
+    }
+  }
+
+  async function handleReject() {
+    if (!rejectTarget) {
+      return;
+    }
+
+    try {
+      const values = await rejectForm.validateFields();
+      setReviewingId(rejectTarget.id);
+      await reviewAdminGuess(rejectTarget.id, {
+        status: 'rejected',
+        rejectReason: values.rejectReason,
+      });
+      messageApi.success('竞猜审核已拒绝');
+      setRejectTarget(null);
+      rejectForm.resetFields();
+      setActionSeed((value) => value + 1);
+    } catch (error) {
+      if (error instanceof Error) {
+        messageApi.error(error.message);
+      }
+    } finally {
+      setReviewingId(null);
+    }
+  }
+
   return (
     <div className="page-stack">
+      {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={form}
@@ -300,6 +386,31 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
           </div>
         ) : null}
       </Drawer>
+
+      <Modal
+        confirmLoading={!!reviewingId}
+        open={!!rejectTarget}
+        title="拒绝竞猜审核"
+        onCancel={() => {
+          setRejectTarget(null);
+          rejectForm.resetFields();
+        }}
+        onOk={() => {
+          void handleReject();
+        }}
+      >
+        <ConfigProvider theme={SEARCH_THEME}>
+          <Form form={rejectForm} layout="vertical">
+            <Form.Item
+              label="拒绝原因"
+              name="rejectReason"
+              rules={[{ required: true, message: '请填写拒绝原因' }]}
+            >
+              <Input.TextArea maxLength={200} rows={4} showCount />
+            </Form.Item>
+          </Form>
+        </ConfigProvider>
+      </Modal>
     </div>
   );
 }

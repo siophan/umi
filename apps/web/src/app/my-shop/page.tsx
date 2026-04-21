@@ -453,9 +453,6 @@ export default function MyShopPage() {
           >
             <i className="fa-solid fa-eye" />
           </button>
-          <button className={styles.iconBtn} type="button" onClick={() => showToast('店铺设置尚未接入')}>
-            <i className="fa-solid fa-gear" />
-          </button>
         </div>
       </header>
 
@@ -545,24 +542,13 @@ export default function MyShopPage() {
             上架 <i className="fa-solid fa-chevron-right" />
           </button>
         </div>
+        <div className={styles.sectionHint}>当前仅开放查看与上架商品，编辑和上下架能力暂未开放。</div>
         {productList.length > 0 ? productList.map((item) => (
           <article className={styles.productItem} key={item.id}>
             <img src={item.img || '/legacy/images/products/p001-lays.jpg'} alt={item.name} />
             <div className={styles.productBody}>
               <div className={styles.productName}>{item.name}</div>
               <div className={styles.productPrice}>¥{item.price.toFixed(1)}</div>
-              <div className={styles.productBtns}>
-                <button className={styles.miniBtn} type="button" onClick={() => showToast('编辑商品尚未接入')}>
-                  编辑
-                </button>
-                <button
-                  className={styles.miniBtnDanger}
-                  type="button"
-                  onClick={() => showToast('商品上下架尚未接入')}
-                >
-                  下架
-                </button>
-              </div>
             </div>
           </article>
         )) : (

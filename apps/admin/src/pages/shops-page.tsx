@@ -95,17 +95,29 @@ export function ShopsPage({ refreshToken = 0 }: ShopsPageProps) {
   }, [refreshToken, actionSeed]);
 
   const categoryOptions = useMemo(() => {
-    const activeCategories = data.categories
-      .filter((item) => item.bizType === 'shop' && item.status === 'active')
-      .map((item) => ({ label: item.name, value: item.name }));
-
-    if (activeCategories.length > 0) {
-      return activeCategories;
-    }
-
-    return Array.from(new Set(data.shops.map((item) => item.category).filter(Boolean))).map(
-      (value) => ({ label: String(value), value: String(value) }),
+    const referencedCategories = new Set(
+      data.shops.map((item) => item.category).filter((value): value is string => Boolean(value)),
     );
+    const knownOptions = data.categories
+      .filter((item) => item.bizType === 'shop')
+      .filter((item) => item.status === 'active' || referencedCategories.has(item.name))
+      .sort((left, right) => {
+        if (left.status !== right.status) {
+          return left.status === 'active' ? -1 : 1;
+        }
+        return left.name.localeCompare(right.name, 'zh-CN');
+      })
+      .map((item) => ({
+        label: item.status === 'active' ? item.name : `${item.name}（已停用）`,
+        value: item.name,
+      }));
+
+    const missingOptions = Array.from(referencedCategories)
+      .filter((value) => !data.categories.some((item) => item.bizType === 'shop' && item.name === value))
+      .sort((left, right) => left.localeCompare(right, 'zh-CN'))
+      .map((value) => ({ label: `${value}（历史类目）`, value }));
+
+    return [...knownOptions, ...missingOptions];
   }, [data.categories, data.shops]);
 
   const statusItems = useMemo(

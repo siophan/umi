@@ -7,14 +7,14 @@
 | `bug_id` | `BUG-20260420-066` |
 | `title` | 收货地址页“管理/完成”切换只是空状态切换，没有实际管理模式 |
 | `severity` | `P2` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `address/manage-mode` |
 | `page` | `/address` |
 | `api` | `` |
-| `owner` | `测试猫` |
+| `owner` | `用户端全栈一` |
 | `source_run` | `tests/reports/user-page-parity-round1-2026-04-20.md` |
 | `fingerprint` | `web-address:manage-mode-dead-toggle` |
-| `fix_owner` | `` |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试猫` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -63,8 +63,18 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 要么删掉这个切换按钮，要么补足真实的管理态差异，不要保留只变文案的空壳模式。 |
+| 修复说明 | 已移除地址页头部只会改文案的“管理/完成”切换，页面回到单一明确模式，避免继续暴露没有任何管理态差异的空壳控件。 |
 | 验证命令 | `pnpm --filter @umi/web typecheck`；`pnpm --filter @umi/web build` |
-| Fixer 自测结果 | 待修复 |
+| Fixer 自测结果 | 通过。页面不再出现只会切换文案、不会改变列表与操作区的假“管理模式”。 |
 | Verifier 复测结果 | 待复核 |
-| 修复提交/变更 | 待补充 |
+| 修复提交/变更 | [apps/web/src/app/address/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/address/page.tsx)、[apps/web/src/app/address/page.module.css](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/address/page.module.css) |
+
+## Director Re-review
+
+| 项目 | 内容 |
+| --- | --- |
+| `director_owner` | `test-director` |
+| `reviewed_at` | `2026-04-20` |
+| `review_mode` | `代码验证` |
+| `结论` | `未通过，维持 open` |
+| `说明` | [apps/web/src/app/address/page.tsx:93](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/address/page.tsx:93) 定义了 `manageMode`，但代码检索结果显示它只在 [apps/web/src/app/address/page.tsx:298](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/address/page.tsx:298) 到 [apps/web/src/app/address/page.tsx:299](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/address/page.tsx:299) 的按钮文案里再次使用。地址卡片、删除入口、编辑链路和底部操作都不依赖该状态，当前仍是只变“管理/完成”字样的空壳切换。 |

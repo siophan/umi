@@ -85,6 +85,16 @@ export interface SendCodeResult {
   devCode?: string;
 }
 
+export interface VerifyCodePayload {
+  phone: string;
+  code: string;
+  bizType: SmsBizType;
+}
+
+export interface VerifyCodeResult {
+  verified: true;
+}
+
 export interface RegisterPayload {
   phone: string;
   code: string;
@@ -230,6 +240,36 @@ export interface UpdateAdminBrandResult {
   id: EntityId;
 }
 
+export interface CreateAdminBrandProductPayload {
+  brandId: EntityId;
+  name: string;
+  categoryId: EntityId;
+  guidePrice: number;
+  supplyPrice?: number | null;
+  defaultImg?: string | null;
+  description?: string | null;
+  status?: 'active' | 'disabled';
+}
+
+export interface CreateAdminBrandProductResult {
+  id: EntityId;
+}
+
+export interface UpdateAdminBrandProductPayload {
+  brandId: EntityId;
+  name: string;
+  categoryId: EntityId;
+  guidePrice: number;
+  supplyPrice?: number | null;
+  defaultImg?: string | null;
+  description?: string | null;
+  status: 'active' | 'disabled';
+}
+
+export interface UpdateAdminBrandProductResult {
+  id: EntityId;
+}
+
 export interface ReviewAdminBrandAuthApplyPayload {
   status: 'approved' | 'rejected';
   rejectReason?: string | null;
@@ -238,6 +278,11 @@ export interface ReviewAdminBrandAuthApplyPayload {
 export interface ReviewAdminBrandAuthApplyResult {
   id: EntityId;
   status: 'approved' | 'rejected';
+}
+
+export interface RevokeAdminBrandAuthRecordResult {
+  id: EntityId;
+  status: 'revoked';
 }
 
 export interface UpdateAdminShopStatusPayload {
@@ -535,6 +580,369 @@ export interface BannerListResult {
   items: BannerItem[];
 }
 
+export type AdminBannerDisplayStatus = 'active' | 'scheduled' | 'paused' | 'ended';
+export type AdminBannerRawStatus = 'active' | 'disabled';
+export type AdminBannerTargetType = BannerItem['targetType'];
+
+export interface AdminBannerItem {
+  id: EntityId;
+  position: string;
+  positionLabel: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string;
+  targetType: AdminBannerTargetType;
+  targetTypeLabel: string;
+  targetId: EntityId | null;
+  targetName: string | null;
+  actionUrl: string | null;
+  sort: number;
+  rawStatus: AdminBannerRawStatus;
+  status: AdminBannerDisplayStatus;
+  statusLabel: '投放中' | '待排期' | '已暂停' | '已结束';
+  startAt: string | null;
+  endAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminBannerListResult {
+  items: AdminBannerItem[];
+  summary: {
+    total: number;
+    active: number;
+    scheduled: number;
+    paused: number;
+    ended: number;
+  };
+}
+
+export interface CreateAdminBannerPayload {
+  position: string;
+  title: string;
+  subtitle?: string | null;
+  imageUrl: string;
+  targetType: AdminBannerTargetType;
+  targetId?: EntityId | null;
+  actionUrl?: string | null;
+  sort?: number;
+  status?: AdminBannerRawStatus;
+  startAt?: string | null;
+  endAt?: string | null;
+}
+
+export interface CreateAdminBannerResult {
+  id: EntityId;
+}
+
+export interface UpdateAdminBannerPayload {
+  position: string;
+  title: string;
+  subtitle?: string | null;
+  imageUrl: string;
+  targetType: AdminBannerTargetType;
+  targetId?: EntityId | null;
+  actionUrl?: string | null;
+  sort?: number;
+  status?: AdminBannerRawStatus;
+  startAt?: string | null;
+  endAt?: string | null;
+}
+
+export interface UpdateAdminBannerResult {
+  id: EntityId;
+}
+
+export interface UpdateAdminBannerStatusPayload {
+  status: AdminBannerRawStatus;
+}
+
+export interface UpdateAdminBannerStatusResult {
+  id: EntityId;
+  status: AdminBannerRawStatus;
+}
+
+export interface DeleteAdminBannerResult {
+  id: EntityId;
+}
+
+export type AdminCheckinRewardType = 'coin' | 'coupon' | 'physical';
+export type AdminCheckinRewardConfigStatus = 'active' | 'disabled';
+
+export interface AdminCheckinRewardConfigItem {
+  id: EntityId;
+  dayNo: number;
+  rewardType: AdminCheckinRewardType;
+  rewardTypeLabel: '零食币' | '优惠券' | '实物';
+  rewardValue: number;
+  rewardRefId: EntityId | null;
+  title: string | null;
+  sort: number;
+  status: AdminCheckinRewardConfigStatus;
+  statusLabel: '启用' | '停用';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCheckinRewardConfigListResult {
+  items: AdminCheckinRewardConfigItem[];
+  summary: {
+    total: number;
+    active: number;
+    disabled: number;
+  };
+}
+
+export interface CreateAdminCheckinRewardConfigPayload {
+  dayNo: number;
+  rewardType: AdminCheckinRewardType;
+  rewardValue: number;
+  rewardRefId?: EntityId | null;
+  title?: string | null;
+  sort?: number;
+  status?: AdminCheckinRewardConfigStatus;
+}
+
+export interface CreateAdminCheckinRewardConfigResult {
+  id: EntityId;
+}
+
+export interface UpdateAdminCheckinRewardConfigPayload {
+  dayNo: number;
+  rewardType: AdminCheckinRewardType;
+  rewardValue: number;
+  rewardRefId?: EntityId | null;
+  title?: string | null;
+  sort?: number;
+}
+
+export interface UpdateAdminCheckinRewardConfigResult {
+  id: EntityId;
+}
+
+export interface UpdateAdminCheckinRewardConfigStatusPayload {
+  status: AdminCheckinRewardConfigStatus;
+}
+
+export interface UpdateAdminCheckinRewardConfigStatusResult {
+  id: EntityId;
+  status: AdminCheckinRewardConfigStatus;
+}
+
+export type AdminInviteRewardType = 'coin' | 'coupon' | 'physical';
+export type AdminInviteRewardConfigStatus = 'active' | 'disabled';
+
+export interface AdminInviteRewardConfigItem {
+  id: EntityId;
+  inviterRewardType: AdminInviteRewardType;
+  inviterRewardTypeLabel: '零食币' | '优惠券' | '实物';
+  inviterRewardValue: number;
+  inviterRewardRefId: EntityId | null;
+  inviteeRewardType: AdminInviteRewardType;
+  inviteeRewardTypeLabel: '零食币' | '优惠券' | '实物';
+  inviteeRewardValue: number;
+  inviteeRewardRefId: EntityId | null;
+  status: AdminInviteRewardConfigStatus;
+  statusLabel: '启用' | '停用';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminInviteRecordItem {
+  id: EntityId;
+  inviterId: EntityId;
+  inviterName: string;
+  inviterPhone: string | null;
+  inviterUidCode: string | null;
+  inviteCode: string | null;
+  inviteeId: EntityId;
+  inviteeName: string;
+  inviteePhone: string | null;
+  inviteeUidCode: string | null;
+  registeredAt: string;
+}
+
+export interface AdminInviteRecordListResult {
+  items: AdminInviteRecordItem[];
+  summary: {
+    total: number;
+    distinctInviters: number;
+  };
+}
+
+export interface UpdateAdminInviteRewardConfigPayload {
+  inviterRewardType: AdminInviteRewardType;
+  inviterRewardValue: number;
+  inviterRewardRefId?: EntityId | null;
+  inviteeRewardType: AdminInviteRewardType;
+  inviteeRewardValue: number;
+  inviteeRewardRefId?: EntityId | null;
+  status: AdminInviteRewardConfigStatus;
+}
+
+export interface UpdateAdminInviteRewardConfigResult {
+  item: AdminInviteRewardConfigItem;
+}
+
+export type AdminCouponTemplateType = 'cash' | 'discount' | 'shipping';
+export type AdminCouponTemplateScopeType = 'platform' | 'shop';
+export type AdminCouponTemplateValidityType = 'fixed' | 'relative';
+export type AdminCouponTemplateRawStatus = 'active' | 'paused' | 'disabled';
+export type AdminCouponTemplateDisplayStatus =
+  | 'active'
+  | 'scheduled'
+  | 'paused'
+  | 'disabled'
+  | 'ended';
+export type AdminCouponSourceType =
+  | 'admin'
+  | 'activity'
+  | 'compensation'
+  | 'system';
+export type AdminCouponGrantAudience =
+  | 'all_users'
+  | 'order_users'
+  | 'guess_users'
+  | 'shop_users';
+export type AdminCouponGrantBatchDisplayStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed';
+
+export interface AdminCouponTemplateItem {
+  id: EntityId;
+  code: string;
+  name: string;
+  type: AdminCouponTemplateType;
+  typeLabel: '满减券' | '折扣券' | '运费券';
+  rawStatus: AdminCouponTemplateRawStatus;
+  status: AdminCouponTemplateDisplayStatus;
+  statusLabel: '启用' | '待开始' | '已暂停' | '已停用' | '已结束';
+  scopeType: AdminCouponTemplateScopeType;
+  scopeTypeLabel: '平台通用' | '指定店铺';
+  shopId: EntityId | null;
+  shopName: string | null;
+  description: string | null;
+  sourceType: AdminCouponSourceType;
+  sourceTypeLabel: '后台人工' | '活动发放' | '补偿发放' | '系统发放';
+  minAmount: number;
+  discountAmount: number;
+  discountRate: number | null;
+  maxDiscountAmount: number;
+  validityType: AdminCouponTemplateValidityType;
+  validityTypeLabel: '固定时间段' | '领取后 N 天';
+  startAt: string | null;
+  endAt: string | null;
+  validDays: number;
+  totalQuantity: number;
+  userLimit: number;
+  grantedCount: number;
+  remainingQuantity: number | null;
+  batchCount: number;
+  lastBatchAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCouponListResult {
+  items: AdminCouponTemplateItem[];
+  summary: {
+    total: number;
+    active: number;
+    scheduled: number;
+    paused: number;
+    disabled: number;
+    ended: number;
+  };
+}
+
+export interface AdminCouponGrantBatchItem {
+  id: EntityId;
+  batchNo: string;
+  templateId: EntityId | null;
+  sourceType: AdminCouponSourceType;
+  sourceTypeLabel: '后台人工' | '活动发放' | '补偿发放' | '系统发放';
+  operatorId: EntityId | null;
+  operatorName: string | null;
+  targetUserCount: number;
+  grantedCount: number;
+  status: AdminCouponGrantBatchDisplayStatus;
+  statusLabel: '待执行' | '执行中' | '已完成' | '已失败';
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCouponGrantBatchListResult {
+  items: AdminCouponGrantBatchItem[];
+}
+
+export interface CreateAdminCouponTemplatePayload {
+  name: string;
+  type: AdminCouponTemplateType;
+  scopeType: AdminCouponTemplateScopeType;
+  shopId?: EntityId | null;
+  description?: string | null;
+  minAmount: number;
+  discountAmount?: number;
+  discountRate?: number;
+  maxDiscountAmount?: number;
+  validityType: AdminCouponTemplateValidityType;
+  startAt?: string | null;
+  endAt?: string | null;
+  validDays?: number;
+  totalQuantity: number;
+  userLimit: number;
+  status?: AdminCouponTemplateRawStatus;
+}
+
+export interface CreateAdminCouponTemplateResult {
+  id: EntityId;
+}
+
+export interface UpdateAdminCouponTemplatePayload {
+  name: string;
+  type: AdminCouponTemplateType;
+  scopeType: AdminCouponTemplateScopeType;
+  shopId?: EntityId | null;
+  description?: string | null;
+  minAmount: number;
+  discountAmount?: number;
+  discountRate?: number;
+  maxDiscountAmount?: number;
+  validityType: AdminCouponTemplateValidityType;
+  startAt?: string | null;
+  endAt?: string | null;
+  validDays?: number;
+  totalQuantity: number;
+  userLimit: number;
+  status?: AdminCouponTemplateRawStatus;
+}
+
+export interface UpdateAdminCouponTemplateResult {
+  id: EntityId;
+}
+
+export interface UpdateAdminCouponTemplateStatusPayload {
+  status: AdminCouponTemplateRawStatus;
+}
+
+export interface UpdateAdminCouponTemplateStatusResult {
+  id: EntityId;
+  status: AdminCouponTemplateRawStatus;
+}
+
+export interface CreateAdminCouponGrantBatchPayload {
+  audience: AdminCouponGrantAudience;
+  note?: string | null;
+}
+
+export interface CreateAdminCouponGrantBatchResult {
+  id: EntityId;
+  grantedCount: number;
+}
+
 export type RankingType = 'winRate' | 'guessWins' | 'inviteCount';
 export type RankingPeriodType = 'daily' | 'weekly' | 'monthly' | 'allTime';
 
@@ -557,6 +965,199 @@ export interface RankingListResult {
   type: RankingType;
   periodType: RankingPeriodType;
   periodValue: string;
+}
+
+export interface AdminRankingSummaryItem {
+  id: string;
+  boardType: RankingType;
+  boardTypeLabel: string;
+  periodType: RankingPeriodType;
+  periodTypeLabel: string;
+  periodValue: string;
+  periodLabel: string;
+  entryCount: number;
+  topUserId: UserId | null;
+  topUserName: string | null;
+  topUserUid: string | null;
+  topScore: number;
+  topValue: string;
+  generatedAt: string;
+}
+
+export interface AdminRankingListResult {
+  items: AdminRankingSummaryItem[];
+  summary: {
+    total: number;
+    guessWins: number;
+    winRate: number;
+    inviteCount: number;
+  };
+}
+
+export interface AdminRankingEntryItem {
+  rank: number;
+  userId: UserId;
+  userUid: string | null;
+  nickname: string;
+  avatar: string | null;
+  level: number;
+  score: number;
+  value: string;
+  extraSummary: string | null;
+}
+
+export interface AdminRankingDetailResult {
+  boardType: RankingType;
+  boardTypeLabel: string;
+  periodType: RankingPeriodType;
+  periodTypeLabel: string;
+  periodValue: string;
+  periodLabel: string;
+  generatedAt: string;
+  totalEntries: number;
+  items: AdminRankingEntryItem[];
+}
+
+export type AdminCommunityPostType = 'post' | 'guess' | 'repost';
+export type AdminCommunityPostScope = 'public' | 'followers' | 'private' | 'unknown';
+
+export interface AdminCommunityPostItem {
+  id: EntityId;
+  title: string | null;
+  content: string;
+  tag: string | null;
+  type: AdminCommunityPostType;
+  typeLabel: string;
+  scope: AdminCommunityPostScope;
+  scopeLabel: string;
+  authorId: UserId;
+  authorUid: string | null;
+  authorName: string;
+  guessId: GuessId | null;
+  guessTitle: string | null;
+  images: string[];
+  likeCount: number;
+  commentCount: number;
+  repostCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCommunityPostListResult {
+  items: AdminCommunityPostItem[];
+}
+
+export interface DeleteAdminCommunityPostResult {
+  id: EntityId;
+  success: true;
+}
+
+export interface AdminCommunityCommentItem {
+  id: EntityId;
+  targetType: 'post';
+  targetPostId: EntityId | null;
+  targetPostTitle: string | null;
+  parentId: EntityId | null;
+  content: string;
+  authorId: UserId;
+  authorUid: string | null;
+  authorName: string;
+  likeCount: number;
+  replyCount: number;
+  createdAt: string;
+}
+
+export interface AdminCommunityCommentListResult {
+  items: AdminCommunityCommentItem[];
+}
+
+export interface DeleteAdminCommunityCommentResult {
+  id: EntityId;
+  success: true;
+}
+
+export type AdminCommunityReportStatus = 'pending' | 'reviewing' | 'resolved' | 'rejected';
+export type AdminCommunityReportReasonType =
+  | 'spam'
+  | 'explicit'
+  | 'abuse'
+  | 'false_info'
+  | 'other';
+export type AdminCommunityReportAction = 'review' | 'approve' | 'reject' | 'ban';
+export type AdminCommunityReportHandleAction = 'approve' | 'reject' | 'ban' | null;
+
+export interface AdminCommunityReportItem {
+  id: EntityId;
+  reporterUserId: UserId;
+  reporterUid: string | null;
+  reporterName: string;
+  targetType: 'post';
+  targetId: EntityId;
+  targetTitle: string | null;
+  targetContent: string | null;
+  targetAuthorId: UserId | null;
+  targetAuthorUid: string | null;
+  targetAuthorName: string | null;
+  reasonType: AdminCommunityReportReasonType;
+  reasonLabel: string;
+  reasonDetail: string | null;
+  status: AdminCommunityReportStatus;
+  statusLabel: string;
+  handleAction: AdminCommunityReportHandleAction;
+  handleActionLabel: string | null;
+  handleNote: string | null;
+  handledAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminCommunityReportListResult {
+  items: AdminCommunityReportItem[];
+  summary: {
+    total: number;
+    pending: number;
+    reviewing: number;
+    resolved: number;
+    rejected: number;
+  };
+}
+
+export interface UpdateAdminCommunityReportPayload {
+  action: AdminCommunityReportAction;
+  note?: string | null;
+}
+
+export interface UpdateAdminCommunityReportResult {
+  item: AdminCommunityReportItem;
+}
+
+export type AdminLiveRoomStatus = 'live' | 'upcoming' | 'ended';
+
+export interface AdminLiveRoomItem {
+  id: EntityId;
+  title: string;
+  imageUrl: string | null;
+  hostId: UserId | null;
+  hostUid: string | null;
+  hostName: string;
+  rawStatusCode: number | null;
+  status: AdminLiveRoomStatus;
+  statusLabel: string;
+  startTime: string | null;
+  guessCount: number;
+  currentGuessTitle: string | null;
+  participantCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminLiveRoomListResult {
+  items: AdminLiveRoomItem[];
+  summary: {
+    total: number;
+    live: number;
+    upcoming: number;
+    ended: number;
+  };
 }
 
 export interface MeSummaryResult {
@@ -656,6 +1257,16 @@ export interface SendChatMessagePayload {
 
 export interface GuessListResult {
   items: GuessSummary[];
+}
+
+export interface ReviewAdminGuessPayload {
+  status: 'approved' | 'rejected';
+  rejectReason?: string | null;
+}
+
+export interface ReviewAdminGuessResult {
+  id: GuessId;
+  status: 'approved' | 'rejected';
 }
 
 export type AdminUserFilter = 'all' | 'user' | 'shop_owner' | 'banned';
@@ -1009,6 +1620,8 @@ export interface ProductDetailResult {
     images: string[];
     originalPrice: number;
     stock: number;
+    sales: number;
+    rating: number;
     tags: string[];
     description: string;
     favorited: boolean;
@@ -1016,6 +1629,14 @@ export interface ProductDetailResult {
   activeGuess: GuessSummary | null;
   warehouseItems: WarehouseItem[];
   recommendations: ProductSummary[];
+  reviews: Array<{
+    id: EntityId;
+    userName: string;
+    userAvatar: string | null;
+    rating: number;
+    content: string | null;
+    createdAt: string;
+  }>;
 }
 
 export interface MyShopBrandAuthItem {
@@ -1185,4 +1806,70 @@ export interface AddShopProductsResult {
 export interface WalletLedgerResult {
   balance: number;
   items: CoinLedgerEntry[];
+}
+
+export type AdminEquityAccountSubType = 'category' | 'exchange' | 'general';
+export type AdminEquityLogType = 'grant' | 'use' | 'expire' | 'adjust' | 'unknown';
+
+export interface AdminEquityAccountItem {
+  id: EntityId;
+  userId: EntityId;
+  userName: string | null;
+  phoneNumber: string | null;
+  avatarUrl: string | null;
+  categoryAmount: number;
+  exchangeAmount: number;
+  generalAmount: number;
+  totalBalance: number;
+  totalGranted: number;
+  totalUsed: number;
+  totalExpired: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminEquityLogItem {
+  id: EntityId;
+  accountId: EntityId;
+  userId: EntityId;
+  type: AdminEquityLogType;
+  subType: AdminEquityAccountSubType | null;
+  amount: number;
+  balance: number;
+  sourceType: number | null;
+  refId: EntityId | null;
+  note: string | null;
+  expireAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminEquityListResult {
+  items: AdminEquityAccountItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: {
+    totalAccounts: number;
+    totalGranted: number;
+    totalUsed: number;
+    totalExpired: number;
+    activeBalance: number;
+  };
+}
+
+export interface AdminEquityDetailResult {
+  account: AdminEquityAccountItem;
+  logs: AdminEquityLogItem[];
+}
+
+export interface AdjustAdminEquityPayload {
+  userId: EntityId;
+  subType: AdminEquityAccountSubType;
+  amount: number;
+  note?: string | null;
+}
+
+export interface AdjustAdminEquityResult {
+  account: AdminEquityAccountItem;
+  log: AdminEquityLogItem;
 }

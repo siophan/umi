@@ -120,15 +120,49 @@ export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
     { label: '管理', value: 'manage' },
   ] satisfies Array<{ label: string; value: AdminPermissionItem['action'] }>;
 
+  const descendantIdSet = useMemo(() => {
+    if (!editing) {
+      return new Set<string>();
+    }
+
+    const childrenByParent = new Map<string, string[]>();
+    for (const item of permissions) {
+      if (!item.parentId) {
+        continue;
+      }
+      const siblings = childrenByParent.get(item.parentId) ?? [];
+      siblings.push(item.id);
+      childrenByParent.set(item.parentId, siblings);
+    }
+
+    const descendants = new Set<string>();
+    const queue = [editing.id];
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      if (!currentId) {
+        continue;
+      }
+      const children = childrenByParent.get(currentId) ?? [];
+      for (const childId of children) {
+        if (descendants.has(childId)) {
+          continue;
+        }
+        descendants.add(childId);
+        queue.push(childId);
+      }
+    }
+    return descendants;
+  }, [editing, permissions]);
+
   const parentOptions = useMemo(
     () =>
       permissions
-        .filter((item) => (editing ? item.id !== editing.id : true))
+        .filter((item) => (editing ? item.id !== editing.id && !descendantIdSet.has(item.id) : true))
         .map((item) => ({
           label: `${item.name} · ${item.code}`,
           value: item.id,
         })),
-    [editing, permissions],
+    [descendantIdSet, editing, permissions],
   );
 
   const filteredPermissions = useMemo(
@@ -169,7 +203,10 @@ export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
       width: 260,
       render: (_, record) => (
         <div>
-          <Typography.Text strong>{record.name}</Typography.Text>
+          <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+            <Typography.Text strong>{record.name}</Typography.Text>
+            {record.isBuiltIn ? <Tag color="processing">内置</Tag> : null}
+          </div>
           <Typography.Text style={{ display: 'block' }} type="secondary">
             {record.code}
           </Typography.Text>
@@ -225,14 +262,19 @@ export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
           <Button size="small" type="link" onClick={() => setSelected(record)}>
             查看
           </Button>
-          <Button size="small" type="link" onClick={() => openEditModal(record)}>
+          <Button
+            disabled={record.isBuiltIn}
+            size="small"
+            type="link"
+            onClick={() => openEditModal(record)}
+          >
             编辑
           </Button>
           <Popconfirm
             title={record.status === 'active' ? '停用权限' : '启用权限'}
             description={
               record.status === 'active'
-                ? '停用后，角色配置中将不能再分配该权限。'
+                ? '停用后，当前权限及其子权限都会一并失效，角色访问会同步收口。'
                 : '确认重新启用该权限？'
             }
             okText="确认"
@@ -408,6 +450,9 @@ export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
             </Descriptions.Item>
             <Descriptions.Item label="父权限">{selected.parentName || '-'}</Descriptions.Item>
             <Descriptions.Item label="角色引用">{selected.assignedRoleCount}</Descriptions.Item>
+            <Descriptions.Item label="权限来源">
+              {selected.isBuiltIn ? '系统内置目录' : '自定义权限'}
+            </Descriptions.Item>
             <Descriptions.Item label="排序">{selected.sort}</Descriptions.Item>
             <Descriptions.Item label="状态">
               <Tag color={statusColor(selected.status)}>

@@ -3,9 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "build": "echo \"db package build pending\"",
-    "lint": "echo \"db package lint pending\"",
-    "test": "echo \"db package test pending\"",
+    "build": "echo \"@umi/db is docs-first only; no executable schema build output exists yet\"",
+    "lint": "echo \"@umi/db has no runnable SQL asset set to lint yet; align new assets with umi/docs first\"",
+    "test": "echo \"@umi/db requires manual schema verification against docs/db.md, docs/schema-reference.md, and docs/status-codes.md\"",
     "typecheck": "tsc -p tsconfig.json"
   }
 }

@@ -7,7 +7,6 @@ import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-cont
 import type { AdminConsignRow } from '../lib/api/orders';
 import { fetchAdminConsignRows } from '../lib/api/orders';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
-import { buildOptions } from '../lib/admin-filter-options';
 import { formatAmount, formatDateTime } from '../lib/format';
 
 interface WarehouseConsignPageProps {
@@ -15,11 +14,31 @@ interface WarehouseConsignPageProps {
 }
 
 type ConsignFilters = {
+  tradeNo?: string;
   productName?: string;
+  sellerUserId?: string;
+  orderSn?: string;
   sourceType?: string;
 };
 
 const emptyRows: AdminConsignRow[] = [];
+const sourceTypeOptions = [
+  { label: '仓库商品', value: '仓库商品' },
+  { label: '仓库调入', value: '仓库调入' },
+];
+
+function getSettlementLabel(record: AdminConsignRow) {
+  if (record.statusLabel === '已取消') {
+    return '-';
+  }
+  if (record.settledAt) {
+    return '已结算';
+  }
+  if (record.statusLabel === '已成交' || record.statusLabel === '待结算') {
+    return '待结算';
+  }
+  return '-';
+}
 
 export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageProps) {
   const [searchForm] = Form.useForm<ConsignFilters>();
@@ -53,34 +72,75 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
     };
   }, [refreshToken]);
 
-  const sourceTypeOptions = useMemo(() => buildOptions(rows, 'sourceType'), [rows]);
   const filteredRows = useMemo(
     () =>
       rows.filter((record) => {
         if (status !== 'all' && record.statusLabel !== status) return false;
+        if (
+          filters.tradeNo &&
+          !`${record.tradeNo || record.id}`.toLowerCase().includes(filters.tradeNo.trim().toLowerCase())
+        ) {
+          return false;
+        }
         if (filters.productName && !record.productName.toLowerCase().includes(filters.productName.trim().toLowerCase())) return false;
+        if (
+          filters.sellerUserId &&
+          !record.userId.toLowerCase().includes(filters.sellerUserId.trim().toLowerCase())
+        ) {
+          return false;
+        }
+        if (
+          filters.orderSn &&
+          !`${record.orderSn || ''}`.toLowerCase().includes(filters.orderSn.trim().toLowerCase())
+        ) {
+          return false;
+        }
         if (filters.sourceType && record.sourceType !== filters.sourceType) return false;
         return true;
       }),
-    [filters.productName, filters.sourceType, rows, status],
+    [filters.orderSn, filters.productName, filters.sellerUserId, filters.sourceType, filters.tradeNo, rows, status],
   );
 
   const columns: ProColumns<AdminConsignRow>[] = [
     {
-      title: '寄售商品',
-      width: 260,
+      title: '交易单号',
+      width: 180,
+      render: (_, record) => <Typography.Text strong>{record.tradeNo || record.id}</Typography.Text>,
+    },
+    {
+      title: '商品',
+      width: 240,
       render: (_, record) => (
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {record.productImg ? (
+            <img
+              src={record.productImg}
+              alt={record.productName}
+              style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }}
+            />
+          ) : null}
           <Typography.Text strong>{record.productName}</Typography.Text>
-          <Typography.Text style={{ display: 'block' }} type="secondary">卖家 {record.userId}</Typography.Text>
         </div>
       ),
     },
-    { title: '成交价', dataIndex: 'price', width: 120, render: (_, record) => formatAmount(record.price) },
+    {
+      title: '卖家',
+      width: 160,
+      render: (_, record) => <Typography.Text>{record.userId}</Typography.Text>,
+    },
+    {
+      title: '买家',
+      width: 160,
+      render: (_, record) => <Typography.Text>{record.buyerUserId || '-'}</Typography.Text>,
+    },
     { title: '挂单价', dataIndex: 'listingPrice', width: 120, render: (_, record) => (record.listingPrice ? formatAmount(record.listingPrice) : '-') },
+    { title: '成交价', dataIndex: 'price', width: 120, render: (_, record) => formatAmount(record.price) },
     { title: '佣金', dataIndex: 'commissionAmount', width: 120, render: (_, record) => formatAmount(record.commissionAmount) },
+    { title: '卖家到账', dataIndex: 'sellerAmount', width: 120, render: (_, record) => formatAmount(record.sellerAmount) },
     { title: '状态', dataIndex: 'statusLabel', width: 120 },
-    { title: '时间', dataIndex: 'createdAt', width: 180, render: (_, record) => formatDateTime(record.createdAt) },
+    { title: '结算状态', width: 120, render: (_, record) => getSettlementLabel(record) },
+    { title: '上架时间', dataIndex: 'listedAt', width: 180, render: (_, record) => formatDateTime(record.listedAt || record.createdAt) },
+    { title: '成交时间', dataIndex: 'tradedAt', width: 180, render: (_, record) => formatDateTime(record.tradedAt) },
     {
       title: '操作',
       key: 'actions',
@@ -96,6 +156,7 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={searchForm}
+        defaultCount={3}
         onSearch={() => setFilters(searchForm.getFieldsValue())}
         onReset={() => {
           searchForm.resetFields();
@@ -103,8 +164,17 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
           setStatus('all');
         }}
       >
+        <Form.Item name="tradeNo">
+          <Input allowClear placeholder="交易单号" />
+        </Form.Item>
         <Form.Item name="productName">
           <Input allowClear placeholder="商品名称" />
+        </Form.Item>
+        <Form.Item name="sellerUserId">
+          <Input allowClear placeholder="卖家" />
+        </Form.Item>
+        <Form.Item name="orderSn">
+          <Input allowClear placeholder="订单号" />
         </Form.Item>
         <Form.Item name="sourceType">
           <Select allowClear options={sourceTypeOptions} placeholder="来源类型" />
@@ -114,10 +184,9 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
         activeKey={status}
         items={[
           { key: 'all', label: '全部', count: rows.length },
-          { key: '待上架', label: '待上架', count: rows.filter((item) => item.statusLabel === '待上架').length },
           { key: '寄售中', label: '寄售中', count: rows.filter((item) => item.statusLabel === '寄售中').length },
+          { key: '待结算', label: '待结算', count: rows.filter((item) => item.statusLabel === '待结算').length },
           { key: '已成交', label: '已成交', count: rows.filter((item) => item.statusLabel === '已成交').length },
-          { key: '已结算', label: '已结算', count: rows.filter((item) => item.statusLabel === '已结算').length },
           { key: '已取消', label: '已取消', count: rows.filter((item) => item.statusLabel === '已取消').length },
         ]}
         onChange={setStatus}
@@ -136,16 +205,26 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
           toolBarRender={() => []}
         />
       </ConfigProvider>
-      <Drawer open={selected != null} title="寄售市场" width={460} onClose={() => setSelected(null)}>
+      <Drawer open={selected != null} title="寄售详情" width={460} onClose={() => setSelected(null)}>
         {selected ? (
           <Descriptions column={1} size="small">
+            <Descriptions.Item label="交易单号">{selected.tradeNo || selected.id}</Descriptions.Item>
             <Descriptions.Item label="商品名称">{selected.productName}</Descriptions.Item>
+            <Descriptions.Item label="实物仓记录">{selected.physicalItemId || '-'}</Descriptions.Item>
             <Descriptions.Item label="卖家">{selected.userId}</Descriptions.Item>
-            <Descriptions.Item label="成交价">{formatAmount(selected.price)}</Descriptions.Item>
-            <Descriptions.Item label="挂单价">{selected.listingPrice ? formatAmount(selected.listingPrice) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="佣金">{formatAmount(selected.commissionAmount)}</Descriptions.Item>
-            <Descriptions.Item label="状态">{selected.statusLabel}</Descriptions.Item>
+            <Descriptions.Item label="买家">{selected.buyerUserId || '-'}</Descriptions.Item>
+            <Descriptions.Item label="订单号">{selected.orderSn || selected.orderId || '-'}</Descriptions.Item>
             <Descriptions.Item label="来源类型">{selected.sourceType}</Descriptions.Item>
+            <Descriptions.Item label="挂单价">{selected.listingPrice ? formatAmount(selected.listingPrice) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="成交价">{formatAmount(selected.price)}</Descriptions.Item>
+            <Descriptions.Item label="佣金">{formatAmount(selected.commissionAmount)}</Descriptions.Item>
+            <Descriptions.Item label="卖家到账">{formatAmount(selected.sellerAmount)}</Descriptions.Item>
+            <Descriptions.Item label="状态">{selected.statusLabel}</Descriptions.Item>
+            <Descriptions.Item label="结算状态">{getSettlementLabel(selected)}</Descriptions.Item>
+            <Descriptions.Item label="上架时间">{formatDateTime(selected.listedAt || selected.createdAt)}</Descriptions.Item>
+            <Descriptions.Item label="成交时间">{formatDateTime(selected.tradedAt)}</Descriptions.Item>
+            <Descriptions.Item label="结算时间">{formatDateTime(selected.settledAt)}</Descriptions.Item>
+            <Descriptions.Item label="取消时间">{formatDateTime(selected.canceledAt)}</Descriptions.Item>
             <Descriptions.Item label="创建时间">{formatDateTime(selected.createdAt)}</Descriptions.Item>
           </Descriptions>
         ) : null}

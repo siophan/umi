@@ -173,6 +173,7 @@ export function MallHome() {
   const [productError, setProductError] = useState<string | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
   const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryErrors, setCategoryErrors] = useState<Record<string, string>>({});
   const [catOpen, setCatOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [feedAnimating, setFeedAnimating] = useState(false);
@@ -181,6 +182,7 @@ export function MallHome() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSort, setActiveSort] = useState<MallSort>('default');
   const [reloadToken, setReloadToken] = useState(0);
+  const [categoryReloadToken, setCategoryReloadToken] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -267,6 +269,10 @@ export function MallHome() {
   }, [categoryOptions]);
 
   const activeCategoryItems = activeCategory === 'all' ? mallItems : (categoryItems[activeCategory] ?? []);
+  const activeCategoryError =
+    contentTab === 'category' && activeCategory !== 'all'
+      ? categoryErrors[activeCategory] ?? null
+      : null;
 
   useEffect(() => {
     if (contentTab !== 'category' || activeCategory === 'all' || categoryItems[activeCategory]) {
@@ -278,14 +284,26 @@ export function MallHome() {
 
     async function loadCategoryItems() {
       try {
+        setCategoryErrors((current) => {
+          if (!(activeCategory in current)) {
+            return current;
+          }
+          const next = { ...current };
+          delete next[activeCategory];
+          return next;
+        });
+
         const result = await fetchProductList({ limit: 50, categoryId: activeCategory });
         if (!ignore) {
           setCategoryItems((current) => ({ ...current, [activeCategory]: applyLegacyGridMeta(result.items) }));
           setProductCategories(result.categories);
         }
-      } catch {
+      } catch (error) {
         if (!ignore) {
-          setCategoryItems((current) => ({ ...current, [activeCategory]: [] }));
+          setCategoryErrors((current) => ({
+            ...current,
+            [activeCategory]: getErrorMessage(error, '分类商品读取失败'),
+          }));
         }
       } finally {
         if (!ignore) {
@@ -299,7 +317,7 @@ export function MallHome() {
     return () => {
       ignore = true;
     };
-  }, [activeCategory, categoryItems, contentTab]);
+  }, [activeCategory, categoryItems, categoryReloadToken, contentTab]);
 
   const filteredItems = useMemo(() => {
     let next = [...mallItems];
@@ -703,13 +721,27 @@ export function MallHome() {
         {loading || (contentTab === 'category' && activeCategory !== 'all' && categoryLoading && !categoryItems[activeCategory]) ? (
           <div className="m-load-more">正在加载商品...</div>
         ) : null}
+        {!loading && activeCategoryError ? (
+          <div className="m-state-card m-state-card-error">
+            <div className="m-state-title">分类商品加载失败</div>
+            <div className="m-state-desc">{activeCategoryError}</div>
+            <button
+              className="m-state-action"
+              type="button"
+              onClick={() => setCategoryReloadToken((current) => current + 1)}
+            >
+              重试
+            </button>
+          </div>
+        ) : null}
         {!loading &&
         !productError &&
+        !activeCategoryError &&
         !(contentTab === 'category' && activeCategory !== 'all' && categoryLoading && !categoryItems[activeCategory]) &&
         filteredItems.length === 0 ? (
           <div className="m-load-more">当前分类暂无商品</div>
         ) : null}
-        {!loading && !productError && visibleGridItems.length > 0 ? (
+        {!loading && !productError && !activeCategoryError && visibleGridItems.length > 0 ? (
           <div className={`m-grid ${useInlinePairGrid ? 'm-grid-inline-pair' : ''}`}>{gridNodes}</div>
         ) : null}
 

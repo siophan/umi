@@ -16,6 +16,7 @@ function ReviewPageInner() {
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState("");
+  const hasReviewContext = Boolean(orderId && productId);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -51,6 +52,25 @@ function ReviewPageInner() {
         <div className={styles.placeholder} />
       </header>
 
+      {!hasReviewContext ? (
+        <div className={styles.issueWrap}>
+          <div className={styles.issueCard}>
+            <div className={styles.issueIcon}>
+              <i className="fa-solid fa-circle-exclamation" />
+            </div>
+            <div className={styles.issueTitle}>缺少评价上下文</div>
+            <div className={styles.issueDesc}>当前入口没有携带订单和商品信息，暂时无法提交评价。</div>
+            <div className={styles.issueActions}>
+              <button className={styles.issueGhostBtn} type="button" onClick={() => router.back()}>
+                返回上一页
+              </button>
+              <button className={styles.issuePrimaryBtn} type="button" onClick={() => router.replace("/orders")}>
+                回到订单
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className={styles.card}>
         <p className={styles.label}>综合评分</p>
         <div className={styles.stars}>
@@ -83,6 +103,22 @@ function ReviewPageInner() {
         />
         <p className={styles.count}>{content.length}/500</p>
 
+        <p className={styles.label}>晒单图片（暂未开放）</p>
+        <div className={styles.uploadGrid}>
+          <button className={styles.uploadPlaceholder} type="button" disabled aria-disabled="true">
+            <span className={styles.uploadIcon}>
+              <i className="fa-solid fa-camera" />
+            </span>
+            <span className={styles.uploadTitle}>上传图片</span>
+            <span className={styles.uploadHint}>图片晒单能力建设中</span>
+          </button>
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div key={index} className={styles.uploadGhost} aria-hidden="true">
+              <i className="fa-regular fa-image" />
+            </div>
+          ))}
+        </div>
+
         <button
           className={styles.submitBtn}
           type="button"
@@ -92,6 +128,7 @@ function ReviewPageInner() {
           {submitting ? "提交中..." : "提交评价"}
         </button>
       </div>
+      )}
 
       <div className={`${styles.toast} ${toast ? styles.toastShow : ""}`}>{toast}</div>
     </div>

@@ -16,19 +16,6 @@ const brandLogoMap: Record<string, string> = {
   海底捞: '/legacy/images/products/p011-haidilao.jpg',
 };
 
-const brandMetaMap: Record<
-  string,
-  { deposit: number; authCount: number; monthSales: string; products: number; category: string }
-> = {
-  旺旺: { deposit: 600, authCount: 156, monthSales: '2.1万', products: 45, category: '膨化食品' },
-  德芙: { deposit: 800, authCount: 89, monthSales: '1.8万', products: 32, category: '巧克力糖果' },
-  卫龙: { deposit: 400, authCount: 234, monthSales: '3.5万', products: 28, category: '辣味零食' },
-  良品铺子: { deposit: 700, authCount: 178, monthSales: '2.8万', products: 56, category: '综合零食' },
-  元气森林: { deposit: 500, authCount: 67, monthSales: '1.5万', products: 18, category: '健康饮料' },
-  海底捞: { deposit: 900, authCount: 45, monthSales: '0.9万', products: 12, category: '自热食品' },
-  乐事: { deposit: 500, authCount: 126, monthSales: '2.4万', products: 52, category: '膨化食品' },
-};
-
 export default function BrandAuthPage() {
   const router = useRouter();
   const [overview, setOverview] = useState<Awaited<ReturnType<typeof fetchBrandAuthOverview>>>({
@@ -165,7 +152,7 @@ export default function BrandAuthPage() {
           <div className={styles.step}>
             <div className={styles.dot}>2</div>
             <div className={styles.stepText}>
-              <strong>提交资料</strong> → 填写店铺信息并缴纳保证金
+              <strong>提交资料</strong> → 填写店铺信息并提交授权申请
             </div>
           </div>
           <div className={styles.step}>
@@ -197,7 +184,6 @@ export default function BrandAuthPage() {
             <div className={styles.emptyText}>正在读取授权概览...</div>
           ) : mineRows.length > 0 ? (
             mineRows.map((item) => {
-              const meta = brandMetaMap[item.brandName];
               const sinceText = item.createdAt ? ` · ${new Date(item.createdAt).toLocaleDateString()}起` : '';
               return (
                 <article className={styles.mineItem} key={item.id}>
@@ -205,7 +191,7 @@ export default function BrandAuthPage() {
                   <div className={styles.info}>
                     <div className={styles.name}>{item.brandName}</div>
                     <div className={styles.meta}>
-                      {(meta?.products || 0)}个商品 · 保证金¥{meta?.deposit || 0}{sinceText}
+                      品牌授权记录{sinceText}
                     </div>
                   </div>
                   <span
@@ -242,9 +228,6 @@ export default function BrandAuthPage() {
             <div className={styles.emptyText}>正在同步可申请品牌...</div>
           ) : availableRows.length > 0 ? (
             availableRows.map((item) => (
-              (() => {
-                const meta = brandMetaMap[item.name];
-                return (
               <article
                 className={styles.availableItem}
                 key={item.id}
@@ -262,11 +245,10 @@ export default function BrandAuthPage() {
                 <div className={styles.info}>
                   <div className={styles.name}>{item.name}</div>
                   <div className={styles.meta}>
-                    {(meta?.category || item.category || '未分类')} · 已有{meta?.authCount || 0}家授权商 · 月均{meta?.monthSales || '0'}销量
+                    {(item.category || '未分类')} · 可售商品 {item.productCount} 款
                   </div>
                 </div>
                 <div className={styles.right}>
-                  <div className={styles.deposit}>¥{meta?.deposit || 0}</div>
                   <button
                     className={styles.applyBtn}
                     type="button"
@@ -280,8 +262,6 @@ export default function BrandAuthPage() {
                   </button>
                 </div>
               </article>
-                );
-              })()
             ))
           ) : !error ? (
             <div className={styles.emptyText}>所有品牌均已申请</div>
@@ -340,19 +320,11 @@ export default function BrandAuthPage() {
                     <div className={styles.modalLabel}>📋 品牌信息</div>
                     <div className={styles.modalInfoRow}>
                       <span className={styles.modalInfoKey}>品牌类目</span>
-                      <span className={styles.modalInfoVal}>{brandMetaMap[currentBrand.name]?.category || currentBrand.category || '未分类'}</span>
+                      <span className={styles.modalInfoVal}>{currentBrand.category || '未分类'}</span>
                     </div>
                     <div className={styles.modalInfoRow}>
                       <span className={styles.modalInfoKey}>可售商品数</span>
-                      <span className={styles.modalInfoVal}>{brandMetaMap[currentBrand.name]?.products || currentBrand.productCount}款</span>
-                    </div>
-                    <div className={styles.modalInfoRow}>
-                      <span className={styles.modalInfoKey}>保证金</span>
-                      <span className={`${styles.modalInfoVal} ${styles.priceVal}`}>¥{brandMetaMap[currentBrand.name]?.deposit || 0}</span>
-                    </div>
-                    <div className={styles.modalInfoRow}>
-                      <span className={styles.modalInfoKey}>授权店铺</span>
-                      <span className={styles.modalInfoVal}>{brandMetaMap[currentBrand.name]?.authCount || 0}家</span>
+                      <span className={styles.modalInfoVal}>{currentBrand.productCount}款</span>
                     </div>
                   </div>
                   <div className={styles.modalSection}>

@@ -11,6 +11,7 @@ import type {
   SendCodeResult,
   SmsBizType,
   UserSummary,
+  VerifyCodeResult,
 } from '@umi/shared';
 
 import { env } from '../../env';
@@ -225,6 +226,48 @@ async function requireCode(phone: string, code: string, bizType: SmsBizType) {
     `,
     [SMS_STATUS_VERIFIED, record.id],
   );
+}
+
+async function validateCode(phone: string, code: string, bizType: SmsBizType) {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT id, code_hash, expires_at
+      FROM sms_verification_code
+      WHERE phone_number = ?
+        AND biz_type = ?
+        AND status = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [phone, smsBizTypeToCode(bizType), SMS_STATUS_SENT],
+  );
+
+  const record = rows[0] as { id: number; code_hash: string; expires_at: Date } | undefined;
+  if (!record) {
+    throw new Error('验证码未发送或已过期');
+  }
+
+  if (new Date(record.expires_at).getTime() < Date.now()) {
+    await db.execute(
+      `UPDATE sms_verification_code SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [SMS_STATUS_EXPIRED, record.id],
+    );
+    throw new Error('验证码已过期');
+  }
+
+  if (record.code_hash !== hashSmsCode(phone, bizType, code)) {
+    throw new Error('验证码错误');
+  }
+}
+
+export async function verifyCode(phone: string, code: string, bizType: SmsBizType): Promise<VerifyCodeResult> {
+  requireValidPhone(phone);
+  if (!code.trim()) {
+    throw new Error('验证码不能为空');
+  }
+  await validateCode(phone, code, bizType);
+  return { verified: true };
 }
 
 export async function login(payload: LoginPayload): Promise<LoginResult> {

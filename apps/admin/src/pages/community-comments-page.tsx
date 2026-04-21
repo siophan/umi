@@ -1,84 +1,175 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Button, ConfigProvider, Descriptions, Drawer, Form, Input } from 'antd';
-import { useMemo, useState } from 'react';
+import type { AdminCommunityCommentItem } from '@umi/shared';
+import {
+  Alert,
+  Button,
+  ConfigProvider,
+  Descriptions,
+  Drawer,
+  Form,
+  Input,
+  Popconfirm,
+  Typography,
+  message,
+} from 'antd';
+import { useEffect, useState } from 'react';
 
-import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { AdminSearchPanel } from '../components/admin-list-controls';
+import {
+  deleteAdminCommunityComment,
+  fetchAdminCommunityComments,
+} from '../lib/api/content';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
+import { formatDateTime, formatNumber } from '../lib/format';
 
 interface CommunityCommentsPageProps {
   refreshToken?: number;
 }
 
-type CommunityCommentRow = {
-  id: string;
-  content: string;
-  author: string;
-  target: string;
-  status: '正常' | '复核中';
-};
-
 type CommunityCommentFilters = {
   content?: string;
   author?: string;
+  postTitle?: string;
 };
 
-const rows: CommunityCommentRow[] = [
-  { id: 'comment-1', content: '这个竞猜太刺激了', author: '用户 1003', target: 'Panda 竞猜晒单', status: '正常' },
-  { id: 'comment-2', content: '请尽快发货', author: '用户 1018', target: '品牌上新开箱', status: '复核中' },
-];
-
 export function CommunityCommentsPage({ refreshToken = 0 }: CommunityCommentsPageProps) {
+  const [messageApi, contextHolder] = message.useMessage();
   const [searchForm] = Form.useForm<CommunityCommentFilters>();
+  const [rows, setRows] = useState<AdminCommunityCommentItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<CommunityCommentFilters>({});
-  const [status, setStatus] = useState<'all' | CommunityCommentRow['status']>('all');
-  const [selected, setSelected] = useState<CommunityCommentRow | null>(null);
+  const [selected, setSelected] = useState<AdminCommunityCommentItem | null>(null);
+  const [actionSeed, setActionSeed] = useState(0);
 
-  const filteredRows = useMemo(
-    () =>
-      rows.filter((record) => {
-        if (status !== 'all' && record.status !== status) {
-          return false;
-        }
-        if (filters.content && !record.content.toLowerCase().includes(filters.content.trim().toLowerCase())) {
-          return false;
-        }
-        if (filters.author && !record.author.toLowerCase().includes(filters.author.trim().toLowerCase())) {
-          return false;
-        }
-        return true;
-      }),
-    [filters.author, filters.content, status],
-  );
+  useEffect(() => {
+    let alive = true;
 
-  const columns: ProColumns<CommunityCommentRow>[] = [
-    { title: '评论内容', dataIndex: 'content', width: 300 },
-    { title: '评论人', dataIndex: 'author', width: 160 },
-    { title: '评论对象', dataIndex: 'target', width: 220 },
-    { title: '状态', dataIndex: 'status', width: 120 },
+    async function loadComments() {
+      setLoading(true);
+      setIssue(null);
+      try {
+        const result = await fetchAdminCommunityComments(filters);
+        if (!alive) {
+          return;
+        }
+        setRows(result.items);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+        setRows([]);
+        setIssue(error instanceof Error ? error.message : '评论列表加载失败');
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadComments();
+
+    return () => {
+      alive = false;
+    };
+  }, [actionSeed, filters, refreshToken]);
+
+  async function handleDelete(record: AdminCommunityCommentItem) {
+    try {
+      await deleteAdminCommunityComment(record.id);
+      messageApi.success('评论已删除');
+      setSelected((current) => (current?.id === record.id ? null : current));
+      setActionSeed((value) => value + 1);
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '删除评论失败');
+    }
+  }
+
+  const columns: ProColumns<AdminCommunityCommentItem>[] = [
+    {
+      title: '评论内容',
+      dataIndex: 'content',
+      width: 360,
+      render: (value) => (
+        <Typography.Text ellipsis style={{ maxWidth: 320 }}>
+          {value || '-'}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: '评论人',
+      width: 180,
+      render: (_, record) => (
+        <div>
+          <Typography.Text>{record.authorName}</Typography.Text>
+          <Typography.Text style={{ display: 'block' }} type="secondary">
+            {record.authorUid || `用户 ID ${record.authorId}`}
+          </Typography.Text>
+        </div>
+      ),
+    },
+    {
+      title: '所属帖子',
+      dataIndex: 'targetPostTitle',
+      width: 240,
+      render: (value) => value || '-',
+    },
+    {
+      title: '互动',
+      width: 140,
+      render: (_, record) => (
+        <div>
+          <Typography.Text>点赞 {formatNumber(record.likeCount)}</Typography.Text>
+          <Typography.Text style={{ display: 'block' }} type="secondary">
+            回复 {formatNumber(record.replyCount)}
+          </Typography.Text>
+        </div>
+      ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      width: 180,
+      render: (_, record) => formatDateTime(record.createdAt),
+    },
     {
       title: '操作',
       key: 'actions',
-      width: 100,
+      width: 120,
       fixed: 'right',
-      valueType: 'option',
       render: (_, record) => (
-        <Button size="small" type="link" onClick={() => setSelected(record)}>
-          查看
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button size="small" type="link" onClick={() => setSelected(record)}>
+            查看
+          </Button>
+          <Popconfirm
+            title="确认删除该评论？"
+            description="删除后该评论及其直接回复会一起清理。"
+            okText="确认"
+            cancelText="取消"
+            onConfirm={() => void handleDelete(record)}
+          >
+            <Button danger size="small" type="link">
+              删除
+            </Button>
+          </Popconfirm>
+        </div>
       ),
     },
   ];
 
   return (
     <div className="page-stack">
+      {contextHolder}
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
+
       <AdminSearchPanel
         form={searchForm}
         onSearch={() => setFilters(searchForm.getFieldsValue())}
         onReset={() => {
           searchForm.resetFields();
           setFilters({});
-          setStatus('all');
         }}
       >
         <Form.Item name="content">
@@ -87,25 +178,19 @@ export function CommunityCommentsPage({ refreshToken = 0 }: CommunityCommentsPag
         <Form.Item name="author">
           <Input allowClear placeholder="评论人" />
         </Form.Item>
+        <Form.Item name="postTitle">
+          <Input allowClear placeholder="所属帖子" />
+        </Form.Item>
       </AdminSearchPanel>
 
-      <AdminStatusTabs
-        activeKey={status}
-        items={[
-          { key: 'all', label: '全部', count: rows.length },
-          { key: '正常', label: '正常', count: rows.filter((item) => item.status === '正常').length },
-          { key: '复核中', label: '复核中', count: rows.filter((item) => item.status === '复核中').length },
-        ]}
-        onChange={(key) => setStatus(key as typeof status)}
-      />
-
       <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
-        <ProTable<CommunityCommentRow>
+        <ProTable<AdminCommunityCommentItem>
           cardBordered={false}
           rowKey="id"
           columns={columns}
           columnsState={{}}
-          dataSource={filteredRows}
+          dataSource={rows}
+          loading={loading}
           options={{ reload: true, density: true, fullScreen: false, setting: true }}
           pagination={{ defaultPageSize: 10, showSizeChanger: true }}
           search={false}
@@ -113,13 +198,34 @@ export function CommunityCommentsPage({ refreshToken = 0 }: CommunityCommentsPag
         />
       </ConfigProvider>
 
-      <Drawer open={selected != null} title="评论详情" width={460} onClose={() => setSelected(null)}>
+      <Drawer
+        open={selected != null}
+        title="评论详情"
+        width={520}
+        onClose={() => setSelected(null)}
+      >
         {selected ? (
           <Descriptions column={1} size="small">
             <Descriptions.Item label="评论内容">{selected.content}</Descriptions.Item>
-            <Descriptions.Item label="评论人">{selected.author}</Descriptions.Item>
-            <Descriptions.Item label="评论对象">{selected.target}</Descriptions.Item>
-            <Descriptions.Item label="状态">{selected.status}</Descriptions.Item>
+            <Descriptions.Item label="评论人">{selected.authorName}</Descriptions.Item>
+            <Descriptions.Item label="评论人 UID">
+              {selected.authorUid || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="所属帖子">
+              {selected.targetPostTitle || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="父评论">
+              {selected.parentId || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="点赞数">
+              {formatNumber(selected.likeCount)}
+            </Descriptions.Item>
+            <Descriptions.Item label="回复数">
+              {formatNumber(selected.replyCount)}
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {formatDateTime(selected.createdAt)}
+            </Descriptions.Item>
           </Descriptions>
         ) : null}
       </Drawer>

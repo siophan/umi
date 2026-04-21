@@ -76,7 +76,7 @@
 - `packages/config`
   工程配置资产，不作为独立运行服务
 - `packages/db`
-  数据库 SQL 和相关资产，不作为独立运行服务
+  数据库 docs-first 文档说明和待重建 schema / migration 资产，不作为独立运行服务
 
 结论：
 
@@ -181,13 +181,14 @@ pnpm build
 
 ## 数据库准备
 
-当前仓库下的 `packages/db/sql/` 是零散 SQL 资产，不是完整统一 migration 体系。
+当前仓库下的 `packages/db/sql/` 目前不再保留可直接执行的旧模型 SQL，也还不是完整统一 migration 体系。
 
 当前更稳的做法：
 
 1. 先在本地准备好可用库
-2. 从本地导出结构和数据
-3. 导入生产库
+2. 以 `umi/docs/` 核对本地 `joy-test` 结构正确
+3. 从本地导出结构和数据
+4. 导入生产库
 
 示例：
 

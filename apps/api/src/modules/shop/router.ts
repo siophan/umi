@@ -55,6 +55,8 @@ type ShopProductRow = {
   price: number | string;
   original_price?: number | string | null;
   image_url: string | null;
+  sales?: number | string | null;
+  rating?: number | string | null;
   status: number | string;
   created_at?: Date | string;
   brand_name?: string | null;
@@ -472,6 +474,8 @@ shopRouter.get('/:id(\\d+)', async (request, response) => {
           p.price,
           p.original_price,
           p.image_url,
+          p.sales,
+          p.rating,
           p.status,
           p.created_at,
           b.name AS brand_name
@@ -529,6 +533,30 @@ shopRouter.get('/:id(\\d+)', async (request, response) => {
       optionRows = options as Array<{ guess_id: number | string; option_index: number | string; option_text: string }>;
     }
 
+    const productItems = (productRows as ShopProductRow[]).map((row) => ({
+      id: toEntityId(row.id),
+      name: row.name,
+      price: Number(row.price ?? 0) / 100,
+      originalPrice: Number(row.original_price ?? row.price ?? 0) / 100,
+      sales: Number(row.sales ?? 0),
+      rating: Number(row.rating ?? 0),
+      brand: row.brand_name ?? null,
+      img: row.image_url ?? null,
+      badge: '',
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+    }));
+
+    const ratedProducts = productItems.filter((item) => item.rating > 0);
+    const avgRating =
+      ratedProducts.length > 0
+        ? Number(
+            (
+              ratedProducts.reduce((sum, item) => sum + item.rating, 0) /
+              ratedProducts.length
+            ).toFixed(1),
+          )
+        : 0;
+
     const result: PublicShopDetailResult = {
       shop: {
         id: toEntityId(shop.id),
@@ -541,21 +569,10 @@ shopRouter.get('/:id(\\d+)', async (request, response) => {
         fans: Number(shop.fans ?? 0),
         productCount: Number(shop.product_count ?? 0),
         totalSales: Number(shop.total_sales ?? 0),
-        avgRating: 4.8,
+        avgRating,
         brandAuthCount: Number(shop.brand_auth_count ?? 0),
       },
-      products: (productRows as ShopProductRow[]).map((row, index) => ({
-        id: toEntityId(row.id),
-        name: row.name,
-        price: Number(row.price ?? 0) / 100,
-        originalPrice: Number(row.original_price ?? row.price ?? 0) / 100,
-        sales: Math.max(0, 1200 - index * 97),
-        rating: 4.7 + ((index % 3) * 0.1),
-        brand: row.brand_name ?? null,
-        img: row.image_url ?? null,
-        badge: index === 0 ? '热销' : index < 3 ? '品牌' : '新品',
-        createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
-      })),
+      products: productItems,
       guesses: (guessRows as PublicShopGuessRow[]).map((row) => {
         const options = optionRows
           .filter((item) => String(item.guess_id) === String(row.id))
