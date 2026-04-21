@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 
 import { fetchChatDetail, sendChatMessage } from '../../../lib/api/chat';
 import { fetchUserProfile, fetchUserProfileActivity, followUser, unfollowUser } from '../../../lib/api/users';
+import { UserProfileChatOverlay } from './user-profile-chat-overlay';
+import { UserProfileSections } from './user-profile-sections';
 import styles from './page.module.css';
 
 type ProfilePost = {
@@ -309,68 +311,6 @@ export default function UserProfilePage() {
     }
   }
 
-  const renderPostCard = (post: ProfilePost, liked: boolean) => {
-    if (!profile) {
-      return null;
-    }
-    const author = post.author ?? {
-      name: profile.name,
-      avatar: profile.avatar,
-      verified: profile.verified,
-    };
-
-    return (
-      <article className={styles.postCard} key={post.id}>
-        <div className={styles.postAuthor}>
-          <img src={author.avatar} alt={author.name} />
-          <div className={styles.postAuthorInfo}>
-            <div className={styles.postAuthorName}>
-              {author.name}
-              {author.verified ? <i className={`fa-solid fa-circle-check ${styles.postVerified}`} /> : null}
-            </div>
-            <div className={styles.postAuthorMeta}>{post.time}</div>
-          </div>
-          <span className={`${styles.postTag} ${post.tag.cls ? styles[post.tag.cls] : liked ? styles.tagHot : ''}`}>
-            {post.tag.text}
-          </span>
-        </div>
-        <div className={styles.postBody}>
-          <div className={styles.postTitle}>{post.title}</div>
-          <div className={styles.postDesc}>{post.desc}</div>
-        </div>
-        {post.images.length > 0 ? (
-          <div
-            className={`${styles.postImages} ${
-              post.images.length === 1 ? styles.cols1 : post.images.length === 2 ? styles.cols2 : styles.cols3
-            }`}
-          >
-            {post.images.map((img) => (
-              <img src={img} alt={post.title} key={img} />
-            ))}
-          </div>
-        ) : null}
-        <div className={styles.postActions}>
-          <button
-            type="button"
-            className={liked || likedPosts[post.id] ? styles.liked : ''}
-            onClick={() =>
-              setLikedPosts((current) => ({
-                ...current,
-                [post.id]: !current[post.id],
-              }))
-            }
-          >
-            <i className={`${liked || likedPosts[post.id] ? 'fa-solid' : 'fa-regular'} fa-heart`} /> {post.likes}
-          </button>
-          <span><i className="fa-regular fa-comment" /> {post.comments}</span>
-          <button className={styles.postShare} type="button" onClick={() => setToast('分享主页')}>
-            <i className="fa-solid fa-share-nodes" /> 分享
-          </button>
-        </div>
-      </article>
-    );
-  };
-
   if (loading) {
     return <main className={styles.page} />;
   }
@@ -399,202 +339,45 @@ export default function UserProfilePage() {
 
   return (
     <main className={styles.page}>
-      <header className={`${styles.topbar} ${scrolled ? styles.topbarScrolled : ''}`}>
-        <button className={styles.backBtn} type="button" onClick={() => router.back()}>
-          <i className="fa-solid fa-arrow-left" />
-        </button>
-        <div className={styles.topName}>{profileData.name}</div>
-        <div className={styles.topRight}>
-          <button type="button" aria-label="分享主页" onClick={() => setToast('分享主页')}>
-            <i className="fa-solid fa-share-nodes" />
-          </button>
-          <button type="button" aria-label="更多选项" onClick={() => setToast('更多选项')}>
-            <i className="fa-solid fa-ellipsis" />
-          </button>
-        </div>
-      </header>
+      <UserProfileSections
+        profile={profileData}
+        tab={tab}
+        following={following}
+        scrolled={scrolled}
+        statItems={statItems}
+        likedPosts={likedPosts}
+        visibility={visibility}
+        followSaving={followSaving}
+        onBack={() => router.back()}
+        onCopyUid={() => void handleCopyUid()}
+        onOpenChat={() => void openChat()}
+        onToggleFollow={() => void handleToggleFollow()}
+        onToggleTab={setTab}
+        onToggleLike={(id) =>
+          setLikedPosts((current) => ({
+            ...current,
+            [id]: !current[id],
+          }))
+        }
+        onShare={() => setToast('分享主页')}
+        onMore={() => setToast('更多选项')}
+      />
 
-      <section className={styles.cover}>
-        <img src={profileData.cover} alt={profileData.name} />
-      </section>
-
-      <section className={styles.info}>
-        <img className={styles.avatar} src={profileData.avatar} alt={profileData.name} />
-        <div className={styles.nameRow}>
-          <span className={styles.name}>{profileData.name}</span>
-          {profileData.verified ? <span className={styles.verified}><i className="fa-solid fa-circle-check" /></span> : null}
-          <span className={styles.level}>{profileData.level}</span>
-        </div>
-        <div className={styles.uid}>
-          优米号：{profileData.uid || '--'}
-          {profileData.location ? <> · IP: {profileData.location}</> : null}
-          {profileData.gender ? <> · {profileData.gender}</> : null}
-          {profileData.age ? <> · {profileData.age}</> : null}
-          <button className={styles.uidCopy} type="button" onClick={() => void handleCopyUid()}>
-            <i className="fa-regular fa-copy" />
-          </button>
-        </div>
-
-        <div className={styles.stats}>
-          {statItems.map((item) => (
-            <div className={styles.stat} key={item.label}>
-              <strong>{item.value}</strong>
-              <span>{item.label}</span>
-            </div>
-          ))}
-          <button className={styles.chatBtn} type="button" onClick={() => void openChat()} disabled={!profile.id}>
-            <i className="fa-regular fa-comment-dots" />
-            私信
-          </button>
-          <button
-            className={`${styles.followBtn} ${following ? styles.following : ''}`}
-            type="button"
-            onClick={() => void handleToggleFollow()}
-            disabled={!profile.id || followSaving}
-          >
-            {following ? (
-              <>
-                <i className="fa-solid fa-check" />
-                已关注
-              </>
-            ) : (
-              <>
-                <i className="fa-solid fa-plus" />
-                关注
-              </>
-            )}
-          </button>
-        </div>
-
-        <p className={styles.bio}>{profileData.bio}</p>
-        <div className={styles.tags}>
-          {profileData.tags.filter(Boolean).map((item) => (
-            <span className={styles.tag} key={item}>
-              {item}
-            </span>
-          ))}
-          {profileData.location ? (
-            <span className={`${styles.tag} ${styles.tagLoc}`}>
-              <i className="fa-solid fa-location-dot" />
-              {profileData.location}
-            </span>
-          ) : null}
-          {profileData.gender ? (
-            <span className={`${styles.tag} ${styles.tagGender}`}>
-              {profileData.gender}
-              {profileData.age ? ` · ${profileData.age}` : ''}
-            </span>
-          ) : null}
-        </div>
-      </section>
-
-      <section className={styles.tabs}>
-        <button className={tab === 'works' ? styles.tabActive : styles.tab} type="button" onClick={() => setTab('works')}>
-          作品
-        </button>
-        <button className={tab === 'liked' ? styles.tabActive : styles.tab} type="button" onClick={() => setTab('liked')}>
-          喜欢
-        </button>
-      </section>
-
-      <section className={tab === 'works' ? styles.panelActive : styles.panel}>
-        <div className={styles.sectionTitle}>
-          <span><i className="fa-solid fa-pen-to-square" /></span> TA发布的猜友圈
-        </div>
-        <div className={styles.postList}>
-          {profileData.works.length > 0 ? (
-            profileData.works.map((post) => renderPostCard(post, false))
-          ) : (
-            <div className={styles.empty}>
-              <div className={styles.emptyIcon}>📝</div>
-              <div className={styles.emptyTitle}>{visibility.works ? 'TA还没有发布过猜友圈' : '作品内容已设为不可见'}</div>
-              <div className={styles.emptyDesc}>
-                {visibility.works ? '关注TA，第一时间获取新动态' : '当前仅自己或好友可见'}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className={tab === 'liked' ? styles.panelActive : styles.panel}>
-        <div className={styles.sectionTitle}>
-          <span><i className="fa-solid fa-heart" /></span> TA点赞的猜友圈
-        </div>
-        <div className={styles.postList}>
-          {profileData.liked.length > 0 ? (
-            profileData.liked.map((post) => renderPostCard(post, true))
-          ) : (
-            <div className={styles.empty}>
-              <div className={styles.emptyIcon}>💗</div>
-              <div className={styles.emptyTitle}>{visibility.liked ? 'TA还没有点赞过帖子' : '喜欢列表已设为不可见'}</div>
-              <div className={styles.emptyDesc}>
-                {visibility.liked ? '暂无喜欢的内容' : '当前仅自己可见'}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {chatOpen ? (
-        <div className={styles.chatOverlay}>
-          <button className={styles.chatMask} type="button" onClick={() => setChatOpen(false)} />
-          <div className={styles.chatPanel}>
-            <div className={styles.chatHeader}>
-              <button className={styles.chatBack} type="button" onClick={() => setChatOpen(false)}>
-                <i className="fa-solid fa-arrow-left" />
-              </button>
-              <img className={styles.chatAvatar} src={profileData.avatar} alt={profileData.name} />
-              <div className={styles.chatName}>{profileData.name}</div>
-              <button className={styles.chatMore} type="button" onClick={() => setToast('更多设置')}>
-                <i className="fa-solid fa-ellipsis" />
-              </button>
-            </div>
-            <div className={styles.chatMessages}>
-              {chatLoading ? <div className={styles.timeLabel}>正在读取聊天记录…</div> : <div className={styles.timeLabel}>聊天记录</div>}
-              {chatMessages.map((message) => (
-                <div key={message.id} className={`${styles.msgRow} ${styles[message.side]}`}>
-                  <img src={message.side === 'me' ? '/legacy/images/mascot/mouse-main.png' : profileData.avatar} alt="" />
-                  <div className={styles.bubble}>{message.text}</div>
-                </div>
-              ))}
-              {typing ? (
-                <div className={`${styles.msgRow} ${styles.other} ${styles.typing}`}>
-                  <img src={profileData.avatar} alt="" />
-                  <div className={styles.typingDots}>
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            <div className={styles.chatInputBar}>
-              <div className={styles.chatTools}>
-                <button type="button" onClick={() => setToast('发送图片')}>
-                  <i className="fa-regular fa-image" />
-                </button>
-                <button type="button" onClick={() => setToast('发送表情')}>
-                  <i className="fa-regular fa-face-smile" />
-                </button>
-              </div>
-              <textarea
-                className={styles.chatInput}
-                rows={1}
-                placeholder="发送消息…"
-                value={chatInput}
-                onChange={(event) => setChatInput(event.target.value)}
-              />
-              <button
-                className={`${styles.chatSend} ${chatInput.trim() ? styles.chatSendActive : ''}`}
-                type="button"
-                onClick={sendMessage}
-              >
-                <i className="fa-solid fa-paper-plane" />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <UserProfileChatOverlay
+        open={chatOpen}
+        loading={chatLoading}
+        profileName={profileData.name}
+        profileAvatar={profileData.avatar}
+        chatMessages={chatMessages}
+        chatInput={chatInput}
+        typing={typing}
+        onClose={() => setChatOpen(false)}
+        onMore={() => setToast('更多设置')}
+        onInputChange={setChatInput}
+        onSend={sendMessage}
+        onSendImage={() => setToast('发送图片')}
+        onSendEmoji={() => setToast('发送表情')}
+      />
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>

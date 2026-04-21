@@ -4,10 +4,12 @@ import { asyncHandler, withErrorBoundary } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import { addCartItem, getCart, removeCartItem, updateCartItem } from './store';
 export const cartRouter = Router();
+// 购物车列表：返回当前用户真实 cart_item，并带上商品展示字段。
 cartRouter.get('/', requireUser, asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
     ok(response, await getCart(user.id));
 }));
+// 加入购物车：同商品同规格会在 store 层自动合并数量。
 cartRouter.post('/items', requireUser, withErrorBoundary({
     status: 400,
     code: 'CART_ADD_FAILED',
@@ -16,6 +18,7 @@ cartRouter.post('/items', requireUser, withErrorBoundary({
     const user = getRequestUser(request);
     ok(response, await addCartItem(user.id, request.body));
 }));
+// 更新购物车：支持修改数量和勾选状态，供购物车页乐观更新后回写。
 cartRouter.put('/items/:id', requireUser, withErrorBoundary({
     status: 400,
     code: 'CART_UPDATE_FAILED',
@@ -24,6 +27,7 @@ cartRouter.put('/items/:id', requireUser, withErrorBoundary({
     const user = getRequestUser(request);
     ok(response, await updateCartItem(user.id, String(request.params.id), request.body));
 }));
+// 删除购物车商品：供单删和管理态批量删除复用。
 cartRouter.delete('/items/:id', requireUser, withErrorBoundary({
     status: 400,
     code: 'CART_REMOVE_FAILED',

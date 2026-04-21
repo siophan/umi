@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-102` |
 | `title` | 寄售市场把已转元金额再次按分格式化，挂单价和成交价会缩小 100 倍 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/warehouse/consign-amount-format` |
 | `scope` | `admin` |
 | `page` | `#/warehouse/consign` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-warehouse-qa-2026-04-20.md` |
 | `fingerprint` | `admin-warehouse:consign-page-double-divides-money-values` |
-| `fix_owner` |  |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -55,8 +55,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 统一寄售后台金额单位契约，避免后端转元后前端再除一次。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 寄售市场列表和详情都改成直接展示后端已转元金额，不再对 `listingPrice / price / commissionAmount / sellerAmount` 二次除 `100`。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过：寄售市场金额和后端返回口径一致，不再缩小 100 倍。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/admin/src/lib/format.ts](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/format.ts)；[apps/admin/src/pages/warehouse-consign-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/warehouse-consign-page.tsx)；[apps/admin/src/pages/warehouse-consign-detail-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/warehouse-consign-detail-page.tsx) |

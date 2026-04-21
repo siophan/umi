@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -67,7 +67,7 @@
 | 修复说明 | 已为后台店铺列表补 `GET /api/admin/shops/{id}` 真实详情接口，返回店铺基础信息、商品、订单、竞猜、品牌授权 5 组数据；列表页“查看”改成真实详情抽屉，不再重复消费列表摘要。 |
 | 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 通过。后台与接口类型检查通过，管理台生产构建通过；“查看”动作已改为请求真实详情链路。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前店铺页已经通过 `fetchAdminShopDetail()` 读取真实详情，`查看` 动作会打开真实详情抽屉；不再只是把列表行摘要塞进本地抽屉。 |
 | 修复提交/变更 | `packages/shared/src/api.ts`；`apps/api/src/modules/admin/merchant.ts`；`apps/api/src/modules/admin/router.ts`；`apps/api/src/routes/openapi/paths/admin.ts`；`apps/admin/src/lib/api/merchant.ts`；`apps/admin/src/pages/shops-page.tsx` |
 
 ## Fixer

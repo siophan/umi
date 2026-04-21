@@ -5,6 +5,7 @@ const GUESS_ACTIVE = 30;
 const ORDER_PENDING = 10;
 const ORDER_PAID = 20;
 const ORDER_FULFILLED = 30;
+const ORDER_CLOSED = 40;
 const ORDER_REFUNDED = 90;
 const SHOP_APPLY_PENDING = 10;
 const REFUND_PENDING = 10;
@@ -71,10 +72,14 @@ export async function getAdminDashboardStats() {
         FROM \`order\`
         WHERE status = ?
         UNION ALL
+        SELECT '已关闭' AS label, COUNT(*) AS value
+        FROM \`order\`
+        WHERE status = ?
+        UNION ALL
         SELECT '已退款' AS label, COUNT(*) AS value
         FROM \`order\`
         WHERE status = ?
-      `, [ORDER_PENDING, ORDER_PAID, ORDER_FULFILLED, ORDER_REFUNDED]),
+      `, [ORDER_PENDING, ORDER_PAID, ORDER_FULFILLED, ORDER_CLOSED, ORDER_REFUNDED]),
         db.execute(`
         SELECT COALESCE(c.name, '未分类') AS label, COUNT(*) AS value
         FROM guess g
@@ -95,10 +100,11 @@ export async function getAdminDashboardStats() {
         LEFT JOIN category c ON c.id = g.category_id
         LEFT JOIN guess_bet gb ON gb.guess_id = g.id
         WHERE g.review_status = ?
+          AND g.status = ?
         GROUP BY g.id, g.title, g.end_time, c.name
         ORDER BY participant_count DESC, total_pool DESC, g.created_at DESC
         LIMIT 5
-      `, [GUESS_APPROVED]),
+      `, [GUESS_APPROVED, GUESS_ACTIVE]),
         db.execute(`
         SELECT
           p.id,

@@ -8,14 +8,25 @@ import { fetchCart, removeCartItem, updateCartItem } from '../../lib/api/cart';
 import { fetchProductList } from '../../lib/api/products';
 import styles from './page.module.css';
 
+/**
+ * 把未知错误收成页面可直接展示的文案。
+ */
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+/**
+ * 购物车分组 key。
+ * 这里按品牌优先分组，和老购物车页的店铺头展示口径保持一致。
+ */
 function getGroupKey(item: CartLineItem) {
   return item.brand?.trim() || item.shop?.trim() || '其他';
 }
 
+/**
+ * 生成购物车店头文案。
+ * 优先展示真实店铺名，缺失时再退回“品牌旗舰店”口径。
+ */
 function getDisplayShopName(item: CartLineItem) {
   if (item.shop?.trim() && item.shop !== '未知店铺') {
     return item.shop;
@@ -24,6 +35,10 @@ function getDisplayShopName(item: CartLineItem) {
   return `${groupKey}旗舰店`;
 }
 
+/**
+ * 购物车页主组件。
+ * 购物车读写真正走 cart_item，UI 结构则按老购物车页对齐。
+ */
 export default function CartPage() {
   const router = useRouter();
   const [items, setItems] = useState<CartLineItem[]>([]);
@@ -42,6 +57,10 @@ export default function CartPage() {
   useEffect(() => {
     let ignore = false;
 
+    /**
+     * 加载购物车主数据和推荐商品。
+     * 两条链路独立容错，避免推荐流失败时把购物车主体一起打空。
+     */
     async function load() {
       setLoading(true);
       setCartError(null);
@@ -128,10 +147,18 @@ export default function CartPage() {
     setItems((current) => current.map((item) => (item.id === itemId ? updater(item) : item)));
   }
 
+  /**
+   * 按店铺批量更新本地购物车状态。
+   * 只做前端乐观更新，真正持久化仍走后端接口。
+   */
   function patchShop(shop: string, updater: (item: CartLineItem) => CartLineItem) {
     setItems((current) => current.map((item) => (getGroupKey(item) === shop ? updater(item) : item)));
   }
 
+  /**
+   * 切换单个商品勾选状态。
+   * 先本地乐观更新，失败后再回滚，保证购物车操作手感。
+   */
   async function toggleItem(itemId: string) {
     const currentItem = items.find((item) => item.id === itemId);
     if (!currentItem) {
@@ -149,6 +176,10 @@ export default function CartPage() {
     }
   }
 
+  /**
+   * 切换整组店铺勾选状态。
+   * 店铺头的“全选/取消全选”会同步落到该组所有 cart_item。
+   */
   async function toggleShop(shop: string) {
     const shopItems = items.filter((item) => getGroupKey(item) === shop);
     if (!shopItems.length) {
@@ -172,6 +203,10 @@ export default function CartPage() {
     }
   }
 
+  /**
+   * 切换购物车全选状态。
+   * 这里走逐项更新接口，保证前后端勾选态口径一致。
+   */
   async function toggleAll() {
     if (!items.length) {
       return;
@@ -194,6 +229,10 @@ export default function CartPage() {
     }
   }
 
+  /**
+   * 修改单个购物车商品数量。
+   * 数量受库存和 99 上限约束，失败时回滚到旧值。
+   */
   async function changeQty(itemId: string, delta: number) {
     const currentItem = items.find((item) => item.id === itemId);
     if (!currentItem) {
@@ -216,6 +255,10 @@ export default function CartPage() {
     }
   }
 
+  /**
+   * 删除单个购物车商品。
+   * 先从本地列表移除，接口失败再恢复，保持老购物车页的滑删体验。
+   */
   async function handleRemoveItem(itemId: string) {
     const previous = items;
     setSwipedId(null);
@@ -230,6 +273,10 @@ export default function CartPage() {
     }
   }
 
+  /**
+   * 管理态批量删除。
+   * 只删除当前勾选商品，成功后退出管理态。
+   */
   async function handleBulkRemove() {
     if (!selectedItems.length) {
       showToast('请选择商品');
@@ -251,6 +298,10 @@ export default function CartPage() {
     }
   }
 
+  /**
+   * 从购物车进入支付页。
+   * 这里只传被勾选的 cartItemIds，支付页再按真实购物车数据拉取快照。
+   */
   const handlePay = () => {
     if (!selectedItems.length) {
       showToast('请选择商品');

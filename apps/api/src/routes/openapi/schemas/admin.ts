@@ -1053,6 +1053,190 @@ export const adminSchemas = {
       sentCount: { type: 'integer', example: 1280 },
     },
   },
+  AdminNotificationItem: {
+    type: 'object',
+    required: [
+      'id',
+      'title',
+      'audience',
+      'type',
+      'status',
+      'targetType',
+      'recipientCount',
+      'readCount',
+      'unreadCount',
+      'createdAt',
+      'sentAt',
+    ],
+    properties: {
+      id: { type: 'string', example: '6d5b8f7f' },
+      title: { type: 'string', example: '系统维护通知' },
+      content: { type: 'string', nullable: true, example: '今晚 23:00-23:30 进行系统维护。' },
+      audience: {
+        type: 'string',
+        enum: ['all_users', 'order_users', 'guess_users', 'post_users', 'chat_users', 'targeted_users'],
+        example: 'all_users',
+      },
+      type: {
+        type: 'string',
+        enum: ['system', 'order', 'guess', 'social'],
+        example: 'system',
+      },
+      status: { type: 'string', enum: ['sent'], example: 'sent' },
+      targetType: {
+        type: 'string',
+        enum: ['order', 'guess', 'post', 'chat', 'unknown'],
+        example: 'unknown',
+      },
+      targetId: { type: 'string', nullable: true, example: '1024' },
+      actionUrl: { type: 'string', nullable: true, example: '/orders/list' },
+      recipientCount: { type: 'integer', example: 1280 },
+      readCount: { type: 'integer', example: 512 },
+      unreadCount: { type: 'integer', example: 768 },
+      createdAt: { type: 'string', format: 'date-time', example: '2026-04-21T08:00:00.000Z' },
+      sentAt: { type: 'string', format: 'date-time', example: '2026-04-21T08:00:00.000Z' },
+    },
+  },
+  AdminNotificationListResult: {
+    type: 'object',
+    required: ['items', 'total', 'page', 'pageSize', 'summary', 'basis'],
+    properties: {
+      items: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/AdminNotificationItem' },
+      },
+      total: { type: 'integer', example: 236 },
+      page: { type: 'integer', example: 1 },
+      pageSize: { type: 'integer', example: 10 },
+      summary: {
+        type: 'object',
+        required: ['total', 'sent', 'read', 'unread'],
+        properties: {
+          total: { type: 'integer', example: 236 },
+          sent: { type: 'integer', example: 18620 },
+          read: { type: 'integer', example: 9210 },
+          unread: { type: 'integer', example: 9410 },
+        },
+      },
+      basis: {
+        type: 'string',
+        example: '基于 notification 真表按消息载荷聚合为发送批次视图；搜索、筛选和分页都建立在真实批次全集上。',
+      },
+    },
+  },
+  AdminChatItem: {
+    type: 'object',
+    required: ['id', 'userA', 'userB', 'messages', 'unreadMessages', 'riskLevel', 'status', 'updatedAt'],
+    properties: {
+      id: { type: 'string', example: '12:103' },
+      userA: {
+        type: 'object',
+        required: ['id', 'uid', 'name'],
+        properties: {
+          id: { type: 'string', example: '12' },
+          uid: { type: 'string', nullable: true, example: 'DOACgEkT' },
+          name: { type: 'string', example: '小零' },
+        },
+      },
+      userB: {
+        type: 'object',
+        required: ['id', 'uid', 'name'],
+        properties: {
+          id: { type: 'string', example: '103' },
+          uid: { type: 'string', nullable: true, example: 'ABC123XY' },
+          name: { type: 'string', example: '乐事不服榜' },
+        },
+      },
+      messages: { type: 'integer', example: 26 },
+      unreadMessages: { type: 'integer', example: 3 },
+      riskLevel: { type: 'string', enum: ['low', 'medium', 'high'], example: 'medium' },
+      status: { type: 'string', enum: ['normal', 'review', 'escalated'], example: 'review' },
+      updatedAt: { type: 'string', format: 'date-time', example: '2026-04-21T08:30:00.000Z' },
+    },
+  },
+  AdminChatListResult: {
+    type: 'object',
+    required: ['items', 'summary', 'basis'],
+    properties: {
+      items: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/AdminChatItem' },
+      },
+      summary: {
+        type: 'object',
+        required: ['total', 'review', 'escalated', 'highRisk'],
+        properties: {
+          total: { type: 'integer', example: 92 },
+          review: { type: 'integer', example: 15 },
+          escalated: { type: 'integer', example: 3 },
+          highRisk: { type: 'integer', example: 3 },
+        },
+      },
+      basis: {
+        type: 'string',
+        example: '基于 chat_message 真表按用户对聚合唯一会话，风险等级取双方 user.risk_level 的较高值；当前没有 admin 聊天抽检专表。',
+      },
+    },
+  },
+  AdminChatDetailResult: {
+    type: 'object',
+    required: ['conversation', 'messages', 'basis'],
+    properties: {
+      conversation: {
+        type: 'object',
+        required: ['id', 'userA', 'userB', 'messages', 'unreadMessages', 'riskLevel', 'status', 'updatedAt'],
+        properties: {
+          id: { type: 'string', example: '12:103' },
+          userA: {
+            type: 'object',
+            required: ['id', 'uid', 'name', 'riskLevel'],
+            properties: {
+              id: { type: 'string', example: '12' },
+              uid: { type: 'string', nullable: true, example: 'DOACgEkT' },
+              name: { type: 'string', example: '小零' },
+              riskLevel: { type: 'string', enum: ['low', 'medium', 'high'], example: 'low' },
+            },
+          },
+          userB: {
+            type: 'object',
+            required: ['id', 'uid', 'name', 'riskLevel'],
+            properties: {
+              id: { type: 'string', example: '103' },
+              uid: { type: 'string', nullable: true, example: 'ABC123XY' },
+              name: { type: 'string', example: '乐事不服榜' },
+              riskLevel: { type: 'string', enum: ['low', 'medium', 'high'], example: 'medium' },
+            },
+          },
+          messages: { type: 'integer', example: 26 },
+          unreadMessages: { type: 'integer', example: 3 },
+          riskLevel: { type: 'string', enum: ['low', 'medium', 'high'], example: 'medium' },
+          status: { type: 'string', enum: ['normal', 'review', 'escalated'], example: 'review' },
+          updatedAt: { type: 'string', format: 'date-time', example: '2026-04-21T08:30:00.000Z' },
+        },
+      },
+      messages: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['id', 'senderId', 'senderName', 'receiverId', 'receiverName', 'content', 'read', 'createdAt'],
+          properties: {
+            id: { type: 'string', example: '8001' },
+            senderId: { type: 'string', example: '12' },
+            senderName: { type: 'string', example: '小零' },
+            receiverId: { type: 'string', example: '103' },
+            receiverName: { type: 'string', example: '乐事不服榜' },
+            content: { type: 'string', example: '这单什么时候发货？' },
+            read: { type: 'boolean', example: false },
+            createdAt: { type: 'string', format: 'date-time', example: '2026-04-21T08:00:00.000Z' },
+          },
+        },
+      },
+      basis: {
+        type: 'string',
+        example: '基于 chat_message 真表返回会话消息时间线；管理后台详情读取不会修改已读状态或会话摘要。',
+      },
+    },
+  },
   UpdateAdminShopStatusPayload: {
     type: 'object',
     required: ['status'],
@@ -1073,6 +1257,29 @@ export const adminSchemas = {
         type: 'string',
         enum: ['active', 'paused', 'closed'],
         example: 'paused',
+      },
+    },
+  },
+  UpdateAdminShopProductStatusPayload: {
+    type: 'object',
+    required: ['status'],
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['active', 'off_shelf'],
+        example: 'off_shelf',
+      },
+    },
+  },
+  UpdateAdminShopProductStatusResult: {
+    type: 'object',
+    required: ['id', 'status'],
+    properties: {
+      id: { type: 'string', example: '501' },
+      status: {
+        type: 'string',
+        enum: ['active', 'off_shelf'],
+        example: 'active',
       },
     },
   },
@@ -1989,6 +2196,125 @@ export const adminSchemas = {
         example: 'approved',
       },
       rejectReason: { type: 'string', nullable: true, example: '竞猜描述信息不完整' },
+    },
+  },
+  ShipAdminOrderPayload: {
+    type: 'object',
+    required: ['shippingType'],
+    properties: {
+      shippingType: {
+        type: 'string',
+        enum: ['express', 'same_city', 'self_pickup'],
+        example: 'express',
+      },
+      trackingNo: { type: 'string', nullable: true, example: 'SF1234567890' },
+    },
+  },
+  ShipAdminOrderResult: {
+    type: 'object',
+    required: ['id', 'fulfillmentId', 'fulfillmentStatus', 'shippingType', 'trackingNo', 'shippedAt'],
+    properties: {
+      id: { type: 'string', example: '1201' },
+      fulfillmentId: { type: 'string', example: '5001' },
+      fulfillmentStatus: { type: 'string', enum: ['shipped'], example: 'shipped' },
+      shippingType: {
+        type: 'string',
+        enum: ['express', 'same_city', 'self_pickup'],
+        example: 'express',
+      },
+      trackingNo: { type: 'string', nullable: true, example: 'SF1234567890' },
+      shippedAt: {
+        type: 'string',
+        format: 'date-time',
+        example: '2026-04-21T10:30:00.000Z',
+      },
+    },
+  },
+  ReviewAdminOrderRefundPayload: {
+    type: 'object',
+    required: ['status'],
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['approved', 'rejected'],
+        example: 'approved',
+      },
+      reviewNote: { type: 'string', nullable: true, example: '退款原因属实，同意退款' },
+    },
+  },
+  ReviewAdminOrderRefundResult: {
+    type: 'object',
+    required: ['id', 'refundId', 'status', 'reviewedAt'],
+    properties: {
+      id: { type: 'string', example: '1201' },
+      refundId: { type: 'string', example: '7001' },
+      status: {
+        type: 'string',
+        enum: ['approved', 'rejected'],
+        example: 'approved',
+      },
+      reviewedAt: {
+        type: 'string',
+        format: 'date-time',
+        example: '2026-04-21T10:35:00.000Z',
+      },
+    },
+  },
+  CompleteAdminOrderRefundPayload: {
+    type: 'object',
+    properties: {},
+  },
+  CompleteAdminOrderRefundResult: {
+    type: 'object',
+    required: ['id', 'refundId', 'status', 'completedAt'],
+    properties: {
+      id: { type: 'string', example: '1201' },
+      refundId: { type: 'string', example: '7001' },
+      status: { type: 'string', enum: ['completed'], example: 'completed' },
+      completedAt: {
+        type: 'string',
+        format: 'date-time',
+        example: '2026-04-21T11:00:00.000Z',
+      },
+    },
+  },
+  CreateAdminGuessPayload: {
+    type: 'object',
+    required: ['title', 'categoryId', 'productId', 'endTime', 'optionTexts'],
+    properties: {
+      title: { type: 'string', example: '乐事和奥利奥谁更受欢迎？' },
+      categoryId: { type: 'string', example: '18' },
+      productId: { type: 'string', example: '502' },
+      endTime: {
+        type: 'string',
+        format: 'date-time',
+        example: '2026-04-23T10:00:00.000Z',
+      },
+      description: {
+        type: 'string',
+        nullable: true,
+        example: '围绕热门零食做一场二选一竞猜',
+      },
+      imageUrl: {
+        type: 'string',
+        nullable: true,
+        example: 'https://example.com/guess-cover.png',
+      },
+      optionTexts: {
+        type: 'array',
+        minItems: 2,
+        items: { type: 'string', example: '乐事' },
+        example: ['乐事', '奥利奥'],
+      },
+    },
+  },
+  CreateAdminGuessResult: {
+    type: 'object',
+    required: ['id', 'status', 'reviewStatus'],
+    properties: {
+      id: { type: 'string', example: '301' },
+      status: { type: 'string', enum: ['active'], example: 'active' },
+      reviewStatus: { type: 'string', enum: ['approved'], example: 'approved' },
     },
   },
   ReviewAdminGuessResult: {

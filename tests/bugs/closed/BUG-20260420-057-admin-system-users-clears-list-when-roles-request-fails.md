@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -66,7 +66,7 @@
 | 修复说明 | 已把系统用户列表和角色字典拆成独立失败面：角色接口失败时只清空角色字典并展示 warning，不再把用户主列表一起清空；只有 `/api/admin/system-users` 本身失败时才视作整页失败。 |
 | 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 通过。管理台类型检查和构建通过，角色请求失败不再连坐清空用户表格。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前系统用户页真实加载逻辑已下沉到 `apps/admin/src/lib/admin-system-users-page.ts`，页面使用 `Promise.allSettled([fetchAdminSystemUsers(), fetchAdminRoles()])` 分开处理主表和角色字典；角色接口失败只会写入 `roleIssue` 并清空角色选项，不再把 `users` 主列表一起清空。 |
 | 修复提交/变更 | `apps/admin/src/pages/system-users-page.tsx` |
 
 ## Fixer

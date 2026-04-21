@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -66,7 +66,7 @@
 | 修复说明 | 已把后台通知发送动作固定成“同一次发送共享同一个批次时间戳”，通知列表改为按“消息载荷 + 批次时间”聚合，不再把不同时间重复发送的同内容消息错误合并成一条。 |
 | 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 通过。前后端类型检查通过，管理台构建通过；重复发送同内容通知时，后端批次聚合键已按发送动作区分。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前通知发送会为同一次发送动作写入统一的 `batchCreatedAt`，批次聚合键也已把精确批次时间纳入计算；不同时间重复发送同内容通知不再被错误并成同一条。 |
 | 修复提交/变更 | `apps/api/src/modules/admin/system.ts` |
 
 ## Fixer

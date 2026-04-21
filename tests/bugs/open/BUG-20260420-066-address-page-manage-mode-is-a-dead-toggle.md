@@ -7,17 +7,17 @@
 | `bug_id` | `BUG-20260420-066` |
 | `title` | 收货地址页“管理/完成”切换只是空状态切换，没有实际管理模式 |
 | `severity` | `P2` |
-| `status` | `fixed_pending_verify` |
+| `status` | `verified` |
 | `area` | `address/manage-mode` |
 | `page` | `/address` |
 | `api` | `` |
-| `owner` | `用户端全栈一` |
+| `owner` | `测试猫` |
 | `source_run` | `tests/reports/user-page-parity-round1-2026-04-20.md` |
 | `fingerprint` | `web-address:manage-mode-dead-toggle` |
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试猫` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -66,7 +66,7 @@
 | 修复说明 | 已移除地址页头部只会改文案的“管理/完成”切换，页面回到单一明确模式，避免继续暴露没有任何管理态差异的空壳控件。 |
 | 验证命令 | `pnpm --filter @umi/web typecheck`；`pnpm --filter @umi/web build` |
 | Fixer 自测结果 | 通过。页面不再出现只会切换文案、不会改变列表与操作区的假“管理模式”。 |
-| Verifier 复测结果 | 待复核 |
+| Verifier 复测结果 | 通过。当前地址页头部已经不再出现只会切文案的“管理/完成”按钮，页面回到单一明确模式；列表、卡片操作和底部 CTA 也不再存在一个没有实际管理态差异的空壳入口。 |
 | 修复提交/变更 | [apps/web/src/app/address/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/address/page.tsx)、[apps/web/src/app/address/page.module.css](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/address/page.module.css) |
 
 ## Director Re-review

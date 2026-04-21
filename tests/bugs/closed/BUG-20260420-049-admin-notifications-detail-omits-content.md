@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -67,7 +67,7 @@
 | 修复说明 | 已让 `/api/admin/notifications` 返回正文 `content`，并在系统通知“查看”抽屉里补展示通知正文，支持核对标题、正文、目标人群和跳转链接。 |
 | 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 通过。前后端类型检查通过，管理台构建通过，通知详情抽屉已展示正文。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前通知列表结果和前端类型都已包含 `content`，系统通知“查看”抽屉可以直接复核正文内容；原先“只能看标题，正文丢失”的链路已消失。 |
 | 修复提交/变更 | `apps/api/src/modules/admin/system.ts`；`apps/api/src/routes/openapi/paths/admin.ts`；`apps/admin/src/lib/api/system.ts`；`apps/admin/src/pages/system-notifications-page.tsx` |
 
 ## Fixer

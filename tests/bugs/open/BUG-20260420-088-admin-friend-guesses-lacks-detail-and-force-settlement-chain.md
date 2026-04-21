@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-088` |
 | `title` | 好友竞猜页只剩摘要抽屉，缺少详情跳转和强制结算链路 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/friend-guesses/actions` |
 | `scope` | `admin` |
 | `page` | `#/guesses/friends` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-guesses-qa-2026-04-20.md` |
 | `fingerprint` | `admin-friend-guesses:lacks-detail-and-force-settle` |
-| `fix_owner` |  |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -54,8 +54,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 恢复好友竞猜详情跳转，并补齐强制结算承接；至少不要把故障处理压缩成一个只读抽屉。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 好友竞猜页已移除只读摘要抽屉，操作列恢复为真实详情跳转；活跃记录会直接跳到 `#/guesses/detail/:id` 继续处理，不再把异常处理压缩在列表页。当前工作区仍未提供 admin 侧强制结算写接口，因此没有伪造本地“强制结算成功”动作。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过：好友竞猜页操作列已改为真实详情跳转，后台类型检查和构建成功。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/admin/src/pages/friend-guesses-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/friend-guesses-page.tsx) |

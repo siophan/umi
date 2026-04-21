@@ -7,7 +7,7 @@ import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-cont
 import type { AdminTransactionRow } from '../lib/api/orders';
 import { fetchAdminTransactions } from '../lib/api/orders';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
-import { formatAmount, formatDateTime } from '../lib/format';
+import { formatDateTime, formatYuanAmount } from '../lib/format';
 
 interface OrderTransactionsPageProps {
   refreshToken?: number;
@@ -116,7 +116,7 @@ export function OrderTransactionsPage({ refreshToken = 0 }: OrderTransactionsPag
       width: 140,
       render: (_, record) => (
         <Typography.Text type={record.direction === 'refund' ? 'danger' : undefined}>
-          {formatAmount(record.amount)}
+          {formatYuanAmount(record.amount)}
         </Typography.Text>
       ),
     },
@@ -190,7 +190,7 @@ export function OrderTransactionsPage({ refreshToken = 0 }: OrderTransactionsPag
             <Descriptions.Item label="用户 ID">{selected.userId}</Descriptions.Item>
             <Descriptions.Item label="渠道">{selected.channel}</Descriptions.Item>
             <Descriptions.Item label="方向">{selected.direction === 'payment' ? '支付' : '退款'}</Descriptions.Item>
-            <Descriptions.Item label="金额">{formatAmount(selected.amount)}</Descriptions.Item>
+            <Descriptions.Item label="金额">{formatYuanAmount(selected.amount)}</Descriptions.Item>
             <Descriptions.Item label="来源表">
               {selected.sourceTable === 'order' ? '订单支付' : '退款单'}
             </Descriptions.Item>

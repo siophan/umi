@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -66,7 +66,7 @@
 | 修复说明 | 已调整系统用户页角色筛选：保留启用角色，同时补回“停用但仍被当前账号绑定”的角色，并在下拉里标记为“已停用”。 |
 | 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 通过。管理台类型检查和生产构建通过，角色筛选不再遗漏停用但仍绑定的角色。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前系统用户页角色筛选已改成 `buildRoleFilterOptions(roles, users)` 基于“真实绑定结果”生成，下拉会补回停用但仍挂在账号上的角色，并标记“已停用”。 |
 | 修复提交/变更 | `apps/admin/src/pages/system-users-page.tsx` |
 
 ## Fixer

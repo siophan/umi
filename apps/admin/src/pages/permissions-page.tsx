@@ -1,28 +1,11 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import {
-  Alert,
-  Button,
-  ConfigProvider,
-  Descriptions,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Popconfirm,
-  Select,
-  Tag,
-  Typography,
-  message,
-} from 'antd';
+import { Alert, Button, ConfigProvider, Form, Input, Select, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
-import {
-  AdminSearchPanel,
-  AdminStatusTabs,
-  SEARCH_THEME,
-} from '../components/admin-list-controls';
+import { AdminPermissionDetailDrawer } from '../components/admin-permission-detail-drawer';
+import { AdminPermissionFormModal } from '../components/admin-permission-form-modal';
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import {
   createAdminPermission,
   fetchAdminPermissions,
@@ -30,46 +13,23 @@ import {
   updateAdminPermissionStatus,
   type AdminPermissionItem,
 } from '../lib/api/system';
+import {
+  buildCreatePermissionFormValues,
+  buildEditPermissionFormValues,
+  buildPermissionColumns,
+  buildPermissionDescendantIdSet,
+  buildPermissionModuleOptions,
+  buildPermissionParentOptions,
+  buildPermissionStatusItems,
+  filterPermissions,
+  type PermissionFilters,
+  type PermissionFormValues,
+  PERMISSION_ACTION_OPTIONS,
+} from '../lib/admin-permissions';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
 interface PermissionsPageProps {
   refreshToken?: number;
-}
-
-type PermissionFilters = {
-  keyword?: string;
-  module?: string;
-  action?: AdminPermissionItem['action'];
-};
-
-type PermissionFormValues = {
-  code: string;
-  name: string;
-  module: string;
-  action: Exclude<AdminPermissionItem['action'], 'unknown'>;
-  parentId?: `${bigint}`;
-  sort?: number;
-  status?: 'active' | 'disabled';
-};
-
-function actionLabel(action: AdminPermissionItem['action']) {
-  if (action === 'view') return '查看';
-  if (action === 'create') return '新建';
-  if (action === 'edit') return '编辑';
-  if (action === 'manage') return '管理';
-  return '未知';
-}
-
-function actionColor(action: AdminPermissionItem['action']) {
-  if (action === 'manage') return 'red';
-  if (action === 'edit') return 'processing';
-  if (action === 'create') return 'gold';
-  if (action === 'view') return 'default';
-  return 'default';
-}
-
-function statusColor(status: AdminPermissionItem['status']) {
-  return status === 'active' ? 'success' : 'default';
 }
 
 export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
@@ -86,6 +46,101 @@ export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
   const [editing, setEditing] = useState<AdminPermissionItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  useEffect(() => {
+    void loadPermissions();
+  }, [refreshToken]);
+
+  const moduleOptions = useMemo(() => buildPermissionModuleOptions(permissions), [permissions]);
+  const descendantIdSet = useMemo(
+    () => buildPermissionDescendantIdSet(permissions, editing),
+    [editing, permissions],
+  );
+  const parentOptions = useMemo(
+    () => buildPermissionParentOptions(permissions, editing, descendantIdSet),
+    [descendantIdSet, editing, permissions],
+  );
+  const filteredPermissions = useMemo(
+    () => filterPermissions(permissions, filters, status),
+    [filters, permissions, status],
+  );
+  const columns: ProColumns<AdminPermissionItem>[] = buildPermissionColumns({
+    onEdit: (record) => openEditModal(record),
+    onToggleStatus: (record) => void handleToggleStatus(record),
+    onView: (record) => setSelected(record),
+  });
+
+  return (
+    <div className="page-stack">
+      {contextHolder}
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
+
+      <AdminSearchPanel
+        form={form}
+        onSearch={() => setFilters(form.getFieldsValue())}
+        onReset={() => {
+          form.resetFields();
+          setFilters({});
+          setStatus('all');
+        }}
+      >
+        <Form.Item name="keyword">
+          <Input allowClear placeholder="权限名称 / 编码" />
+        </Form.Item>
+        <Form.Item name="module">
+          <Select allowClear options={moduleOptions} placeholder="所属模块" />
+        </Form.Item>
+        <Form.Item name="action">
+          <Select allowClear options={PERMISSION_ACTION_OPTIONS} placeholder="动作" />
+        </Form.Item>
+      </AdminSearchPanel>
+
+      <AdminStatusTabs
+        activeKey={status}
+        items={buildPermissionStatusItems(permissions)}
+        onChange={(key) => setStatus(key as 'all' | AdminPermissionItem['status'])}
+      />
+
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<AdminPermissionItem>
+          cardBordered={false}
+          rowKey="id"
+          columns={columns}
+          columnsState={{}}
+          dataSource={filteredPermissions}
+          loading={loading}
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          search={false}
+          toolBarRender={() => [
+            <Button key="create" type="primary" onClick={openCreateModal}>
+              新增
+            </Button>,
+          ]}
+        />
+      </ConfigProvider>
+
+      <AdminPermissionDetailDrawer
+        open={selected != null}
+        selected={selected}
+        onClose={() => setSelected(null)}
+      />
+
+      <AdminPermissionFormModal
+        editing={editing != null}
+        form={modalForm}
+        open={modalOpen}
+        parentOptions={parentOptions}
+        submitting={submitting}
+        onCancel={() => {
+          setModalOpen(false);
+          setEditing(null);
+          modalForm.resetFields();
+        }}
+        onSubmit={() => void handleSubmit()}
+      />
+    </div>
+  );
+
   async function loadPermissions() {
     setLoading(true);
     setIssue(null);
@@ -99,196 +154,6 @@ export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    void loadPermissions();
-  }, [refreshToken]);
-
-  const moduleOptions = useMemo(
-    () =>
-      Array.from(new Set(permissions.map((item) => item.module))).map((value) => ({
-        label: value,
-        value,
-      })),
-    [permissions],
-  );
-
-  const actionOptions = [
-    { label: '查看', value: 'view' },
-    { label: '新建', value: 'create' },
-    { label: '编辑', value: 'edit' },
-    { label: '管理', value: 'manage' },
-  ] satisfies Array<{ label: string; value: AdminPermissionItem['action'] }>;
-
-  const descendantIdSet = useMemo(() => {
-    if (!editing) {
-      return new Set<string>();
-    }
-
-    const childrenByParent = new Map<string, string[]>();
-    for (const item of permissions) {
-      if (!item.parentId) {
-        continue;
-      }
-      const siblings = childrenByParent.get(item.parentId) ?? [];
-      siblings.push(item.id);
-      childrenByParent.set(item.parentId, siblings);
-    }
-
-    const descendants = new Set<string>();
-    const queue = [editing.id];
-    while (queue.length > 0) {
-      const currentId = queue.shift();
-      if (!currentId) {
-        continue;
-      }
-      const children = childrenByParent.get(currentId) ?? [];
-      for (const childId of children) {
-        if (descendants.has(childId)) {
-          continue;
-        }
-        descendants.add(childId);
-        queue.push(childId);
-      }
-    }
-    return descendants;
-  }, [editing, permissions]);
-
-  const parentOptions = useMemo(
-    () =>
-      permissions
-        .filter((item) => (editing ? item.id !== editing.id && !descendantIdSet.has(item.id) : true))
-        .map((item) => ({
-          label: `${item.name} · ${item.code}`,
-          value: item.id,
-        })),
-    [descendantIdSet, editing, permissions],
-  );
-
-  const filteredPermissions = useMemo(
-    () =>
-      permissions.filter((item) => {
-        if (status !== 'all' && item.status !== status) {
-          return false;
-        }
-
-        if (
-          filters.keyword &&
-          ![item.name, item.code]
-            .filter(Boolean)
-            .some((value) =>
-              String(value).toLowerCase().includes(filters.keyword!.trim().toLowerCase()),
-            )
-        ) {
-          return false;
-        }
-
-        if (filters.module && item.module !== filters.module) {
-          return false;
-        }
-
-        if (filters.action && item.action !== filters.action) {
-          return false;
-        }
-
-        return true;
-      }),
-    [filters, permissions, status],
-  );
-
-  const columns: ProColumns<AdminPermissionItem>[] = [
-    {
-      title: '权限',
-      dataIndex: 'name',
-      width: 260,
-      render: (_, record) => (
-        <div>
-          <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-            <Typography.Text strong>{record.name}</Typography.Text>
-            {record.isBuiltIn ? <Tag color="processing">内置</Tag> : null}
-          </div>
-          <Typography.Text style={{ display: 'block' }} type="secondary">
-            {record.code}
-          </Typography.Text>
-        </div>
-      ),
-    },
-    {
-      title: '所属模块',
-      dataIndex: 'module',
-      width: 180,
-    },
-    {
-      title: '动作',
-      dataIndex: 'action',
-      width: 120,
-      render: (_, record) => (
-        <Tag color={actionColor(record.action)}>{actionLabel(record.action)}</Tag>
-      ),
-    },
-    {
-      title: '父权限',
-      dataIndex: 'parentName',
-      width: 180,
-      render: (_, record) => record.parentName || '-',
-    },
-    {
-      title: '角色引用',
-      dataIndex: 'assignedRoleCount',
-      width: 120,
-    },
-    {
-      title: '排序',
-      dataIndex: 'sort',
-      width: 100,
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      render: (_, record) => (
-        <Tag color={statusColor(record.status)}>
-          {record.status === 'active' ? '启用' : '停用'}
-        </Tag>
-      ),
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 160,
-      valueType: 'option',
-      render: (_, record) => (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="small" type="link" onClick={() => setSelected(record)}>
-            查看
-          </Button>
-          <Button
-            disabled={record.isBuiltIn}
-            size="small"
-            type="link"
-            onClick={() => openEditModal(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title={record.status === 'active' ? '停用权限' : '启用权限'}
-            description={
-              record.status === 'active'
-                ? '停用后，当前权限及其子权限都会一并失效，角色访问会同步收口。'
-                : '确认重新启用该权限？'
-            }
-            okText="确认"
-            cancelText="取消"
-            onConfirm={() => void handleToggleStatus(record)}
-          >
-            <Button size="small" type="link">
-              {record.status === 'active' ? '停用' : '启用'}
-            </Button>
-          </Popconfirm>
-        </div>
-      ),
-    },
-  ];
 
   async function handleToggleStatus(record: AdminPermissionItem) {
     try {
@@ -305,29 +170,14 @@ export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
   function openCreateModal() {
     setEditing(null);
     modalForm.resetFields();
-    modalForm.setFieldsValue({
-      code: '',
-      name: '',
-      module: '',
-      action: 'view',
-      parentId: undefined,
-      sort: 0,
-      status: 'active',
-    });
+    modalForm.setFieldsValue(buildCreatePermissionFormValues());
     setModalOpen(true);
   }
 
   function openEditModal(record: AdminPermissionItem) {
     setEditing(record);
     modalForm.resetFields();
-    modalForm.setFieldsValue({
-      code: record.code,
-      name: record.name,
-      module: record.module,
-      action: record.action === 'unknown' ? 'view' : record.action,
-      parentId: (record.parentId as `${bigint}` | null) ?? undefined,
-      sort: record.sort,
-    });
+    modalForm.setFieldsValue(buildEditPermissionFormValues(record));
     setModalOpen(true);
   }
 
@@ -371,161 +221,4 @@ export function PermissionsPage({ refreshToken = 0 }: PermissionsPageProps) {
       setSubmitting(false);
     }
   }
-
-  return (
-    <div className="page-stack">
-      {contextHolder}
-      {issue ? <Alert showIcon type="error" message={issue} /> : null}
-
-      <AdminSearchPanel
-        form={form}
-        onSearch={() => setFilters(form.getFieldsValue())}
-        onReset={() => {
-          form.resetFields();
-          setFilters({});
-          setStatus('all');
-        }}
-      >
-        <Form.Item name="keyword">
-          <Input allowClear placeholder="权限名称 / 编码" />
-        </Form.Item>
-        <Form.Item name="module">
-          <Select allowClear options={moduleOptions} placeholder="所属模块" />
-        </Form.Item>
-        <Form.Item name="action">
-          <Select allowClear options={actionOptions} placeholder="动作" />
-        </Form.Item>
-      </AdminSearchPanel>
-
-      <AdminStatusTabs
-        activeKey={status}
-        items={[
-          { key: 'all', label: '全部', count: permissions.length },
-          {
-            key: 'active',
-            label: '启用',
-            count: permissions.filter((item) => item.status === 'active').length,
-          },
-          {
-            key: 'disabled',
-            label: '停用',
-            count: permissions.filter((item) => item.status === 'disabled').length,
-          },
-        ]}
-        onChange={(key) => setStatus(key as 'all' | AdminPermissionItem['status'])}
-      />
-
-      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
-        <ProTable<AdminPermissionItem>
-          cardBordered={false}
-          rowKey="id"
-          columns={columns}
-          columnsState={{}}
-          dataSource={filteredPermissions}
-          loading={loading}
-          options={{ reload: true, density: true, fullScreen: false, setting: true }}
-          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
-          search={false}
-          toolBarRender={() => [
-            <Button key="create" type="primary" onClick={openCreateModal}>
-              新增
-            </Button>,
-          ]}
-        />
-      </ConfigProvider>
-
-      <Drawer
-        open={selected != null}
-        width={460}
-        title={selected?.name}
-        onClose={() => setSelected(null)}
-      >
-        {selected ? (
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="权限名称">{selected.name}</Descriptions.Item>
-            <Descriptions.Item label="权限编码">{selected.code}</Descriptions.Item>
-            <Descriptions.Item label="所属模块">{selected.module}</Descriptions.Item>
-            <Descriptions.Item label="动作">
-              <Tag color={actionColor(selected.action)}>{actionLabel(selected.action)}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="父权限">{selected.parentName || '-'}</Descriptions.Item>
-            <Descriptions.Item label="角色引用">{selected.assignedRoleCount}</Descriptions.Item>
-            <Descriptions.Item label="权限来源">
-              {selected.isBuiltIn ? '系统内置目录' : '自定义权限'}
-            </Descriptions.Item>
-            <Descriptions.Item label="排序">{selected.sort}</Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <Tag color={statusColor(selected.status)}>
-                {selected.status === 'active' ? '启用' : '停用'}
-              </Tag>
-            </Descriptions.Item>
-          </Descriptions>
-        ) : null}
-      </Drawer>
-
-      <ConfigProvider theme={SEARCH_THEME}>
-        <Modal
-          confirmLoading={submitting}
-          destroyOnHidden
-          open={modalOpen}
-          title={editing ? '编辑权限' : '新增权限'}
-          okText="保存"
-          cancelText="取消"
-          onCancel={() => {
-            setModalOpen(false);
-            setEditing(null);
-            modalForm.resetFields();
-          }}
-          onOk={() => void handleSubmit()}
-        >
-          <Form form={modalForm} layout="vertical">
-            <Form.Item
-              label="权限编码"
-              name="code"
-              rules={[{ required: true, message: '请输入权限编码' }]}
-            >
-              <Input allowClear placeholder="请输入权限编码" />
-            </Form.Item>
-            <Form.Item
-              label="权限名称"
-              name="name"
-              rules={[{ required: true, message: '请输入权限名称' }]}
-            >
-              <Input allowClear placeholder="请输入权限名称" />
-            </Form.Item>
-            <Form.Item
-              label="所属模块"
-              name="module"
-              rules={[{ required: true, message: '请输入所属模块' }]}
-            >
-              <Input allowClear placeholder="请输入所属模块" />
-            </Form.Item>
-            <Form.Item
-              label="动作"
-              name="action"
-              rules={[{ required: true, message: '请选择动作' }]}
-            >
-              <Select options={actionOptions} placeholder="请选择动作" />
-            </Form.Item>
-            <Form.Item label="父权限" name="parentId">
-              <Select allowClear options={parentOptions} placeholder="请选择父权限" />
-            </Form.Item>
-            <Form.Item label="排序" name="sort">
-              <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-            </Form.Item>
-            {!editing ? (
-              <Form.Item label="状态" name="status">
-                <Select
-                  options={[
-                    { label: '启用', value: 'active' },
-                    { label: '停用', value: 'disabled' },
-                  ]}
-                />
-              </Form.Item>
-            ) : null}
-          </Form>
-        </Modal>
-      </ConfigProvider>
-    </div>
-  );
 }

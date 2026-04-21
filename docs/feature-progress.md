@@ -56,7 +56,6 @@
 | 直播列表 | `/lives` | 直播列表首屏 | `已落地-已接API` | `需对齐-部分对齐` | `GET /api/lives` | `已接-读` | `未见专项测试` | 服务端首屏直连接口，见 [lives/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/lives/page.tsx:1) |
 | 搜索 | `/search` | 全站搜索、热词、联想建议 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/search`、`GET /api/search/hot`、`GET /api/search/suggest` | `已接-读` | `未见专项测试` | 当前已用独立搜索域 API client，见 [search.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/lib/api/search.ts:1) |
 | 功能聚合页 | `/features` | 功能入口聚合 | `已落地-部分接API` | `不适用-新系统新增` | `GET /api/users/me`、`GET /api/notifications` | `已接-读` | `未见专项测试` | 页面本身是功能入口聚合，非完整业务页 |
-| 全功能别名页 | `/all-features` | `features` 兼容入口 | `兼容页/包装页` | `不适用-兼容/包装页` | 无独立接口 | `未接` | `未见专项测试` | 兼容路径 |
 
 ### 2. 认证、个人资料、账户辅助
 
@@ -81,7 +80,6 @@
 | 会话列表 | `/chat` | 会话列表读取 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/chats` | `已接-读` | `通知/聊天有 integration` |  |
 | 聊天详情 | `/chat/[id]` | 消息列表、发送消息 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/chats/:userId`、`POST /api/chats/:userId` | `已接-读写` | `通知/聊天有 integration` |  |
 | 用户主页 | `/user/[uid]` | 公开资料、动态、竞猜、关注/取关、私信 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/users/:id`、`GET /api/users/:id/activity`、`POST /api/users/:id/follow`、`DELETE /api/users/:id/follow`、`GET /api/chats/:userId`、`POST /api/chats/:userId` | `已接-读写` | `用户 activity / 聊天部分有 integration` | 路由参数是 `uid`，但 API 仍走用户资料接口 |
-| 用户主页兼容页 | `/user-profile` | `user/[uid]` 兼容入口 | `兼容页/包装页` | `不适用-兼容/包装页` | 无独立接口 | `未接` | `未见专项测试` | 兼容路径 |
 
 ### 4. 社区内容
 
@@ -90,7 +88,6 @@
 | 社区主页 | `/community` | 推荐/关注 feed、发布、点赞、收藏、转发、评论 | `已落地-已接API` | `需对齐-部分对齐` | `GET /api/community/feed`、`GET /api/community/discovery`、`POST /api/community/posts`、`POST /api/community/posts/:id/repost`、`POST /api/community/posts/:id/like`、`DELETE /api/community/posts/:id/like`、`POST /api/community/posts/:id/bookmark`、`DELETE /api/community/posts/:id/bookmark`、`POST /api/community/posts/:id/comments` | `已接-读写` | `社区未见专项 integration 测试` | 页面接入广，但当前 `tests/` 里未见 community 专项脚本 |
 | 社区搜索 | `/community-search` | 搜社区内容、搜用户、关注/取关推荐用户 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/community/search`、`GET /api/community/discovery`、`GET /api/users/search`、`POST /api/users/:id/follow`、`DELETE /api/users/:id/follow` | `已接-读写` | `未见专项测试` |  |
 | 动态详情 | `/post/[id]` | 动态详情、评论、点赞、收藏、转发、举报 | `已落地-已接API` | `需对齐-未核对` | `GET /api/community/posts/:id`、`POST /api/community/posts/:id/comments`、`POST /api/community/comments/:id/like`、`DELETE /api/community/comments/:id/like`、`POST /api/community/posts/:id/like`、`DELETE /api/community/posts/:id/like`、`POST /api/community/posts/:id/bookmark`、`DELETE /api/community/posts/:id/bookmark`、`POST /api/community/posts/:id/report` | `已接-读写` | `未见专项测试` | 举报接口已在前后端与 OpenAPI 中存在，但当前未见专项自动化测试 |
-| 动态详情兼容页 | `/post-detail` | `post/[id]` 兼容入口 | `兼容页/包装页` | `不适用-兼容/包装页` | 无独立接口 | `未接` | `未见专项测试` | 兼容路径 |
 
 ### 5. 竞猜、直播
 
@@ -100,7 +97,6 @@
 | 竞猜历史 | `/guess-history` | 当前用户竞猜历史 | `已落地-已接API` | `需对齐-未核对` | `GET /api/guesses/user/history` | `已接-读` | `有 integration` |  |
 | 猜单页 | `/guess-order` | 竞猜订单展示页 | `已落地-静态/本地态` | `需对齐-已对齐` | 无直接 API import | `未接` | `未见专项测试` | 页面未见 API client 接入 |
 | 直播详情 | `/live/[id]` | 直播详情读取 | `已落地-部分接API` | `需对齐-部分对齐` | `GET /api/lives/:id` | `前端直连-后端存在` | `未见专项测试` | 页面未走 `lib/api/lives.ts`，而是自己 `fetch` |
-| 直播兼容页 | `/live` | `live/[id]` 兼容入口 | `兼容页/包装页` | `不适用-兼容/包装页` | 无独立接口 | `未接` | `未见专项测试` | 兼容路径 |
 | 新手竞猜 | `/novice-guess` | 新手竞猜引导/结果页 | `已落地-静态/本地态` | `需对齐-部分对齐` | 无直接 API import | `未接` | `未见专项测试` | 当前未见接口接入 |
 | 创建竞猜 | `/create` | 模板选择、选项填写、预览、发布流程 UI | `已落地-静态/本地态` | `需对齐-已对齐` | 无 | `未接` | `未见专项测试` | 页面以本地模板、好友、商品数据驱动，未见发布接口 |
 | 创建好友竞猜 | `/create-user` | 话题模板、邀请好友、预览、发布弹层 | `已落地-静态/本地态` | `需对齐-已对齐` | 无 | `未接` | `未见专项测试` | 当前完全本地态 |
@@ -110,14 +106,11 @@
 | 功能页面 | 路由 | 具体功能点 | UI状态 | 老系统对齐状态 | 接口列表 | 接口状态 | 是否测试 | 问题备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 商品详情 | `/product/[id]` | 商品主数据、收藏、加入购物车、立即购买 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/products/:id`、`POST /api/products/:id/favorite`、`DELETE /api/products/:id/favorite`、`POST /api/cart/items` | `已接-读写` | `商品详情有 integration` | 对应测试：`api-product-detail.db.ts`、`api-product-guest-404.db.ts` |
-| 商品详情兼容页 | `/product-detail` | 兼容入口 | `兼容页/包装页` | `不适用-兼容/包装页` | 无独立接口 | `未接` | `未见专项测试` | 兼容路径 |
 | 店铺详情 | `/shop/[id]` | 店铺详情、店铺商品、关联竞猜 | `已落地-已接API` | `需对齐-部分对齐` | `GET /api/shops/:id` | `已接-读` | `公开店铺有 integration` | 对应测试：`api-shop-public.db.ts` |
-| 店铺详情兼容页 | `/shop-detail` | 兼容入口 | `兼容页/包装页` | `不适用-兼容/包装页` | 无独立接口 | `未接` | `未见专项测试` | 兼容路径 |
 | 购物车 | `/cart` | 列表、勾选、数量修改、删除、批量删除 | `已落地-已接API` | `需对齐-部分对齐` | `GET /api/cart`、`PUT /api/cart/items/:id`、`DELETE /api/cart/items/:id`、`GET /api/products` | `已接-读写` | `未见购物车专项测试` | 依赖商品列表补推荐流 |
 | 支付页 | `/payment` | 地址、优惠券、购物车项或商品购买、下单 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/addresses`、`GET /api/cart`、`GET /api/coupons`、`POST /api/orders`、`GET /api/products/:id` | `已接-读写` | `订单列表/详情有 integration；下单未见专项测试` |  |
 | 订单列表 | `/orders` | 当前用户订单列表、催发货、确认收货 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/orders`、`POST /api/orders/:id/confirm`、`POST /api/orders/:id/urge` | `已接-读写` | `订单列表有 integration` | 对应测试：`api-order-list.db.ts` |
 | 订单详情 | `/order-detail` | 订单详情、确认收货 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/orders/:id`、`POST /api/orders/:id/confirm` | `已接-读写` | `订单详情有 integration` | 对应测试：`api-order-detail.db.ts` |
-| 订单兼容页 | `/my-orders` | `orders` 兼容入口 | `兼容页/包装页` | `不适用-兼容/包装页` | 无独立接口 | `未接` | `未见专项测试` | 兼容路径 |
 | 评价页 | `/review` | 提交订单商品评价 | `已落地-已接API` | `需对齐-未核对` | `POST /api/orders/:id/review` | `已接-写` | `未见评价专项测试` | 页面只承接提交评价 |
 | 仓库 | `/warehouse` | 虚拟仓、实体仓、寄售、取消寄售 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/warehouse/virtual`、`GET /api/warehouse/physical`、`POST /api/warehouse/physical/:id/consign`、`POST /api/warehouse/physical/:id/cancel-consign` | `已接-读写` | `仓库与后台仓库有 integration` | 对应测试：`api-warehouse.db.ts`、`api-warehouse-admin.db.ts` |
 
@@ -126,7 +119,6 @@
 | 功能页面 | 路由 | 具体功能点 | UI状态 | 老系统对齐状态 | 接口列表 | 接口状态 | 是否测试 | 问题备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 我的店铺 | `/my-shop` | 开店状态、开店申请、我的店铺信息 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/shops/me`、`GET /api/shops/me/status`、`POST /api/shops/apply` | `已接-读写` | `店铺链路有 integration` | 对应测试：`api-shop.db.ts`、`api-shop-empty.db.ts`、`api-shop-guards.db.ts` |
-| 我的店铺兼容页 | `/myshop` | `my-shop` 兼容入口 | `兼容页/包装页` | `不适用-兼容/包装页` | 无独立接口 | `未接` | `未见专项测试` | 兼容路径 |
 | 品牌授权 | `/brand-auth` | 授权概览、提交品牌授权申请 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/shops/brand-auth`、`POST /api/shops/brand-auth` | `已接-读写` | `店铺链路有 integration` |  |
 | 上架商品 | `/add-product` | 品牌商品池、批量上架到店铺 | `已落地-已接API` | `需对齐-已对齐` | `GET /api/shops/brand-auth`、`GET /api/shops/brand-products`、`POST /api/shops/products` | `已接-读写` | `店铺链路有 integration` |  |
 | 邀请页 | `/invite` | 邀请码、邀请链接、邀请记录 | `已落地-部分接API` | `需对齐-已对齐` | `GET /api/invite/my`、`POST /api/invite/generate`、`GET /api/invite/records` | `前端直连-后端未见` | `未见专项测试` | 当前页面直接 `fetch`，但 `apps/api/src/app.ts` 中未见 `invite` router |
@@ -154,8 +146,8 @@
 | 角色管理 | `#/system/roles` | 角色列表、创建、编辑、改状态、分配权限 | `已落地-已接API` | `不适用-新系统新增` | `GET /api/admin/roles`、`POST /api/admin/roles`、`PUT /api/admin/roles/:id`、`PUT /api/admin/roles/:id/status`、`PUT /api/admin/roles/:id/permissions` | `已接-读写` | `未见角色专项测试` | 当前 workspace `typecheck` 已通过；当前页已支持非系统角色编辑 |
 | 权限管理 | `#/users/permissions` | 权限列表、权限矩阵、新增、编辑、改状态 | `已落地-已接API` | `不适用-新系统新增` | `GET /api/admin/permissions`、`GET /api/admin/permissions/matrix`、`POST /api/admin/permissions`、`PUT /api/admin/permissions/:id`、`PUT /api/admin/permissions/:id/status` | `已接-读写` | `未见权限专项测试` |  |
 | 分类管理 | `#/system/categories` | 分类列表、新增、编辑、改状态 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/categories`、`POST /api/admin/categories`、`PUT /api/admin/categories/:id`、`PUT /api/admin/categories/:id/status` | `已接-读写` | `未见分类专项测试` |  |
-| 系统通知 | `#/system/notifications` | 通知列表、发送通知 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/notifications`、`POST /api/admin/notifications` | `已接-读写` | `未见专项测试` | 当前页已支持按人群发送通知并直接回写 `notification` 真表 |
-| 系统聊天 | `#/system/chats` | 风险会话列表 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/chats` | `已接-读` | `未见专项测试` |  |
+| 系统通知 | `#/system/notifications` | 通知列表、发送通知 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/notifications`、`POST /api/admin/notifications` | `已接-读写` | `未见专项测试` | 当前页已支持按人群发送通知并直接回写 `notification` 真表，且列表已改成服务端分页/筛选，不再只覆盖最近 100 个批次 |
+| 系统聊天 | `#/system/chats` | 风险会话列表、聊天详情子页 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/chats`、`GET /api/admin/chats/:id` | `已接-读` | `未见专项测试` | 当前页已改成列表 + 独立详情子页，详情可查看真实消息时间线和会话双方上下文 |
 | 系统排行榜 | `#/system/rankings` | 榜单结果列表、按榜单/周期筛选、查看当期明细 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/rankings`、`GET /api/admin/rankings/:boardType/:periodType/:periodValue` | `已接-读` | `未见专项测试` | 当前已按 `leaderboard_entry` 真实结果表接入后台查看页，不再使用静态数组 |
 
 ### 3. 用户与商家、品牌、授权
@@ -166,24 +158,24 @@
 | 店铺列表 | `#/shops/list` | 店铺列表、分类过滤、店主搜索、启用/暂停/关闭 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/shops`、`GET /api/admin/categories`、`PUT /api/admin/shops/:id/status` | `已接-读写` | `未见专项测试` | 当前页面已支持启用/暂停/关闭店铺；关闭后会自动下架该店铺在售商品，但重新启用不会自动恢复商品上架 |
 | 开店审核 | `#/shops/apply` | 开店申请列表、状态筛选、通过/拒绝 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/shops/applies`、`GET /api/admin/categories`、`PUT /api/admin/shops/applies/:id/review` | `已接-读写` | `未见专项测试` | 当前页面已支持通过/拒绝审核 |
 | 品牌管理 | `#/brands/list` | 品牌列表、分类过滤、新增/编辑品牌 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/brands`、`GET /api/admin/categories`、`POST /api/admin/brands`、`PUT /api/admin/brands/:id` | `已接-读写` | `未见专项测试` | 当前后台已改成直接在品牌管理页新增/编辑品牌，不再保留品牌入驻审核流程 |
-| 品牌授权 | `#/shops/brand-auth` | 授权审核、授权记录、撤销授权 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/brands/auth-applies`、`PUT /api/admin/brands/auth-applies/:id/review`、`GET /api/admin/brands/auth-records`、`PUT /api/admin/brands/auth-records/:id/revoke` | `已接-读写` | `未见专项测试` | 当前页面已支持审核申请、查看生效授权、撤销生效授权；撤销后会自动下架该店铺当前品牌在售商品 |
-| 店铺商品 | `#/shops/products` | 店铺商品列表 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/shops/products` | `已接-读` | `未见专项测试` |  |
+| 品牌授权 | `#/shops/brand-auth` | 品牌授权列表、状态筛选、查看、通过/拒绝、撤销授权 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/brands/auth-applies`、`PUT /api/admin/brands/auth-applies/:id/review`、`GET /api/admin/brands/auth-records`、`PUT /api/admin/brands/auth-records/:id/revoke` | `已接-读写` | `未见专项测试` | 当前页面已统一为单列表状态流，支持待审核/已授权/已拒绝/已过期/已撤销筛选；撤销后会自动下架该店铺当前品牌在售商品 |
+| 店铺商品 | `#/shops/products` | 店铺商品列表、上架/下架 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/shops/products`、`PUT /api/admin/shops/products/:id/status` | `已接-读写` | `未见专项测试` | 当前已支持按店铺、商品、品牌筛选，并对已下架/在售商品执行上架或下架 |
 
 ### 4. 商品、竞猜、订单、仓库
 
 | 功能页面 | 路由 | 具体功能点 | UI状态 | 老系统对齐状态 | 接口列表 | 接口状态 | 是否测试 | 问题备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 商品列表 | `#/products/list` | 商品列表、状态筛选、分类筛选 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/products`、`GET /api/admin/categories` | `已接-读` | `未见专项测试` |  |
-| 品牌商品 | `#/products/brands` | 品牌商品列表 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/products/brand-library`、`GET /api/admin/categories` | `已接-读` | `未见专项测试` |  |
+| 品牌商品 | `#/products/brands` | 品牌商品列表、新增、编辑 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/products/brand-library`、`GET /api/admin/categories`、`POST /api/admin/products/brand-library`、`PUT /api/admin/products/brand-library/:id` | `已接-读写` | `未见专项测试` | 当前已支持新增与编辑品牌商品 |
 | 竞猜列表 | `#/guesses/list` | 竞猜列表、状态筛选、分类筛选、通过/拒绝审核 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/guesses`、`GET /api/admin/categories`、`PUT /api/admin/guesses/:id/review` | `已接-读写` | `未见专项测试` | 当前列表已支持直接审核待审核竞猜，拒绝时需填写原因 |
-| 创建竞猜 | `#/guesses/create` | 分类、商品、好友竞猜候选读取 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/categories`、`GET /api/admin/products`、`GET /api/admin/guesses/friends` | `已接-读` | `未见专项测试` | 当前未见创建竞猜写接口 |
+| 创建竞猜 | `#/guesses/create` | 创建竞猜、分类选择、商品搜索、选项维护、发布提交 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/categories`、`GET /api/admin/products`、`POST /api/admin/guesses` | `已接-读写` | `未见专项测试` | 当前已支持后台直接创建并发布公开竞猜 |
 | 好友竞猜 | `#/guesses/friends` | 好友竞猜列表、状态筛选、邀请统计、结果确认统计、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/guesses/friends` | `已接-读` | `未见专项测试` | 当前已补房间/发起人/奖励搜索与详情统计，但未接写操作 |
 | PK 对战 | `#/pk` | PK 列表、状态筛选、发起人/对手搜索、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/pk` | `已接-读` | `未见专项测试` | 当前已补对战双方、选择、结算时间与奖励信息展示，未接写操作 |
-| 订单列表 | `#/orders/list` | 订单列表、状态筛选、订单号/买家/商品搜索、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders` | `已接-读` | `有 admin 订单 overview / smoke，但非页面专项测试` | 当前已补订单号、买家、商品、物流单号与详情信息展示；后端已直连 MySQL，见 [admin/orders.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/orders.ts:1) |
+| 订单列表 | `#/orders/list` | 订单列表、状态筛选、订单号/买家/商品搜索、订单详情子页、发货、退款处理 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders`、`GET /api/admin/orders/:id`、`PUT /api/admin/orders/:id/ship`、`PUT /api/admin/orders/:id/refund/review`、`PUT /api/admin/orders/:id/refund/complete` | `已接-读写` | `有 admin 订单 overview / smoke，但非页面专项测试` | 当前订单详情页已改成独立子页，并在详情页内支持发货、退款审核和完成退款；退款信息区仅在存在退款记录时显示，详情布局已收成分区块结构；后端已直连 MySQL，见 [admin/orders.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/orders.ts:1) |
 | 交易流水 | `#/orders/transactions` | 交易流水列表、方向筛选、流水号/订单号/用户搜索、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/transactions` | `已接-读` | `未见专项测试` | 当前已补流水号、订单号、用户、渠道搜索与详情信息展示 |
-| 物流管理 | `#/orders/logistics` | 履约物流列表 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/logistics` | `已接-读` | `未见专项测试` |  |
-| 虚拟仓/实体仓 | `#/warehouse/virtual`、`#/warehouse/physical` | 仓库列表、状态筛选、商品/用户/来源搜索、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/warehouse/admin/virtual`、`GET /api/warehouse/admin/physical` | `已接-读` | `后台仓库有 integration` | 当前虚拟仓已补状态 Tabs、单价/总价值与来源展示；实体仓已聚焦在库/配送中/已送达，不再混寄售状态。对应测试：`api-warehouse-admin.db.ts` |
-| 寄售市场 | `#/warehouse/consign` | 寄售成交列表、状态筛选、交易单号/商品/卖家/订单号搜索、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/consign` | `已接-读` | `未见专项测试` | 当前已补交易单号、卖家/买家、卖家到账、结算状态和成交时间展示 |
+| 物流管理 | `#/orders/logistics` | 履约物流列表、订单号/承运商/物流方式搜索、物流详情子页 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/logistics`、`GET /api/admin/orders/logistics/:id` | `已接-读` | `未见专项测试` | 当前已从详情抽屉改成独立子页 `#/orders/logistics/detail/:id`；左侧菜单已去掉该子菜单，页面作为 `订单管理` 下的非菜单页保留 |
+| 虚拟仓/实体仓 | `#/warehouse/virtual`、`#/warehouse/physical` | 仓库列表、状态筛选、商品/用户/来源搜索、仓库详情子页 | `已落地-已接API` | `需对齐-未核对` | `GET /api/warehouse/admin/virtual`、`GET /api/warehouse/admin/virtual/:id`、`GET /api/warehouse/admin/physical`、`GET /api/warehouse/admin/physical/:id` | `已接-读` | `后台仓库有 integration` | 当前虚拟仓/实体仓都已改成独立详情子页，不再使用抽屉；对应测试：`api-warehouse-admin.db.ts` |
+| 寄售市场 | `#/warehouse/consign` | 寄售成交列表、状态筛选、交易单号/商品/卖家/订单号搜索、寄售详情子页 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/consign`、`GET /api/admin/orders/consign/:id` | `已接-读` | `未见专项测试` | 当前已补交易单号、卖家/买家、卖家到账、结算状态和成交时间展示，并改成独立详情子页 |
 
 ### 5. 营销、内容、风控
 
@@ -198,7 +190,6 @@
 | 社区动态管理 | `#/community/posts` | 动态管理表、查看、删除 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/community/posts`、`DELETE /api/admin/community/posts/:id` | `已接-读写` | `未见专项测试` | 当前已接真实动态治理链路 |
 | 举报管理 | `#/community/reports` | 举报记录管理、处理中/采纳/驳回/封禁 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/community/reports`、`PUT /api/admin/community/reports/:id` | `已接-读写` | `未见专项测试` | 当前已直连 `report_item` 真表和处理动作 |
 | 直播管理 | `#/live/list` | 直播列表管理、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/lives` | `已接-读` | `未见专项测试` | 当前已按真实 `live` 主表接入后台列表 |
-| 弹幕管理 | `#/live/danmaku` | 弹幕管理边界页 | `已落地-静态/本地态` | `需对齐-未核对` | 无 | `未接` | `未见专项测试` | 当前系统未承接直播弹幕持久化表，页面明确展示为待真实链路补齐 |
 
 ## 测试现状汇总
 
@@ -252,5 +243,5 @@
 ## 当前重点问题
 
 1. 用户端 `checkin`、`invite` 页面已直接请求接口，但当前 `apps/api/src/app.ts` 中未见对应 router 注册，链路状态不应判定为“已承接后端”。
-2. 管理后台营销和内容治理主列表页已大面积接入真实接口，但弹幕管理仍缺真实持久化链路，页面级专项测试也仍不足。
+2. 管理后台营销和内容治理主列表页已大面积接入真实接口，但页面级专项测试也仍不足。
 3. 当前 workspace `typecheck` 已通过；本轮已收掉 `apps/admin` 角色页和 `apps/api` 订单路由的类型错误。

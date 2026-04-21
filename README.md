@@ -43,13 +43,19 @@
 
 - workspace 已完成初始化并通过 `pnpm typecheck`
 - `apps/api` 已从最小骨架推进到多模块真实读写，Swagger 入口为 `/docs`
+- `apps/web` 当前保留 `46` 个正式页面入口；旧的 `/detail / product-detail / post-detail / live / profile / user-profile / my-orders / all-features / myshop / shop-detail / chat-detail` 兼容壳已删除，后续只维护正式业务路由
 - `apps/web` 已覆盖旧静态页主要用户路径，`/`、`/ranking`、`/lives`、`mall / cart / me / community / user / friends / notifications / chat / shop / guess / product` 等高频页已多轮收口
 - `/search` 已切到独立搜索域，统一走 `/api/search`、`/api/search/hot`、`/api/search/suggest`，不再由页面自行拼商品和竞猜接口
+- `apps/web` 的一批高频重页面已收成“协调层 + 子组件”结构：`/community`、`/product/[id]`、`/post/[id]`、`/friends`、`/me`、`/payment`、`/community-search`、`/my-shop`、`/create-user`、`/novice-guess`、`/search`、`/user/[uid]`、`/shop/[id]`
 - `apps/admin` 已完成路由拆分、单页单文件收口和按业务 API 拆分，具备 `dashboard / users / products / guesses / orders / warehouse / system / marketing` 等页面骨架
+- `apps/admin/src/lib/api` 已收成按业务域子模块 + 薄 barrel 入口，`system / merchant / catalog` 不再是前端总接口文件
+- `apps/admin` 当前热点大页已大批收口成“页面协调层 + state/helper + 子组件”，`users / system-users / roles / warehouse / marketing-coupons / dashboard / rankings / guess-create / community-reports / shop-applies` 等页面已不再是 300+ / 400+ 行中心文件
 - `apps/admin` 当前菜单权限已按真实 `admin_permission.code` 做页面级控制，不再使用登录后整后台预加载或模块级粗粒度权限猜测
 - 后台权限目录当前采用“模块根权限 + 菜单叶子页权限”模型，叶子页权限与实际后台菜单页一一对应
 - 共享权限目录由 `packages/shared/src/admin-permissions.ts` 维护，应用层会同步到 `admin_permission`
-- `packages/shared` 已抽出领域类型、状态枚举和 API 契约
+- `apps/api/src/modules/admin` 已从超大 router/service 文件继续拆到按业务域模块组织，`system / merchant / products / coupons / guesses / orders / content` 目前都已收成薄入口 + 领域文件
+- `packages/shared` 已抽出领域类型、状态枚举和 API 契约，`api.ts` 已降为薄导出层
+- `apps/admin` 当前已从“架构大拆阶段”转入“运行质量和回归验证阶段”，后续重点不再是机械拆页面，而是关键链路回归、包体积治理和防止重新聚合
 
 ## 已落地模块
 
@@ -200,6 +206,12 @@
 - Permissions
 - Categories
 
+当前后台架构判断：
+
+- `apps/admin` 整体架构已通过，不再存在总页面数据壳、总接口文件或单个 500+ / 800+ 行页面中心文件
+- `apps/admin` 当前共有 `35` 个页面文件；最大的页面已降到 `286` 行
+- 剩余可继续优化的页面是局部热点，不再是架构层阻塞
+
 当前权限模型：
 
 - 后台登录账号基于独立 `admin_user / admin_role / admin_permission` RBAC 体系
@@ -231,6 +243,10 @@ pnpm --filter @umi/admin dev
 - 资金、订单、竞猜、仓库链路优先于次要功能
 - `apps/api` 的在线调试入口统一使用 `/docs`
 - 新增或修改 API 时，同步更新 `apps/api/src/routes/openapi/` 对应模块和装配入口
+- `apps/admin/src/lib/api` 不允许继续长成跨域总接口文件；允许薄 barrel，实际请求函数必须按业务域拆分
+- `apps/admin` 页面不允许继续把列表、详情抽屉、表单弹窗、动作状态长期堆在同一个 600+ / 800+ 文件里；开始拆就要在同轮完成引用和类型收口
+- `apps/api/src/modules/admin` 不允许再回到“一个文件扛多个后台业务域”的状态；薄导出层允许保留，真实逻辑必须下沉到领域文件
+- `apps/admin` 当前已过架构收口基线，后续默认先做关键链路回归、构建体积治理和防回退约束；不要再为把 `250` 行页面拆到 `150` 行而机械扩散文件数量
 
 ## 下一阶段
 

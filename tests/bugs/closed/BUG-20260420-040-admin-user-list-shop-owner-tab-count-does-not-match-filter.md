@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -67,7 +67,7 @@
 | 修复说明 | 把“店主”标签计数、行级 `role` 和 `shop_owner` 后端过滤统一成“已认证店铺”口径，不再把仅有店铺名但未认证的用户算进店主结果。本轮又把前台展示文案从泛化的“店主”收成“认证店主”，让标签名称、行级角色和真实过滤语义一致。 |
 | 验证命令 | `cd /Users/ezreal/Downloads/joy/umi && pnpm --filter @umi/admin typecheck` |
 | Fixer 自测结果 | 通过。后台用户列表中的标签页和角色标签都已显示为“认证店主”，与当前已认证店铺口径一致。 |
-| Verifier 复测结果 | 待复测。上一版逻辑已统一，本轮继续收了残留展示文案。 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前后端 `shop_owner` 过滤、汇总统计和行级角色都已统一走 `shop_verified` 口径；前端标签与角色文案也已收口为“认证店主”，统计和展示语义一致。 |
 | 修复提交/变更 | [apps/api/src/modules/users/admin-store.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/users/admin-store.ts)、[apps/api/src/modules/users/model.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/users/model.ts)、[apps/admin/src/pages/users-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/users-page.tsx)、[apps/admin/src/lib/format.ts](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/format.ts) |
 
 ## Fixer

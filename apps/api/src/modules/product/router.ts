@@ -270,6 +270,10 @@ function sanitizeWarehouseRow(row: WarehouseRow): WarehouseItem {
   };
 }
 
+/**
+ * 读取单个商品的详情主数据。
+ * 这里只查详情页通用字段，不混入竞猜、仓库、收藏等派生数据。
+ */
 async function getProductById(productId: string) {
   const db = getDbPool();
   // Use text protocol here because LIMIT bind values have been flaky with prepared statements locally.
@@ -309,6 +313,10 @@ async function getProductById(productId: string) {
   return (rows[0] as ProductRow | undefined) ?? null;
 }
 
+/**
+ * 确认商品存在。
+ * 详情、收藏、加购等链路都先走这里，统一返回商品不存在错误。
+ */
 async function ensureProductExists(productId: string) {
   const product = await getProductById(productId);
   if (!product) {
@@ -317,6 +325,10 @@ async function ensureProductExists(productId: string) {
   return product;
 }
 
+/**
+ * 批量读取当前用户的商品收藏态。
+ * 商品列表和详情页都依赖这条链路回填 favorited 字段。
+ */
 async function getFavoritedProductIdSet(userId: string, productIds: string[]) {
   if (!productIds.length) {
     return new Set<string>();
@@ -338,6 +350,10 @@ async function getFavoritedProductIdSet(userId: string, productIds: string[]) {
   return new Set((rows as Array<{ product_id: number | string }>).map((row) => toEntityId(row.product_id)));
 }
 
+/**
+ * 新增商品收藏。
+ * 用 NOT EXISTS 保证幂等，避免重复点击插入重复收藏记录。
+ */
 async function favoriteProduct(userId: string, productId: string) {
   await ensureProductExists(productId);
   const db = getDbPool();
@@ -358,6 +374,10 @@ async function favoriteProduct(userId: string, productId: string) {
   return { success: true as const };
 }
 
+/**
+ * 取消商品收藏。
+ * 这里直接删关系，不额外要求商品仍然存在。
+ */
 async function unfavoriteProduct(userId: string, productId: string) {
   const db = getDbPool();
   await db.execute(
@@ -372,6 +392,10 @@ async function unfavoriteProduct(userId: string, productId: string) {
   return { success: true as const };
 }
 
+/**
+ * 读取商品当前可展示的竞猜活动。
+ * 只返回已审核且进行中的最新一场，避免详情页同时挂多场竞猜。
+ */
 async function getActiveGuess(productId: string, product: ProductRow): Promise<GuessSummary | null> {
   const db = getDbPool();
   const [guessRows] = await db.execute<mysql.RowDataPacket[]>(
@@ -456,6 +480,10 @@ async function getActiveGuess(productId: string, product: ProductRow): Promise<G
   };
 }
 
+/**
+ * 汇总当前用户与该商品相关的仓库资产。
+ * 这里把虚拟仓、实物仓和待发货履约单统一整理成详情页可直接消费的仓库列表。
+ */
 async function getWarehouseItems(userId: string, productId: string) {
   const db = getDbPool();
   const [virtualRows] = await db.execute<mysql.RowDataPacket[]>(
@@ -555,6 +583,10 @@ async function getWarehouseItems(userId: string, productId: string) {
   );
 }
 
+/**
+ * 读取详情页“猜你喜欢”。
+ * 目前优先按同品牌/同店铺回推荐，维持老详情页的推荐密度和相关性。
+ */
 async function getRecommendations(product: ProductRow) {
   const db = getDbPool();
   // Use text protocol here because LIMIT bind values have been flaky with prepared statements locally.
@@ -607,6 +639,10 @@ async function getRecommendations(product: ProductRow) {
   );
 }
 
+/**
+ * 读取最近商品评价。
+ * 本地测试库缺表时降级为空数组，避免评价子链路把详情页接口整体打成 500。
+ */
 async function getRecentProductReviews(productId: string) {
   const db = getDbPool();
   let rows: mysql.RowDataPacket[];
@@ -631,6 +667,7 @@ async function getRecentProductReviews(productId: string) {
     );
   } catch (error) {
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
+    // 本地测试库不一定补了 product_review；这里降级为空评价，不能把商品详情接口直接打成 500。
     if (code === 'ER_NO_SUCH_TABLE') {
       return [];
     }
@@ -647,6 +684,10 @@ async function getRecentProductReviews(productId: string) {
   }));
 }
 
+/**
+ * 读取商城商品分类池。
+ * 分类列表直接来自 category 主表，不再从首屏商品 feed 里反推。
+ */
 async function getProductCategories() {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(

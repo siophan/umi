@@ -1,32 +1,23 @@
 import type {
   AdminUserFilter,
-  GuessSummary,
-  OrderSummary,
   UserSummary,
 } from '@umi/shared';
-import type { TableColumnsType } from 'antd';
 import { ProTable } from '@ant-design/pro-components';
 
-import { Alert, Avatar, Card, ConfigProvider, Descriptions, Drawer, Form, Input, Table, Tag, Typography } from 'antd';
-import { Button, Empty, Spin, Tabs, message } from 'antd';
+import { ConfigProvider, Form, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
-import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { AdminUserDetailDrawer } from '../components/admin-user-detail-drawer';
+import { AdminUsersFilters } from '../components/admin-users-filters';
 import {
-  formatAmount,
-  formatDateTime,
-  formatNumber,
-  formatPercent,
-  guessStatusMeta,
-  orderStatusMeta,
-  roleMeta,
-} from '../lib/format';
+  buildUserColumns,
+  buildUserSummaryItems,
+  type UserSummaryCounts,
+  type UsersSearchFormValues,
+} from '../lib/admin-users';
+import { useAdminUserDetailState } from '../lib/admin-users-page';
 import {
   fetchAdminUsersPage,
-  fetchAdminUserDetail,
-  fetchAdminUserGuesses,
-  fetchAdminUserOrders,
-  updateAdminUserBan,
 } from '../lib/api/users';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
@@ -46,181 +37,65 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
   const [total, setTotal] = useState(0);
   const [phone, setPhone] = useState('');
   const [shopName, setShopName] = useState('');
-  const [summary, setSummary] = useState({
+  const [summary, setSummary] = useState<UserSummaryCounts>({
     totalUsers: 0,
     verifiedUsers: 0,
     bannedUsers: 0,
   });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailTab, setDetailTab] = useState('info');
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailSubmitting, setDetailSubmitting] = useState(false);
-  const [selected, setSelected] = useState<UserSummary | null>(null);
-  const [profileIssue, setProfileIssue] = useState<string | null>(null);
-  const [orderIssue, setOrderIssue] = useState<string | null>(null);
-  const [guessIssue, setGuessIssue] = useState<string | null>(null);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [guessesLoading, setGuessesLoading] = useState(false);
-  const [userOrders, setUserOrders] = useState<OrderSummary[]>([]);
-  const [userGuesses, setUserGuesses] = useState<GuessSummary[]>([]);
-  const [orderPage, setOrderPage] = useState(1);
-  const [orderPageSize, setOrderPageSize] = useState(10);
-  const [orderTotal, setOrderTotal] = useState(0);
-  const [guessPage, setGuessPage] = useState(1);
-  const [guessPageSize, setGuessPageSize] = useState(10);
-  const [guessTotal, setGuessTotal] = useState(0);
-  const [searchForm] = Form.useForm<{ keyword?: string; phone?: string; shopName?: string }>();
+  const [searchForm] = Form.useForm<UsersSearchFormValues>();
 
-  useEffect(() => {
-    if (!selectedId) {
-      setSelected(null);
-      setUserOrders([]);
-      setUserGuesses([]);
-      setProfileIssue(null);
-      setOrderIssue(null);
-      setGuessIssue(null);
-      setDetailTab('info');
-      setOrderPage(1);
-      setOrderPageSize(10);
-      setOrderTotal(0);
-      setGuessPage(1);
-      setGuessPageSize(10);
-      setGuessTotal(0);
-      return;
-    }
+  async function reloadUsers() {
+    const result = await fetchAdminUsersPage({
+      page,
+      pageSize,
+      keyword,
+      phone,
+      shopName,
+      role,
+    });
 
-    const currentSelectedId = selectedId;
-    let alive = true;
+    setListData(result.items);
+    setTotal(result.total);
+    setSummary(result.summary);
+    setListIssue(null);
+  }
 
-    setSelected(null);
-    setUserOrders([]);
-    setUserGuesses([]);
-    setProfileIssue(null);
-    setOrderIssue(null);
-    setGuessIssue(null);
-    setDetailTab('info');
-    setOrderTotal(0);
-    setGuessTotal(0);
+  const {
+    selectedId,
+    detailTab,
+    detailLoading,
+    detailSubmitting,
+    selected,
+    detailIssue,
+    orderIssue,
+    guessIssue,
+    ordersLoading,
+    guessesLoading,
+    userOrders,
+    userGuesses,
+    orderPage,
+    orderPageSize,
+    orderTotal,
+    guessPage,
+    guessPageSize,
+    guessTotal,
+    setSelectedId,
+    setDetailTab,
+    handleToggleBan,
+    handleOrderPageChange,
+    handleGuessPageChange,
+  } = useAdminUserDetailState({
+    onUserBanUpdated: reloadUsers,
+    onBanSuccess: (banned) => {
+      messageApi.success(banned ? '已封禁该用户' : '已解除封禁');
+    },
+    onBanError: (error) => {
+      messageApi.error(error instanceof Error ? error.message : '操作失败');
+    },
+  });
 
-    async function loadUserDetail() {
-      setDetailLoading(true);
-      setProfileIssue(null);
-      try {
-        const userResult = await fetchAdminUserDetail(currentSelectedId);
-
-        if (!alive) {
-          return;
-        }
-
-        setSelected(userResult);
-        setOrderTotal(userResult.totalOrders ?? 0);
-        setGuessTotal(userResult.totalGuess ?? 0);
-      } catch (error) {
-        if (!alive) {
-          return;
-        }
-        setSelected(null);
-        setProfileIssue(error instanceof Error ? error.message : '用户详情加载失败');
-      } finally {
-        if (alive) {
-          setDetailLoading(false);
-        }
-      }
-    }
-
-    void loadUserDetail();
-
-    return () => {
-      alive = false;
-    };
-  }, [selectedId]);
-
-  useEffect(() => {
-    if (!selectedId) {
-      return;
-    }
-
-    const currentSelectedId = selectedId;
-    let alive = true;
-
-    async function loadOrders() {
-      setOrdersLoading(true);
-      setOrderIssue(null);
-      try {
-        const result = await fetchAdminUserOrders(currentSelectedId, {
-          page: orderPage,
-          pageSize: orderPageSize,
-        });
-        if (!alive) {
-          return;
-        }
-        setUserOrders(result.items);
-        setOrderTotal(result.total);
-      } catch (error) {
-        if (!alive) {
-          return;
-        }
-        setUserOrders([]);
-        setOrderIssue(error instanceof Error ? `订单记录：${error.message}` : '订单记录加载失败');
-      } finally {
-        if (alive) {
-          setOrdersLoading(false);
-        }
-      }
-    }
-
-    void loadOrders();
-
-    return () => {
-      alive = false;
-    };
-  }, [orderPage, orderPageSize, selectedId]);
-
-  useEffect(() => {
-    if (!selectedId) {
-      return;
-    }
-
-    const currentSelectedId = selectedId;
-    let alive = true;
-
-    async function loadGuesses() {
-      setGuessesLoading(true);
-      setGuessIssue(null);
-      try {
-        const result = await fetchAdminUserGuesses(currentSelectedId, {
-          page: guessPage,
-          pageSize: guessPageSize,
-        });
-        if (!alive) {
-          return;
-        }
-        setUserGuesses(result.items);
-        setGuessTotal(result.total);
-      } catch (error) {
-        if (!alive) {
-          return;
-        }
-        setUserGuesses([]);
-        setGuessIssue(error instanceof Error ? `竞猜记录：${error.message}` : '竞猜记录加载失败');
-      } finally {
-        if (alive) {
-          setGuessesLoading(false);
-        }
-      }
-    }
-
-    void loadGuesses();
-
-    return () => {
-      alive = false;
-    };
-  }, [guessPage, guessPageSize, selectedId]);
-
-  const detailIssue = useMemo(
-    () => [profileIssue, orderIssue, guessIssue].filter(Boolean).join('；'),
-    [guessIssue, orderIssue, profileIssue],
-  );
+  const columns = useMemo(() => buildUserColumns(setSelectedId), [setSelectedId]);
+  const statusItems = useMemo(() => buildUserSummaryItems(summary), [summary]);
 
   useEffect(() => {
     let alive = true;
@@ -228,15 +103,7 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
     async function loadUsers() {
       setListLoading(true);
       try {
-        const result = await fetchAdminUsersPage({
-          page,
-          pageSize,
-          keyword,
-          phone,
-          shopName,
-          role,
-        });
-
+        const result = await fetchAdminUsersPage({ page, pageSize, keyword, phone, shopName, role });
         if (!alive) {
           return;
         }
@@ -266,278 +133,15 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
     };
   }, [keyword, page, pageSize, phone, refreshToken, role, shopName]);
 
-  async function handleToggleBan() {
-    if (!selected) {
-      return;
-    }
-
-    setDetailSubmitting(true);
-    try {
-      const result = await updateAdminUserBan(selected.id, {
-        banned: !selected.banned,
-      });
-      setSelected((current) =>
-        current ? { ...current, banned: result.banned } : current,
-      );
-      messageApi.success(result.banned ? '已封禁该用户' : '已解除封禁');
-      const refreshed = await fetchAdminUsersPage({
-        page,
-        pageSize,
-        keyword,
-        phone,
-        shopName,
-        role,
-      });
-      setListData(refreshed.items);
-      setTotal(refreshed.total);
-      setSummary(refreshed.summary);
-    } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : '操作失败');
-    } finally {
-      setDetailSubmitting(false);
-    }
-  }
-
-  const orderColumns: TableColumnsType<OrderSummary> = [
-    {
-      title: '订单',
-      dataIndex: 'id',
-      render: (_, record) => (
-        <div>
-          <Typography.Text strong>#{record.id}</Typography.Text>
-          <Typography.Text style={{ display: 'block' }} type="secondary">
-            {record.guessTitle ?? record.items[0]?.productName ?? '普通订单'}
-          </Typography.Text>
-        </div>
-      ),
-    },
-    {
-      title: '金额',
-      dataIndex: 'amount',
-      render: (value: number) => formatAmount(Math.round(value * 100)),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      render: (value: OrderSummary['status']) => (
-        <Tag color={orderStatusMeta[value].color}>
-          {orderStatusMeta[value].label}
-        </Tag>
-      ),
-    },
-    {
-      title: '时间',
-      dataIndex: 'createdAt',
-      render: (value) => formatDateTime(value),
-    },
-  ];
-
-  const guessColumns: TableColumnsType<GuessSummary> = [
-    {
-      title: '竞猜',
-      dataIndex: 'title',
-      render: (_, record) => (
-        <div>
-          <Typography.Text strong>{record.title}</Typography.Text>
-          <Typography.Text style={{ display: 'block' }} type="secondary">
-            {record.product.name}
-          </Typography.Text>
-        </div>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      render: (value: GuessSummary['status']) => (
-        <Tag color={guessStatusMeta[value].color}>
-          {guessStatusMeta[value].label}
-        </Tag>
-      ),
-    },
-    {
-      title: '分类',
-      dataIndex: 'category',
-    },
-    {
-      title: '截止',
-      dataIndex: 'endTime',
-      render: (value) => formatDateTime(value),
-    },
-  ];
-
-  const orderTabContent = orderIssue ? (
-    <Alert showIcon type="warning" message="订单记录加载失败" description={orderIssue} />
-  ) : userOrders.length > 0 || ordersLoading ? (
-    <Table
-      columns={orderColumns}
-      dataSource={userOrders}
-      loading={ordersLoading}
-      pagination={{
-        current: orderPage,
-        pageSize: orderPageSize,
-        total: orderTotal,
-        showSizeChanger: true,
-        showTotal: (value) => `共 ${value} 条`,
-        pageSizeOptions: [10, 20, 50],
-        locale: {
-          items_per_page: '条/页',
-        },
-        onChange: (nextPage, nextPageSize) => {
-          if (nextPageSize !== orderPageSize) {
-            setOrderPage(1);
-            setOrderPageSize(nextPageSize);
-            return;
-          }
-          setOrderPage(nextPage);
-        },
-      }}
-      rowKey="id"
-      size="small"
-    />
-  ) : (
-    <Empty description="暂无订单记录" />
-  );
-
-  const guessTabContent = guessIssue ? (
-    <Alert showIcon type="warning" message="竞猜记录加载失败" description={guessIssue} />
-  ) : userGuesses.length > 0 || guessesLoading ? (
-    <Table
-      columns={guessColumns}
-      dataSource={userGuesses}
-      loading={guessesLoading}
-      pagination={{
-        current: guessPage,
-        pageSize: guessPageSize,
-        total: guessTotal,
-        showSizeChanger: true,
-        showTotal: (value) => `共 ${value} 条`,
-        pageSizeOptions: [10, 20, 50],
-        locale: {
-          items_per_page: '条/页',
-        },
-        onChange: (nextPage, nextPageSize) => {
-          if (nextPageSize !== guessPageSize) {
-            setGuessPage(1);
-            setGuessPageSize(nextPageSize);
-            return;
-          }
-          setGuessPage(nextPage);
-        },
-      }}
-      rowKey="id"
-      size="small"
-    />
-  ) : (
-    <Empty description="暂无竞猜记录" />
-  );
-
-  const columns: TableColumnsType<UserSummary> = [
-    {
-      title: '用户',
-      dataIndex: 'name',
-      render: (_, record) => (
-        <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
-          <Avatar src={record.avatar}>{record.name.slice(0, 1)}</Avatar>
-          <div>
-            <Typography.Text strong>{record.name}</Typography.Text>
-            <Typography.Text style={{ display: 'block' }} type="secondary">UID {record.uid}</Typography.Text>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: '手机号',
-      dataIndex: 'phone',
-    },
-    {
-      title: '角色',
-      dataIndex: 'role',
-      render: (value: UserSummary['role']) => (
-        <Tag color={roleMeta[value].color}>{roleMeta[value].label}</Tag>
-      ),
-    },
-    {
-      title: '等级',
-      dataIndex: 'level',
-      render: (_, record) =>
-        record.level ? (
-          <div>
-            <Typography.Text>Lv.{record.level}</Typography.Text>
-            <Typography.Text style={{ display: 'block' }} type="secondary">{record.title ?? '未设置头衔'}</Typography.Text>
-          </div>
-        ) : (
-          '-'
-        ),
-    },
-    {
-      title: '竞猜',
-      dataIndex: 'totalGuess',
-      render: (_, record) => (
-        <div>
-          <Typography.Text>{formatNumber(record.totalGuess ?? 0)} 场</Typography.Text>
-          <Typography.Text style={{ display: 'block' }} type="secondary">
-            胜率 {formatPercent(record.winRate)}
-          </Typography.Text>
-        </div>
-      ),
-    },
-    {
-      title: '店铺',
-      dataIndex: 'shopName',
-      render: (_, record) =>
-        record.shopName ? (
-          <div>
-            <Typography.Text>{record.shopName}</Typography.Text>
-            <Typography.Text style={{ display: 'block' }} type="secondary">
-              {record.shopVerified ? '已认证店铺' : '店铺资料待完善'}
-            </Typography.Text>
-          </div>
-        ) : (
-          <Typography.Text type="secondary">-</Typography.Text>
-        ),
-    },
-    {
-      title: '零钱',
-      dataIndex: 'coins',
-      render: (value: number) => formatAmount(value),
-    },
-    {
-      title: '状态',
-      dataIndex: 'banned',
-      render: (value: UserSummary['banned']) =>
-        value ? <Tag color="error">已封禁</Tag> : <Tag color="success">正常</Tag>,
-    },
-    {
-      title: '注册时间',
-      dataIndex: 'joinDate',
-      render: (value) => formatDateTime(value),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Button size="small" type="link" onClick={() => setSelectedId(record.id)}>
-          查看
-        </Button>
-      ),
-    },
-  ];
-
   return (
     <div className="page-stack">
       {contextHolder}
 
-      {listIssue ? (
-        <Alert
-          showIcon
-          type="warning"
-          message="用户列表加载失败"
-          description={listIssue}
-        />
-      ) : null}
-
-      <AdminSearchPanel
+      <AdminUsersFilters
         form={searchForm}
+        listIssue={listIssue}
+        role={role}
+        statusItems={statusItems}
         onSearch={() => {
           const values = searchForm.getFieldsValue();
           setKeyword(values.keyword ?? '');
@@ -553,28 +157,8 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
           setRole('all');
           setPage(1);
         }}
-      >
-        <Form.Item name="keyword">
-          <Input placeholder="昵称 / UID" allowClear />
-        </Form.Item>
-        <Form.Item name="phone">
-          <Input placeholder="手机号" allowClear />
-        </Form.Item>
-        <Form.Item name="shopName">
-          <Input placeholder="店铺名称" allowClear />
-        </Form.Item>
-      </AdminSearchPanel>
-
-      <AdminStatusTabs
-        activeKey={role}
-        items={[
-          { key: 'all', label: '全部', count: summary.totalUsers },
-          { key: 'user', label: '普通用户' },
-          { key: 'shop_owner', label: '认证店主', count: summary.verifiedUsers },
-          { key: 'banned', label: '已封禁', count: summary.bannedUsers },
-        ]}
-        onChange={(nextRole) => {
-          setRole(nextRole as AdminUserFilter);
+        onRoleChange={(nextRole) => {
+          setRole(nextRole);
           setPage(1);
         }}
       />
@@ -612,111 +196,31 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
         />
       </ConfigProvider>
 
-      <Drawer
+      <AdminUserDetailDrawer
         open={selectedId != null}
-        width={640}
-        title={selected?.name ?? '用户详情'}
+        selected={selected}
+        detailLoading={detailLoading}
+        detailSubmitting={detailSubmitting}
+        detailTab={detailTab}
+        detailIssue={detailIssue}
+        orderIssue={orderIssue}
+        guessIssue={guessIssue}
+        ordersLoading={ordersLoading}
+        guessesLoading={guessesLoading}
+        userOrders={userOrders}
+        userGuesses={userGuesses}
+        orderPage={orderPage}
+        orderPageSize={orderPageSize}
+        orderTotal={orderTotal}
+        guessPage={guessPage}
+        guessPageSize={guessPageSize}
+        guessTotal={guessTotal}
         onClose={() => setSelectedId(null)}
-      >
-        {detailLoading ? (
-          <div style={{ padding: '32px 0', textAlign: 'center' }}>
-            <Spin />
-          </div>
-        ) : selected ? (
-          <div style={{ display: 'grid', gap: 16, width: '100%' }}>
-            <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
-              <Avatar size={56} src={selected.avatar}>
-                {selected.name.slice(0, 1)}
-              </Avatar>
-              <div style={{ display: 'grid', gap: 2 }}>
-                <Typography.Text strong>{selected.name}</Typography.Text>
-                <Typography.Text type="secondary">
-                  {selected.phone}
-                </Typography.Text>
-              </div>
-              <div style={{ marginLeft: 'auto' }}>
-                <Button
-                  danger={!selected.banned}
-                  loading={detailSubmitting}
-                  onClick={() => void handleToggleBan()}
-                >
-                  {selected.banned ? '解除封禁' : '封禁用户'}
-                </Button>
-              </div>
-            </div>
-
-            {detailIssue ? (
-              <Alert
-                showIcon
-                type="warning"
-                message="部分详情加载失败"
-                description={detailIssue}
-              />
-            ) : null}
-
-            <Tabs
-              activeKey={detailTab}
-              onChange={setDetailTab}
-              items={[
-                {
-                  key: 'info',
-                  label: '基本信息',
-                  children: (
-                    <Descriptions column={1} size="small">
-                      <Descriptions.Item label="UID">{selected.uid}</Descriptions.Item>
-                      <Descriptions.Item label="角色">
-                        <Tag color={roleMeta[selected.role].color}>
-                          {roleMeta[selected.role].label}
-                        </Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="手机号">{selected.phone}</Descriptions.Item>
-                      <Descriptions.Item label="状态">
-                        {selected.banned ? (
-                          <Tag color="error">已封禁</Tag>
-                        ) : (
-                          <Tag color="success">正常</Tag>
-                        )}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="地区">{selected.region ?? '-'}</Descriptions.Item>
-                      <Descriptions.Item label="店铺">{selected.shopName ?? '-'}</Descriptions.Item>
-                      <Descriptions.Item label="余额">
-                        {formatAmount(selected.coins)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="粉丝 / 关注">
-                        {formatNumber(selected.followers ?? 0)} / {formatNumber(selected.following ?? 0)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="竞猜战绩">
-                        {formatNumber(selected.wins ?? 0)} / {formatNumber(selected.totalGuess ?? 0)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="订单记录">
-                        {formatNumber(selected.totalOrders ?? 0)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="猜中率">
-                        {formatPercent(selected.winRate)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="注册时间">
-                        {formatDateTime(selected.joinDate)}
-                      </Descriptions.Item>
-                    </Descriptions>
-                  ),
-                },
-                {
-                  key: 'orders',
-                  label: `订单记录 (${orderTotal})`,
-                  children: orderTabContent,
-                },
-                {
-                  key: 'guesses',
-                  label: `竞猜记录 (${guessTotal})`,
-                  children: guessTabContent,
-                },
-              ]}
-            />
-          </div>
-        ) : (
-          <Empty description="用户详情不存在" />
-        )}
-      </Drawer>
+        onToggleBan={handleToggleBan}
+        onTabChange={setDetailTab}
+        onOrderPageChange={handleOrderPageChange}
+        onGuessPageChange={handleGuessPageChange}
+      />
     </div>
   );
 }

@@ -1,91 +1,179 @@
-import type { GuessSummary } from '@umi/shared';
-import { Card, Descriptions, List, Tag, Typography } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
-
 import type { AdminCategoryItem } from '../lib/api/categories';
+import type { AdminProduct } from '../lib/api/catalog';
+import { Alert, ConfigProvider, Form, message } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { AdminGuessCreateBasicCard } from '../components/admin-guess-create-basic-card';
+import { AdminGuessCreateOptionsCard } from '../components/admin-guess-create-options-card';
+import { AdminGuessCreatePreviewCard } from '../components/admin-guess-create-preview-card';
+import { SEARCH_THEME } from '../components/admin-list-controls';
 import { fetchAdminCategories } from '../lib/api/categories';
-import type { AdminFriendGuessItem, AdminProduct } from '../lib/api/catalog';
-import { fetchAdminFriendGuesses, fetchAdminGuesses, fetchAdminProducts } from '../lib/api/catalog';
-import { guessReviewStatusMeta, guessStatusMeta } from '../lib/format';
+import { createAdminGuess, fetchAdminProducts } from '../lib/api/catalog';
+import {
+  buildGuessCategoryOptions,
+  buildGuessPreviewOptions,
+  GUESS_CREATE_INITIAL_VALUES,
+  toCreateGuessPayload,
+  type GuessCreateFormValues,
+} from '../lib/admin-guess-create';
 
 interface GuessCreatePageProps {
   refreshToken?: number;
 }
 
-interface GuessCreatePageData {
-  categories: AdminCategoryItem[];
-  friendGuesses: AdminFriendGuessItem[];
-  guesses: GuessSummary[];
-  products: AdminProduct[];
-}
-
-const emptyData: GuessCreatePageData = { categories: [], friendGuesses: [], guesses: [], products: [] };
-
 export function GuessCreatePage({ refreshToken = 0 }: GuessCreatePageProps) {
-  const [data, setData] = useState<GuessCreatePageData>(emptyData);
+  const [messageApi, contextHolder] = message.useMessage();
+  const [form] = Form.useForm<GuessCreateFormValues>();
   const [issue, setIssue] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [bootLoading, setBootLoading] = useState(false);
+  const [productLoading, setProductLoading] = useState(false);
+  const [categories, setCategories] = useState<AdminCategoryItem[]>([]);
+  const [productOptions, setProductOptions] = useState<AdminProduct[]>([]);
+  const productCacheRef = useRef<Record<string, AdminProduct>>({});
+
+  const selectedProductId = Form.useWatch('productId', form);
+  const optionValues = Form.useWatch('optionTexts', form);
 
   useEffect(() => {
     let alive = true;
-    async function loadPageData() {
+
+    async function loadBootstrap() {
+      setBootLoading(true);
       setIssue(null);
       try {
-        const [guesses, products, categories, friendGuesses] = await Promise.all([
-          fetchAdminGuesses().then((result) => result.items),
-          fetchAdminProducts({ page: 1, pageSize: 100 }).then((result) => result.items),
-          fetchAdminCategories().then((result) => result.items),
-          fetchAdminFriendGuesses().then((result) => result.items),
+        const [categoriesResult, productsResult] = await Promise.all([
+          fetchAdminCategories(),
+          fetchAdminProducts({ page: 1, pageSize: 20, status: 'active' }),
         ]);
-        if (!alive) return;
-        setData({ categories, friendGuesses, guesses, products });
+
+        if (!alive) {
+          return;
+        }
+
+        const guessCategories = categoriesResult.items.filter(
+          (item) => item.bizType === 'guess' && item.status === 'active',
+        );
+        setCategories(guessCategories);
+        setProductOptions(productsResult.items);
+        productCacheRef.current = productsResult.items.reduce<Record<string, AdminProduct>>(
+          (acc, item) => {
+            acc[item.id] = item;
+            return acc;
+          },
+          {},
+        );
       } catch (error) {
-        if (!alive) return;
-        setData(emptyData);
-        setIssue(error instanceof Error ? error.message : '创建竞猜页数据加载失败');
+        if (!alive) {
+          return;
+        }
+        setCategories([]);
+        setProductOptions([]);
+        setIssue(error instanceof Error ? error.message : '创建竞猜页加载失败');
+      } finally {
+        if (alive) {
+          setBootLoading(false);
+        }
       }
     }
-    void loadPageData();
+
+    void loadBootstrap();
+
     return () => {
       alive = false;
     };
   }, [refreshToken]);
 
-  const draftCount = data.guesses.filter((item) => item.reviewStatus === 'pending').length;
-  const guessCategories = useMemo(
-    () => data.categories.filter((item) => item.bizType === 'guess' && item.status === 'active'),
-    [data.categories],
+  const categoryOptions = useMemo(
+    () => buildGuessCategoryOptions(categories),
+    [categories],
   );
+
+  const selectedProduct = selectedProductId
+    ? productCacheRef.current[selectedProductId] ?? null
+    : null;
+
+  const previewOptions = useMemo(
+    () => buildGuessPreviewOptions(optionValues),
+    [optionValues],
+  );
+
+  async function loadProductOptions(keyword: string) {
+    setProductLoading(true);
+    try {
+      const result = await fetchAdminProducts({
+        page: 1,
+        pageSize: 20,
+        keyword: keyword.trim() || undefined,
+        status: 'active',
+      });
+      setProductOptions(result.items);
+      productCacheRef.current = result.items.reduce<Record<string, AdminProduct>>((acc, item) => {
+        acc[item.id] = item;
+        return acc;
+      }, productCacheRef.current);
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '商品搜索失败');
+    } finally {
+      setProductLoading(false);
+    }
+  }
+
+  async function handleSubmit() {
+    try {
+      const values = await form.validateFields();
+      setSubmitting(true);
+      await createAdminGuess(toCreateGuessPayload(values));
+      messageApi.success('竞猜已创建并发布');
+      window.location.hash = '#/guesses/list';
+    } catch (error) {
+      if (error instanceof Error) {
+        messageApi.error(error.message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="page-stack">
-      {issue ? <Card>{issue}</Card> : null}
-      <Card title="创建前检查">
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="商品池">{data.products.length > 0 ? '已接入' : '暂无商品'}</Descriptions.Item>
-          <Descriptions.Item label="可选分类">{guessCategories.length} 个</Descriptions.Item>
-          <Descriptions.Item label="审核待办">{draftCount} 条</Descriptions.Item>
-          <Descriptions.Item label="好友竞猜房间">{data.friendGuesses.length} 个</Descriptions.Item>
-        </Descriptions>
-      </Card>
-      <Card title="最近待处理竞猜">
-        <List
-          dataSource={data.guesses.slice(0, 8)}
-          renderItem={(record: GuessSummary) => (
-            <List.Item>
-              <div style={{ alignItems: 'flex-start', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <div>
-                  <Typography.Text strong>{record.title}</Typography.Text>
-                  <Typography.Text style={{ display: 'block' }} type="secondary">{record.product.name}</Typography.Text>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Tag color={guessStatusMeta[record.status].color}>{guessStatusMeta[record.status].label}</Tag>
-                  <Tag color={guessReviewStatusMeta[record.reviewStatus].color}>{guessReviewStatusMeta[record.reviewStatus].label}</Tag>
-                </div>
-              </div>
-            </List.Item>
-          )}
-        />
-      </Card>
+      {contextHolder}
+      {issue ? <Alert showIcon type="error" message={issue} /> : null}
+      <ConfigProvider theme={SEARCH_THEME}>
+        <Form<GuessCreateFormValues>
+          form={form}
+          layout="vertical"
+          initialValues={GUESS_CREATE_INITIAL_VALUES}
+        >
+          <AdminGuessCreateBasicCard
+            bootLoading={bootLoading}
+            categoryOptions={categoryOptions}
+            productLoading={productLoading}
+            productOptions={productOptions}
+            onProductSearch={(value) => {
+              void loadProductOptions(value);
+            }}
+            onProductFocus={() => {
+              if (productOptions.length === 0) {
+                void loadProductOptions('');
+              }
+            }}
+          />
+          <AdminGuessCreateOptionsCard bootLoading={bootLoading} />
+          <AdminGuessCreatePreviewCard
+            bootLoading={bootLoading}
+            previewOptions={previewOptions}
+            selectedProduct={selectedProduct}
+            submitting={submitting}
+            onSubmit={() => {
+              void handleSubmit();
+            }}
+            onBack={() => {
+              window.location.hash = '#/guesses/list';
+            }}
+          />
+        </Form>
+      </ConfigProvider>
     </div>
   );
 }

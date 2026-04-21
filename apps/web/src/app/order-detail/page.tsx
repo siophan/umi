@@ -7,6 +7,10 @@ import type { OrderDetailResult } from '@umi/shared';
 import { confirmOrder, fetchOrderDetail } from '../../lib/api/orders';
 import styles from './page.module.css';
 
+/**
+ * 生成订单详情页顶部状态横幅。
+ * 这里把真实订单状态收口成用户端固定的文案、说明和配色类。
+ */
 function getStatusMeta(order: OrderDetailResult | null) {
   if (!order) {
     return { text: '', desc: '', cls: 'shipped' };
@@ -29,6 +33,10 @@ function getStatusMeta(order: OrderDetailResult | null) {
   return { text: '待支付', desc: '等待支付完成', cls: 'shipped' };
 }
 
+/**
+ * 订单详情页主体。
+ * 数据来自真实订单详情接口，物流、地址、商品、日志都围绕同一条订单链展示。
+ */
 function OrderDetailPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -40,6 +48,10 @@ function OrderDetailPageInner() {
   useEffect(() => {
     let ignore = false;
 
+    /**
+     * 加载订单详情。
+     * 通过 ignore 避免路由切换后旧请求回写页面状态。
+     */
     async function load() {
       const orderId = searchParams.get('id');
       if (!orderId) {

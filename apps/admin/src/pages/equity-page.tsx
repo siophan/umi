@@ -1,83 +1,29 @@
 import type {
   AdminEquityAccountItem,
   AdminEquityLogItem,
-  AdjustAdminEquityPayload,
 } from '@umi/shared';
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import {
-  Alert,
-  Avatar,
-  Button,
-  ConfigProvider,
-  Descriptions,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Table,
-  Tag,
-  Typography,
-  message,
-} from 'antd';
-import type { TableColumnsType } from 'antd';
+import { Alert, ConfigProvider, Form, Input, message } from 'antd';
 import { useEffect, useState } from 'react';
 
+import { AdminEquityAdjustModal } from '../components/admin-equity-adjust-modal';
+import { AdminEquityDetailDrawer } from '../components/admin-equity-detail-drawer';
 import { AdminSearchPanel } from '../components/admin-list-controls';
+import {
+  type AdjustFormValues,
+  buildEquityColumns,
+  type EquityFilters,
+} from '../lib/admin-equity';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import {
   adjustAdminEquity,
   fetchAdminEquityAccounts,
   fetchAdminEquityDetail,
 } from '../lib/api/equity';
-import { formatAmount, formatDateTime } from '../lib/format';
 
 interface EquityPageProps {
   refreshToken?: number;
-}
-
-type EquityFilters = {
-  userId?: string;
-  userName?: string;
-  phone?: string;
-};
-
-type AdjustFormValues = {
-  subType: AdjustAdminEquityPayload['subType'];
-  amount: number;
-  note?: string;
-};
-
-const equitySubTypeOptions = [
-  { label: '类目权益金', value: 'category' },
-  { label: '换购权益金', value: 'exchange' },
-  { label: '通兑资产', value: 'general' },
-] as const;
-
-const equityLogTypeMeta: Record<AdminEquityLogItem['type'], { color: string; label: string }> = {
-  grant: { color: 'success', label: '发放' },
-  use: { color: 'warning', label: '使用' },
-  expire: { color: 'error', label: '过期' },
-  adjust: { color: 'processing', label: '调整' },
-  unknown: { color: 'default', label: '未知' },
-};
-
-const equitySubTypeLabel: Record<NonNullable<AdminEquityLogItem['subType']>, string> = {
-  category: '类目权益金',
-  exchange: '换购权益金',
-  general: '通兑资产',
-};
-
-function formatEquitySource(sourceType: number | null) {
-  if (sourceType === 40) {
-    return '后台调账';
-  }
-  if (sourceType == null) {
-    return '-';
-  }
-  return `来源类型 ${sourceType}`;
 }
 
 export function EquityPage({ refreshToken = 0 }: EquityPageProps) {
@@ -242,141 +188,10 @@ export function EquityPage({ refreshToken = 0 }: EquityPageProps) {
     }
   }
 
-  const columns: ProColumns<AdminEquityAccountItem>[] = [
-    {
-      title: '用户',
-      width: 220,
-      render: (_, record) => (
-        <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
-          <Avatar src={record.avatarUrl}>{record.userName?.slice(0, 1) || 'U'}</Avatar>
-          <div>
-            <Typography.Text strong>{record.userName || record.userId}</Typography.Text>
-            <Typography.Text style={{ display: 'block' }} type="secondary">
-              {record.userId}
-            </Typography.Text>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: '手机号',
-      dataIndex: 'phoneNumber',
-      width: 140,
-      render: (_, record) => record.phoneNumber || '-',
-    },
-    {
-      title: '类目权益金',
-      dataIndex: 'categoryAmount',
-      width: 120,
-      render: (_, record) => formatAmount(record.categoryAmount),
-    },
-    {
-      title: '换购权益金',
-      dataIndex: 'exchangeAmount',
-      width: 120,
-      render: (_, record) => formatAmount(record.exchangeAmount),
-    },
-    {
-      title: '通兑资产',
-      dataIndex: 'generalAmount',
-      width: 120,
-      render: (_, record) => formatAmount(record.generalAmount),
-    },
-    {
-      title: '总余额',
-      dataIndex: 'totalBalance',
-      width: 120,
-      render: (_, record) => <Typography.Text strong>{formatAmount(record.totalBalance)}</Typography.Text>,
-    },
-    {
-      title: '累计发放',
-      dataIndex: 'totalGranted',
-      width: 120,
-      render: (_, record) => formatAmount(record.totalGranted),
-    },
-    {
-      title: '累计使用',
-      dataIndex: 'totalUsed',
-      width: 120,
-      render: (_, record) => formatAmount(record.totalUsed),
-    },
-    {
-      title: '累计过期',
-      dataIndex: 'totalExpired',
-      width: 120,
-      render: (_, record) => formatAmount(record.totalExpired),
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      width: 180,
-      render: (_, record) => formatDateTime(record.updatedAt),
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 140,
-      fixed: 'right',
-      valueType: 'option',
-      render: (_, record) => [
-        <Button key="view" size="small" type="link" onClick={() => openDetail(record)}>
-          查看
-        </Button>,
-        <Button key="adjust" size="small" type="link" onClick={() => openAdjust(record)}>
-          调账
-        </Button>,
-      ],
-    },
-  ];
-
-  const logColumns: TableColumnsType<AdminEquityLogItem> = [
-    {
-      title: '时间',
-      dataIndex: 'createdAt',
-      width: 160,
-      render: (_, record) => formatDateTime(record.createdAt),
-    },
-    {
-      title: '类型',
-      dataIndex: 'type',
-      width: 100,
-      render: (_, record) => (
-        <Tag color={equityLogTypeMeta[record.type].color}>{equityLogTypeMeta[record.type].label}</Tag>
-      ),
-    },
-    {
-      title: '子账户',
-      dataIndex: 'subType',
-      width: 120,
-      render: (_, record) => (record.subType ? equitySubTypeLabel[record.subType] : '-'),
-    },
-    {
-      title: '金额',
-      dataIndex: 'amount',
-      width: 120,
-      render: (_, record) => {
-        const color = record.amount < 0 ? 'danger' : undefined;
-        return <Typography.Text type={color}>{formatAmount(record.amount)}</Typography.Text>;
-      },
-    },
-    {
-      title: '变动后余额',
-      dataIndex: 'balance',
-      width: 130,
-      render: (_, record) => formatAmount(record.balance),
-    },
-    {
-      title: '来源',
-      dataIndex: 'sourceType',
-      width: 120,
-      render: (_, record) => formatEquitySource(record.sourceType),
-    },
-    {
-      title: '备注',
-      dataIndex: 'note',
-      render: (_, record) => record.note || '-',
-    },
-  ];
+  const columns: ProColumns<AdminEquityAccountItem>[] = buildEquityColumns({
+    onAdjust: (record) => openAdjust(record),
+    onView: (record) => openDetail(record),
+  });
 
   return (
     <div className="page-stack">
@@ -433,10 +248,12 @@ export function EquityPage({ refreshToken = 0 }: EquityPageProps) {
         />
       </ConfigProvider>
 
-      <Drawer
+      <AdminEquityDetailDrawer
+        detailIssue={detailIssue}
+        loading={detailLoading}
+        logs={detailLogs}
         open={detailOpen}
-        width={900}
-        title="权益金详情"
+        selectedAccount={selectedAccount}
         onClose={() => {
           setDetailOpen(false);
           setSelectedUserId(null);
@@ -444,71 +261,20 @@ export function EquityPage({ refreshToken = 0 }: EquityPageProps) {
           setDetailLogs([]);
           setDetailIssue(null);
         }}
-      >
-        {detailIssue ? <Alert showIcon type="error" message={detailIssue} /> : null}
-        {selectedAccount ? (
-          <div style={{ display: 'grid', gap: 16 }}>
-            <Descriptions column={2} size="small">
-              <Descriptions.Item label="用户">{selectedAccount.userName || selectedAccount.userId}</Descriptions.Item>
-              <Descriptions.Item label="用户 ID">{selectedAccount.userId}</Descriptions.Item>
-              <Descriptions.Item label="手机号">{selectedAccount.phoneNumber || '-'}</Descriptions.Item>
-              <Descriptions.Item label="总余额">{formatAmount(selectedAccount.totalBalance)}</Descriptions.Item>
-              <Descriptions.Item label="类目权益金">{formatAmount(selectedAccount.categoryAmount)}</Descriptions.Item>
-              <Descriptions.Item label="换购权益金">{formatAmount(selectedAccount.exchangeAmount)}</Descriptions.Item>
-              <Descriptions.Item label="通兑资产">{formatAmount(selectedAccount.generalAmount)}</Descriptions.Item>
-              <Descriptions.Item label="累计发放">{formatAmount(selectedAccount.totalGranted)}</Descriptions.Item>
-              <Descriptions.Item label="累计使用">{formatAmount(selectedAccount.totalUsed)}</Descriptions.Item>
-              <Descriptions.Item label="累计过期">{formatAmount(selectedAccount.totalExpired)}</Descriptions.Item>
-              <Descriptions.Item label="创建时间">{formatDateTime(selectedAccount.createdAt)}</Descriptions.Item>
-              <Descriptions.Item label="更新时间">{formatDateTime(selectedAccount.updatedAt)}</Descriptions.Item>
-            </Descriptions>
-            <Table
-              rowKey="id"
-              size="small"
-              loading={detailLoading}
-              columns={logColumns}
-              dataSource={detailLogs}
-              pagination={false}
-            />
-          </div>
-        ) : detailLoading ? null : null}
-      </Drawer>
+      />
 
-      <Modal
-        title={`调账 - ${adjustTarget?.userName || adjustTarget?.userId || ''}`}
+      <AdminEquityAdjustModal
+        form={adjustForm}
         open={adjustOpen}
-        onOk={() => void handleAdjustSubmit()}
+        submitting={adjustLoading}
+        title={`调账 - ${adjustTarget?.userName || adjustTarget?.userId || ''}`}
         onCancel={() => {
           setAdjustOpen(false);
           setAdjustTarget(null);
           adjustForm.resetFields();
         }}
-        confirmLoading={adjustLoading}
-        okText="确认调账"
-      >
-        <Form form={adjustForm} layout="vertical">
-          <Form.Item
-            name="subType"
-            label="子账户类型"
-            rules={[{ required: true, message: '请选择子账户类型' }]}
-          >
-            <Select options={equitySubTypeOptions as unknown as { label: string; value: string }[]} />
-          </Form.Item>
-          <Form.Item
-            name="amount"
-            label="金额（正数增加，负数扣减）"
-            rules={[{ required: true, message: '请输入金额' }]}
-          >
-            <InputNumber
-              precision={2}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-          <Form.Item name="note" label="备注">
-            <Input.TextArea rows={3} placeholder="请输入调账原因" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onSubmit={() => void handleAdjustSubmit()}
+      />
     </div>
   );
 }

@@ -113,6 +113,7 @@ export interface GuessSummary {
   title: string;
   status: GuessStatus;
   reviewStatus: GuessReviewStatus;
+  categoryId?: CategoryId | null;
   category: string;
   endTime: string;
   creatorId: UserId;

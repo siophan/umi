@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import type { CommunityFeedItem, UserSearchItem } from '@umi/shared';
@@ -8,97 +8,17 @@ import type { CommunityFeedItem, UserSearchItem } from '@umi/shared';
 import { fetchCommunityDiscovery, searchCommunity } from '../../lib/api/community';
 import { followUser, searchUsers, unfollowUser } from '../../lib/api/users';
 import { hasAuthToken } from '../../lib/api/shared';
+import { CommunitySearchDefaultView } from './default-view';
+import { CommunitySearchResultsView } from './results-view';
+import {
+  HISTORY_KEY,
+  highlight,
+  postType,
+  searchFilters,
+  type HotSearchItem,
+  type SearchFilter,
+} from './page-helpers';
 import styles from './page.module.css';
-
-type SearchFilter = 'all' | 'post' | 'guess' | 'user';
-
-const HISTORY_KEY = 'cy_search_history';
-const filters = [
-  { key: 'all', label: '全部' },
-  { key: 'post', label: '动态' },
-  { key: 'guess', label: '竞猜' },
-  { key: 'user', label: '猜友' },
-] as const;
-
-function formatNum(value: number) {
-  if (value >= 10000) {
-    return `${(value / 10000).toFixed(1)}万`;
-  }
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}k`;
-  }
-  return String(value);
-}
-
-function formatRelativeTime(value: string) {
-  const timestamp = new Date(value).getTime();
-  if (Number.isNaN(timestamp)) {
-    return '刚刚';
-  }
-
-  const diff = Date.now() - timestamp;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diff < minute) {
-    return '刚刚';
-  }
-  if (diff < hour) {
-    return `${Math.max(1, Math.floor(diff / minute))}分钟前`;
-  }
-  if (diff < day) {
-    return `${Math.max(1, Math.floor(diff / hour))}小时前`;
-  }
-  return `${Math.max(1, Math.floor(diff / day))}天前`;
-}
-
-function highlight(text: string, keyword: string) {
-  if (!keyword.trim()) {
-    return text;
-  }
-
-  const keywordLower = keyword.toLowerCase();
-  const pattern = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(pattern);
-
-  return parts.map((part, index) => (
-    part.toLowerCase() === keywordLower ? <em key={`${part}-${index}`}>{part}</em> : <Fragment key={`${part}-${index}`}>{part}</Fragment>
-  ));
-}
-
-function userDesc(user: UserSearchItem) {
-  if (user.shopVerified) {
-    return '品牌认证';
-  }
-  if ((user.winRate ?? 0) > 0) {
-    return `胜率${user.winRate}%`;
-  }
-  if ((user.followers ?? 0) > 0) {
-    return `${formatNum(user.followers ?? 0)}粉丝`;
-  }
-  return '猜友';
-}
-
-function postType(post: CommunityFeedItem): Exclude<SearchFilter, 'all' | 'user'> {
-  if (post.guessInfo) {
-    return 'guess';
-  }
-  return 'post';
-}
-
-function postTagClass(post: CommunityFeedItem) {
-  if (post.guessInfo || post.author.verified) {
-    return 'tagBrand';
-  }
-  if ((post.tag || '').includes('测评')) {
-    return 'tagHot';
-  }
-  if ((post.tag || '').includes('视频')) {
-    return 'tagLive';
-  }
-  return 'tagCommunity';
-}
 
 function CommunitySearchPageInner() {
   const router = useRouter();
@@ -120,7 +40,7 @@ function CommunitySearchPageInner() {
   const [searching, setSearching] = useState(false);
   const [followSavingId, setFollowSavingId] = useState('');
   const [toast, setToast] = useState('');
-  const [hotSearches, setHotSearches] = useState<Array<{ title: string; desc: string; tag: string; kind: 'hotFire' | 'hotNew' | 'hotBoom' }>>([]);
+  const [hotSearches, setHotSearches] = useState<HotSearchItem[]>([]);
   const [hotError, setHotError] = useState('');
   const [recommendError, setRecommendError] = useState('');
   const [searchError, setSearchError] = useState('');
@@ -426,7 +346,7 @@ function CommunitySearchPageInner() {
       </div>
 
       <div className={styles.filters}>
-        {filters.map((item) => (
+        {searchFilters.map((item) => (
           <button
             className={filter === item.key ? styles.filterActive : styles.filter}
             key={item.key}
@@ -439,242 +359,53 @@ function CommunitySearchPageInner() {
       </div>
 
       {!searchedQuery ? (
-        <div className={styles.defaultView}>
-          {!loggedIn ? (
-            <div className={styles.empty}>
-              <i className="fa-solid fa-user-lock" />
-              <div className={styles.emptyTitle}>登录后查看社区热搜和推荐关注</div>
-              <div className={styles.emptyDesc}>社区搜索支持搜动态、竞猜话题和猜友</div>
-              <button
-                className={styles.emptyRetry}
-                type="button"
-                onClick={() =>
-                  router.push(
-                    `/login?redirect=${encodeURIComponent(loginRedirect)}&action=${encodeURIComponent(authAction)}`,
-                  )
-                }
-              >
-                去登录
-              </button>
-            </div>
-          ) : null}
-
-          {loggedIn && searchHistory.length > 0 ? (
-            <section className={styles.section}>
-              <div className={styles.sectionTitle}>
-                <span><i className="fa-solid fa-clock-rotate-left" /></span> 搜索历史
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchHistory([]);
-                    window.localStorage.removeItem(HISTORY_KEY);
-                    showToast('搜索历史已清除');
-                  }}
-                >
-                  <i className="fa-solid fa-trash-can" /> 清除
-                </button>
-              </div>
-              <div className={styles.historyList}>
-                {searchHistory.map((item) => (
-                  <button className={styles.historyItem} key={item} type="button" onClick={() => doSearch(item)}>
-                    <i className="fa-solid fa-clock-rotate-left" />
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {loggedIn ? (
-          <section className={styles.section}>
-            <div className={styles.sectionTitle}>
-              <span><i className="fa-solid fa-fire" /></span> 热搜榜
-            </div>
-            {hotSearches.length ? (
-              <div className={styles.hotList}>
-                {hotSearches.map((item, index) => (
-                  <button className={styles.hotItem} key={item.title} type="button" onClick={() => doSearch(item.title)}>
-                    <div className={`${styles.hotRank} ${styles[`rank${index < 3 ? index + 1 : 4}` as const]}`}>
-                      {index + 1}
-                    </div>
-                    <div className={styles.hotText}>
-                      <div className={styles.hotItemTitle}>{item.title}</div>
-                      <div className={styles.hotItemDesc}>{item.desc}</div>
-                    </div>
-                    <span className={styles[item.kind]}>{item.tag}</span>
-                  </button>
-                ))}
-              </div>
-            ) : hotError ? (
-              <div className={styles.sectionIssue}>
-                <div className={styles.sectionIssueTitle}>热搜加载失败</div>
-                <div className={styles.sectionIssueDesc}>{hotError}</div>
-                <button className={styles.sectionRetry} type="button" onClick={() => setDiscoveryReloadToken((value) => value + 1)}>
-                  重试
-                </button>
-              </div>
-            ) : (
-              <div className={styles.sectionEmpty}>暂无热搜内容</div>
-            )}
-          </section>
-          ) : null}
-
-          {loggedIn ? (
-          <section className={styles.section}>
-            <div className={styles.sectionTitle}>
-              <span><i className="fa-solid fa-user-plus" /></span> 推荐关注
-            </div>
-            {ready && recommendedUsers.length ? (
-              <div className={styles.userScroll}>
-                {recommendedUsers.map((user) => {
-                  const followed = user.relation === 'friend' || user.relation === 'following';
-                  return (
-                    <button className={styles.userCard} key={user.id} type="button" onClick={() => router.push(`/user/${encodeURIComponent(user.uid)}`)}>
-                      <img src={user.avatar || '/legacy/images/mascot/mouse-main.png'} alt={user.name} />
-                      <div className={styles.userName}>
-                        {user.name}
-                        {user.shopVerified ? <i className="fa-solid fa-circle-check" /> : null}
-                      </div>
-                      <div className={styles.userDesc}>{userDesc(user)}</div>
-                      <span
-                        className={followed ? styles.followedBtn : styles.followBtn}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void toggleFollow(user);
-                        }}
-                      >
-                        {followSavingId === user.id ? '处理中' : followed ? '已关注' : '+ 关注'}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : recommendError ? (
-              <div className={styles.sectionIssue}>
-                <div className={styles.sectionIssueTitle}>推荐关注加载失败</div>
-                <div className={styles.sectionIssueDesc}>{recommendError}</div>
-                <button className={styles.sectionRetry} type="button" onClick={() => setDiscoveryReloadToken((value) => value + 1)}>
-                  重试
-                </button>
-              </div>
-            ) : (
-              <div className={styles.sectionEmpty}>暂无推荐用户</div>
-            )}
-          </section>
-          ) : null}
-        </div>
+        <CommunitySearchDefaultView
+          loggedIn={loggedIn}
+          searchHistory={searchHistory}
+          hotSearches={hotSearches}
+          hotError={hotError}
+          ready={ready}
+          recommendedUsers={recommendedUsers}
+          recommendError={recommendError}
+          followSavingId={followSavingId}
+          onLogin={() =>
+            router.push(
+              `/login?redirect=${encodeURIComponent(loginRedirect)}&action=${encodeURIComponent(authAction)}`,
+            )
+          }
+          onSearch={doSearch}
+          onClearHistory={() => {
+            setSearchHistory([]);
+            window.localStorage.removeItem(HISTORY_KEY);
+            showToast('搜索历史已清除');
+          }}
+          onRetryDiscovery={() => setDiscoveryReloadToken((value) => value + 1)}
+          onUserOpen={(uid) => router.push(`/user/${encodeURIComponent(uid)}`)}
+          onToggleFollow={(user) => {
+            void toggleFollow(user);
+          }}
+        />
       ) : (
-        <div className={styles.resultsView}>
-          {!loggedIn ? (
-            <div className={styles.empty}>
-              <i className="fa-solid fa-user-lock" />
-              <div className={styles.emptyTitle}>
-                登录后可查看“{searchedQuery}”相关内容
-              </div>
-              <div className={styles.emptyDesc}>社区搜索、热搜和推荐关注需要登录后使用</div>
-              <button
-                className={styles.emptyRetry}
-                type="button"
-                onClick={() =>
-                  router.push(
-                    `/login?redirect=${encodeURIComponent(loginRedirect)}&action=${encodeURIComponent(authAction)}`,
-                  )
-                }
-              >
-                去登录
-              </button>
-            </div>
-          ) : searching ? (
-            <div className={styles.empty}>
-              <i className="fa-solid fa-spinner fa-spin" />
-              <div className={styles.emptyTitle}>搜索中</div>
-              <div className={styles.emptyDesc}>正在查找相关内容...</div>
-            </div>
-          ) : searchError ? (
-            <div className={styles.empty}>
-              <i className="fa-solid fa-circle-exclamation" />
-              <div className={styles.emptyTitle}>搜索失败</div>
-              <div className={styles.emptyDesc}>{searchError}</div>
-              <button className={styles.emptyRetry} type="button" onClick={() => setSearchReloadToken((value) => value + 1)}>
-                重试
-              </button>
-            </div>
-          ) : (
-            <>
-              {filteredUsers.length ? (
-                <section className={styles.section}>
-                  <div className={styles.sectionTitle}>
-                    <span><i className="fa-solid fa-user" /></span> 相关猜友
-                  </div>
-                  <div className={styles.userScroll}>
-                    {filteredUsers.map((user) => {
-                      const followed = user.relation === 'friend' || user.relation === 'following';
-                      return (
-                        <button className={styles.userCard} key={user.id} type="button" onClick={() => router.push(`/user/${encodeURIComponent(user.uid)}`)}>
-                          <img src={user.avatar || '/legacy/images/mascot/mouse-main.png'} alt={user.name} />
-                          <div className={styles.userName}>
-                            {user.name}
-                            {user.shopVerified ? <i className="fa-solid fa-circle-check" /> : null}
-                          </div>
-                          <div className={styles.userDesc}>{userDesc(user)}</div>
-                          <span
-                            className={followed ? styles.followedBtn : styles.followBtn}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void toggleFollow(user);
-                            }}
-                          >
-                            {followSavingId === user.id ? '处理中' : followed ? '已关注' : '+ 关注'}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ) : null}
-
-              {filteredPosts.length ? filteredPosts.map((item) => (
-                <button className={styles.resultCard} key={item.id} type="button" onClick={() => router.push(`/post/${encodeURIComponent(item.id)}`)}>
-                  <div className={styles.resultAuthor}>
-                    <img src={item.author.avatar || '/legacy/images/mascot/mouse-main.png'} alt={item.author.name} />
-                    <div>
-                      <div className={styles.resultName}>
-                        {item.author.name}
-                        {item.author.verified ? <i className="fa-solid fa-circle-check" /> : null}
-                      </div>
-                      <div className={styles.resultTime}>{formatRelativeTime(item.createdAt)}</div>
-                    </div>
-                    <span className={`${styles.resultTag} ${styles[postTagClass(item)]}`}>{item.tag || '猜友动态'}</span>
-                  </div>
-                  <div className={styles.resultBody}>
-                    <div className={styles.resultTitle}>{highlight(item.title, searchedQuery)}</div>
-                    <div className={styles.resultDesc}>{item.desc}</div>
-                  </div>
-                  {item.images.length ? (
-                    <div className={`${styles.resultImages} ${styles[`img${item.images.length >= 3 ? 3 : item.images.length}` as const]}`}>
-                      {item.images.slice(0, 3).map((image) => (
-                        <img src={image} alt={item.title} key={image} />
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className={styles.resultActions}>
-                    <span><i className="fa-regular fa-heart" /> {formatNum(item.likes)}</span>
-                    <span><i className="fa-regular fa-comment" /> {formatNum(item.comments)}</span>
-                    <span><i className="fa-solid fa-share-nodes" /> {formatNum(item.shares)}</span>
-                  </div>
-                </button>
-              )) : null}
-
-              {!filteredPosts.length && !filteredUsers.length ? (
-                <div className={styles.empty}>
-                  <i className="fa-solid fa-magnifying-glass" />
-                  <div className={styles.emptyTitle}>未找到“{searchedQuery}”相关内容</div>
-                  <div className={styles.emptyDesc}>换个关键词试试吧~</div>
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
+        <CommunitySearchResultsView
+          loggedIn={loggedIn}
+          searchedQuery={searchedQuery}
+          searching={searching}
+          searchError={searchError}
+          filteredUsers={filteredUsers}
+          filteredPosts={filteredPosts}
+          followSavingId={followSavingId}
+          onLogin={() =>
+            router.push(
+              `/login?redirect=${encodeURIComponent(loginRedirect)}&action=${encodeURIComponent(authAction)}`,
+            )
+          }
+          onRetrySearch={() => setSearchReloadToken((value) => value + 1)}
+          onUserOpen={(uid) => router.push(`/user/${encodeURIComponent(uid)}`)}
+          onToggleFollow={(user) => {
+            void toggleFollow(user);
+          }}
+          onPostOpen={(postId) => router.push(`/post/${encodeURIComponent(postId)}`)}
+        />
       )}
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}

@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-093` |
 | `title` | 订单列表和交易流水把已转元金额再次按分格式化，金额会缩小 100 倍 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/orders/amount-format` |
 | `scope` | `admin` |
 | `page` | `#/orders/list` / `#/orders/transactions` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-orders-qa-2026-04-20.md` |
 | `fingerprint` | `admin-orders:double-divides-money-values` |
-| `fix_owner` |  |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -57,8 +57,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 统一订单后台金额单位契约，避免后端转元后前端再除一次。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 新增按“元”格式化的 `formatYuanAmount()`，订单列表、订单详情、交易流水都改成直接展示后端已转元的金额，不再把元值再除以 `100`。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin build`；`pnpm --filter @umi/api build` |
+| Fixer 自测结果 | 通过：订单列表、订单详情和交易流水金额统一按元显示，前后端类型检查和构建通过。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/admin/src/lib/format.ts](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/format.ts)；[apps/admin/src/lib/admin-orders.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-orders.tsx)；[apps/admin/src/pages/order-detail-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/order-detail-page.tsx)；[apps/admin/src/pages/order-transactions-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/order-transactions-page.tsx) |

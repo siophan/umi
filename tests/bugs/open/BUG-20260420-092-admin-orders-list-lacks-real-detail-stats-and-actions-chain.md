@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-092` |
 | `title` | 订单列表只剩摘要抽屉，丢失统计、真实详情、发货和退款审核链路 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/orders/detail-actions` |
 | `scope` | `admin` |
 | `page` | `#/orders/list` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-orders-qa-2026-04-20.md` |
 | `fingerprint` | `admin-orders:list-lacks-real-detail-stats-actions-chain` |
-| `fix_owner` |  |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -56,8 +56,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 恢复订单 stats、详情、发货和退款审核链路；未接通前不要把订单后台当作可操作闭环。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 已把订单“查看”改成真实详情子页 `#/orders/detail/:id`，并补齐 `GET /api/admin/orders/:id`、`PUT /api/admin/orders/:id/ship`、`PUT /api/admin/orders/:id/refund/review`、`PUT /api/admin/orders/:id/refund/complete`。订单详情页现在承接发货、退款审核和完成退款，不再依赖摘要抽屉。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin build`；`pnpm --filter @umi/api build` |
+| Fixer 自测结果 | 通过：订单列表已跳真实详情页，订单详情可执行发货、退款审核和完成退款，前后端类型检查和构建通过。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/admin/src/pages/orders-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/orders-page.tsx)；[apps/admin/src/pages/order-detail-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/order-detail-page.tsx)；[apps/api/src/modules/admin/order-actions.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/order-actions.ts)；[apps/api/src/modules/admin/routes/order-routes.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/routes/order-routes.ts) |

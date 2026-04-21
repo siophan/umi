@@ -10,48 +10,14 @@ import { fetchCoupons } from '../../lib/api/coupons';
 import { createOrder } from '../../lib/api/orders';
 import { fetchProductDetail } from '../../lib/api/products';
 import styles from './page.module.css';
+import { PaymentOrderSections } from './payment-order-sections';
+import { PaymentOverlays } from './payment-overlays';
+import { getCouponDiscount, getErrorMessage, type PaymentProduct } from './payment-helpers';
 
-type PaymentProduct = {
-  productId: string;
-  cartItemId?: string;
-  name: string;
-  price: number;
-  qty: number;
-  orig: number;
-  img: string;
-};
-
-function parseCouponCondition(condition: string) {
-  const match = condition.match(/(\d+(?:\.\d+)?)/);
-  return match ? Number(match[1]) : 0;
-}
-
-function getCouponDiscount(coupon: CouponListItem | null, subtotal: number) {
-  if (!coupon || coupon.status !== 'unused') {
-    return 0;
-  }
-
-  const threshold = parseCouponCondition(coupon.condition);
-  if (threshold > 0 && subtotal < threshold) {
-    return 0;
-  }
-
-  if (coupon.type === 'amount' || coupon.type === 'shipping') {
-    return Math.min(subtotal, coupon.amount);
-  }
-
-  if (coupon.type === 'percent') {
-    const rate = Math.max(0, Math.min(100, coupon.amount));
-    return Number(((subtotal * (100 - rate)) / 100).toFixed(2));
-  }
-
-  return 0;
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
+/**
+ * 支付页主体。
+ * 支持两条入口：商品详情直接购买，以及购物车勾选项结算。
+ */
 function PaymentPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,6 +44,10 @@ function PaymentPageInner() {
   useEffect(() => {
     let ignore = false;
 
+    /**
+     * 加载支付页首屏所需数据。
+     * 地址、优惠券、商品来源分开处理，避免一条弱依赖失败把整页拖垮。
+     */
     async function load() {
       setLoading(true);
       setAddressError(null);
@@ -204,6 +174,10 @@ function PaymentPageInner() {
     [coupons, subtotal],
   );
 
+  /**
+   * 创建真实订单。
+   * 购物车入口传 cartItemIds，商品入口传 productId + quantity，两条链路共用一个下单动作。
+   */
   async function submitOrder() {
     if (submitting) {
       return;
@@ -264,385 +238,74 @@ function PaymentPageInner() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.back} type="button" onClick={() => router.back()}>
-          <i className="fa-solid fa-arrow-left" />
-        </button>
-        <div className={styles.title}>确认订单</div>
-        <div className={styles.secure}>
-          <i className="fa-solid fa-shield-halved" /> 安全支付
-        </div>
-      </header>
-
-      {addressError ? (
-        <section className={`${styles.card} ${styles.errorCard}`}>
-          <div className={styles.errorTitle}>收货地址加载失败</div>
-          <div className={styles.errorDesc}>{addressError}</div>
-          <button className={styles.errorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
-            重新加载
-          </button>
-        </section>
-      ) : !selectedAddress ? (
-        <section className={`${styles.card} ${styles.addressCard}`}>
-          <div className={styles.addrBar} />
-          <button type="button" className={styles.addrRow} onClick={() => router.push('/address')}>
-            <div className={styles.addrIcon}>
-              <i className="fa-solid fa-location-dot" />
-            </div>
-            <div className={styles.addrInfo}>
-              <div className={styles.addrTop}>
-                <div className={styles.addrName}>{loading ? '正在加载地址' : '请先新增收货地址'}</div>
-              </div>
-              <div className={styles.addrDetail}>前往地址页添加真实收货地址后再提交订单</div>
-            </div>
-            <div className={styles.arrow}>
-              <i className="fa-solid fa-chevron-right" />
-            </div>
-          </button>
-        </section>
-      ) : (
-        <section className={`${styles.card} ${styles.addressCard}`}>
-          <div className={styles.addrBar} />
-          <button type="button" className={styles.addrRow} onClick={() => setAddrOpen(true)}>
-            <div className={styles.addrIcon}>
-              <i className="fa-solid fa-location-dot" />
-            </div>
-            <div className={styles.addrInfo}>
-              <div className={styles.addrTop}>
-                <div className={styles.addrName}>{selectedAddress.name}</div>
-                <div className={styles.addrPhone}>{selectedAddress.phone}</div>
-                {selectedAddress.tag ? <div className={styles.addrTag}>{selectedAddress.tag}</div> : null}
-              </div>
-              <div className={styles.addrDetail}>
-                {selectedAddress.province}
-                {selectedAddress.city}
-                {selectedAddress.district}
-                {selectedAddress.detail}
-              </div>
-            </div>
-            <div className={styles.arrow}>
-              <i className="fa-solid fa-chevron-right" />
-            </div>
-          </button>
-        </section>
-      )}
-
-      <section className={styles.card}>
-        <div className={styles.sectionTitle}>
-          <i className="fa-solid fa-bag-shopping" /> 商品信息
-        </div>
-        {products.length === 1 && products[0] ? (
-          <div className={styles.productPoster}>
-            <img alt={products[0].name} src={products[0].img} />
-            <span className={styles.productPosterTag}>真实商品</span>
-          </div>
-        ) : null}
-        {products.map((item, index) => (
-          <div className={styles.productRow} key={`${item.productId}-${index}`}>
-            {index > 0 ? <div className={styles.divider} /> : null}
-            <img alt={item.name} className={styles.productImg} src={item.img} />
-            <div className={styles.productInfo}>
-              <div className={styles.productName}>{item.name}</div>
-              <div className={styles.productTags}>
-                <span className={styles.tagBrand}>真实订单</span>
-                <span className={styles.tag}>正品保障</span>
-              </div>
-              <div className={styles.productBottom}>
-                <div>
-                  <span className={styles.price}>¥ {item.price.toFixed(2)}</span>
-                  <span className={styles.orig}>¥ {item.orig.toFixed(2)}</span>
-                </div>
-                <div className={styles.qty}>×{item.qty}</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.sectionTitle}>
-          <i className="fa-solid fa-truck-fast" /> 配送信息
-        </div>
-        <div className={styles.detailRow}>
-          <i className="fa-solid fa-truck" />
-          <span className={styles.detailLabel}>配送方式</span>
-          <strong className={styles.detailValue}>普通快递</strong>
-        </div>
-        <div className={styles.detailRow}>
-          <i className="fa-regular fa-clock" />
-          <span className={styles.detailLabel}>预计送达</span>
-          <strong className={`${styles.detailValue} ${styles.green}`}>支付后尽快发货</strong>
-        </div>
-        <div className={styles.detailRow}>
-          <i className="fa-solid fa-box-open" />
-          <span className={styles.detailLabel}>运费</span>
-          <strong className={`${styles.detailValue} ${styles.green}`}>包邮</strong>
-        </div>
-      </section>
-
-      <section className={styles.card}>
-        {couponError ? (
-          <div className={styles.inlineError}>
-            <div>
-              <div className={styles.inlineErrorTitle}>优惠券加载失败</div>
-              <div className={styles.inlineErrorDesc}>{couponError}</div>
-            </div>
-            <button className={styles.inlineErrorBtn} type="button" onClick={() => setReloadToken((current) => current + 1)}>
-              重试
-            </button>
-          </div>
-        ) : (
-          <button className={styles.couponRow} type="button" onClick={() => setCouponOpen(true)}>
-            <div className={styles.couponLeft}>
-              <i className="fa-solid fa-ticket" />
-              优惠券
-              <span className={styles.couponBadge}>{availableCoupons.length}张可用</span>
-            </div>
-            <div className={styles.couponRight}>
-              <span>{selectedCoupon ? `-¥ ${couponValue.toFixed(2)}` : '不使用'}</span>
-              <i className="fa-solid fa-chevron-right" />
-            </div>
-          </button>
-        )}
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.sectionTitle}>
-          <i className="fa-solid fa-credit-card" /> 支付方式
-        </div>
-        <button type="button" className={`${styles.pm} ${method === 'wechat' ? styles.pmActive : ''}`} onClick={() => setMethod('wechat')}>
-          <div className={styles.pmIcon} style={{ background: '#07C160' }}>
-            <i className="fa-brands fa-weixin" />
-          </div>
-          <div className={styles.pmInfo}>
-            <div className={styles.pmName}>微信支付</div>
-            <div className={styles.pmDesc}>提交后直接落真实订单</div>
-          </div>
-          <div className={styles.pmCheck}>✓</div>
-        </button>
-        <button type="button" className={`${styles.pm} ${method === 'alipay' ? styles.pmActive : ''}`} onClick={() => setMethod('alipay')}>
-          <div className={styles.pmIcon} style={{ background: '#1677ff' }}>
-            <i className="fa-brands fa-alipay" />
-          </div>
-          <div className={styles.pmInfo}>
-            <div className={styles.pmName}>支付宝</div>
-            <div className={styles.pmDesc}>提交后直接落真实订单</div>
-          </div>
-          <div className={styles.pmCheck}>✓</div>
-        </button>
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.sectionTitle}>
-          <i className="fa-solid fa-award" /> 服务保障
-        </div>
-        <div className={styles.services}>
-          {['正品保障', '破损包赔', '7天无理由', '安全支付', '真实订单'].map((item) => (
-            <div className={styles.serviceTag} key={item}>
-              <i className="fa-solid fa-circle-check" />
-              {item}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.sectionTitle}>
-          <i className="fa-regular fa-message" /> 订单备注
-        </div>
-        <textarea
-          className={styles.remarkInput}
-          rows={2}
-          placeholder="选填，备注特殊需求"
-          value={remark}
-          onChange={(event) => setRemark(event.target.value)}
-        />
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.sectionTitle}>
-          <i className="fa-solid fa-receipt" /> 价格明细
-        </div>
-        <div className={styles.priceRow}>
-          <span>商品金额</span>
-          <strong>¥ {subtotal.toFixed(2)}</strong>
-        </div>
-        <div className={styles.priceRow}>
-          <span>优惠金额</span>
-          <strong className={styles.discount}>-¥ {couponValue.toFixed(2)}</strong>
-        </div>
-        <div className={styles.priceRow}>
-          <span>运费</span>
-          <strong className={styles.green}>包邮</strong>
-        </div>
-        <div className={`${styles.priceRow} ${styles.totalRow}`}>
-          <span>实付金额</span>
-          <strong className={styles.total}>¥ {total.toFixed(2)}</strong>
-        </div>
-      </section>
-
-      <footer className={styles.bottom}>
-        <div>
-          <div className={styles.bottomLabel}>合计</div>
-          <div className={styles.bottomPrice}>
-            <small>¥</small>
-            {total.toFixed(2)}
-          </div>
-        </div>
-        <button
-          className={styles.payBtn}
-          type="button"
-          onClick={() => setPwdOpen(true)}
-          disabled={!products.length || !selectedAddress || Boolean(addressError) || submitting}
-        >
-          {submitting ? '提交中...' : '立即支付'}
-        </button>
-      </footer>
-
-      {addrOpen ? (
-        <div className={styles.overlay}>
-          <div className={styles.sheetBg} onClick={() => setAddrOpen(false)} />
-          <div className={styles.sheet}>
-            <div className={styles.sheetHead}>
-              <div className={styles.sheetTitle}>选择收货地址</div>
-              <button type="button" className={styles.sheetClose} onClick={() => setAddrOpen(false)}>×</button>
-            </div>
-            <div className={styles.sheetList}>
-              {addresses.map((item, index) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`${styles.addrItem} ${addressIndex === index ? styles.addrActive : ''}`}
-                  onClick={() => {
-                    setAddressIndex(index);
-                    setAddrOpen(false);
-                  }}
-                >
-                  <div className={styles.addrItemTop}>
-                    <span>{item.name}</span>
-                    <span>{item.phone}</span>
-                    {item.tag ? <span className={styles.addrMiniTag}>{item.tag}</span> : null}
-                  </div>
-                  <div className={styles.addrItemDetail}>{item.province}{item.city}{item.district}{item.detail}</div>
-                  <div className={styles.addrItemCheck}>{addressIndex === index ? '✓' : ''}</div>
-                </button>
-              ))}
-            </div>
-            <button className={styles.sheetAdd} type="button" onClick={() => router.push('/address')}>
-              + 管理收货地址
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {couponOpen ? (
-        <div className={styles.overlay}>
-          <div className={styles.sheetBg} onClick={() => setCouponOpen(false)} />
-          <div className={styles.sheet}>
-            <div className={styles.sheetHead}>
-              <div className={styles.sheetTitle}>选择优惠券</div>
-              <button type="button" className={styles.sheetClose} onClick={() => setCouponOpen(false)}>×</button>
-            </div>
-            <div className={styles.couponList}>
-              {availableCoupons.map((item) => {
-                const discount = getCouponDiscount(item, subtotal);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`${styles.couponItem} ${couponId === item.id ? styles.couponActive : ''}`}
-                    onClick={() => {
-                      setCouponId(item.id);
-                      setCouponOpen(false);
-                    }}
-                  >
-                    <div className={`${styles.couponFace} ${styles.red}`}>
-                      <div className={styles.couponVal}>¥{discount.toFixed(2)}</div>
-                      <div className={styles.couponSmall}>优惠券</div>
-                    </div>
-                    <div className={styles.couponInfo}>
-                      <div className={styles.couponName}>{item.name}</div>
-                      <div className={styles.couponCond}>{item.condition}</div>
-                      <div className={styles.couponExp}>有效期至 {item.expireAt ? item.expireAt.slice(0, 10) : '长期有效'}</div>
-                    </div>
-                    <div className={styles.couponCheck}>{couponId === item.id ? '✓' : ''}</div>
-                  </button>
-                );
-              })}
-              {!availableCoupons.length ? <div className={styles.sheetNotUse}>当前暂无可用优惠券</div> : null}
-            </div>
-            <div className={styles.sheetNotUse} onClick={() => { setCouponId(null); setCouponOpen(false); }}>
-              不使用优惠券
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {pwdOpen ? (
-        <div className={styles.passwordOverlay}>
-          <div className={styles.sheetBg} onClick={() => !submitting && setPwdOpen(false)} />
-          <div className={styles.passwordSheet}>
-            <div className={styles.sheetHead}>
-              <div className={styles.sheetTitle}>请输入支付密码</div>
-              <button type="button" className={styles.sheetClose} onClick={() => !submitting && setPwdOpen(false)}>×</button>
-            </div>
-            <div className={styles.payAmount}>
-              <div className={styles.payAmountLabel}>{method === 'wechat' ? '微信支付' : '支付宝'}</div>
-              <div className={styles.payAmountValue}>¥ {total.toFixed(2)}</div>
-            </div>
-            <div className={styles.pwdDots}>
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className={`${styles.pwdDot} ${pwd[index] ? styles.filled : ''}`}>
-                  {pwd[index] ? '•' : ''}
-                </div>
-              ))}
-            </div>
-            <div className={styles.keypad}>
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((key) => (
-                <button
-                  key={key || 'empty'}
-                  type="button"
-                  className={`${styles.key} ${key === '' ? styles.emptyKey : ''} ${key === '⌫' ? styles.delKey : ''}`}
-                  onClick={() => {
-                    if (submitting || key === '') return;
-                    if (key === '⌫') {
-                      setPwd((prev) => prev.slice(0, -1));
-                      return;
-                    }
-                    const next = `${pwd}${key}`.slice(0, 6);
-                    setPwd(next);
-                    if (next.length === 6) {
-                      void submitOrder();
-                    }
-                  }}
-                >
-                  {key}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {successOpen ? (
-        <div className={styles.successOverlay}>
-          <div className={styles.sheetBg} onClick={() => setSuccessOpen(false)} />
-          <div className={styles.successCard}>
-            <div className={styles.successIcon}>🎉</div>
-            <div className={styles.successTitle}>支付成功</div>
-            <div className={styles.successDesc}>真实订单已创建</div>
-            <button
-              type="button"
-              className={styles.payBtn}
-              onClick={() => router.push(createdOrderId ? `/order-detail?id=${encodeURIComponent(createdOrderId)}` : '/orders')}
-            >
-              查看订单
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {toast ? <div className={styles.successDesc} style={{ position: 'fixed', left: '50%', bottom: 110, transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.78)', color: '#fff', padding: '8px 14px', borderRadius: 999, zIndex: 400 }}>{toast}</div> : null}
+      <PaymentOrderSections
+        loading={loading}
+        addressError={addressError}
+        selectedAddress={selectedAddress}
+        products={products}
+        couponError={couponError}
+        availableCoupons={availableCoupons}
+        selectedCoupon={selectedCoupon}
+        couponValue={couponValue}
+        method={method}
+        remark={remark}
+        subtotal={subtotal}
+        total={total}
+        submitting={submitting}
+        canSubmit={Boolean(products.length && selectedAddress && !addressError && !submitting)}
+        onBack={() => router.back()}
+        onRetry={() => setReloadToken((current) => current + 1)}
+        onManageAddresses={() => router.push('/address')}
+        onAddressOpen={() => setAddrOpen(true)}
+        onCouponOpen={() => setCouponOpen(true)}
+        onMethodChange={setMethod}
+        onRemarkChange={setRemark}
+        onSubmit={() => setPwdOpen(true)}
+      />
+      <PaymentOverlays
+        addrOpen={addrOpen}
+        couponOpen={couponOpen}
+        pwdOpen={pwdOpen}
+        successOpen={successOpen}
+        toast={toast}
+        addresses={addresses}
+        addressIndex={addressIndex}
+        availableCoupons={availableCoupons}
+        couponId={couponId}
+        subtotal={subtotal}
+        method={method}
+        total={total}
+        pwd={pwd}
+        submitting={submitting}
+        createdOrderId={createdOrderId}
+        onAddressClose={() => setAddrOpen(false)}
+        onAddressSelect={(index) => {
+          setAddressIndex(index);
+          setAddrOpen(false);
+        }}
+        onCouponClose={() => setCouponOpen(false)}
+        onCouponSelect={(nextCouponId) => {
+          setCouponId(nextCouponId);
+          setCouponOpen(false);
+        }}
+        onPasswordClose={() => setPwdOpen(false)}
+        onPasswordKeyPress={(key) => {
+          if (submitting || key === '') {
+            return;
+          }
+          if (key === '⌫') {
+            setPwd((prev) => prev.slice(0, -1));
+            return;
+          }
+          const next = `${pwd}${key}`.slice(0, 6);
+          setPwd(next);
+          if (next.length === 6) {
+            void submitOrder();
+          }
+        }}
+        onSuccessClose={() => setSuccessOpen(false)}
+        onToastClear={() => setToast('')}
+      />
     </div>
   );
 }

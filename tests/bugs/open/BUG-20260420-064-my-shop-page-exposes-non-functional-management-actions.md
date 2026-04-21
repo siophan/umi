@@ -7,11 +7,11 @@
 | `bug_id` | `BUG-20260420-064` |
 | `title` | 我的店铺页暴露了未承接的店铺设置和商品管理操作 |
 | `severity` | `P1` |
-| `status` | `fixed_pending_verify` |
+| `status` | `verified` |
 | `area` | `shop/my-shop-actions` |
 | `page` | `/my-shop` |
 | `api` | `/api/shops/me` |
-| `owner` | `用户端全栈一` |
+| `owner` | `测试猫` |
 | `source_run` | `tests/reports/user-page-parity-round1-2026-04-20.md` |
 | `fingerprint` | `web-my-shop:non-functional-management-actions-exposed` |
 | `fix_owner` | `用户端全栈一` |
@@ -64,7 +64,7 @@
 | 修复说明 | 已把 `/my-shop` 成功态里未承接的管理动作降掉：右上角店铺设置按钮已移除，商品卡上的“编辑/下架”按钮已移除，并改成统一说明当前只开放查看与上架商品，避免再把 toast 演示态暴露成真实管理入口。 |
 | 验证命令 | `pnpm --filter @umi/web typecheck`；`pnpm --filter @umi/web build` |
 | Fixer 自测结果 | 通过。页面不再暴露会触发“尚未接入”toast 的店铺设置、商品编辑、商品上下架按钮，只保留真实可用动作。 |
-| Verifier 复测结果 | 待复核 |
+| Verifier 复测结果 | 通过。测试猫复核 [apps/web/src/app/my-shop/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/my-shop/page.tsx) 当前实现后确认，右上角未接线的“店铺设置”按钮已被店铺预览入口替换，商品卡上的“编辑 / 下架”按钮已移除，只保留“品牌授权”“上架商品”“数据统计”等当前真实可用动作；旧的 toast 级假经营操作点已不存在。 |
 | 修复提交/变更 | [apps/web/src/app/my-shop/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/my-shop/page.tsx)、[apps/web/src/app/my-shop/page.module.css](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/my-shop/page.module.css) |
 
 ## Director Re-review

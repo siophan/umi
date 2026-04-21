@@ -1,92 +1,53 @@
-import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import type { EntityId } from '@umi/shared';
-import {
-  Alert,
-  Button,
-  ConfigProvider,
-  Descriptions,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Tag,
-  Typography,
-  message,
-} from 'antd';
+import { Alert, Button, ConfigProvider, Form, Input, Select, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AdminBrandLibraryDetailDrawer } from '../components/admin-brand-library-detail-drawer';
+import { AdminBrandLibraryFormModal } from '../components/admin-brand-library-form-modal';
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import {
-  AdminSearchPanel,
-  AdminStatusTabs,
-  SEARCH_THEME,
-} from '../components/admin-list-controls';
+  buildBrandFilterOptions,
+  buildBrandIdOptions,
+  buildBrandLibraryColumns,
+  buildCategoryFilterOptions,
+  buildCategoryIdOptions,
+  buildCreateBrandProductFormValues,
+  buildEditBrandProductFormValues,
+  type BrandLibraryFilters,
+  type BrandProductFormValues,
+  EMPTY_BRAND_LIBRARY_DATA,
+  yuanToCents,
+  type BrandLibraryPageData,
+} from '../lib/admin-brand-library';
 import type { AdminBrandLibraryItem } from '../lib/api/catalog';
 import {
   createAdminBrandProduct,
   fetchAdminBrandLibrary,
   updateAdminBrandProduct,
 } from '../lib/api/catalog';
-import type { AdminCategoryItem } from '../lib/api/categories';
 import { fetchAdminCategories } from '../lib/api/categories';
-import type { AdminBrandItem } from '../lib/api/merchant';
 import { fetchAdminBrands } from '../lib/api/merchant';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
-import { buildOptions } from '../lib/admin-filter-options';
-import { formatAmount, formatDate, formatDateTime, formatNumber } from '../lib/format';
 
 interface BrandLibraryPageProps {
   refreshToken?: number;
-}
-
-interface BrandLibraryPageData {
-  brandLibrary: AdminBrandLibraryItem[];
-  brands: AdminBrandItem[];
-  categories: AdminCategoryItem[];
-}
-
-type BrandLibraryFilters = {
-  productName?: string;
-  brandName?: string;
-  category?: string;
-};
-
-type BrandProductFormValues = {
-  brandId: EntityId;
-  name: string;
-  categoryId: EntityId;
-  guidePriceYuan: number;
-  supplyPriceYuan?: number;
-  defaultImg?: string;
-  description?: string;
-  status: AdminBrandLibraryItem['status'];
-};
-
-const emptyData: BrandLibraryPageData = { brandLibrary: [], brands: [], categories: [] };
-
-function centsToYuan(value: number) {
-  return value / 100;
-}
-
-function yuanToCents(value?: number | null) {
-  if (value == null) {
-    return null;
-  }
-
-  return Math.round(value * 100);
 }
 
 export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
   const [messageApi, contextHolder] = message.useMessage();
   const [searchForm] = Form.useForm<BrandLibraryFilters>();
   const [brandProductForm] = Form.useForm<BrandProductFormValues>();
-  const [data, setData] = useState<BrandLibraryPageData>(emptyData);
+  const [data, setData] = useState<BrandLibraryPageData>(EMPTY_BRAND_LIBRARY_DATA);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
+  const [brandIssue, setBrandIssue] = useState<string | null>(null);
+  const [categoryIssue, setCategoryIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<BrandLibraryFilters>({});
   const [status, setStatus] = useState<'all' | AdminBrandLibraryItem['status']>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<AdminBrandLibraryItem | null>(null);
   const [editingItem, setEditingItem] = useState<AdminBrandLibraryItem | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -98,18 +59,47 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
     async function loadPageData() {
       setLoading(true);
       setIssue(null);
+      setBrandIssue(null);
+      setCategoryIssue(null);
       try {
-        const [brandLibrary, brands, categories] = await Promise.all([
-          fetchAdminBrandLibrary({ page: 1, pageSize: 100 }).then((result) => result.items),
+        const [brandLibraryResult, brandsResult, categoriesResult] = await Promise.allSettled([
+          fetchAdminBrandLibrary({
+            page,
+            pageSize,
+            keyword: filters.productName?.trim() || undefined,
+            status,
+            brandId: filters.brandId ? String(filters.brandId) : undefined,
+            categoryId: filters.categoryId ? String(filters.categoryId) : undefined,
+          }),
           fetchAdminBrands().then((result) => result.items),
           fetchAdminCategories().then((result) => result.items),
         ]);
         if (!alive) return;
-        setData({ brandLibrary, brands, categories });
-      } catch (error) {
-        if (!alive) return;
-        setData(emptyData);
-        setIssue(error instanceof Error ? error.message : '品牌商品加载失败');
+        setData({
+          brandLibrary: brandLibraryResult.status === 'fulfilled' ? brandLibraryResult.value.items : [],
+          brands: brandsResult.status === 'fulfilled' ? brandsResult.value : [],
+          categories: categoriesResult.status === 'fulfilled' ? categoriesResult.value : [],
+        });
+        setTotal(brandLibraryResult.status === 'fulfilled' ? brandLibraryResult.value.total : 0);
+        if (brandLibraryResult.status === 'rejected') {
+          setIssue(
+            brandLibraryResult.reason instanceof Error
+              ? brandLibraryResult.reason.message
+              : '品牌商品加载失败',
+          );
+        }
+        if (brandsResult.status === 'rejected') {
+          setBrandIssue(
+            brandsResult.reason instanceof Error ? brandsResult.reason.message : '品牌字典加载失败',
+          );
+        }
+        if (categoriesResult.status === 'rejected') {
+          setCategoryIssue(
+            categoriesResult.reason instanceof Error
+              ? categoriesResult.reason.message
+              : '商品分类加载失败',
+          );
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -118,151 +108,106 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
     return () => {
       alive = false;
     };
-  }, [actionSeed, refreshToken]);
+  }, [actionSeed, filters.brandId, filters.categoryId, filters.productName, page, pageSize, refreshToken, status]);
 
-  const brandOptions = useMemo(() => {
-    const activeBrands = data.brands
-      .filter((item) => item.status === 'active')
-      .map((item) => ({ label: item.name, value: item.name }));
-    if (activeBrands.length > 0) {
-      return activeBrands;
-    }
-    return buildOptions(data.brandLibrary, 'brandName');
-  }, [data.brandLibrary, data.brands]);
-  const categoryOptions = useMemo(() => {
-    const activeCategories = data.categories
-      .filter((item) => item.bizType === 'product' && item.status === 'active')
-      .map((item) => ({ label: item.name, value: item.name }));
-    if (activeCategories.length > 0) return activeCategories;
-    return buildOptions(data.brandLibrary, 'category');
-  }, [data.brandLibrary, data.categories]);
-  const brandIdOptions = useMemo(
-    () =>
-      data.brands
-        .filter((item) => item.status === 'active')
-        .map((item) => ({ label: item.name, value: item.id })),
-    [data.brands],
-  );
+  const brandOptions = useMemo(() => buildBrandFilterOptions(data), [data]);
+  const categoryOptions = useMemo(() => buildCategoryFilterOptions(data), [data]);
+  const brandIdOptions = useMemo(() => buildBrandIdOptions(data, editingItem), [data, editingItem]);
   const categoryIdOptions = useMemo(
-    () =>
-      data.categories
-        .filter((item) => item.bizType === 'product' && item.status === 'active')
-        .map((item) => ({ label: item.name, value: item.id })),
-    [data.categories],
+    () => buildCategoryIdOptions(data, editingItem),
+    [data, editingItem],
   );
-  const filteredRows = useMemo(
-    () =>
-      data.brandLibrary.filter((record) => {
-        if (status !== 'all' && record.status !== status) return false;
-        if (filters.productName && !record.productName.toLowerCase().includes(filters.productName.trim().toLowerCase())) return false;
-        if (filters.brandName && record.brandName !== filters.brandName) return false;
-        if (filters.category && record.category !== filters.category) return false;
-        return true;
-      }),
-    [data.brandLibrary, filters.brandName, filters.category, filters.productName, status],
-  );
-
-  const columns: ProColumns<AdminBrandLibraryItem>[] = [
-    {
-      title: '品牌商品',
-      width: 260,
-      render: (_, record) => (
-        <div>
-          <Typography.Text strong>{record.productName}</Typography.Text>
-          <Typography.Text style={{ display: 'block' }} type="secondary">{record.brandName}</Typography.Text>
-        </div>
-      ),
+  const columns = buildBrandLibraryColumns({
+    onEdit: (record) => {
+      brandProductForm.setFieldsValue(buildEditBrandProductFormValues(record));
+      setEditingItem(record);
+      setFormOpen(true);
     },
-    { title: '分类', dataIndex: 'category', width: 160, render: (_, record) => record.category || '-' },
-    { title: '指导价', dataIndex: 'guidePrice', width: 120, render: (_, record) => formatAmount(record.guidePrice) },
-    { title: '供货价', dataIndex: 'supplyPrice', width: 120, render: (_, record) => formatAmount(record.supplyPrice) },
-    { title: '挂载商品', dataIndex: 'productCount', width: 120, render: (_, record) => formatNumber(record.productCount) },
-    { title: '在售商品', dataIndex: 'activeProductCount', width: 120, render: (_, record) => formatNumber(record.activeProductCount) },
-    {
-      title: '状态',
-      width: 120,
-      render: (_, record) => <Tag color={record.status === 'active' ? 'success' : 'default'}>{record.status === 'active' ? '启用' : '停用'}</Tag>,
-    },
-    { title: '创建时间', dataIndex: 'createdAt', width: 120, render: (_, record) => formatDate(record.createdAt) },
-    { title: '更新时间', dataIndex: 'updatedAt', width: 180, render: (_, record) => formatDateTime(record.updatedAt) },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 140,
-      fixed: 'right',
-      valueType: 'option',
-      render: (_, record) => (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="small" type="link" onClick={() => setSelected(record)}>
-            查看
-          </Button>
-          <Button
-            size="small"
-            type="link"
-            onClick={() => {
-              brandProductForm.setFieldsValue({
-                brandId: record.brandId as EntityId,
-                name: record.productName,
-                categoryId: record.categoryId as EntityId,
-                guidePriceYuan: centsToYuan(record.guidePrice),
-                supplyPriceYuan: centsToYuan(record.supplyPrice),
-                defaultImg: record.imageUrl || undefined,
-                description: record.description || undefined,
-                status: record.status,
-              });
-              setEditingItem(record);
-              setFormOpen(true);
-            }}
-          >
-            编辑
-          </Button>
-        </div>
-      ),
-    },
-  ];
+    onView: (record) => setSelected(record),
+  });
 
   return (
     <div className="page-stack">
       {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
+      {brandIssue ? (
+        <Alert
+          showIcon
+          type="warning"
+          message="品牌字典加载失败"
+          description="品牌商品主表已按真实接口结果保留；品牌筛选器和编辑弹层品牌选项可能不完整。"
+        />
+      ) : null}
+      {categoryIssue ? (
+        <Alert
+          showIcon
+          type="warning"
+          message="商品分类加载失败"
+          description="品牌商品主表已按真实接口结果保留；分类筛选器和编辑弹层分类选项可能不完整。"
+        />
+      ) : null}
+
       <AdminSearchPanel
         form={searchForm}
-        onSearch={() => setFilters(searchForm.getFieldsValue())}
+        onSearch={() => {
+          setFilters(searchForm.getFieldsValue());
+          setPage(1);
+        }}
         onReset={() => {
           searchForm.resetFields();
           setFilters({});
           setStatus('all');
+          setPage(1);
+          setPageSize(10);
         }}
       >
         <Form.Item name="productName">
           <Input allowClear placeholder="商品名称" />
         </Form.Item>
-        <Form.Item name="brandName">
+        <Form.Item name="brandId">
           <Select allowClear options={brandOptions} placeholder="品牌" />
         </Form.Item>
-        <Form.Item name="category">
+        <Form.Item name="categoryId">
           <Select allowClear options={categoryOptions} placeholder="分类" />
         </Form.Item>
       </AdminSearchPanel>
+
       <AdminStatusTabs
         activeKey={status}
         items={[
-          { key: 'all', label: '全部', count: data.brandLibrary.length },
-          { key: 'active', label: '启用', count: data.brandLibrary.filter((item) => item.status === 'active').length },
-          { key: 'disabled', label: '停用', count: data.brandLibrary.filter((item) => item.status === 'disabled').length },
+          { key: 'all', label: '全部', count: status === 'all' ? total : undefined },
+          { key: 'active', label: '启用', count: status === 'active' ? total : undefined },
+          { key: 'disabled', label: '停用', count: status === 'disabled' ? total : undefined },
         ]}
-        onChange={(key) => setStatus(key as typeof status)}
+        onChange={(key) => {
+          setStatus(key as typeof status);
+          setPage(1);
+        }}
       />
+
       <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
         <ProTable<AdminBrandLibraryItem>
           cardBordered={false}
           rowKey="id"
           columns={columns}
           columnsState={{}}
-          dataSource={filteredRows}
+          dataSource={data.brandLibrary}
           loading={loading}
           options={{ reload: true, density: true, fullScreen: false, setting: true }}
-          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            onChange: (nextPage, nextPageSize) => {
+              if (nextPageSize !== pageSize) {
+                setPage(1);
+                setPageSize(nextPageSize);
+                return;
+              }
+              setPage(nextPage);
+            },
+          }}
           search={false}
           toolBarRender={() => [
             <Button
@@ -270,7 +215,7 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
               type="primary"
               onClick={() => {
                 brandProductForm.resetFields();
-                brandProductForm.setFieldsValue({ status: 'active' });
+                brandProductForm.setFieldsValue(buildCreateBrandProductFormValues());
                 setEditingItem(null);
                 setFormOpen(true);
               }}
@@ -280,76 +225,26 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
           ]}
         />
       </ConfigProvider>
-      <Drawer open={selected != null} title="品牌商品详情" width={460} onClose={() => setSelected(null)}>
-        {selected ? (
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="商品">{selected.productName}</Descriptions.Item>
-            <Descriptions.Item label="品牌">{selected.brandName}</Descriptions.Item>
-            <Descriptions.Item label="分类">{selected.category || '-'}</Descriptions.Item>
-            <Descriptions.Item label="指导价">{formatAmount(selected.guidePrice)}</Descriptions.Item>
-            <Descriptions.Item label="供货价">{formatAmount(selected.supplyPrice)}</Descriptions.Item>
-            <Descriptions.Item label="挂载商品">{formatNumber(selected.productCount)}</Descriptions.Item>
-            <Descriptions.Item label="在售商品">{formatNumber(selected.activeProductCount)}</Descriptions.Item>
-            <Descriptions.Item label="状态">{selected.status === 'active' ? '启用' : '停用'}</Descriptions.Item>
-            <Descriptions.Item label="创建时间">{formatDate(selected.createdAt)}</Descriptions.Item>
-            <Descriptions.Item label="更新时间">{formatDateTime(selected.updatedAt)}</Descriptions.Item>
-            <Descriptions.Item label="商品说明">{selected.description || '-'}</Descriptions.Item>
-          </Descriptions>
-        ) : null}
-      </Drawer>
 
-      <Modal
+      <AdminBrandLibraryDetailDrawer
+        open={selected != null}
+        selected={selected}
+        onClose={() => setSelected(null)}
+      />
+
+      <AdminBrandLibraryFormModal
+        brandIdOptions={brandIdOptions}
+        categoryIdOptions={categoryIdOptions}
+        editing={editingItem != null}
+        form={brandProductForm}
         open={formOpen}
-        title={editingItem ? '编辑品牌商品' : '新增品牌商品'}
-        okText="确定"
-        cancelText="取消"
-        confirmLoading={submitting}
+        submitting={submitting}
         onCancel={() => {
           setFormOpen(false);
           setEditingItem(null);
         }}
-        onOk={() => void handleSubmitBrandProduct()}
-        destroyOnClose
-      >
-        <ConfigProvider theme={SEARCH_THEME}>
-          <Form form={brandProductForm} layout="vertical" preserve={false}>
-            <Form.Item label="品牌" name="brandId" rules={[{ required: true, message: '请选择品牌' }]}>
-              <Select allowClear options={brandIdOptions} placeholder="品牌" />
-            </Form.Item>
-            <Form.Item label="商品名称" name="name" rules={[{ required: true, message: '请输入商品名称' }]}>
-              <Input allowClear placeholder="商品名称" />
-            </Form.Item>
-            <Form.Item label="类目" name="categoryId" rules={[{ required: true, message: '请选择类目' }]}>
-              <Select allowClear options={categoryIdOptions} placeholder="类目" />
-            </Form.Item>
-            <Form.Item
-              label="指导价（元）"
-              name="guidePriceYuan"
-              rules={[{ required: true, message: '请输入指导价' }]}
-            >
-              <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="指导价（元）" />
-            </Form.Item>
-            <Form.Item label="供货价（元）" name="supplyPriceYuan">
-              <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="供货价（元）" />
-            </Form.Item>
-            <Form.Item label="封面图" name="defaultImg">
-              <Input allowClear placeholder="封面图 URL" />
-            </Form.Item>
-            <Form.Item label="商品说明" name="description">
-              <Input.TextArea rows={4} placeholder="商品说明" />
-            </Form.Item>
-            <Form.Item label="状态" name="status" rules={[{ required: true, message: '请选择状态' }]}>
-              <Select
-                options={[
-                  { label: '启用', value: 'active' },
-                  { label: '停用', value: 'disabled' },
-                ]}
-                placeholder="状态"
-              />
-            </Form.Item>
-          </Form>
-        </ConfigProvider>
-      </Modal>
+        onSubmit={() => void handleSubmitBrandProduct()}
+      />
     </div>
   );
 

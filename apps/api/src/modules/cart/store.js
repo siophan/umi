@@ -1,6 +1,10 @@
 import { toEntityId, toOptionalEntityId } from '@umi/shared';
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
+/**
+ * 安全解析商品图片数组。
+ * 购物车页可能同时遇到 image_url、images、default_img 三种来源，这里统一兜底。
+ */
 function safeJsonArray(value) {
     if (!value) {
         return [];
@@ -13,6 +17,10 @@ function safeJsonArray(value) {
         return [];
     }
 }
+/**
+ * 把购物车查询结果收口成前端契约。
+ * 这里统一做金额、图片、状态和规格兜底，避免页面层自己重复判断。
+ */
 function sanitizeCartItem(row) {
     return {
         id: toEntityId(row.id),
@@ -32,6 +40,10 @@ function sanitizeCartItem(row) {
         status: Number(row.product_status ?? 0) === 10 ? 'active' : 'unavailable',
     };
 }
+/**
+ * 读取当前用户拥有的单条购物车记录。
+ * 后续修改数量、勾选、删除都先走这条链路确认归属。
+ */
 async function getOwnedCartItem(userId, cartItemId) {
     const db = getDbPool();
     const [rows] = await db.execute(`
@@ -51,6 +63,10 @@ async function getOwnedCartItem(userId, cartItemId) {
     `, [cartItemId, userId]);
     return rows[0] ?? null;
 }
+/**
+ * 确认购物车项归属当前用户。
+ * 找不到时统一抛购物车商品不存在，避免越权修改。
+ */
 async function ensureOwnedCartItem(userId, cartItemId) {
     const row = await getOwnedCartItem(userId, cartItemId);
     if (!row) {
@@ -58,6 +74,10 @@ async function ensureOwnedCartItem(userId, cartItemId) {
     }
     return row;
 }
+/**
+ * 确认目标商品仍可加入购物车。
+ * 只允许上架商品进入购物车，并返回实时库存用于数量校验。
+ */
 async function ensureProductAvailable(productId) {
     const db = getDbPool();
     const [rows] = await db.execute(`
@@ -75,6 +95,10 @@ async function ensureProductAvailable(productId) {
         stock: Math.max(0, Number(row.stock ?? 0)),
     };
 }
+/**
+ * 读取当前用户购物车列表。
+ * 购物车页、角标和支付页购物车入口都复用这条主查询。
+ */
 export async function getCart(userId) {
     const db = getDbPool();
     const [rows] = await db.execute(`
@@ -109,6 +133,10 @@ export async function getCart(userId) {
         promoThreshold: 200,
     };
 }
+/**
+ * 新增购物车商品。
+ * 同商品同规格会合并数量，不额外拆出复杂 SKU 体系。
+ */
 export async function addCartItem(userId, payload) {
     const product = await ensureProductAvailable(payload.productId);
     const nextQuantity = Math.min(99, Math.max(1, Number(payload.quantity ?? 1) || 1));
@@ -141,6 +169,10 @@ export async function addCartItem(userId, payload) {
     `, [userId, payload.productId, finalQuantity, specs, checked]);
     return { success: true, id: toEntityId(result.insertId) };
 }
+/**
+ * 更新购物车商品数量或勾选状态。
+ * 这里只允许改数量和 checked，库存上限在这里统一截断。
+ */
 export async function updateCartItem(userId, cartItemId, payload) {
     if (payload.quantity === undefined && payload.checked === undefined) {
         throw new HttpError(400, 'CART_UPDATE_INVALID', '至少提供一个更新字段');
@@ -162,6 +194,10 @@ export async function updateCartItem(userId, cartItemId, payload) {
     `, [cappedQuantity, nextChecked, cartItemId, userId]);
     return { success: true, id: toEntityId(cartItemId) };
 }
+/**
+ * 删除购物车商品。
+ * 删除前先校验归属，避免跨用户删除别人的 cart_item。
+ */
 export async function removeCartItem(userId, cartItemId) {
     await ensureOwnedCartItem(userId, cartItemId);
     const db = getDbPool();

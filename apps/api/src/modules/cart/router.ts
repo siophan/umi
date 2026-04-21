@@ -10,6 +10,7 @@ import { addCartItem, getCart, removeCartItem, updateCartItem } from './store';
 
 export const cartRouter: ExpressRouter = Router();
 
+// 购物车列表：返回当前用户真实 cart_item，并带上商品展示字段。
 cartRouter.get(
   '/',
   requireUser,
@@ -19,6 +20,7 @@ cartRouter.get(
   }),
 );
 
+// 加入购物车：同商品同规格会在 store 层自动合并数量。
 cartRouter.post(
   '/items',
   requireUser,
@@ -35,6 +37,7 @@ cartRouter.post(
   ),
 );
 
+// 更新购物车：支持修改数量和勾选状态，供购物车页乐观更新后回写。
 cartRouter.put(
   '/items/:id',
   requireUser,
@@ -58,6 +61,7 @@ cartRouter.put(
   ),
 );
 
+// 删除购物车商品：供单删和管理态批量删除复用。
 cartRouter.delete(
   '/items/:id',
   requireUser,

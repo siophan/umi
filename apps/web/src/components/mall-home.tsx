@@ -58,10 +58,18 @@ const collabVisuals: CollabVisual[] = [
 
 const LEGACY_GRID_HEIGHTS = [180, 210, 165, 220, 175, 195, 185, 205, 170, 200, 190, 215];
 
+/**
+ * 商城金额展示统一入口。
+ * 这里保留老商城的展示习惯：整数不补小数，非整数保留 1 位。
+ */
 function formatPrice(value: number) {
   return value.toFixed(value % 1 === 0 ? 0 : 1);
 }
 
+/**
+ * 商城销量展示统一入口。
+ * 大于 1 万时转成“万”单位，保持老商城卡片上的短文案风格。
+ */
 function formatSales(value: number) {
   if (value >= 10000) {
     return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`;
@@ -79,6 +87,10 @@ function getCategoryEmoji(label: string) {
   return '📦';
 }
 
+/**
+ * 把联名标题拆成左右两段。
+ * 联名卡和 banner 都按老商城的“A × B”排版来渲染。
+ */
 function splitCollabLabel(item: ProductFeedItem) {
   const collabText = item.collab?.trim() || `${item.brand} × ${item.category}`;
   const parts = collabText.split(/\s*[×xX✕]\s*/);
@@ -124,6 +136,10 @@ function buildBrandAvatarText(brand: string) {
   return trimmed.slice(0, 1).toUpperCase();
 }
 
+/**
+ * 计算 hero 进度条展示值。
+ * 这里仍然是基于真实商品销量和库存做展示推导，不是独立活动进度源。
+ */
 function buildHeroProgress(item: ProductFeedItem) {
   const base = item.sales + item.stock;
   if (base <= 0) {
@@ -144,10 +160,18 @@ function buildBannerSubtitle(item: ProductFeedItem) {
   return `${item.category} · ${item.brand} · 已售${formatSales(item.sales)}`;
 }
 
+/**
+ * 生成瀑布流卡高。
+ * 推荐流沿用老商城的固定高低节奏，避免真实数据顺序变化后把版式打散。
+ */
 function buildGridHeight(item: ProductFeedItem, index: number) {
   return item.height || LEGACY_GRID_HEIGHTS[index % LEGACY_GRID_HEIGHTS.length];
 }
 
+/**
+ * 给商品流批量补上老商城瀑布流元信息。
+ * 这里只控制展示节奏，不改真实商品排序和业务字段。
+ */
 function applyLegacyGridMeta(items: ProductFeedItem[]) {
   return items.map((item, index) => ({
     ...item,
@@ -163,6 +187,10 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+/**
+ * 商城首页主组件。
+ * 商品、分类、收藏和购物车角标走真实接口；活动位和瀑布流节奏继续按老商城页面结构对齐。
+ */
 export function MallHome() {
   const router = useRouter();
   const [mallItems, setMallItems] = useState<ProductFeedItem[]>([]);
@@ -187,6 +215,10 @@ export function MallHome() {
   useEffect(() => {
     let ignore = false;
 
+    /**
+     * 加载商城首屏主数据。
+     * 商品流和购物车角标分开容错，避免其中一条链路失败时把整页全部打空。
+     */
     async function load() {
       if (!ignore) {
         setLoading(true);

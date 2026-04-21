@@ -1,11 +1,11 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Tag } from 'antd';
+import { Alert, Button, Card, ConfigProvider, Descriptions, Drawer, Form, Input, Statistic, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import type { AdminPkMatchItem } from '../lib/api/catalog';
-import { fetchAdminPkMatches } from '../lib/api/catalog';
+import type { AdminPkMatchItem, AdminPkMatchStats } from '../lib/api/catalog';
+import { fetchAdminPkMatches, fetchAdminPkStats } from '../lib/api/catalog';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import { formatAmount, formatDateTime } from '../lib/format';
 
@@ -20,6 +20,14 @@ type PkFilters = {
 };
 
 const emptyRows: AdminPkMatchItem[] = [];
+const emptyStats: AdminPkMatchStats = {
+  total: 0,
+  pending: 0,
+  active: 0,
+  completed: 0,
+  cancelled: 0,
+  totalStakeAmount: 0,
+};
 
 function pkStatusTag(record: AdminPkMatchItem) {
   const color =
@@ -42,6 +50,8 @@ export function PkMatchesPage({ refreshToken = 0 }: PkMatchesPageProps) {
   const [rows, setRows] = useState<AdminPkMatchItem[]>(emptyRows);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
+  const [statsIssue, setStatsIssue] = useState<string | null>(null);
+  const [stats, setStats] = useState<AdminPkMatchStats>(emptyStats);
   const [filters, setFilters] = useState<PkFilters>({});
   const [status, setStatus] = useState<'all' | AdminPkMatchItem['status']>('all');
   const [selected, setSelected] = useState<AdminPkMatchItem | null>(null);
@@ -51,14 +61,29 @@ export function PkMatchesPage({ refreshToken = 0 }: PkMatchesPageProps) {
     async function loadPageData() {
       setLoading(true);
       setIssue(null);
+      setStatsIssue(null);
       try {
-        const items = await fetchAdminPkMatches().then((result) => result.items);
+        const [listResult, statsResult] = await Promise.allSettled([
+          fetchAdminPkMatches(),
+          fetchAdminPkStats(),
+        ]);
         if (!alive) return;
-        setRows(items);
-      } catch (error) {
-        if (!alive) return;
-        setRows(emptyRows);
-        setIssue(error instanceof Error ? error.message : 'PK 对战加载失败');
+
+        if (listResult.status === 'fulfilled') {
+          setRows(listResult.value.items);
+        } else {
+          setRows(emptyRows);
+          setIssue(listResult.reason instanceof Error ? listResult.reason.message : 'PK 对战加载失败');
+        }
+
+        if (statsResult.status === 'fulfilled') {
+          setStats(statsResult.value);
+        } else {
+          setStats(emptyStats);
+          setStatsIssue(
+            statsResult.reason instanceof Error ? statsResult.reason.message : 'PK 统计加载失败',
+          );
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -119,6 +144,34 @@ export function PkMatchesPage({ refreshToken = 0 }: PkMatchesPageProps) {
   return (
     <div className="page-stack">
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
+      {statsIssue ? (
+        <Alert
+          showIcon
+          type="warning"
+          message="PK 统计加载失败"
+          description="PK 主表已按真实列表结果保留，顶部概览暂不可用。"
+        />
+      ) : null}
+      <div
+        style={{
+          display: 'grid',
+          gap: 16,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        }}
+      >
+        <Card>
+          <Statistic title="总 PK 数" value={stats.total} />
+        </Card>
+        <Card>
+          <Statistic title="进行中" value={stats.active} />
+        </Card>
+        <Card>
+          <Statistic title="已结算" value={stats.completed} />
+        </Card>
+        <Card>
+          <Statistic title="总对战金额" value={formatAmount(stats.totalStakeAmount)} />
+        </Card>
+      </div>
       <AdminSearchPanel
         form={searchForm}
         defaultCount={3}

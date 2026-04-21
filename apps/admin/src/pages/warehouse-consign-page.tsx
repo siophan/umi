@@ -1,13 +1,13 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Typography } from 'antd';
+import { Alert, Button, ConfigProvider, Form, Input, Select, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminConsignRow } from '../lib/api/orders';
 import { fetchAdminConsignRows } from '../lib/api/orders';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
-import { formatAmount, formatDateTime } from '../lib/format';
+import { formatDateTime, formatYuanAmount } from '../lib/format';
 
 interface WarehouseConsignPageProps {
   refreshToken?: number;
@@ -47,7 +47,6 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<ConsignFilters>({});
   const [status, setStatus] = useState<string>('all');
-  const [selected, setSelected] = useState<AdminConsignRow | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -133,10 +132,10 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
       width: 160,
       render: (_, record) => <Typography.Text>{record.buyerUserId || '-'}</Typography.Text>,
     },
-    { title: '挂单价', dataIndex: 'listingPrice', width: 120, render: (_, record) => (record.listingPrice ? formatAmount(record.listingPrice) : '-') },
-    { title: '成交价', dataIndex: 'price', width: 120, render: (_, record) => formatAmount(record.price) },
-    { title: '佣金', dataIndex: 'commissionAmount', width: 120, render: (_, record) => formatAmount(record.commissionAmount) },
-    { title: '卖家到账', dataIndex: 'sellerAmount', width: 120, render: (_, record) => formatAmount(record.sellerAmount) },
+    { title: '挂单价', dataIndex: 'listingPrice', width: 120, render: (_, record) => (record.listingPrice ? formatYuanAmount(record.listingPrice) : '-') },
+    { title: '成交价', dataIndex: 'price', width: 120, render: (_, record) => formatYuanAmount(record.price) },
+    { title: '佣金', dataIndex: 'commissionAmount', width: 120, render: (_, record) => formatYuanAmount(record.commissionAmount) },
+    { title: '卖家到账', dataIndex: 'sellerAmount', width: 120, render: (_, record) => formatYuanAmount(record.sellerAmount) },
     { title: '状态', dataIndex: 'statusLabel', width: 120 },
     { title: '结算状态', width: 120, render: (_, record) => getSettlementLabel(record) },
     { title: '上架时间', dataIndex: 'listedAt', width: 180, render: (_, record) => formatDateTime(record.listedAt || record.createdAt) },
@@ -147,7 +146,17 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
       width: 100,
       fixed: 'right',
       valueType: 'option',
-      render: (_, record) => <Button size="small" type="link" onClick={() => setSelected(record)}>查看</Button>,
+      render: (_, record) => (
+        <Button
+          size="small"
+          type="link"
+          onClick={() => {
+            window.location.hash = `#/warehouse/consign/detail/${record.id}`;
+          }}
+        >
+          查看
+        </Button>
+      ),
     },
   ];
 
@@ -205,30 +214,6 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
           toolBarRender={() => []}
         />
       </ConfigProvider>
-      <Drawer open={selected != null} title="寄售详情" width={460} onClose={() => setSelected(null)}>
-        {selected ? (
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="交易单号">{selected.tradeNo || selected.id}</Descriptions.Item>
-            <Descriptions.Item label="商品名称">{selected.productName}</Descriptions.Item>
-            <Descriptions.Item label="实物仓记录">{selected.physicalItemId || '-'}</Descriptions.Item>
-            <Descriptions.Item label="卖家">{selected.userId}</Descriptions.Item>
-            <Descriptions.Item label="买家">{selected.buyerUserId || '-'}</Descriptions.Item>
-            <Descriptions.Item label="订单号">{selected.orderSn || selected.orderId || '-'}</Descriptions.Item>
-            <Descriptions.Item label="来源类型">{selected.sourceType}</Descriptions.Item>
-            <Descriptions.Item label="挂单价">{selected.listingPrice ? formatAmount(selected.listingPrice) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="成交价">{formatAmount(selected.price)}</Descriptions.Item>
-            <Descriptions.Item label="佣金">{formatAmount(selected.commissionAmount)}</Descriptions.Item>
-            <Descriptions.Item label="卖家到账">{formatAmount(selected.sellerAmount)}</Descriptions.Item>
-            <Descriptions.Item label="状态">{selected.statusLabel}</Descriptions.Item>
-            <Descriptions.Item label="结算状态">{getSettlementLabel(selected)}</Descriptions.Item>
-            <Descriptions.Item label="上架时间">{formatDateTime(selected.listedAt || selected.createdAt)}</Descriptions.Item>
-            <Descriptions.Item label="成交时间">{formatDateTime(selected.tradedAt)}</Descriptions.Item>
-            <Descriptions.Item label="结算时间">{formatDateTime(selected.settledAt)}</Descriptions.Item>
-            <Descriptions.Item label="取消时间">{formatDateTime(selected.canceledAt)}</Descriptions.Item>
-            <Descriptions.Item label="创建时间">{formatDateTime(selected.createdAt)}</Descriptions.Item>
-          </Descriptions>
-        ) : null}
-      </Drawer>
     </div>
   );
 }

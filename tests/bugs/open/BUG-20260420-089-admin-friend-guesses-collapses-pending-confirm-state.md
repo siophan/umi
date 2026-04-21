@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-089` |
 | `title` | 好友竞猜状态被压扁成“待开赛/进行中/已结束”，丢失“待确认”阶段 |
 | `severity` | `P2` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/friend-guesses/status` |
 | `scope` | `admin` |
 | `page` | `#/guesses/friends` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-guesses-qa-2026-04-20.md` |
 | `fingerprint` | `admin-friend-guesses:pending-confirm-state-collapsed` |
-| `fix_owner` |  |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -54,8 +54,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 结合 `friend_guess_confirm` 进度恢复“待确认”这类可运营状态，不要再把确认中房间并入泛化的 `ended`。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 后端好友竞猜状态机现在会结合 `friend_guess_confirm` 的确认进度计算 `pending_confirm`；当竞猜已结束但确认人数仍少于下注人数时，返回“待确认”。前端状态标签和筛选项也同步补回“待确认”。 |
+| 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过：好友竞猜页已能区分“待开赛 / 进行中 / 待确认 / 已结束”，API 类型检查、后台类型检查和构建均成功。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/api/src/modules/admin/friend-guesses.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/friend-guesses.ts)；[apps/admin/src/lib/api/catalog-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/api/catalog-shared.ts)；[apps/admin/src/pages/friend-guesses-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/friend-guesses-page.tsx) |

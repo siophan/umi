@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -65,7 +65,7 @@
 | 修复说明 | 订单/竞猜子表读取失败时不再把 `orderTotal / guessTotal` 重写成 `0`，而是保留详情主接口已有的真实计数；同时 tab 内容区改成显式错误告警，不再回落成“暂无订单记录 / 暂无竞猜记录”。 |
 | 验证命令 | `cd /Users/ezreal/Downloads/joy/umi && pnpm --filter @umi/admin typecheck` |
 | Fixer 自测结果 | 通过。子表失败时 tab 数量不再被抹成 `0`，内容区会显示明确的“订单记录加载失败 / 竞猜记录加载失败”。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前详情状态已拆到 `apps/admin/src/lib/admin-users-page.ts` 和 `apps/admin/src/components/admin-user-detail-drawer.tsx`；订单/竞猜子表失败时只会写入 `orderIssue / guessIssue` 并显示显式告警，不再把失败伪装成 `0` 条记录和“暂无记录”。 |
 | 修复提交/变更 | [apps/admin/src/pages/users-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/users-page.tsx) |
 
 ## Director Re-review

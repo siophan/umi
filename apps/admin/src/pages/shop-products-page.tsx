@@ -1,11 +1,11 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag } from 'antd';
+import { Alert, App, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Popconfirm, Select, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminShopProductItem } from '../lib/api/merchant';
-import { fetchAdminShopProducts } from '../lib/api/merchant';
+import { fetchAdminShopProducts, updateAdminShopProductStatus } from '../lib/api/merchant';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import { buildOptions } from '../lib/admin-filter-options';
 import { formatAmount, formatNumber, productStatusMeta } from '../lib/format';
@@ -27,6 +27,7 @@ function renderStock(value: number) {
 }
 
 export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
+  const { message: messageApi } = App.useApp();
   const [searchForm] = Form.useForm<ShopProductFilters>();
   const [rows, setRows] = useState<AdminShopProductItem[]>(emptyRows);
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,8 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
   const [filters, setFilters] = useState<ShopProductFilters>({});
   const [status, setStatus] = useState<'all' | AdminShopProductItem['status']>('all');
   const [selected, setSelected] = useState<AdminShopProductItem | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [actionSeed, setActionSeed] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -65,7 +68,7 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
     return () => {
       alive = false;
     };
-  }, [refreshToken]);
+  }, [actionSeed, refreshToken]);
 
   const brandOptions = useMemo(() => buildOptions(rows, 'brandName'), [rows]);
   const statusItems = useMemo(
@@ -117,16 +120,64 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
     {
       title: '操作',
       key: 'actions',
-      width: 100,
+      width: 180,
       fixed: 'right',
       valueType: 'option',
-      render: (_, record) => (
-        <Button size="small" type="link" onClick={() => setSelected(record)}>
-          查看
-        </Button>
-      ),
+      render: (_, record) => {
+        const canActivate = record.status === 'off_shelf';
+        const canOffShelf = record.status === 'active';
+
+        return (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button size="small" type="link" onClick={() => setSelected(record)}>
+              查看
+            </Button>
+            {canActivate ? (
+              <Popconfirm
+                okButtonProps={{ loading: updatingId === record.id }}
+                title="确认上架该商品？"
+                onConfirm={() => void handleUpdateStatus(record, 'active')}
+              >
+                <Button size="small" type="link">
+                  上架
+                </Button>
+              </Popconfirm>
+            ) : null}
+            {canOffShelf ? (
+              <Popconfirm
+                okButtonProps={{ loading: updatingId === record.id }}
+                title="确认下架该商品？"
+                onConfirm={() => void handleUpdateStatus(record, 'off_shelf')}
+              >
+                <Button size="small" type="link">
+                  下架
+                </Button>
+              </Popconfirm>
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
+
+  async function handleUpdateStatus(
+    record: AdminShopProductItem,
+    nextStatus: 'active' | 'off_shelf',
+  ) {
+    setUpdatingId(record.id);
+    try {
+      await updateAdminShopProductStatus(record.id, { status: nextStatus });
+      messageApi.success(nextStatus === 'active' ? '商品已上架' : '商品已下架');
+      setActionSeed((value) => value + 1);
+      if (selected?.id === record.id) {
+        setSelected(null);
+      }
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '更新商品状态失败');
+    } finally {
+      setUpdatingId(null);
+    }
+  }
 
   return (
     <div className="page-stack">

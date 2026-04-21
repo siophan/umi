@@ -1,6 +1,9 @@
 import { toEntityId } from '@umi/shared';
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
+/**
+ * 把地址表记录转换成前端地址契约。
+ */
 function sanitizeAddress(row) {
     return {
         id: toEntityId(row.id),
@@ -14,6 +17,10 @@ function sanitizeAddress(row) {
         isDefault: Boolean(row.is_default),
     };
 }
+/**
+ * 读取当前用户拥有的单条地址。
+ * 地址更新、删除、设默认都先走这条链路确认归属。
+ */
 async function getOwnedAddress(userId, addressId) {
     const db = getDbPool();
     const [rows] = await db.execute(`
@@ -25,6 +32,9 @@ async function getOwnedAddress(userId, addressId) {
     `, [addressId, userId]);
     return rows[0] ?? null;
 }
+/**
+ * 确认地址归属当前用户。
+ */
 async function ensureOwnedAddress(userId, addressId) {
     const address = await getOwnedAddress(userId, addressId);
     if (!address) {
@@ -32,6 +42,10 @@ async function ensureOwnedAddress(userId, addressId) {
     }
     return address;
 }
+/**
+ * 规范化地址入参。
+ * 这里统一做 trim 和必填校验，避免 store 里每个写操作重复判断。
+ */
 function normalizePayload(payload) {
     const name = payload.name?.trim();
     const phone = payload.phone?.trim();
@@ -54,6 +68,9 @@ function normalizePayload(payload) {
         isDefault: Boolean(payload.isDefault),
     };
 }
+/**
+ * 读取当前用户地址列表。
+ */
 export async function listAddresses(userId) {
     const db = getDbPool();
     const [rows] = await db.execute(`
@@ -66,6 +83,10 @@ export async function listAddresses(userId) {
         items: rows.map((row) => sanitizeAddress(row)),
     };
 }
+/**
+ * 新增地址。
+ * 当新地址被设为默认地址时，会先把用户原默认地址取消。
+ */
 export async function createAddress(userId, payload) {
     const normalized = normalizePayload(payload);
     const db = getDbPool();
@@ -96,6 +117,10 @@ export async function createAddress(userId, payload) {
     const created = await ensureOwnedAddress(userId, String(result.insertId));
     return sanitizeAddress(created);
 }
+/**
+ * 更新地址。
+ * 默认地址切换也在这里统一处理。
+ */
 export async function updateAddress(userId, addressId, payload) {
     await ensureOwnedAddress(userId, addressId);
     const normalized = normalizePayload(payload);
@@ -138,6 +163,10 @@ export async function updateAddress(userId, addressId, payload) {
     const updated = await ensureOwnedAddress(userId, addressId);
     return sanitizeAddress(updated);
 }
+/**
+ * 删除地址。
+ * 如果删掉的是默认地址，会自动把最近一条地址补成新的默认地址。
+ */
 export async function deleteAddress(userId, addressId) {
     const address = await ensureOwnedAddress(userId, addressId);
     const db = getDbPool();

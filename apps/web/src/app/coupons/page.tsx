@@ -7,6 +7,10 @@ import type { CouponListItem } from '@umi/shared';
 import { fetchCoupons } from '../../lib/api/coupons';
 import styles from './page.module.css';
 
+/**
+ * 优惠券列表页主组件。
+ * 页面只展示真实优惠券数据，不再回退到任何本地假券数据。
+ */
 export default function CouponsPage() {
   const router = useRouter();
   const [tab, setTab] = useState<CouponListItem['status']>('unused');
@@ -18,6 +22,10 @@ export default function CouponsPage() {
   useEffect(() => {
     let ignore = false;
 
+    /**
+     * 拉取当前用户优惠券列表。
+     * 接口失败时明确展示错误，不伪装成“暂无优惠券”。
+     */
     async function load() {
       try {
         const result = await fetchCoupons();

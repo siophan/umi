@@ -7,12 +7,12 @@
 | `bug_id` | `BUG-20260420-068` |
 | `title` | 评价页缺少订单上下文校验，缺参时仍渲染完整评价表单 |
 | `severity` | `P2` |
-| `status` | `fixed_pending_verify` |
+| `status` | `verified` |
 | `area` | `review/context` |
 | `scope` | `user` |
 | `page` | `/review` |
 | `api` | `POST /api/orders/:id/review` |
-| `owner` | `用户端全栈一` |
+| `owner` | `测试猫` |
 | `source_run` | `user-page-parity-round1-2026-04-20.md` |
 | `fingerprint` | `web-review:missing-order-context-still-renders-form` |
 | `fix_owner` | `用户端全栈一` |
@@ -66,7 +66,7 @@
 | 修复说明 | 页面首屏已增加 `orderId + productId` 上下文校验，缺参时直接显示页级错误态和返回入口，不再渲染可编辑评价表单。 |
 | 验证命令 | `pnpm --filter @umi/web typecheck`；`pnpm --filter @umi/web build` |
 | Fixer 自测结果 | 通过。直接打开 `/review` 且缺少必要参数时，只会看到错误态，不再进入可提交失败的空表单。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | 通过。测试猫复核 [apps/web/src/app/review/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/review/page.tsx) 当前实现后确认，页面首屏已增加 `orderId + productId` 上下文校验，缺参时直接渲染页级错误态和返回入口，不再展示完整评价表单。 |
 | 修复提交/变更 | [apps/web/src/app/review/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/review/page.tsx)、[apps/web/src/app/review/page.module.css](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/review/page.module.css) |
 
 ## Director Re-review

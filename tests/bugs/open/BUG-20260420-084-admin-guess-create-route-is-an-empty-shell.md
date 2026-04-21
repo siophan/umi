@@ -7,18 +7,18 @@
 | `bug_id` | `BUG-20260420-084` |
 | `title` | 创建竞猜入口跳到空壳页面，没有表单和创建写链路 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/guesses/create` |
 | `scope` | `admin` |
 | `page` | `#/guesses/create` |
 | `api` | `/api/admin/guesses` |
-| `owner` | `测试狗` |
+| `owner` | `用户端全栈一` |
 | `source_run` | `admin-guesses-qa-2026-04-20.md` |
 | `fingerprint` | `admin-guesses:create-route-empty-shell` |
-| `fix_owner` |  |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -56,8 +56,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 补齐 admin 竞猜创建写链和对应表单页；在写链未接通前，不应把“创建竞猜”作为主 CTA 暴露。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 当前工作树里这条链已经补齐：`#/guesses/create` 现在是可提交的创建页，包含基础表单、选项编辑、商品搜索、预览和真实提交；后台已提供 `POST /api/admin/guesses` 创建写链，页面提交后会调用 `createAdminGuess()` 完成真实创建并返回列表页。 |
+| 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过。当前 [apps/admin/src/pages/guess-create-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/guess-create-page.tsx) 已包含真实创建表单和提交逻辑；`@umi/api`、`@umi/admin` 的 typecheck 与 admin build 均通过。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | `/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/guess-create-page.tsx`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-guess-create.ts`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/api/catalog-guesses.ts`；`/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/guess-management.ts`；`/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/routes/content-routes.ts` |

@@ -88,6 +88,10 @@ export function formatAmount(value: number) {
   return moneyFormatter.format(value / 100);
 }
 
+export function formatYuanAmount(value: number) {
+  return moneyFormatter.format(value);
+}
+
 export function formatNumber(value: number) {
   return numberFormatter.format(value);
 }

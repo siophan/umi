@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -70,7 +70,7 @@
 | 修复说明 | 停用权限现在会级联停用整棵子权限树，父权限停用时其下已展开到角色上的子权限也会同步失效；权限页停用提示文案也改成了“当前权限及其子权限都会一并失效”，避免继续误导操作者。 |
 | 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 已通过。停用父权限时后端会批量把子权限一并置为 disabled，后台三项验证均通过。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前权限状态更新已迁到 `apps/api/src/modules/admin/system-permissions.ts`，停用权限时会先收集 `descendantIds`，再把当前权限和整棵子树一起置为 `disabled`；前端停用确认文案也已明确“当前权限及其子权限都会一并失效”，原先父停用但叶子继续生效的口径不再成立。 |
 | 修复提交/变更 | `/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/system.ts`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/permissions-page.tsx` |
 
 ## Director Re-review

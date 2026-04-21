@@ -319,21 +319,12 @@ export const ADMIN_PERMISSION_DEFINITIONS: AdminPermissionDefinition[] = [
     path: '/live/list',
   },
   {
-    code: 'community.live.danmaku.view',
-    name: '弹幕管理',
-    module: 'community',
-    action: 'view',
-    parentCode: 'community.manage',
-    sort: 950,
-    path: '/live/danmaku',
-  },
-  {
     code: 'community.chats.view',
     name: '聊天管理',
     module: 'community',
     action: 'view',
     parentCode: 'community.manage',
-    sort: 960,
+    sort: 950,
     path: '/system/chats',
   },
   {

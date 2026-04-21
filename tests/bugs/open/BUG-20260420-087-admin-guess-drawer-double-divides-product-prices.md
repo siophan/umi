@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-087` |
 | `title` | 竞猜详情抽屉把商品价格再次按分格式化，奖品价值和竞猜成本会缩小 100 倍 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/guesses/detail-price` |
 | `scope` | `admin` |
 | `page` | `#/guesses/list` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-guesses-qa-2026-04-20.md` |
 | `fingerprint` | `admin-guesses:drawer-double-divides-prices` |
-| `fix_owner` |  |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -54,8 +54,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 统一 admin 竞猜详情金额单位；若列表结果已转元，页面应直接展示元，不再走按分格式化。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 旧的竞猜摘要抽屉链路已经被真实详情页替换，当前 `#/guesses/detail/:id` 走独立的 `/api/admin/guesses/:id` 详情接口；该接口返回的商品金额仍然是“分”，页面继续用 `formatAmount()` 格式化为元，不再存在“列表里已转元再二次除 100”的旧问题。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过：当前代码里已无旧摘要抽屉链路，竞猜详情页金额来源和格式化口径一致，后台类型检查和构建成功。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/admin/src/pages/guess-detail-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/guess-detail-page.tsx)；[apps/api/src/modules/admin/guess-management.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/guess-management.ts) |

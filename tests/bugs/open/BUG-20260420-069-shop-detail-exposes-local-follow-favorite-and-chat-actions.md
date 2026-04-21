@@ -7,12 +7,12 @@
 | `bug_id` | `BUG-20260420-069` |
 | `title` | 店铺详情页把关注、收藏、客服保留成本地假互动 |
 | `severity` | `P1` |
-| `status` | `fixed_pending_verify` |
+| `status` | `verified` |
 | `area` | `shop/detail-actions` |
 | `scope` | `user` |
 | `page` | `/shop/[id]` |
 | `api` | `/api/shops/:id` |
-| `owner` | `用户端全栈一` |
+| `owner` | `测试猫` |
 | `source_run` | `user-page-parity-round1-2026-04-20.md` |
 | `fingerprint` | `web-shop-detail:local-follow-favorite-chat-actions` |
 | `fix_owner` | `用户端全栈一` |
@@ -66,7 +66,7 @@
 | 修复说明 | 已移除 `/shop/[id]` 成功态里的本地假互动：头部关注按钮、商品卡收藏心形、底部收藏/客服/聊一聊入口都不再暴露。页面只保留真实可用的读链和“全部商品/参与竞猜”主动作，避免继续把本地 state 和 toast 伪装成已上线功能。 |
 | 验证命令 | `pnpm --filter @umi/web typecheck`；`pnpm --filter @umi/web build` |
 | Fixer 自测结果 | 通过。店铺详情已不再显示会修改本地 state 的关注/收藏/客服伪交互，页面只保留真实可用动作。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | 通过。测试猫复核 [apps/web/src/app/shop/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/shop/[id]/page.tsx) 当前实现后确认，头部关注按钮、商品卡收藏心形、底部收藏/客服/聊一聊等本地假互动入口已不再出现在成功态页面中；当前只保留真实可用的读链和“全部商品 / 参与竞猜”等主动作。 |
 | 修复提交/变更 | [apps/web/src/app/shop/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/shop/[id]/page.tsx)、[apps/web/src/app/shop/[id]/page.module.css](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/shop/[id]/page.module.css) |
 
 ## Director Re-review

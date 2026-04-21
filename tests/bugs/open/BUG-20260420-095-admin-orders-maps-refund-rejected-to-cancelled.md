@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-095` |
 | `title` | 订单状态映射把“退款拒绝”直接打成“已关闭” |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/orders/status-semantic` |
 | `scope` | `admin` |
 | `page` | `#/orders/list` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-orders-qa-2026-04-20.md` |
 | `fingerprint` | `admin-orders:maps-refund-rejected-to-cancelled` |
-| `fix_owner` |  |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -54,8 +54,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 拆开订单主状态和退款审核状态，不要用 `cancelled` 吞掉退款拒绝语义。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 已调整订单状态映射，退款拒绝不再落到 `cancelled`，页面也不会把退款拒绝误显示成“已关闭”。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/api typecheck` |
+| Fixer 自测结果 | 通过：退款拒绝订单保持真实订单阶段语义，后台不再把它当成关闭订单。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/api/src/modules/admin/orders-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/orders-shared.ts)；[apps/admin/src/lib/format.ts](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/format.ts) |

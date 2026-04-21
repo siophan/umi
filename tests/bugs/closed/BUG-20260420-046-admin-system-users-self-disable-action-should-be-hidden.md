@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -66,7 +66,7 @@
 | 修复说明 | 已让系统用户页单独读取当前登录管理员信息；当前登录账号所在行不再暴露“停用”按钮，直接显示“当前账号”，避免前端暴露必然失败的入口。 |
 | 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 通过。管理台类型检查和生产构建通过，当前账号行不再渲染停用动作。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前系统用户页会先读取 `currentAdminId`，列表操作列在“当前登录账号且状态为启用”时已改为展示“当前账号”，不再暴露必然失败的“停用”入口。 |
 | 修复提交/变更 | `apps/admin/src/pages/system-users-page.tsx` |
 
 ## Fixer

@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation';
 
 import type {
   CommunityCommentSort,
-  CommunityFeedItem,
   CommunityPostDetailResult,
 } from '@umi/shared';
 
@@ -21,125 +20,21 @@ import {
   unlikeCommunityComment,
   unlikeCommunityPost,
 } from '../../../lib/api/community';
+import { PostDetailArticle } from './post-detail-article';
+import { PostDetailComments } from './post-detail-comments';
+import {
+  appendReplyToTree,
+  findTopLevelCommentIdByReplyId,
+  formatCount,
+  formatRelativeTime,
+  guessLabel,
+  mapCommentTree,
+  REPORT_REASON_OPTIONS,
+  TAG_CLS_MAP,
+  type ReplyTarget,
+} from './post-detail-helpers';
+import { PostDetailOverlays } from './post-detail-overlays';
 import styles from './page.module.css';
-
-const TAG_CLS_MAP: Record<string, string> = {
-  品牌竞猜: styles.tagBrand,
-  猜友动态: styles.tagGuess,
-  品牌资讯: styles.tagBrand,
-  零食测评: styles.tagHot,
-  PK战报: styles.tagGuess,
-  平台公告: styles.tagBrand,
-  店铺动态: styles.tagHot,
-  店铺推荐: styles.tagHot,
-  转发: styles.tagGuess,
-};
-
-const EMOJIS = ['😀', '😂', '🤣', '😍', '🥰', '😎', '🤔', '😢', '😡', '🥳', '🎉', '🔥', '❤️', '👍', '👎', '🙏', '💪', '🎯', '🏆', '✅', '⭐', '💰', '🎁', '🍕'];
-
-const REPORT_REASON_OPTIONS = [
-  { value: 10 as const, label: '垃圾广告' },
-  { value: 20 as const, label: '低俗色情' },
-  { value: 30 as const, label: '人身攻击' },
-  { value: 40 as const, label: '虚假信息' },
-  { value: 90 as const, label: '其他原因' },
-];
-
-function formatRelativeTime(value: string) {
-  const timestamp = new Date(value).getTime();
-  if (Number.isNaN(timestamp)) {
-    return '刚刚';
-  }
-
-  const diff = Date.now() - timestamp;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diff < minute) {
-    return '刚刚';
-  }
-  if (diff < hour) {
-    return `${Math.max(1, Math.floor(diff / minute))}分钟前`;
-  }
-  if (diff < day) {
-    return `${Math.max(1, Math.floor(diff / hour))}小时前`;
-  }
-  if (diff < 7 * day) {
-    return `${Math.max(1, Math.floor(diff / day))}天前`;
-  }
-  return new Date(value).toISOString().slice(0, 10);
-}
-
-function formatCount(value: number) {
-  if (value >= 10000) {
-    return `${(value / 10000).toFixed(1)}万`;
-  }
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}k`;
-  }
-  return String(value);
-}
-
-function guessLabel(post: CommunityFeedItem) {
-  return post.tag?.trim() || '猜友动态';
-}
-
-function mapCommentTree(
-  items: CommunityPostDetailResult['comments'],
-  targetId: string,
-  update: (item: CommunityPostDetailResult['comments'][number]) => CommunityPostDetailResult['comments'][number],
-): CommunityPostDetailResult['comments'] {
-  return items.map((item) => {
-    if (item.id === targetId) {
-      return update(item);
-    }
-    if (item.replies?.length) {
-      return {
-        ...item,
-        replies: mapCommentTree(item.replies, targetId, update),
-      };
-    }
-    return item;
-  });
-}
-
-function appendReplyToTree(
-  items: CommunityPostDetailResult['comments'],
-  targetId: string,
-  reply: CommunityPostDetailResult['comments'][number],
-): CommunityPostDetailResult['comments'] {
-  return items.map((item) => {
-    if (item.id === targetId) {
-      return {
-        ...item,
-        replies: [...(item.replies ?? []), reply],
-      };
-    }
-    if (item.replies?.length) {
-      return {
-        ...item,
-        replies: appendReplyToTree(item.replies, targetId, reply),
-      };
-    }
-    return item;
-  });
-}
-
-function findTopLevelCommentIdByReplyId(
-  items: CommunityPostDetailResult['comments'],
-  replyId: string,
-): CommunityPostDetailResult['comments'][number]['id'] | null {
-  for (const item of items) {
-    if (item.id === replyId) {
-      return item.id;
-    }
-    if (item.replies?.some((reply) => reply.id === replyId)) {
-      return item.id;
-    }
-  }
-  return null;
-}
 
 export default function PostDetailPage() {
   const router = useRouter();
@@ -155,7 +50,7 @@ export default function PostDetailPage() {
   const [bookmarkSaving, setBookmarkSaving] = useState(false);
   const [commentSaving, setCommentSaving] = useState(false);
   const [commentLikeSavingId, setCommentLikeSavingId] = useState('');
-  const [replyTo, setReplyTo] = useState<{ id: CommunityPostDetailResult['comments'][number]['id']; name: string } | null>(null);
+  const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
   const [expandedReplyIds, setExpandedReplyIds] = useState<Record<string, boolean>>({});
   const [commentSort, setCommentSort] = useState<CommunityCommentSort>('hot');
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -462,6 +357,12 @@ export default function PostDetailPage() {
     }));
   }
 
+  function openReplyInput(target: ReplyTarget) {
+    setReplyTo(target);
+    setComment(`回复 @${target.name}：`);
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
   function handleSaveImage() {
     if (!post?.images.length) {
       showToast('当前动态暂无图片可保存');
@@ -590,222 +491,50 @@ export default function PostDetailPage() {
           <i className="fa-solid fa-ellipsis" />
         </button>
       </header>
+      <PostDetailArticle
+        post={post}
+        imageClass={imageClass}
+        tagClass={tagClass}
+        likeSaving={likeSaving}
+        bookmarkSaving={bookmarkSaving}
+        totalCommentCount={totalCommentCount}
+        onOpenUser={(uid) => router.push(`/user/${encodeURIComponent(uid)}`)}
+        onOpenGuess={(guessId) => router.push(`/guess/${guessId}`)}
+        onToggleLike={() => void handleToggleLike()}
+        onOpenComments={() => {
+          commentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          window.setTimeout(() => inputRef.current?.focus(), 350);
+        }}
+        onOpenShare={() => setShareOpen(true)}
+        onToggleBookmark={() => void handleToggleBookmark()}
+      />
 
-      <article className={styles.card}>
-        <button
-          className={styles.cardAuthor}
-          type="button"
-          onClick={() => router.push(`/user/${encodeURIComponent(post.author.uid)}`)}
-        >
-          <img src={post.author.avatar || '/legacy/images/mascot/mouse-main.png'} alt={post.author.name} />
-          <div className={styles.cardAuthorInfo}>
-            <div className={styles.cardAuthorName}>
-              {post.author.name}
-              {post.author.verified ? <span><i className="fa-solid fa-circle-check" /></span> : null}
-            </div>
-            <div className={styles.cardAuthorMeta}>
-              <span>{formatRelativeTime(post.createdAt)}</span>
-              {post.location ? (
-                <span className={styles.cardAuthorLoc}>
-                  <i className="fa-solid fa-location-dot" />
-                  {post.location}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </button>
-
-        <div className={styles.content}>
-          {post.title ? <h1 className={styles.title}>{post.title}</h1> : null}
-          <p className={styles.text}>{post.desc}</p>
-          <div className={styles.tags}>
-            <span className={tagClass}>{guessLabel(post)}</span>
-            {post.scope !== 'public' ? <span className={styles.tagHot}>{post.scope === 'followers' ? '粉丝可见' : '仅自己'}</span> : null}
-          </div>
-        </div>
-
-        {post.images.length ? (
-          <div className={styles.images}>
-            <div className={imageClass}>
-              {post.images.map((img) => (
-                <img src={img} alt={post.title} key={img} />
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {post.guessInfo ? (
-          <section className={styles.guessBar}>
-            <div className={styles.guessHead}>
-              <div className={styles.guessTitle}>
-                <i className="fa-solid fa-bullseye" /> 参与竞猜
-              </div>
-              <span className={styles.guessCount}>{formatCount(post.guessInfo.participants)}人参与</span>
-            </div>
-            <div className={styles.guessOptions}>
-              {post.guessInfo.options.map((item, index) => (
-                <button className={styles.guessOption} key={item} type="button" onClick={() => router.push(`/guess/${post.guessInfo?.id}`)}>
-                  <div className={styles.guessName}>{item}</div>
-                  <div className={styles.guessBarWrap}>
-                    <span style={{ width: `${post.guessInfo?.pcts[index] ?? 0}%` }} />
-                  </div>
-                  <div className={styles.guessPct}>{post.guessInfo?.pcts[index] ?? 0}%</div>
-                </button>
-              ))}
-            </div>
-            <div className={styles.guessCta}>
-              <Link href={`/guess/${post.guessInfo.id}`}>去参与竞猜 <i className="fa-solid fa-arrow-right" /></Link>
-            </div>
-          </section>
-        ) : null}
-
-        <section className={styles.interact}>
-          <button className={`${styles.interactItem} ${post.liked ? styles.active : ''}`} type="button" disabled={likeSaving} onClick={() => void handleToggleLike()}>
-            <i className={`${post.liked ? 'fa-solid' : 'fa-regular'} fa-heart`} /> <span>{formatCount(post.likes)}</span>
-          </button>
-          <button
-            className={styles.interactItem}
-            type="button"
-            onClick={() => {
-              commentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              window.setTimeout(() => inputRef.current?.focus(), 350);
-            }}
-          >
-            <i className="fa-regular fa-comment" /> <span>{formatCount(totalCommentCount)}</span>
-          </button>
-          <button className={styles.interactItem} type="button" onClick={() => setShareOpen(true)}>
-            <i className="fa-solid fa-share-nodes" /> <span>{formatCount(post.shares)}</span>
-          </button>
-          <button className={`${styles.interactItem} ${post.bookmarked ? styles.faved : ''}`} type="button" disabled={bookmarkSaving} onClick={() => void handleToggleBookmark()}>
-            <i className={`${post.bookmarked ? 'fa-solid' : 'fa-regular'} fa-bookmark`} />
-          </button>
-        </section>
-      </article>
-
-      <section className={styles.comments} ref={commentsRef}>
-        <div className={styles.commentsHeader}>
-          <div>
-            <span className={styles.commentsTitle}>评论</span>
-            <span className={styles.commentsCount}>{totalCommentCount} 条</span>
-          </div>
-          <button
-            className={styles.sortBtn}
-            type="button"
-            onClick={() => setCommentSort((current) => (current === 'hot' ? 'newest' : 'hot'))}
-          >
-            <i className={`fa-solid ${commentSort === 'hot' ? 'fa-arrow-down-wide-short' : 'fa-arrow-down-short-wide'}`} />
-            {commentSort === 'hot' ? '最热' : '最新'}
-          </button>
-        </div>
-        {comments.length ? comments.map((item) => (
-          <article className={styles.comment} key={item.id}>
-            <button
-              className={styles.commentAvatarBtn}
-              type="button"
-              onClick={() => router.push(`/user/${encodeURIComponent(item.authorUid)}`)}
-            >
-              <img className={styles.commentAvatar} src={item.authorAvatar || '/legacy/images/mascot/mouse-main.png'} alt={item.authorName} />
-            </button>
-            <div className={styles.commentBody}>
-              <div className={styles.commentTop}>
-                <button
-                  className={styles.commentNameBtn}
-                  type="button"
-                  onClick={() => router.push(`/user/${encodeURIComponent(item.authorUid)}`)}
-                >
-                  {item.authorName}
-                </button>
-                <div className={styles.commentTime}>{formatRelativeTime(item.createdAt)}</div>
-              </div>
-              <div className={styles.commentText}>{item.content}</div>
-              <div className={styles.commentActions}>
-                <span
-                  onClick={() => {
-                    setReplyTo({ id: item.id, name: item.authorName });
-                    setComment(`回复 @${item.authorName}：`);
-                    window.setTimeout(() => inputRef.current?.focus(), 0);
-                  }}
-                >
-                  回复
-                </span>
-              </div>
-              {item.replies?.length ? (
-                <div className={styles.replies}>
-                  {(expandedReplyIds[item.id] ? item.replies : item.replies.slice(0, 2)).map((reply) => (
-                    <div className={styles.reply} key={reply.id}>
-                      <div className={styles.replyHead}>
-                        <button
-                          className={styles.replyNameBtn}
-                          type="button"
-                          onClick={() => router.push(`/user/${encodeURIComponent(reply.authorUid)}`)}
-                        >
-                          {reply.authorName}
-                        </button>
-                        <em>回复</em>
-                      </div>
-                      <div className={styles.replyText}>{reply.content}</div>
-                      <div className={styles.replyFooter}>
-                        <div className={styles.replyMeta}>{formatRelativeTime(reply.createdAt)}</div>
-                        <div className={styles.replyActions}>
-                          <button
-                            className={styles.replyActionBtn}
-                            type="button"
-                            onClick={() => {
-                              const topLevelId = findTopLevelCommentIdByReplyId(
-                                detail?.comments ?? [],
-                                reply.id,
-                              );
-                              setReplyTo({
-                                id: topLevelId ?? reply.id,
-                                name: reply.authorName,
-                              });
-                              setComment(`回复 @${reply.authorName}：`);
-                              window.setTimeout(() => inputRef.current?.focus(), 0);
-                            }}
-                          >
-                            回复
-                          </button>
-                          <button
-                            className={`${styles.replyLikeBtn} ${reply.liked ? styles.commentLikeActive : ''}`}
-                            type="button"
-                            disabled={commentLikeSavingId === reply.id}
-                            onClick={() => void handleToggleCommentLike(reply.id)}
-                          >
-                            <i className={reply.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
-                            <span>{reply.likes}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {item.replies.length > 2 ? (
-                    <button className={styles.replyMore} type="button" onClick={() => toggleReplyThread(item.id)}>
-                      {expandedReplyIds[item.id] ? '收起回复' : '查看全部回复'}
-                      <i className={`fa-solid ${expandedReplyIds[item.id] ? 'fa-chevron-up' : 'fa-chevron-right'}`} />
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-            <button
-              className={`${styles.commentLike} ${item.liked ? styles.commentLikeActive : ''}`}
-              type="button"
-              aria-label="评论点赞"
-              disabled={commentLikeSavingId === item.id}
-              onClick={() => void handleToggleCommentLike(item.id)}
-            >
-              <i className={item.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
-              <span>{item.likes}</span>
-            </button>
-          </article>
-        )) : (
-          <article className={styles.comment}>
-            <div className={styles.commentBody}>
-              <div className={styles.commentText}>还没有评论，来抢第一个位置。</div>
-            </div>
-          </article>
-        )}
-      </section>
+      <PostDetailComments
+        detailComments={comments}
+        totalCommentCount={totalCommentCount}
+        commentSort={commentSort}
+        expandedReplyIds={expandedReplyIds}
+        commentLikeSavingId={commentLikeSavingId}
+        comment={comment}
+        commentSaving={commentSaving}
+        emojiOpen={emojiOpen}
+        commentsRef={commentsRef}
+        inputRef={inputRef}
+        onChangeSort={() => setCommentSort((current) => (current === 'hot' ? 'newest' : 'hot'))}
+        onOpenUser={(uid) => router.push(`/user/${encodeURIComponent(uid)}`)}
+        onReply={openReplyInput}
+        onToggleReplyThread={toggleReplyThread}
+        onToggleCommentLike={(commentId) => void handleToggleCommentLike(commentId)}
+        onCommentChange={(nextValue) => {
+          setComment(nextValue);
+          if (!nextValue.trim()) {
+            setReplyTo(null);
+          }
+        }}
+        onToggleEmoji={() => setEmojiOpen((current) => !current)}
+        onInsertEmoji={insertEmoji}
+        onSubmitComment={() => void handleSubmitComment()}
+      />
 
       <section className={styles.related}>
         <div className={styles.relatedTitle}>
@@ -832,109 +561,20 @@ export default function PostDetailPage() {
         </div>
       </section>
 
-      <footer className={styles.inputBar}>
-        <input
-          ref={inputRef}
-          className={styles.input}
-          value={comment}
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setComment(nextValue);
-            if (!nextValue.trim()) {
-              setReplyTo(null);
-            }
-          }}
-          placeholder="说点什么..."
-        />
-        <button className={styles.emojiBtn} type="button" onClick={() => setEmojiOpen((current) => !current)}>
-          <i className="fa-regular fa-face-smile" />
-        </button>
-        <button className={styles.sendBtn} type="button" disabled={!comment.trim() || commentSaving} onClick={() => void handleSubmitComment()}>
-          {commentSaving ? '发送中' : '发送'}
-        </button>
-      </footer>
-
-      {emojiOpen ? (
-        <div className={styles.emojiPicker}>
-          {EMOJIS.map((emoji) => (
-            <button
-              className={styles.emojiButton}
-              key={emoji}
-              type="button"
-              onClick={() => insertEmoji(emoji)}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {shareOpen ? (
-        <div className={styles.shareOverlay} onClick={() => setShareOpen(false)} role="presentation">
-          <section className={styles.sharePanel} onClick={(event) => event.stopPropagation()} role="presentation">
-            <div className={styles.shareTitle}>分享到</div>
-            <div className={styles.shareGrid}>
-              {[
-                { label: '微信', icon: 'fa-brands fa-weixin', bg: '#07C160', fg: '#fff' },
-                { label: '朋友圈', icon: 'fa-solid fa-circle-nodes', bg: '#07C160', fg: '#fff' },
-                { label: 'QQ', icon: 'fa-brands fa-qq', bg: '#12B7F5', fg: '#fff' },
-                { label: '微博', icon: 'fa-brands fa-weibo', bg: '#E6162D', fg: '#fff' },
-                { label: '复制链接', icon: 'fa-solid fa-link', bg: '#f0f0f0', fg: '#666' },
-                { label: '举报', icon: 'fa-solid fa-flag', bg: '#f0f0f0', fg: '#666' },
-                { label: '收藏', icon: 'fa-solid fa-bookmark', bg: '#FFF3E0', fg: '#FF9800' },
-                { label: '保存图片', icon: 'fa-solid fa-download', bg: '#f0f0f0', fg: '#666' },
-              ].map((item) => (
-                <button
-                  className={styles.shareItem}
-                  key={item.label}
-                  type="button"
-                  onClick={() => void handleShareAction(item.label)}
-                >
-                  <span className={styles.shareItemIcon} style={{ background: item.bg, color: item.fg }}><i className={item.icon} /></span>
-                  <em>{item.label}</em>
-                </button>
-              ))}
-            </div>
-            <button className={styles.shareCancelBtn} type="button" onClick={() => setShareOpen(false)}>
-              取消
-            </button>
-          </section>
-        </div>
-      ) : null}
-
-      {reportOpen ? (
-        <div className={styles.shareOverlay} onClick={() => !reportSaving && setReportOpen(false)} role="presentation">
-          <section className={styles.reportPanel} onClick={(event) => event.stopPropagation()} role="presentation">
-            <div className={styles.shareTitle}>举报动态</div>
-            <div className={styles.reportOptions}>
-              {REPORT_REASON_OPTIONS.map((item) => (
-                <button
-                  className={`${styles.reportOption} ${reportReason === item.value ? styles.reportOptionActive : ''}`}
-                  key={item.value}
-                  type="button"
-                  onClick={() => setReportReason(item.value)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <textarea
-              className={styles.reportTextarea}
-              placeholder="补充说明（选填）"
-              value={reportDetail}
-              onChange={(event) => setReportDetail(event.target.value)}
-            />
-            <div className={styles.reportActions}>
-              <button className={styles.shareCancelBtn} type="button" disabled={reportSaving} onClick={() => setReportOpen(false)}>
-                取消
-              </button>
-              <button className={styles.reportSubmitBtn} type="button" disabled={reportSaving} onClick={() => void handleSubmitReport()}>
-                {reportSaving ? '提交中' : '提交举报'}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
+      <PostDetailOverlays
+        post={post}
+        shareOpen={shareOpen}
+        reportOpen={reportOpen}
+        reportReason={reportReason}
+        reportDetail={reportDetail}
+        reportSaving={reportSaving}
+        onCloseShare={() => setShareOpen(false)}
+        onShareAction={(label) => void handleShareAction(label)}
+        onCloseReport={() => setReportOpen(false)}
+        onChangeReportReason={setReportReason}
+        onChangeReportDetail={setReportDetail}
+        onSubmitReport={() => void handleSubmitReport()}
+      />
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>

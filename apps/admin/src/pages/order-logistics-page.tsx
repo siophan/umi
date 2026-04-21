@@ -1,6 +1,6 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Typography } from 'antd';
+import { Alert, Button, ConfigProvider, Form, Input, Select, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
@@ -17,7 +17,7 @@ interface OrderLogisticsPageProps {
 type LogisticsFilters = {
   orderSn?: string;
   carrier?: string;
-  shippingType?: string;
+  shippingType?: AdminLogisticsRow['shippingType'];
 };
 
 const emptyRows: AdminLogisticsRow[] = [];
@@ -29,7 +29,6 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<LogisticsFilters>({});
   const [status, setStatus] = useState<'all' | AdminLogisticsRow['status']>('all');
-  const [selected, setSelected] = useState<AdminLogisticsRow | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -62,7 +61,7 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
         if (status !== 'all' && record.status !== status) return false;
         if (filters.orderSn && !orderRef.includes(filters.orderSn.trim().toLowerCase())) return false;
         if (filters.carrier && record.carrier !== filters.carrier) return false;
-        if (filters.shippingType && record.shippingTypeLabel !== filters.shippingType) return false;
+        if (filters.shippingType && record.shippingType !== filters.shippingType) return false;
         return true;
       }),
     [filters.carrier, filters.orderSn, filters.shippingType, rows, status],
@@ -93,7 +92,17 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
       width: 100,
       fixed: 'right',
       valueType: 'option',
-      render: (_, record) => <Button size="small" type="link" onClick={() => setSelected(record)}>查看</Button>,
+      render: (_, record) => (
+        <Button
+          size="small"
+          type="link"
+          onClick={() => {
+            window.location.hash = `#/orders/logistics/detail/${record.id}`;
+          }}
+        >
+          查看
+        </Button>
+      ),
     },
   ];
 
@@ -119,10 +128,10 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
           <Select
             allowClear
             options={[
-              { label: '快递', value: '快递' },
-              { label: '同城配送', value: '同城配送' },
-              { label: '到店自提', value: '到店自提' },
-              { label: '未知', value: '未知' },
+              { label: '快递物流', value: 'express' },
+              { label: '同城配送', value: 'same_city' },
+              { label: '用户自提', value: 'self_pickup' },
+              { label: '待确认', value: 'unknown' },
             ]}
             placeholder="物流方式"
           />
@@ -153,23 +162,6 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
           toolBarRender={() => []}
         />
       </ConfigProvider>
-      <Drawer open={selected != null} title="物流管理" width={460} onClose={() => setSelected(null)}>
-        {selected ? (
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="履约单">{selected.fulfillmentSn || selected.orderSn || selected.id}</Descriptions.Item>
-            <Descriptions.Item label="订单号">{selected.orderSn || '-'}</Descriptions.Item>
-            <Descriptions.Item label="商品摘要">{selected.productSummary}</Descriptions.Item>
-            <Descriptions.Item label="收货人">{selected.receiver || '-'}</Descriptions.Item>
-            <Descriptions.Item label="联系电话">{selected.phoneNumber || '-'}</Descriptions.Item>
-            <Descriptions.Item label="物流方式">{selected.shippingTypeLabel}</Descriptions.Item>
-            <Descriptions.Item label="承运商">{selected.carrier}</Descriptions.Item>
-            <Descriptions.Item label="单号">{selected.trackingNo || '-'}</Descriptions.Item>
-            <Descriptions.Item label="状态">{selected.statusLabel}</Descriptions.Item>
-            <Descriptions.Item label="发货时间">{selected.shippedAt ? formatDateTime(selected.shippedAt) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="完成时间">{selected.completedAt ? formatDateTime(selected.completedAt) : '-'}</Descriptions.Item>
-          </Descriptions>
-        ) : null}
-      </Drawer>
     </div>
   );
 }

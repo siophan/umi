@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-101` |
 | `title` | 实体仓页面把后端返回的 `completed` 记录直接过滤掉 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/warehouse/physical-visibility` |
 | `scope` | `admin` |
 | `page` | `#/warehouse/physical` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-warehouse-qa-2026-04-20.md` |
 | `fingerprint` | `admin-warehouse:physical-page-drops-completed-records` |
-| `fix_owner` |  |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -55,8 +55,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 给 `completed` 实体仓记录保留后台可见入口，不要在页面层直接吞掉。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 实体仓页面已停止过滤 `completed` 记录，并在状态 Tabs 中补回“已完成”，后台现在能查看后端返回的完成态实体仓记录。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过：`completed` 实体仓记录重新可见，且仍然不会把 `consigning` 混进实体仓列表。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/admin/src/lib/admin-warehouse.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-warehouse.tsx) |

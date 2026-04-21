@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-085` |
 | `title` | 竞猜分类筛选只显示启用分类，现存停用分类下的竞猜无法被筛出 |
 | `severity` | `P2` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/guesses/category-filter` |
 | `scope` | `admin` |
 | `page` | `#/guesses/list` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-guesses-qa-2026-04-20.md` |
 | `fingerprint` | `admin-guesses:category-filter-hides-disabled-categories` |
-| `fix_owner` |  |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -52,8 +52,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 分类筛选器应同时覆盖当前结果集里出现的分类，至少要把停用但仍在用的分类补回可选项。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | `buildGuessCategoryOptions()` 改为先保留启用的竞猜分类，再把当前结果集中实际出现但已停用或不在字典里的分类补回筛选器，并标记为“当前结果”，避免现存竞猜失去定位入口。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过：后台类型检查和构建均成功，分类筛选器会保留当前结果里出现的停用分类。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/admin/src/lib/admin-guesses.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-guesses.tsx) |

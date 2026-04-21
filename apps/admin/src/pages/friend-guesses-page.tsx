@@ -1,6 +1,6 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag } from 'antd';
+import { Alert, Button, ConfigProvider, Form, Input, Select, Space, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
@@ -35,7 +35,6 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<FriendGuessFilters>({});
   const [status, setStatus] = useState<'all' | AdminFriendGuessItem['status']>('all');
-  const [selected, setSelected] = useState<AdminFriendGuessItem | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -130,7 +129,17 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
       dataIndex: 'status',
       width: 120,
       render: (_, record) => (
-        <Tag color={record.status === 'active' ? 'processing' : record.status === 'ended' ? 'default' : 'warning'}>
+        <Tag
+          color={
+            record.status === 'active'
+              ? 'processing'
+              : record.status === 'pending_confirm'
+                ? 'gold'
+                : record.status === 'ended'
+                  ? 'default'
+                  : 'warning'
+          }
+        >
           {record.statusLabel}
         </Tag>
       ),
@@ -139,10 +148,33 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
     {
       title: '操作',
       key: 'actions',
-      width: 100,
+      width: 160,
       fixed: 'right',
       valueType: 'option',
-      render: (_, record) => <Button size="small" type="link" onClick={() => setSelected(record)}>查看</Button>,
+      render: (_, record) => (
+        <Space size={4}>
+          <Button
+            size="small"
+            type="link"
+            onClick={() => {
+              window.location.hash = `#/guesses/detail/${record.guessId}`;
+            }}
+          >
+            详情
+          </Button>
+          {record.status === 'active' ? (
+            <Button
+              size="small"
+              type="link"
+              onClick={() => {
+                window.location.hash = `#/guesses/detail/${record.guessId}`;
+              }}
+            >
+              去处理
+            </Button>
+          ) : null}
+        </Space>
+      ),
     },
   ];
 
@@ -178,6 +210,7 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
           { key: 'all', label: '全部', count: rows.length },
           { key: 'pending', label: '待开赛', count: rows.filter((item) => item.status === 'pending').length },
           { key: 'active', label: '进行中', count: rows.filter((item) => item.status === 'active').length },
+          { key: 'pending_confirm', label: '待确认', count: rows.filter((item) => item.status === 'pending_confirm').length },
           { key: 'ended', label: '已结束', count: rows.filter((item) => item.status === 'ended').length },
         ]}
         onChange={(key) => setStatus(key as typeof status)}
@@ -196,30 +229,6 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
           toolBarRender={() => []}
         />
       </ConfigProvider>
-      <Drawer open={selected != null} title="好友竞猜" width={460} onClose={() => setSelected(null)}>
-        {selected ? (
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="竞猜 ID">{selected.guessId}</Descriptions.Item>
-            <Descriptions.Item label="房间名称">{selected.roomName}</Descriptions.Item>
-            <Descriptions.Item label="发起人">{selected.inviter}</Descriptions.Item>
-            <Descriptions.Item label="奖励">{selected.reward}</Descriptions.Item>
-            <Descriptions.Item label="参与人数">{formatNumber(selected.participants)}</Descriptions.Item>
-            <Descriptions.Item label="邀请数">{formatNumber(selected.invitationCount)}</Descriptions.Item>
-            <Descriptions.Item label="待响应">{formatNumber(selected.pendingInvitations)}</Descriptions.Item>
-            <Descriptions.Item label="已接受">{formatNumber(selected.acceptedInvitations)}</Descriptions.Item>
-            <Descriptions.Item label="已拒绝">{formatNumber(selected.rejectedInvitations)}</Descriptions.Item>
-            <Descriptions.Item label="已过期">{formatNumber(selected.expiredInvitations)}</Descriptions.Item>
-            <Descriptions.Item label="已下注人数">{formatNumber(selected.betParticipantCount)}</Descriptions.Item>
-            <Descriptions.Item label="已确认结果">{formatNumber(selected.confirmedResults)}</Descriptions.Item>
-            <Descriptions.Item label="拒绝确认">{formatNumber(selected.rejectedResults)}</Descriptions.Item>
-            <Descriptions.Item label="已支付金额">{formatAmount(selected.paidAmount)}</Descriptions.Item>
-            <Descriptions.Item label="支付模式">{paymentModeLabel(selected.paymentMode)}</Descriptions.Item>
-            <Descriptions.Item label="支付人">{selected.paidBy || '-'}</Descriptions.Item>
-            <Descriptions.Item label="状态">{selected.statusLabel}</Descriptions.Item>
-            <Descriptions.Item label="截止时间">{formatDateTime(selected.endTime)}</Descriptions.Item>
-          </Descriptions>
-        ) : null}
-      </Drawer>
     </div>
   );
 }

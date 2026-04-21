@@ -1,0 +1,299 @@
+'use client';
+
+import type { CouponListItem, UserAddressItem } from '@umi/shared';
+
+import styles from './page.module.css';
+import type { PaymentProduct } from './payment-helpers';
+import { PAYMENT_SERVICE_TAGS } from './payment-helpers';
+
+type PaymentOrderSectionsProps = {
+  loading: boolean;
+  addressError: string | null;
+  selectedAddress: UserAddressItem | null;
+  products: PaymentProduct[];
+  couponError: string | null;
+  availableCoupons: CouponListItem[];
+  selectedCoupon: CouponListItem | null;
+  couponValue: number;
+  method: 'wechat' | 'alipay';
+  remark: string;
+  subtotal: number;
+  total: number;
+  submitting: boolean;
+  canSubmit: boolean;
+  onBack: () => void;
+  onRetry: () => void;
+  onManageAddresses: () => void;
+  onAddressOpen: () => void;
+  onCouponOpen: () => void;
+  onMethodChange: (method: 'wechat' | 'alipay') => void;
+  onRemarkChange: (value: string) => void;
+  onSubmit: () => void;
+};
+
+export function PaymentOrderSections({
+  loading,
+  addressError,
+  selectedAddress,
+  products,
+  couponError,
+  availableCoupons,
+  selectedCoupon,
+  couponValue,
+  method,
+  remark,
+  subtotal,
+  total,
+  submitting,
+  canSubmit,
+  onBack,
+  onRetry,
+  onManageAddresses,
+  onAddressOpen,
+  onCouponOpen,
+  onMethodChange,
+  onRemarkChange,
+  onSubmit,
+}: PaymentOrderSectionsProps) {
+  return (
+    <>
+      <header className={styles.header}>
+        <button className={styles.back} type="button" onClick={onBack}>
+          <i className="fa-solid fa-arrow-left" />
+        </button>
+        <div className={styles.title}>确认订单</div>
+        <div className={styles.secure}>
+          <i className="fa-solid fa-shield-halved" /> 安全支付
+        </div>
+      </header>
+
+      {addressError ? (
+        <section className={`${styles.card} ${styles.errorCard}`}>
+          <div className={styles.errorTitle}>收货地址加载失败</div>
+          <div className={styles.errorDesc}>{addressError}</div>
+          <button className={styles.errorBtn} type="button" onClick={onRetry}>
+            重新加载
+          </button>
+        </section>
+      ) : !selectedAddress ? (
+        <section className={`${styles.card} ${styles.addressCard}`}>
+          <div className={styles.addrBar} />
+          <button type="button" className={styles.addrRow} onClick={onManageAddresses}>
+            <div className={styles.addrIcon}>
+              <i className="fa-solid fa-location-dot" />
+            </div>
+            <div className={styles.addrInfo}>
+              <div className={styles.addrTop}>
+                <div className={styles.addrName}>{loading ? '正在加载地址' : '请先新增收货地址'}</div>
+              </div>
+              <div className={styles.addrDetail}>前往地址页添加真实收货地址后再提交订单</div>
+            </div>
+            <div className={styles.arrow}>
+              <i className="fa-solid fa-chevron-right" />
+            </div>
+          </button>
+        </section>
+      ) : (
+        <section className={`${styles.card} ${styles.addressCard}`}>
+          <div className={styles.addrBar} />
+          <button type="button" className={styles.addrRow} onClick={onAddressOpen}>
+            <div className={styles.addrIcon}>
+              <i className="fa-solid fa-location-dot" />
+            </div>
+            <div className={styles.addrInfo}>
+              <div className={styles.addrTop}>
+                <div className={styles.addrName}>{selectedAddress.name}</div>
+                <div className={styles.addrPhone}>{selectedAddress.phone}</div>
+                {selectedAddress.tag ? <div className={styles.addrTag}>{selectedAddress.tag}</div> : null}
+              </div>
+              <div className={styles.addrDetail}>
+                {selectedAddress.province}
+                {selectedAddress.city}
+                {selectedAddress.district}
+                {selectedAddress.detail}
+              </div>
+            </div>
+            <div className={styles.arrow}>
+              <i className="fa-solid fa-chevron-right" />
+            </div>
+          </button>
+        </section>
+      )}
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-bag-shopping" /> 商品信息
+        </div>
+        {products.length === 1 && products[0] ? (
+          <div className={styles.productPoster}>
+            <img alt={products[0].name} src={products[0].img} />
+            <span className={styles.productPosterTag}>真实商品</span>
+          </div>
+        ) : null}
+        {products.map((item, index) => (
+          <div className={styles.productRow} key={`${item.productId}-${index}`}>
+            {index > 0 ? <div className={styles.divider} /> : null}
+            <img alt={item.name} className={styles.productImg} src={item.img} />
+            <div className={styles.productInfo}>
+              <div className={styles.productName}>{item.name}</div>
+              <div className={styles.productTags}>
+                <span className={styles.tagBrand}>真实订单</span>
+                <span className={styles.tag}>正品保障</span>
+              </div>
+              <div className={styles.productBottom}>
+                <div>
+                  <span className={styles.price}>¥ {item.price.toFixed(2)}</span>
+                  <span className={styles.orig}>¥ {item.orig.toFixed(2)}</span>
+                </div>
+                <div className={styles.qty}>×{item.qty}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-truck-fast" /> 配送信息
+        </div>
+        <div className={styles.detailRow}>
+          <i className="fa-solid fa-truck" />
+          <span className={styles.detailLabel}>配送方式</span>
+          <strong className={styles.detailValue}>普通快递</strong>
+        </div>
+        <div className={styles.detailRow}>
+          <i className="fa-regular fa-clock" />
+          <span className={styles.detailLabel}>预计送达</span>
+          <strong className={`${styles.detailValue} ${styles.green}`}>支付后尽快发货</strong>
+        </div>
+        <div className={styles.detailRow}>
+          <i className="fa-solid fa-box-open" />
+          <span className={styles.detailLabel}>运费</span>
+          <strong className={`${styles.detailValue} ${styles.green}`}>包邮</strong>
+        </div>
+      </section>
+
+      <section className={styles.card}>
+        {couponError ? (
+          <div className={styles.inlineError}>
+            <div>
+              <div className={styles.inlineErrorTitle}>优惠券加载失败</div>
+              <div className={styles.inlineErrorDesc}>{couponError}</div>
+            </div>
+            <button className={styles.inlineErrorBtn} type="button" onClick={onRetry}>
+              重试
+            </button>
+          </div>
+        ) : (
+          <button className={styles.couponRow} type="button" onClick={onCouponOpen}>
+            <div className={styles.couponLeft}>
+              <i className="fa-solid fa-ticket" />
+              优惠券
+              <span className={styles.couponBadge}>{availableCoupons.length}张可用</span>
+            </div>
+            <div className={styles.couponRight}>
+              <span>{selectedCoupon ? `-¥ ${couponValue.toFixed(2)}` : '不使用'}</span>
+              <i className="fa-solid fa-chevron-right" />
+            </div>
+          </button>
+        )}
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-credit-card" /> 支付方式
+        </div>
+        <button
+          type="button"
+          className={`${styles.pm} ${method === 'wechat' ? styles.pmActive : ''}`}
+          onClick={() => onMethodChange('wechat')}
+        >
+          <div className={styles.pmIcon} style={{ background: '#07C160' }}>
+            <i className="fa-brands fa-weixin" />
+          </div>
+          <div className={styles.pmInfo}>
+            <div className={styles.pmName}>微信支付</div>
+            <div className={styles.pmDesc}>提交后直接落真实订单</div>
+          </div>
+          <div className={styles.pmCheck}>✓</div>
+        </button>
+        <button
+          type="button"
+          className={`${styles.pm} ${method === 'alipay' ? styles.pmActive : ''}`}
+          onClick={() => onMethodChange('alipay')}
+        >
+          <div className={styles.pmIcon} style={{ background: '#1677ff' }}>
+            <i className="fa-brands fa-alipay" />
+          </div>
+          <div className={styles.pmInfo}>
+            <div className={styles.pmName}>支付宝</div>
+            <div className={styles.pmDesc}>提交后直接落真实订单</div>
+          </div>
+          <div className={styles.pmCheck}>✓</div>
+        </button>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-award" /> 服务保障
+        </div>
+        <div className={styles.services}>
+          {PAYMENT_SERVICE_TAGS.map((item) => (
+            <div className={styles.serviceTag} key={item}>
+              <i className="fa-solid fa-circle-check" />
+              {item}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-regular fa-message" /> 订单备注
+        </div>
+        <textarea
+          className={styles.remarkInput}
+          rows={2}
+          placeholder="选填，备注特殊需求"
+          value={remark}
+          onChange={(event) => onRemarkChange(event.target.value)}
+        />
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-receipt" /> 价格明细
+        </div>
+        <div className={styles.priceRow}>
+          <span>商品金额</span>
+          <strong>¥ {subtotal.toFixed(2)}</strong>
+        </div>
+        <div className={styles.priceRow}>
+          <span>优惠金额</span>
+          <strong className={styles.discount}>-¥ {couponValue.toFixed(2)}</strong>
+        </div>
+        <div className={styles.priceRow}>
+          <span>运费</span>
+          <strong className={styles.green}>包邮</strong>
+        </div>
+        <div className={`${styles.priceRow} ${styles.totalRow}`}>
+          <span>实付金额</span>
+          <strong className={styles.total}>¥ {total.toFixed(2)}</strong>
+        </div>
+      </section>
+
+      <footer className={styles.bottom}>
+        <div>
+          <div className={styles.bottomLabel}>合计</div>
+          <div className={styles.bottomPrice}>
+            <small>¥</small>
+            {total.toFixed(2)}
+          </div>
+        </div>
+        <button className={styles.payBtn} type="button" onClick={onSubmit} disabled={!canSubmit}>
+          {submitting ? '提交中...' : '立即支付'}
+        </button>
+      </footer>
+    </>
+  );
+}

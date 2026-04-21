@@ -1,25 +1,33 @@
 # 当前交接状态
 
-最后更新：2026-04-20（首页 / 排行榜 / 直播列表已同步）
+最后更新：2026-04-21（admin 架构已过线，开始扫描 web 和非 admin API 剩余架构点）
 
 本文档只保留当前阶段最小必要上下文，用于新线程快速接手，减少历史对话 token。
 
 ## 当前阶段
 
-`apps/web` 用户端 UI 与功能行为对齐旧系统仍在继续，但高频主链路已经不再停留在 demo/mock 阶段。
+当前仓库的重点已经不只是在 `apps/web` 对齐旧页，也在保证后台架构不要回退，并开始转向运行质量。
 
-当前重点：
+当前并行重点：
 
-1. 继续把首页、商城、`me`、社区、店铺、直播、新手页压到更接近旧页；
-2. 保住现有对齐结果，不因为接真实接口把旧页交互打坏；
-3. 持续把商品发现、商品详情、搜索、购物车和支付下单等高频购物链路维持在真实数据态；
-4. 保持 `apps/web` 主线 `tsc` 持续通过。
+1. `apps/web` 高频页继续保住旧页 UI 和真实链路；
+2. `apps/web` 不再保留旧路径兼容壳，后续直接维护正式路由；
+3. `apps/admin` 保持现有分层，不再回退到“大文件中心”；
+4. `apps/api/src/modules/admin` 继续保持按业务域模块组织，不回退到后台总域大文件；
+5. 开始关注 `apps/api` 非 `admin` 域的超大 router/store；
+6. 保持 `@umi/web / @umi/admin / @umi/api` 的 typecheck / build 持续通过。
 
 ## 当前硬约束
 
 1. UI 不允许猜，必须以旧 `frontend` 为准。
 2. 功能行为也要对齐，不能只做静态视觉。
 3. 接真实接口时优先保住旧页交互和 fallback，不要把已经接真的链路回退成 demo。
+4. `apps/admin/src/lib/api` 不允许再长成跨域总接口文件；薄 barrel 可以保留，真实请求函数必须按业务域拆开。
+5. `apps/admin` 页面如果已经同时承载列表、详情抽屉、表单弹窗和动作状态，开始拆就要在同轮收口，不留过渡壳；但当前已过架构收口基线，后续不要再为了把 `250` 行页面压到 `150` 行而机械拆分。
+6. `apps/api/src/modules/admin` 允许薄导出层，但不允许再把多个后台业务域堆回单个超大实现文件。
+7. `apps/web` 不允许继续新增没有明确参数承接的兼容壳、别名页和包装页；尤其不能让静态路由直接 import 动态路由页。
+8. `apps/web/src/lib/api/shared.ts` 只保留传输层，不允许重新长成用户端总接口文件。
+9. 非 `admin` API 后续如果继续演进，优先先打 `800+ / 1000+` 行的大 router/store，不要再造新的用户端总 service。
 
 详细规则见：
 
@@ -105,18 +113,64 @@
 - `/order-detail`：已切真实订单详情 `/api/orders/:id`
 - `/coupons`：已切真实 `/api/coupons`，不再回退本地 `fallbackCoupons`
 - `/product/[id]`：收藏、加入购物车、立即购买已切真实链路
+- `/product/[id]`：页面结构已开始从大页本体往“协调层 + 子组件”收口，头图、摘要区、内容区、换购弹层已拆到 `product-detail-*`
 - `/community`：推荐流 / 关注流 / 发现区 / 搜索 / 发布 / 点赞 / 收藏 / 转发 / 评论回复都已切真实接口，关注横条统一为稳定用户 ID 跳转，`mentionUsers` 补齐 ID
+- `/community`：页面结构已开始从大页本体往“协调层 + 子组件”收口，`follow bar / recommend highlights / feed list / page helpers` 已从主文件拆出
+- `/post/[id]`：页面结构已开始从大页本体往“协调层 + 子组件”收口，正文卡片、评论区、分享/举报弹层已拆到 `post-detail-*`
+- `/friends`：页面结构已开始从大页本体往“协调层 + 子组件”收口，数据归一化、四个 tab 列表和 PK 弹层已拆到 `friends-*`
+- `/me`：页面结构已开始从大页本体往“协调层 + 子组件”收口，主页摘要、内容分区和设置/搜索/开店弹层已拆到 `me-*`
 - `/user/[uid]`：公开主页路由已统一切到 `uid_code`，复制提示改回 `已复制优米号`
 - `/live/[id]`：没有进行中的竞猜时，主按钮不再误提示成功
 - `/shop/[id]`：底部主按钮会切到对应内容并带视口滚动
 - `/`：模式切换时 hero 归位，“正在进行”副标题改为跟当前可见卡片数联动
+
+10. 最近完成的后台架构收口：
+- `apps/api/src/modules/admin` 的 `system / merchant / products / coupons / guesses / orders / content` 已拆成薄入口 + 领域文件
+- `apps/admin/src/lib/api/system.ts`、`merchant.ts`、`catalog.ts` 已拆成按业务域子模块 + 薄 barrel
+- `apps/admin/src/pages/users-page.tsx`、`system-users-page.tsx`、`roles-page.tsx`、`warehouse-page.tsx`、`marketing-coupons-page.tsx`、`dashboard-page.tsx`、`system-rankings-page.tsx` 已收成薄协调层
+- 上述收口后，`@umi/admin typecheck/build`、`@umi/api typecheck/build` 已实际通过
+
+11. 当前后台架构判断：
+- `apps/admin` 整体架构已通过，不再是当前主阻塞
+- 当前 `apps/admin/src/pages` 共 `35` 个页面文件
+- 当前最大的后台页已降到 `286` 行，不再有 `300+ / 500+ / 800+` 的中心文件
+
+12. 这轮新增确认的用户端架构事实：
+- `apps/web/src/app` 当前共有 `46` 个页面入口
+- 旧的兼容路由壳已经删除：`/detail`、`/product-detail`、`/post-detail`、`/live`、`/profile`、`/user-profile`、`/my-orders`、`/all-features`、`/myshop`、`/shop-detail`、`/chat-detail`
+- 后续不要再把旧路径兼容页重新加回工作区；如果没有正式需求，就直接维护主路由
+- `apps/web/src/lib/api` 当前还是按业务域拆分；`shared.ts` 仍只承担 token 和基础请求，暂未回退成总接口文件
+- `apps/web/src/app/community/page.tsx` 已从 `1122` 行降到 `757` 行，当前主文件已不再直接承载关注横条、推荐高亮区和整段 feed 卡片渲染
+- `apps/web/src/app/product/[id]/page.tsx` 已从 `1028` 行降到 `396` 行
+- `apps/web/src/app/post/[id]/page.tsx` 已从 `942` 行降到 `584` 行
+- `apps/web/src/app/friends/page.tsx` 已从 `889` 行降到 `496` 行
+- `apps/web/src/app/me/page.tsx` 已从 `827` 行降到 `333` 行
+- `apps/web/src/app/payment/page.tsx` 已从 `676` 行降到 `319` 行，订单主体和弹层已拆到 `payment-order-sections / payment-overlays / payment-helpers`
+- `apps/web/src/app/community-search/page.tsx` 已从 `691` 行降到 `421` 行，默认态、结果态和 helper 已拆到 `default-view / results-view / page-helpers`
+- `apps/web/src/app/my-shop/page.tsx` 已从 `626` 行降到 `257` 行，开店申请态和已开店态内容已拆到 `shop-status-content / active-shop-content / my-shop-helpers`
+- `apps/web/src/app/create-user/page.tsx` 已从 `761` 行降到 `266` 行，主体区块和弹层已拆到 `create-user-form / create-user-overlays / create-user-helpers`
+- `apps/web/src/app/novice-guess/page.tsx` 已从 `685` 行降到 `301` 行，启动页、游戏页和结果页已拆到 `novice-guess-*`
+- `apps/web/src/app/search/page.tsx` 已从 `620` 行降到 `367` 行，搜索前态和结果态已拆到 `search-before-view / search-results-view / search-helpers`
+- `apps/web/src/app/user/[uid]/page.tsx` 已从 `602` 行降到 `385` 行，主页主体和私信浮层已拆到 `user-profile-sections / user-profile-chat-overlay`
+- `apps/web/src/app/shop/[id]/page.tsx` 已从 `601` 行降到 `258` 行，店铺主体内容已拆到 `shop-detail-content`
+- `packages/shared/src/api.ts` 当前只剩薄导出层，`packages/shared` 不是当前主阻塞
+- `apps/api` 非 `admin` 域当前最大的结构热点主要是：
+  - `apps/api/src/modules/order/router.ts`
+  - `apps/api/src/modules/shop/router.ts`
+  - `apps/api/src/modules/product/router.ts`
+  - `apps/api/src/modules/search/router.ts`
+  - `apps/api/src/modules/warehouse/router.ts`
+  - `apps/api/src/modules/guess/router.ts`
+  - `apps/api/src/modules/community/store.ts`
 
 ## 当前正在做
 
 1. 保持现有 UI 对齐结果，不要回退到 demo 占位实现
 2. `login` 页由其他线程处理，当前不要改动
 3. 在接真实接口时，优先保留旧页 fallback 和旧页交互，不要为了联调破坏 UI；`/` 当前首屏依赖真实 `/api/banners /api/guesses /api/rankings /api/lives`，`/mall` 当前主商品流依赖真实 `/api/products`，`/cart` 依赖真实 `/api/cart`，`/payment` 依赖真实 `/api/addresses + /api/coupons + /api/orders`
-4. 若再发现零散差异，仍然先对照对应旧 `frontend/*.html` 再改
+4. `apps/admin` 当前默认不再机械拆页面；只保留防回退约束
+5. `apps/web` 后续优先处理高频大页边界，不要重新引入包装页模式
+6. 若再发现零散差异，仍然先对照对应旧 `frontend/*.html` 再改
 
 当前已知的残留说明：
 
@@ -134,9 +188,14 @@
 - `/mall`
 - `/me`
 - `/community`
+- `/product/[id]`
+- `/post/[id]`
+- `/friends`
 - `/shop/[id]`
 - `/live/[id]`
 - `/novice-guess`
+- `apps/api` 非 `admin` 大 router/store
+- `apps/web` 高频页继续对齐旧 `frontend`
 
 ## 下一步建议顺序
 
@@ -151,6 +210,13 @@ pnpm --dir apps/web exec tsc -p tsconfig.json --pretty false
 4. 如果某页状态发生明显变化，再更新：
 - [progress.md](docs/progress.md)
 - [handoff.md](docs/handoff.md)
+
+如果继续做架构：
+
+1. 先打 `apps/web` 仍然最重的页面，优先 `community / post/[id] / guess/[id] / cart / edit-profile / create`
+2. 保持当前“只留正式路由”的状态，不再重建旧路径兼容页
+3. 然后处理 `apps/api` 非 `admin` 的超大 router/store，优先 `order / shop / product / search`
+4. `apps/admin` 只做防回退，不再默认继续机械拆页
 
 ## 常用参考文件
 

@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -67,7 +67,7 @@
 | 修复说明 | 已同时补前后端防循环校验：前端编辑权限时会从父权限下拉中过滤当前权限的全部后代；后端更新权限时会沿祖先链校验新父节点，禁止把父节点改成自己的子权限或写出已有循环。 |
 | 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 通过。前后端类型检查通过，管理台构建通过；权限父节点不再允许选择自身后代，后端也会拒绝循环写入。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前前端会基于 `descendantIdSet` 从父权限下拉里排除当前权限的全部后代；后端 `wouldCreatePermissionCycle()` 也会拒绝把父节点改成自己的子权限或写出已有环。 |
 | 修复提交/变更 | `apps/api/src/modules/admin/system.ts`；`apps/api/src/modules/admin/router.ts`；`apps/admin/src/pages/permissions-page.tsx`；`apps/admin/src/pages/marketing-banners-page.tsx` |
 
 ## Fixer

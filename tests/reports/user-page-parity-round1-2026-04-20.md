@@ -23,36 +23,36 @@
 | `/me` | `parity_gap` | 快捷入口里存在错误路由。 |
 | `/edit-profile` | `parity_gap` | 页面暴露了未承接的封面上传入口。 |
 | `/search` | `parity_gap` | 搜索结果在缺少评分时会伪造 4.x 评分。 |
-| `/mall` | `parity_gap` | 商品流和购物车数请求失败会被伪装成空商城，分类分支失败还会被伪装成“当前分类暂无商品”。 |
+| `/mall` | `verified` | `BUG-20260420-009` 与 `BUG-20260420-062` 已关闭：首屏商品流/购物车失败和分类分支失败都已改成显式错误态，不再伪装成空内容。 |
 | `/ranking` | `parity_gap` | 榜单读取失败会被伪装成空榜。 |
 | `/lives` | `parity_gap` | 直播列表读取失败会被伪装成空列表。 |
 | `/live/[id]` | `parity_gap` | 直播详情存在本地假竞猜和假弹幕互动。 |
 | `/community-search` | `parity_gap` | 推荐和搜索失败会被伪装成空内容。 |
 | `/post/[id]` | `parity_gap` | 顶栏没有保留旧页作者信息和关注入口。 |
 | `/guess/[id]` | `parity_gap` | 页面混入硬编码统计、倒计时、收藏和评论演示态。 |
-| `/product/[id]` | `parity_gap` | 页面自造价格、固定标签和换购表达，不完全依赖接口。 |
+| `/product/[id]` | `verified` | `BUG-20260420-003` 已验证修复：固定徽标、硬编码换购价和伪造服务卖点已移除，换购表达已回到真实库存抵扣结果。 |
 | `/cart` | `parity_gap` | 购物车和推荐流请求失败会被伪装成空内容。 |
-| `/payment` | `parity_gap` | 地址和优惠券请求失败会被伪装成“无地址/无券”，发票开关也不会进入真实下单链路。 |
+| `/payment` | `verified` | `BUG-20260420-011` 与 `BUG-20260420-065` 已关闭：地址/优惠券失败已改成显式错误态，发票假开关也已移除，页面能力与下单契约一致。 |
 | `/orders` | `parity_gap` | 接口失败会被伪装成空订单页。 |
 | `/warehouse` | `parity_gap` | 接口失败会被伪装成空仓库页。 |
-| `/my-shop` | `parity_gap` | 状态读取失败会错误回退成开店申请页，成功态还暴露了未承接的店铺设置和商品管理按钮。 |
-| `/brand-auth` | `parity_gap` | 授权概览失败会被伪装成空授权页，成功态还会混入本地写死的保证金和经营指标。 |
-| `/add-product` | `parity_gap` | 页面展示了一整套不会真实提交的配置 UI。 |
+| `/my-shop` | `verified` | `BUG-20260420-008` 已关闭，`BUG-20260420-064` 已验证修复；当前未再发现这页遗留的用户端假操作问题。 |
+| `/brand-auth` | `verified` | `BUG-20260420-012` 已关闭，`BUG-20260420-063` 已验证修复；当前这页失败态和成功态伪数据问题都已收口。 |
+| `/add-product` | `verified` | `BUG-20260420-013` 已关闭：第 3 步已改成真实提交确认页，不再展示不会真实提交的配置 UI。 |
 | `/user/[uid]` | `parity_gap` | 接口失败会回退成伪造的默认主页。 |
 | `/friends` | `parity_gap` | 社交链和竞猜链失败会被伪装成空好友页。 |
 | `/notifications` | `parity_gap` | 读取失败会被伪装成空列表，全部已读还会假成功。 |
 | `/chat` | `parity_gap` | 会话列表失败会被伪装成空消息页。 |
 | `/chat/[id]` | `parity_gap` | 会话详情失败会被伪装成空聊天线程。 |
 | `/chat-detail` | `parity_gap` | 兼容入口会把所有访问硬编码跳到 `/chat/u123`。 |
-| `/address` | `parity_gap` | 地址读取失败会被伪装成空地址页，“管理/完成”切换也没有实际管理态。 |
-| `/coupons` | `parity_gap` | 列表失败虽已改成错误态，但“使用”按钮仍无真实落点，且失败时顶部“可用优惠券”统计还会显示成真实 `0`。 |
+| `/address` | `parity_gap` | 地址读取失败仍会被伪装成空地址页；`BUG-20260420-066` 已验证修复，空壳“管理/完成”切换已移除。 |
+| `/coupons` | `verified` | `BUG-20260420-026` 已关闭，`BUG-20260420-067` 与 `BUG-20260420-091` 已验证修复；列表失败、主 CTA 和顶部统计口径问题都已收口。 |
 | `/invite` | `parity_gap` | 后端未承接时，页面仍展示静态奖励和“请先登录”假态。 |
 | `/checkin` | `parity_gap` | 后端未承接时，页面仍展示固定签到进度和静态任务。 |
 | `/community` | `parity_gap` | 发帖面板展示了超出真实 payload 的本地发布配置。 |
 | `/features` | `parity_gap` | 入口页仍把未闭环的邀请/签到能力当成正常福利入口。 |
 | `/order-detail` | `parity_gap` | 已完成订单的“评价”按钮跳错到商品详情。 |
-| `/review` | `parity_gap` | 图片上传占位已补齐，但仍缺少订单上下文校验，缺参时仍允许进入完整评价表单。 |
-| `/shop/[id]` | `parity_gap` | 读取失败问题已关闭，但成功态仍有两类问题：关注/收藏/客服是假互动，且 `BUG-20260420-042` 已回归重开，“商品均分”会在无真实评分时回退本地 `4.8`。 |
+| `/review` | `verified` | `BUG-20260420-053` 与 `BUG-20260420-068` 都已验证修复：图片上传占位已补齐，缺参时也已改成页级错误态。 |
+| `/shop/[id]` | `verified` | `BUG-20260420-032` 已关闭，`BUG-20260420-042` 与 `BUG-20260420-069` 已验证修复；当前这页失败态、成功态伪评分和本地假互动都已收口。 |
 | `/guess-history` | `parity_gap` | 历史读取失败会被伪装成“暂无记录”。 |
 | `/novice-guess` | `parity_gap` | 静态引导页把演示奖励描述成真实入仓结果。 |
 | `/splash` | `parity_gap` | 启动页用静态中奖跑马灯和承诺式文案伪装真实业务状态。 |
@@ -69,11 +69,11 @@
 | `BUG-20260420-006` | `P1` | `/me` | 个人中心快捷入口使用了错误路由 | [tests/bugs/open/BUG-20260420-006-me-shortcuts-use-wrong-routes.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-006-me-shortcuts-use-wrong-routes.md) |
 | `BUG-20260420-007` | `P2` | `/` | 首页把多个接口失败静默吞成正常空区块 | [tests/bugs/open/BUG-20260420-007-home-page-swallows-section-fetch-failures.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-007-home-page-swallows-section-fetch-failures.md) |
 | `BUG-20260420-008` | `P1` | `/my-shop` | 我的店铺页读取失败后错误回退为“申请开店”状态 | [tests/bugs/open/BUG-20260420-008-my-shop-failure-falls-back-to-application-state.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-008-my-shop-failure-falls-back-to-application-state.md) |
-| `BUG-20260420-009` | `P2` | `/mall` | 商城首页把商品和购物车请求失败静默吞成空内容 | [tests/bugs/open/BUG-20260420-009-mall-home-swallows-fetch-failures-as-empty-feed.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-009-mall-home-swallows-fetch-failures-as-empty-feed.md) |
+| `BUG-20260420-009` | `P2` | `/mall` | 商城首页把商品和购物车请求失败静默吞成空内容 | [tests/bugs/closed/BUG-20260420-009-mall-home-swallows-fetch-failures-as-empty-feed.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/closed/BUG-20260420-009-mall-home-swallows-fetch-failures-as-empty-feed.md) |
 | `BUG-20260420-010` | `P2` | `/cart` | 购物车页把购物车和推荐流请求失败静默吞成空内容 | [tests/bugs/open/BUG-20260420-010-cart-page-swallows-fetch-failures-as-empty-state.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-010-cart-page-swallows-fetch-failures-as-empty-state.md) |
-| `BUG-20260420-011` | `P2` | `/payment` | 支付页把地址和优惠券请求失败伪装成“无数据” | [tests/bugs/open/BUG-20260420-011-payment-page-masks-address-and-coupon-fetch-errors.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-011-payment-page-masks-address-and-coupon-fetch-errors.md) |
-| `BUG-20260420-012` | `P2` | `/brand-auth` | 品牌授权页把概览请求失败静默吞成空页面 | [tests/bugs/open/BUG-20260420-012-brand-auth-page-swallows-overview-failures.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-012-brand-auth-page-swallows-overview-failures.md) |
-| `BUG-20260420-013` | `P1` | `/add-product` | 上架商品页展示了一整套不会落库的配置 UI | [tests/bugs/open/BUG-20260420-013-add-product-page-shows-non-persisted-config-ui.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-013-add-product-page-shows-non-persisted-config-ui.md) |
+| `BUG-20260420-011` | `P2` | `/payment` | 支付页把地址和优惠券请求失败伪装成“无数据” | [tests/bugs/closed/BUG-20260420-011-payment-page-masks-address-and-coupon-fetch-errors.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/closed/BUG-20260420-011-payment-page-masks-address-and-coupon-fetch-errors.md) |
+| `BUG-20260420-012` | `P2` | `/brand-auth` | 品牌授权页把概览请求失败静默吞成空页面 | [tests/bugs/closed/BUG-20260420-012-brand-auth-page-swallows-overview-failures.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/closed/BUG-20260420-012-brand-auth-page-swallows-overview-failures.md) |
+| `BUG-20260420-013` | `P1` | `/add-product` | 上架商品页展示了一整套不会落库的配置 UI | [tests/bugs/closed/BUG-20260420-013-add-product-page-shows-non-persisted-config-ui.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/closed/BUG-20260420-013-add-product-page-shows-non-persisted-config-ui.md) |
 | `BUG-20260420-014` | `P2` | `/search` | 搜索页在缺少评分时伪造商品评分 | [tests/bugs/open/BUG-20260420-014-search-page-fabricates-product-ratings.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-014-search-page-fabricates-product-ratings.md) |
 | `BUG-20260420-015` | `P1` | `/user/[uid]` | 用户主页读取失败后回退成伪造的默认主页数据 | [tests/bugs/open/BUG-20260420-015-user-profile-falls-back-to-fake-profile-data.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-015-user-profile-falls-back-to-fake-profile-data.md) |
 | `BUG-20260420-016` | `P2` | `/friends` | 好友页把社交链和竞猜链请求失败静默吞成空页面 | [tests/bugs/open/BUG-20260420-016-friends-page-swallows-social-failures-as-empty-state.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-016-friends-page-swallows-social-failures-as-empty-state.md) |
@@ -102,10 +102,10 @@
 | `BUG-20260420-038` | `P2` | `/splash` | Splash 启动页用静态中奖跑马灯和“稳赚不亏/体验金”文案伪装真实业务承诺 | [tests/bugs/open/BUG-20260420-038-splash-page-fabricates-winner-feed-and-guaranteed-reward-copy.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-038-splash-page-fabricates-winner-feed-and-guaranteed-reward-copy.md) |
 | `BUG-20260420-051` | `P2` | `/register` | 注册页把本地长度判断伪装成已完成手机验证步骤 | [tests/bugs/open/BUG-20260420-051-register-accepts-unverified-code-step.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-051-register-accepts-unverified-code-step.md) |
 | `BUG-20260420-052` | `P2` | `/post/[id]` | 动态详情页顶栏缺失旧页作者信息和关注入口 | [tests/bugs/open/BUG-20260420-052-post-detail-header-missing-author-follow-cta.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-052-post-detail-header-missing-author-follow-cta.md) |
-| `BUG-20260420-062` | `P2` | `/mall` | 商城分类页把分类请求失败静默吞成“当前分类暂无商品” | [tests/bugs/open/BUG-20260420-062-mall-category-fetch-failure-masked-as-empty-category.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-062-mall-category-fetch-failure-masked-as-empty-category.md) |
+| `BUG-20260420-062` | `P2` | `/mall` | 商城分类页把分类请求失败静默吞成“当前分类暂无商品” | [tests/bugs/closed/BUG-20260420-062-mall-category-fetch-failure-masked-as-empty-category.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/closed/BUG-20260420-062-mall-category-fetch-failure-masked-as-empty-category.md) |
 | `BUG-20260420-063` | `P1` | `/brand-auth` | 品牌授权页成功态仍用本地映射伪造保证金和品牌经营指标 | [tests/bugs/open/BUG-20260420-063-brand-auth-page-fabricates-brand-metrics-and-deposit.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-063-brand-auth-page-fabricates-brand-metrics-and-deposit.md) |
 | `BUG-20260420-064` | `P1` | `/my-shop` | 我的店铺页暴露了未承接的店铺设置和商品管理操作 | [tests/bugs/open/BUG-20260420-064-my-shop-page-exposes-non-functional-management-actions.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-064-my-shop-page-exposes-non-functional-management-actions.md) |
-| `BUG-20260420-065` | `P2` | `/payment` | 支付页暴露了不会进入下单 payload 的发票开关 | [tests/bugs/open/BUG-20260420-065-payment-page-exposes-non-persisted-invoice-toggle.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-065-payment-page-exposes-non-persisted-invoice-toggle.md) |
+| `BUG-20260420-065` | `P2` | `/payment` | 支付页暴露了不会进入下单 payload 的发票开关 | [tests/bugs/closed/BUG-20260420-065-payment-page-exposes-non-persisted-invoice-toggle.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/closed/BUG-20260420-065-payment-page-exposes-non-persisted-invoice-toggle.md) |
 | `BUG-20260420-066` | `P2` | `/address` | 收货地址页“管理/完成”切换只是空状态切换，没有实际管理模式 | [tests/bugs/open/BUG-20260420-066-address-page-manage-mode-is-a-dead-toggle.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-066-address-page-manage-mode-is-a-dead-toggle.md) |
 | `BUG-20260420-067` | `P2` | `/coupons` | 优惠券页“使用”按钮只是 toast，没有真实去使用链路 | [tests/bugs/open/BUG-20260420-067-coupons-page-use-cta-is-a-toast-only-action.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-067-coupons-page-use-cta-is-a-toast-only-action.md) |
 | `BUG-20260420-091` | `P2` | `/coupons` | 优惠券页在读取失败时仍把可用券数量显示成真实 `0` | [tests/bugs/open/BUG-20260420-091-coupons-summary-shows-zero-on-load-failure.md](/Users/ezreal/Downloads/joy/umi/tests/bugs/open/BUG-20260420-091-coupons-summary-shows-zero-on-load-failure.md) |
@@ -135,10 +135,8 @@
 | --- | --- |
 | `P1` | 先修 `/login` 的假成功验证码逻辑。 |
 | `P1` | 修正 `/me` 的错误快捷入口路由。 |
-| `P1` | 修正 `/my-shop` 的错误回退逻辑，失败时不要显示开店申请。 |
 | `P1` | 清理 `/guess/[id]` 的硬编码统计和本地伪交互。 |
-| `P1` | 清理 `/product/[id]` 的自造价格、固定标签和伪换购表达。 |
-| `P1` | 清理 `/add-product` 的假配置 UI，或让后端真实承接。 |
+| `P1` | 继续处理 `/orders`、`/warehouse` 这些仍会把失败伪装成空内容或默认态的页面。 |
 | `P1` | 去掉 `/user/[uid]` 的假主页回退，失败时显示真实错误态。 |
 | `P1` | 修正 `/notifications` 的“全部已读”假成功逻辑。 |
 | `P1` | 清理 `/live/[id]` 的假竞猜和假弹幕互动，未接线前至少禁用并明确提示。 |
@@ -155,7 +153,6 @@
 | `P2` | 收敛 `/splash` 的中奖跑马灯和承诺式文案，不再把静态宣传素材冒充真实业务承诺。 |
 | `P2` | 修正 `/features` 的能力入口状态，不再把未闭环的邀请/签到当正常入口。 |
 | `P2` | 调整 `/novice-guess` 文案，让静态引导页不再冒充真实入仓奖励链路。 |
-| `P2` | 修正 `/brand-auth` 的错误态，不再把概览失败伪装成空授权页。 |
 | `P2` | 修正首页分区级错误态，不再把失败伪装成空内容。 |
 | `P2` | 去掉 `/search` 的伪评分展示，只显示真实评分。 |
 | `P2` | 修正 `/friends`、`/notifications`、`/chat`、`/chat/[id]` 的错误态，不再把失败伪装成空页。 |

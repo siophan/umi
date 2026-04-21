@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { toEntityId } from '@umi/shared';
 import { getRequestUser, requireUser } from '../../lib/auth';
-import { asyncHandler } from '../../lib/errors';
+import { asyncHandler, HttpError } from '../../lib/errors';
 import { getDbPool } from '../../lib/db';
 import { ok } from '../../lib/http';
 import { requireAdmin } from '../admin/auth';
@@ -90,6 +90,14 @@ async function getAdminVirtualWarehouseItems() {
     `, [VIRTUAL_STATUS_STORED, VIRTUAL_STATUS_LOCKED, VIRTUAL_STATUS_CONVERTED]);
     return rows.map((row) => sanitizeVirtualRow(row));
 }
+async function getAdminVirtualWarehouseItemDetail(itemId) {
+    const items = await getAdminVirtualWarehouseItems();
+    const matched = items.find((item) => item.id === itemId);
+    if (!matched) {
+        throw new HttpError(404, 'ADMIN_VIRTUAL_WAREHOUSE_ITEM_NOT_FOUND', '虚拟仓记录不存在');
+    }
+    return matched;
+}
 async function getAdminPhysicalWarehouseItems() {
     const db = getDbPool();
     const [fulfillmentRows] = await db.execute(`
@@ -159,6 +167,14 @@ async function getAdminPhysicalWarehouseItems() {
         PHYSICAL_STATUS_FULFILLED,
     ]);
     return [...fulfillmentRows, ...warehouseRows].map((row) => sanitizePhysicalRow(row));
+}
+async function getAdminPhysicalWarehouseItemDetail(itemId) {
+    const items = await getAdminPhysicalWarehouseItems();
+    const matched = items.find((item) => item.id === itemId);
+    if (!matched) {
+        throw new HttpError(404, 'ADMIN_PHYSICAL_WAREHOUSE_ITEM_NOT_FOUND', '实体仓记录不存在');
+    }
+    return matched;
 }
 warehouseRouter.get('/virtual', requireUser, asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
@@ -362,6 +378,12 @@ warehouseRouter.get('/admin/stats', requireAdmin, asyncHandler(async (_request, 
 warehouseRouter.get('/admin/virtual', requireAdmin, asyncHandler(async (_request, response) => {
     ok(response, { items: await getAdminVirtualWarehouseItems() });
 }));
+warehouseRouter.get('/admin/virtual/:id', requireAdmin, asyncHandler(async (request, response) => {
+    ok(response, await getAdminVirtualWarehouseItemDetail(String(request.params.id)));
+}));
 warehouseRouter.get('/admin/physical', requireAdmin, asyncHandler(async (_request, response) => {
     ok(response, { items: await getAdminPhysicalWarehouseItems() });
+}));
+warehouseRouter.get('/admin/physical/:id', requireAdmin, asyncHandler(async (request, response) => {
+    ok(response, await getAdminPhysicalWarehouseItemDetail(String(request.params.id)));
 }));

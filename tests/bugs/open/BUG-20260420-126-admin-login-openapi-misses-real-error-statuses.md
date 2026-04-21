@@ -18,7 +18,7 @@
 | `fix_owner` | `` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -49,8 +49,8 @@
 | 类型 | 内容 |
 | --- | --- |
 | OpenAPI 证据 | [apps/api/src/routes/openapi/paths/admin.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/routes/openapi/paths/admin.ts:10) 到 [apps/api/src/routes/openapi/paths/admin.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/routes/openapi/paths/admin.ts:26) 当前只声明了 `200` 和 `400`。 |
-| 路由证据 | [apps/api/src/modules/admin/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/router.ts:215) 到 [apps/api/src/modules/admin/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/router.ts:239) 登录错误映射实际包含 `400`、`401`、`403` 三类状态。 |
-| 相关文件 | [apps/api/src/routes/openapi/paths/admin.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/routes/openapi/paths/admin.ts) [apps/api/src/modules/admin/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/router.ts) |
+| 路由证据 | [apps/api/src/modules/admin/routes/auth-routes.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/routes/auth-routes.ts:17) 到 [apps/api/src/modules/admin/routes/auth-routes.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/routes/auth-routes.ts:43) 登录错误映射实际包含 `400`、`401`、`403` 三类状态。 |
+| 相关文件 | [apps/api/src/routes/openapi/paths/admin.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/routes/openapi/paths/admin.ts) [apps/api/src/modules/admin/routes/auth-routes.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/routes/auth-routes.ts) |
 
 ## Suspect Files
 

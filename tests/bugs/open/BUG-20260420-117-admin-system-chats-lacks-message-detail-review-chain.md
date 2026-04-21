@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-117` |
 | `title` | 聊天管理页只有会话摘要，缺少消息明细审查链路 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/system-chats-detail` |
 | `scope` | `admin` |
 | `page` | `#/system/chats` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `tests/reports/admin-chat-equity-rankings-qa-2026-04-20.md` |
 | `fingerprint` | `admin-system-chats:lacks-message-detail-review-chain` |
-| `fix_owner` | `` |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -65,8 +65,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 待补 |
-| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/api typecheck` |
-| Fixer 自测结果 | 待修复 |
+| 修复说明 | 聊天管理页已取消摘要抽屉，改成独立详情子页 `#/system/chats/detail/:id`；后台新增 `GET /api/admin/chats/:id`，直接返回会话双方上下文和真实 `chat_message` 时间线，且不会改写已读状态。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin build`；`pnpm --filter @umi/api build` |
+| Fixer 自测结果 | 通过：聊天管理现在可以从列表进入真实详情子页，查看双方信息、风险等级和完整消息时间线。 |
 | Verifier 复测结果 | 待复核 |
-| 修复提交/变更 | 待补充 |
+| 修复提交/变更 | [apps/admin/src/pages/system-chats-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/system-chats-page.tsx)；[apps/admin/src/pages/system-chat-detail-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/system-chat-detail-page.tsx)；[apps/admin/src/lib/admin-page-registry.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-page-registry.tsx)；[apps/admin/src/lib/admin-navigation.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-navigation.tsx)；[apps/api/src/modules/admin/system-chats.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/system-chats.ts)；[apps/api/src/modules/admin/routes/system-ops-routes.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/routes/system-ops-routes.ts) |

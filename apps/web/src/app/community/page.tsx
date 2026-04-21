@@ -6,8 +6,6 @@ import type { ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { MobileShell } from '../../components/mobile-shell';
-import type { CommunityFeedItem as CommunityFeedApiItem } from '@umi/shared';
-
 import {
   bookmarkCommunityPost,
   createCommunityPost,
@@ -19,211 +17,20 @@ import {
   unlikeCommunityPost,
 } from '../../lib/api/community';
 import { fetchSocialOverview } from '../../lib/api/friends';
+import { CommunityFeedList } from './community-feed-list';
+import { CommunityFollowBar } from './community-follow-bar';
+import { CommunityRecommendHighlights } from './community-recommend-highlights';
+import type { EmojiCategory, FeedItem, FollowUser, HotTopic, PublishScope } from './page-helpers';
+import {
+  SCOPE_META,
+  defaultFollowedUsers,
+  emojiCategories,
+  getScopeLabel,
+  mapCommunityFeedItem,
+  myProfile,
+  topicOptions,
+} from './page-helpers';
 import styles from './page.module.css';
-
-type Scope = 'public' | 'friends' | 'fans' | 'followers' | 'private';
-type PublishScope = 'public' | 'followers' | 'private';
-
-type FeedItem = {
-  id: string;
-  author: {
-    uid?: string;
-    name: string;
-    avatar: string;
-    verified: boolean;
-  };
-  tag: { text: string; cls: string };
-  title: string;
-  desc: string;
-  images: string[];
-  guessInfo?: {
-    id: string;
-    options: [string, string];
-    participants: number;
-    pcts: [number, number];
-  };
-  likes: number;
-  comments: number;
-  shares: number;
-  time: string;
-  liked?: boolean;
-  bookmarked?: boolean;
-  scope?: Scope;
-};
-
-type FollowUser = {
-  id: string;
-  uid?: string;
-  name: string;
-  avatar: string;
-  hasNew: boolean;
-};
-
-const TAG_CLS_MAP: Record<string, string> = {
-  品牌竞猜: styles.tagBrand,
-  猜友动态: styles.tagCommunity,
-  品牌资讯: styles.tagBrand,
-  零食测评: styles.tagHot,
-  PK战报: styles.tagPk,
-  平台公告: styles.tagBrand,
-  店铺动态: styles.tagHot,
-  店铺推荐: styles.tagHot,
-  转发: styles.tagCommunity,
-};
-
-const SCOPE_META: Record<
-  Scope,
-  { label: string; desc: string; icon: string; iconClass: string; feedLabel?: string }
-> = {
-  public: {
-    label: '所有人',
-    desc: '所有猜友都可以看到',
-    icon: 'fa-earth-americas',
-    iconClass: styles.scopeIconPublic,
-  },
-  friends: {
-    label: '好友',
-    desc: '仅互相关注的好友可见',
-    icon: 'fa-user-group',
-    iconClass: styles.scopeIconFriends,
-    feedLabel: '好友可见',
-  },
-  fans: {
-    label: '粉丝',
-    desc: '仅关注你的粉丝可见',
-    icon: 'fa-heart',
-    iconClass: styles.scopeIconFans,
-    feedLabel: '粉丝可见',
-  },
-  followers: {
-    label: '粉丝',
-    desc: '仅关注你的粉丝可见',
-    icon: 'fa-heart',
-    iconClass: styles.scopeIconFans,
-    feedLabel: '粉丝可见',
-  },
-  private: {
-    label: '仅自己',
-    desc: '仅自己可见，用于保存草稿',
-    icon: 'fa-lock',
-    iconClass: styles.scopeIconPrivate,
-    feedLabel: '仅自己',
-  },
-};
-
-const defaultFollowedUsers: FollowUser[] = [
-  { id: 'brand-1', uid: 'brand-1', name: '乐事官方旗舰店', avatar: '/legacy/images/products/p001-lays.jpg', hasNew: true },
-  { id: 'friend-1', uid: 'friend-1', name: '零食达人小王', avatar: '/legacy/images/mascot/mouse-main.png', hasNew: false },
-  { id: 'brand-2', uid: 'brand-2', name: '三只松鼠', avatar: '/legacy/images/products/p003-squirrels.jpg', hasNew: false },
-  { id: 'friend-2', uid: 'friend-2', name: '德芙官方', avatar: '/legacy/images/products/p007-dove.jpg', hasNew: true },
-];
-
-const topicOptions = ['🎯 竞猜心得', '🍿 零食测评', '🤝 PK战报', '🔥 热门话题', '📊 数据分析', '💡 攻略分享'];
-
-const emojiCategories = {
-  '😀 表情': ['😀', '😃', '😄', '😁', '😆', '😂', '🙂', '😊', '🥰', '😍', '😎', '🤔', '😮', '😢', '😭', '🥳'],
-  '👍 手势': ['👍', '👎', '👏', '🙌', '🤝', '🙏', '💪', '👌', '✌️', '🤞', '❤️', '🔥'],
-  '🎉 活动': ['🎉', '🎊', '🎈', '🎁', '🎯', '🏆', '🥇', '💰', '⭐', '🌟', '✨', '💥'],
-  '🍕 美食': ['🍿', '🥤', '🍫', '🍬', '🍪', '🥜', '🍓', '🍍', '🍋', '🌶️', '🍕', '🍔'],
-} as const;
-
-const myProfile = {
-  name: '我',
-  avatar: '/legacy/images/mascot/mouse-main.png',
-};
-
-function fmtNum(value: number) {
-  if (value >= 10000) {
-    return `${(value / 10000).toFixed(1)}万`;
-  }
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}k`;
-  }
-  return String(value);
-}
-
-function formatRelativeTime(value: string) {
-  const timestamp = new Date(value).getTime();
-  if (Number.isNaN(timestamp)) {
-    return '刚刚';
-  }
-
-  const diff = Date.now() - timestamp;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diff < minute) {
-    return '刚刚';
-  }
-  if (diff < hour) {
-    return `${Math.max(1, Math.floor(diff / minute))}分钟前`;
-  }
-  if (diff < day) {
-    return `${Math.max(1, Math.floor(diff / hour))}小时前`;
-  }
-  if (diff < 7 * day) {
-    return `${Math.max(1, Math.floor(diff / day))}天前`;
-  }
-  return new Date(value).toISOString().slice(0, 10);
-}
-
-function mapCommunityFeedItem(item: CommunityFeedApiItem): FeedItem {
-  const tagText = item.tag?.trim() || '猜友动态';
-  return {
-    id: item.id,
-    author: {
-      uid: item.author.uid,
-      name: item.author.name,
-      avatar: item.author.avatar || '/legacy/images/mascot/mouse-main.png',
-      verified: item.author.verified,
-    },
-    tag: {
-      text: tagText,
-      cls: TAG_CLS_MAP[tagText] ?? styles.tagCommunity,
-    },
-    title: item.title,
-    desc: item.desc,
-    images: item.images,
-    guessInfo: item.guessInfo
-      ? {
-          id: item.guessInfo.id,
-          options: item.guessInfo.options,
-          participants: item.guessInfo.participants,
-          pcts: item.guessInfo.pcts,
-        }
-      : undefined,
-    likes: item.likes,
-    comments: item.comments,
-    shares: item.shares,
-    time: formatRelativeTime(item.createdAt),
-    liked: item.liked,
-    bookmarked: item.bookmarked,
-    scope: item.scope,
-  };
-}
-
-function normalizePostPreviewText(value: string | null | undefined) {
-  return String(value || '').replace(/\s+/g, ' ').trim();
-}
-
-function shouldRenderStandaloneTitle(title: string | null | undefined, desc: string | null | undefined) {
-  const normalizedTitle = normalizePostPreviewText(title);
-  if (!normalizedTitle) {
-    return false;
-  }
-
-  const normalizedDesc = normalizePostPreviewText(desc);
-  if (!normalizedDesc) {
-    return true;
-  }
-
-  return normalizedTitle !== normalizedDesc;
-}
-
-function getScopeLabel(scope: PublishScope) {
-  return SCOPE_META[scope].label;
-}
 
 export default function CommunityPage() {
   const router = useRouter();
@@ -240,7 +47,7 @@ export default function CommunityPage() {
   const [toast, setToast] = useState('');
   const [publishScope, setPublishScope] = useState<PublishScope>('public');
   const [scopeDraft, setScopeDraft] = useState<PublishScope>('public');
-  const [emojiCategory, setEmojiCategory] = useState<keyof typeof emojiCategories>('😀 表情');
+  const [emojiCategory, setEmojiCategory] = useState<EmojiCategory>('😀 表情');
   const [bookmarkAnimating, setBookmarkAnimating] = useState<string | null>(null);
   const [followedUsers, setFollowedUsers] = useState<FollowUser[]>([]);
   const [socialReady, setSocialReady] = useState(false);
@@ -250,7 +57,7 @@ export default function CommunityPage() {
   const [bookmarkSavingId, setBookmarkSavingId] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [hotTopics, setHotTopics] = useState<Array<{ text: string; desc: string; href: string }>>([]);
+  const [hotTopics, setHotTopics] = useState<HotTopic[]>([]);
   const [heroPost, setHeroPost] = useState<FeedItem | null>(null);
   const [repostTarget, setRepostTarget] = useState<{
     postId: string;
@@ -661,209 +468,37 @@ export default function CommunityPage() {
         </nav>
 
         {tab === 'follow' ? (
-          <section className={styles.followBar}>
-            <div className={styles.followBarTitle}>
-              <span>我关注的猜友</span>
-              <Link href="/friends">
-                管理关注 <i className="fa-solid fa-chevron-right" />
-              </Link>
-            </div>
-            <div className={styles.followScroll}>
-              {followedUsers.length ? followedUsers.map((item) => (
-                <button className={styles.followItem} key={item.id} type="button" onClick={() => router.push(`/user/${encodeURIComponent(item.uid || item.id)}`)}>
-                  <div className={styles.followAvatarWrap}>
-                    <img
-                      className={`${styles.followAvatar} ${item.hasNew ? styles.followAvatarNew : styles.followAvatarOld}`}
-                      src={item.avatar}
-                      alt={item.name}
-                    />
-                    {item.hasNew ? <span className={styles.followDot} /> : null}
-                  </div>
-                  <span className={styles.followName}>{item.name}</span>
-                </button>
-              )) : socialReady ? (
-                <div className={styles.followEmpty}>你还没有关注任何猜友</div>
-              ) : (
-                defaultFollowedUsers.map((item) => (
-                  <div className={styles.followItemSkeleton} key={item.id} />
-                ))
-              )}
-            </div>
-          </section>
+          <CommunityFollowBar
+            followedUsers={followedUsers}
+            socialReady={socialReady}
+            fallbackUsers={defaultFollowedUsers}
+            onOpenUser={(userId) => router.push(`/user/${encodeURIComponent(userId)}`)}
+          />
         ) : null}
 
         {tab === 'recommend' ? (
-          <>
-            {heroPost ? (
-              <button className={styles.banner} type="button" onClick={() => router.push(`/post/${encodeURIComponent(heroPost.id)}`)}>
-                <img src={heroPost.images[0] || heroPost.author.avatar || '/legacy/images/mascot/mouse-main.png'} alt={heroPost.title} />
-                <div className={styles.bannerOverlay}>
-                  <div className={styles.bannerTag}>🔥 社区热议</div>
-                  <div className={styles.bannerTitle}>{heroPost.title}</div>
-                </div>
-              </button>
-            ) : null}
-
-            <section className={styles.hotBar}>
-              {hotTopics.map((item) => (
-                <Link className={styles.hotItem} href={item.href} key={item.text}>
-                  <span>🔥</span>
-                  {item.text}
-                </Link>
-              ))}
-            </section>
-          </>
+          <CommunityRecommendHighlights
+            heroPost={heroPost}
+            hotTopics={hotTopics}
+            onOpenPost={(postId) => router.push(`/post/${encodeURIComponent(postId)}`)}
+          />
         ) : null}
 
-        <section className={styles.feed}>
-          {!feedReady ? (
-            <div className={styles.empty}>
-              <i className="fa-solid fa-spinner fa-spin" />
-              <div className={styles.emptyTitle}>动态加载中</div>
-              <div className={styles.emptyDesc}>正在同步社区内容...</div>
-            </div>
-          ) : visibleFeed.length ? (
-            visibleFeed.map((item) => {
-              const showStandaloneTitle = shouldRenderStandaloneTitle(item.title, item.desc);
-              return (
-              <article className={styles.card} key={item.id} onClick={() => router.push(`/post/${encodeURIComponent(item.id)}`)}>
-                <header className={styles.authorRow}>
-                  <button
-                    className={styles.authorAvatarBtn}
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      router.push(`/user/${encodeURIComponent(item.author.uid || item.author.name)}`);
-                    }}
-                  >
-                    <img src={item.author.avatar} alt={item.author.name} />
-                  </button>
-                  <div className={styles.authorMeta}>
-                    <div className={styles.authorName}>
-                      {item.author.name}
-                      {item.author.verified ? <i className="fa-solid fa-circle-check" /> : null}
-                    </div>
-                    <div className={styles.authorTime}>
-                      {item.time}
-                      {item.scope && item.scope !== 'public' ? (
-                        <>
-                          {' · '}
-                          <i className={`fa-solid ${SCOPE_META[item.scope].icon}`} />
-                          {' '}
-                          {SCOPE_META[item.scope].feedLabel}
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                  <span className={`${styles.tag} ${item.tag.cls}`}>{item.tag.text}</span>
-                </header>
-
-                <div className={styles.body}>
-                  {showStandaloneTitle ? <h2 className={styles.titleText}>{item.title}</h2> : null}
-                  <p className={`${styles.descText} ${showStandaloneTitle ? '' : styles.descTextOnly}`}>{item.desc}</p>
-                </div>
-
-                {item.images.length ? (
-                  <div
-                    className={`${styles.images} ${
-                      item.images.length === 1 ? styles.img1 : item.images.length === 2 ? styles.img2 : styles.img3
-                    }`}
-                  >
-                    {item.images.slice(0, 3).map((src) => (
-                      <img src={src} alt={item.title} key={src} />
-                    ))}
-                  </div>
-                ) : null}
-
-                {item.guessInfo ? (
-                  <>
-                    <button
-                      className={styles.guessBar}
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        router.push(`/guess/${item.guessInfo?.id}`);
-                      }}
-                    >
-                      <div className={styles.guessIcon}>🎯</div>
-                      <div className={styles.guessInfo}>
-                        <div className={styles.guessTitle}>{item.guessInfo.options.join(' vs ')}</div>
-                        <div className={styles.guessData}>{fmtNum(item.guessInfo.participants)}人参与</div>
-                      </div>
-                      <span className={styles.guessBtn}>去竞猜</span>
-                    </button>
-
-                    <div className={styles.pkMini}>
-                      <div className={`${styles.pkSeg} ${styles.pkSeg0}`} style={{ width: `${item.guessInfo.pcts[0]}%` }}>
-                        {item.guessInfo.pcts[0]}%
-                      </div>
-                      <div className={`${styles.pkSeg} ${styles.pkSeg1}`} style={{ width: `${item.guessInfo.pcts[1]}%` }}>
-                        {item.guessInfo.pcts[1]}%
-                      </div>
-                    </div>
-                  </>
-                ) : null}
-
-                <footer className={styles.actions}>
-                  <button
-                    className={styles.actionItem}
-                    type="button"
-                    disabled={likeSavingId === item.id}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void toggleLike(item.id, tab);
-                    }}
-                  >
-                    <i className={`fa-${item.liked ? 'solid' : 'regular'} fa-heart ${item.liked ? styles.actionLiked : ''}`} />
-                    {fmtNum(item.likes)}
-                  </button>
-                  <button
-                    className={styles.actionItem}
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      router.push(`/post/${encodeURIComponent(item.id)}`);
-                    }}
-                  >
-                    <i className="fa-regular fa-comment" />
-                    {fmtNum(item.comments)}
-                  </button>
-                  <button
-                    className={styles.actionItem}
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openRepostComposer(item, tab);
-                    }}
-                  >
-                    <i className="fa-solid fa-share-nodes" />
-                    {fmtNum(item.shares)}
-                  </button>
-                  <button
-                    className={`${styles.actionItem} ${styles.actionFav} ${item.bookmarked ? styles.favorited : ''} ${
-                      bookmarkAnimating === item.id ? styles.favoritedPop : ''
-                    }`}
-                    type="button"
-                    disabled={bookmarkSavingId === item.id}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void toggleBookmark(item.id, tab, Boolean(item.bookmarked));
-                    }}
-                  >
-                    <i className={`fa-${item.bookmarked ? 'solid' : 'regular'} fa-bookmark`} />
-                  </button>
-                </footer>
-              </article>
-              );
-            })
-          ) : (
-            <div className={styles.empty}>
-              <i className={`fa-solid ${feedError ? 'fa-triangle-exclamation' : 'fa-inbox'}`} />
-              <div className={styles.emptyTitle}>{feedError ? '动态加载失败' : '暂无该分类内容'}</div>
-              <div className={styles.emptyDesc}>{feedError || '换个分类看看吧~'}</div>
-            </div>
-          )}
-        </section>
+        <CommunityFeedList
+          feedReady={feedReady}
+          feedError={feedError}
+          feed={visibleFeed}
+          currentTab={tab}
+          likeSavingId={likeSavingId}
+          bookmarkSavingId={bookmarkSavingId}
+          bookmarkAnimating={bookmarkAnimating}
+          onOpenPost={(postId) => router.push(`/post/${encodeURIComponent(postId)}`)}
+          onOpenUser={(userId) => router.push(`/user/${encodeURIComponent(userId)}`)}
+          onOpenGuess={(guessId) => router.push(`/guess/${guessId}`)}
+          onToggleLike={(postId, currentTab) => void toggleLike(postId, currentTab)}
+          onOpenRepost={openRepostComposer}
+          onToggleBookmark={(postId, currentTab, bookmarked) => void toggleBookmark(postId, currentTab, bookmarked)}
+        />
 
         <div className={styles.loadMore}>
           {feedReady ? (

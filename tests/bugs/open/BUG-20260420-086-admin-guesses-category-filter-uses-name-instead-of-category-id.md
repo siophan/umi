@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-086` |
 | `title` | 竞猜分类筛选只用分类名称，不足以区分树形分类里的同名节点 |
 | `severity` | `P2` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/guesses/category-filter-precision` |
 | `scope` | `admin` |
 | `page` | `#/guesses/list` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-guesses-qa-2026-04-20.md` |
 | `fingerprint` | `admin-guesses:category-filter-uses-name-instead-of-id` |
-| `fix_owner` |  |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -54,8 +54,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | admin 竞猜列表应返回 `categoryId`，前端筛选器和详情展示分离，筛选按主键、展示按名称。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | admin 竞猜列表补回 `categoryId`，前端分类筛选器的 option `value` 和过滤逻辑都改成按 `categoryId` 工作；列表展示继续用分类名称，并额外显示分类 ID 方便区分树形同名节点。 |
+| 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过：竞猜分类筛选已按 `categoryId` 精确匹配，admin API 类型检查、后台类型检查和构建均成功。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [packages/shared/src/domain.ts](/Users/ezreal/Downloads/joy/umi/packages/shared/src/domain.ts)；[apps/api/src/modules/admin/guesses-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/guesses-shared.ts)；[apps/admin/src/lib/admin-guesses.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-guesses.tsx)；[apps/admin/src/pages/guesses-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/guesses-page.tsx) |

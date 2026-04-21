@@ -908,6 +908,22 @@ export const commercePaths = {
             },
         },
     },
+    '/api/warehouse/admin/virtual/{id}': {
+        get: {
+            tags: ['Warehouse'],
+            summary: '管理台获取虚拟仓库详情',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '虚拟仓记录 ID')],
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    additionalProperties: true,
+                }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '虚拟仓记录不存在'),
+            },
+        },
+    },
     '/api/warehouse/admin/physical': {
         get: {
             tags: ['Warehouse'],
@@ -924,6 +940,22 @@ export const commercePaths = {
                     },
                 }),
                 401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/warehouse/admin/physical/{id}': {
+        get: {
+            tags: ['Warehouse'],
+            summary: '管理台获取实体仓库详情',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '实体仓记录 ID')],
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    additionalProperties: true,
+                }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '实体仓记录不存在'),
             },
         },
     },

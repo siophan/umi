@@ -20,6 +20,9 @@ type CouponRow = {
   status: number | string | null;
 };
 
+/**
+ * 把优惠券类型码映射成前端可直接消费的类型。
+ */
 function mapCouponType(type: number): CouponListItem['type'] {
   if (type === 20) {
     return 'percent';
@@ -30,6 +33,10 @@ function mapCouponType(type: number): CouponListItem['type'] {
   return 'amount';
 }
 
+/**
+ * 计算优惠券当前展示状态。
+ * 这里会把数据库状态和过期时间一起折算成 unused / used / expired / locked。
+ */
 function mapCouponStatus(status: number, expireAt: Date | string | null): CouponListItem['status'] {
   const expired = expireAt ? new Date(expireAt).getTime() < Date.now() : false;
   if (status === 30) {
@@ -44,6 +51,9 @@ function mapCouponStatus(status: number, expireAt: Date | string | null): Coupon
   return 'unused';
 }
 
+/**
+ * 优惠券来源文案。
+ */
 function mapCouponSource(sourceType: number) {
   if (sourceType === 10) {
     return '后台发放';
@@ -57,6 +67,9 @@ function mapCouponSource(sourceType: number) {
   return '系统发放';
 }
 
+/**
+ * 把优惠券表记录转换成前端展示契约。
+ */
 function sanitizeCoupon(row: CouponRow): CouponListItem {
   const sourceType = Number(row.source_type ?? 0);
   return {
@@ -73,6 +86,9 @@ function sanitizeCoupon(row: CouponRow): CouponListItem {
   };
 }
 
+/**
+ * 读取当前用户优惠券列表。
+ */
 export async function listCoupons(userId: string): Promise<CouponListResult> {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(

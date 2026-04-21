@@ -1,0 +1,207 @@
+import type { EntityId } from '@umi/shared';
+
+export interface AdminNotificationItem {
+  id: string;
+  title: string;
+  content: string | null;
+  audience:
+    | 'all_users'
+    | 'order_users'
+    | 'guess_users'
+    | 'post_users'
+    | 'chat_users'
+    | 'targeted_users';
+  type: 'system' | 'order' | 'guess' | 'social';
+  status: 'sent';
+  targetType: 'order' | 'guess' | 'post' | 'chat' | 'unknown';
+  targetId: string | null;
+  actionUrl: string | null;
+  recipientCount: number;
+  readCount: number;
+  unreadCount: number;
+  createdAt: string;
+  sentAt: string;
+}
+
+export interface AdminChatItem {
+  id: string;
+  userA: { id: string; uid: string | null; name: string };
+  userB: { id: string; uid: string | null; name: string };
+  messages: number;
+  unreadMessages: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  status: 'normal' | 'review' | 'escalated';
+  updatedAt: string;
+}
+
+export interface AdminChatDetailParticipant {
+  id: string;
+  uid: string | null;
+  name: string;
+  riskLevel: 'low' | 'medium' | 'high';
+}
+
+export interface AdminChatMessageItem {
+  id: string;
+  senderId: string;
+  senderName: string;
+  receiverId: string;
+  receiverName: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface AdminChatDetailResult {
+  conversation: {
+    id: string;
+    userA: AdminChatDetailParticipant;
+    userB: AdminChatDetailParticipant;
+    messages: number;
+    unreadMessages: number;
+    riskLevel: 'low' | 'medium' | 'high';
+    status: 'normal' | 'review' | 'escalated';
+    updatedAt: string;
+  };
+  messages: AdminChatMessageItem[];
+  basis: string;
+}
+
+export interface AdminSystemUserItem {
+  id: string;
+  username: string;
+  displayName: string;
+  phoneNumber: string | null;
+  email: string | null;
+  role: string;
+  roleCodes: string[];
+  roleIds: EntityId[];
+  status: 'active' | 'disabled';
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminRoleListItem {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  permissionRange: string;
+  permissionModules: string[];
+  memberCount: number;
+  permissionCount: number;
+  status: 'active' | 'disabled';
+  isSystem: boolean;
+  sort: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminPermissionMatrixPermission {
+  id: string;
+  code: string;
+  name: string;
+  action: 'view' | 'create' | 'edit' | 'manage' | 'unknown';
+  parentId: string | null;
+  enabledRoleIds: string[];
+}
+
+export interface AdminPermissionMatrixCell {
+  roleId: string;
+  roleCode: string;
+  roleName: string;
+  level: 'none' | 'view' | 'create' | 'edit' | 'manage';
+  permissionCodes: string[];
+  permissionNames: string[];
+}
+
+export interface AdminPermissionMatrixModule {
+  module: string;
+  permissions: AdminPermissionMatrixPermission[];
+  cells: AdminPermissionMatrixCell[];
+}
+
+export interface AdminPermissionMatrixData {
+  roles: Array<{
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    status: 'active' | 'disabled';
+    isSystem: boolean;
+  }>;
+  modules: AdminPermissionMatrixModule[];
+  summary: {
+    roles: number;
+    modules: number;
+    permissions: number;
+  };
+}
+
+export interface AdminPermissionItem {
+  id: string;
+  code: string;
+  name: string;
+  module: string;
+  action: 'view' | 'create' | 'edit' | 'manage' | 'unknown';
+  parentId: string | null;
+  parentName: string | null;
+  status: 'active' | 'disabled';
+  sort: number;
+  assignedRoleCount: number;
+  isBuiltIn: boolean;
+}
+
+export type AdminNotificationListResult = {
+  items: AdminNotificationItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: {
+    total: number;
+    sent: number;
+    read: number;
+    unread: number;
+  };
+  basis: string;
+};
+
+export type AdminChatListResult = {
+  items: AdminChatItem[];
+  summary: {
+    total: number;
+    review: number;
+    escalated: number;
+    highRisk: number;
+  };
+  basis: string;
+};
+
+export type AdminSystemUserListResult = {
+  items: AdminSystemUserItem[];
+  summary: {
+    total: number;
+    active: number;
+    disabled: number;
+  };
+};
+
+export type AdminRoleListResult = {
+  items: AdminRoleListItem[];
+  summary: {
+    total: number;
+    active: number;
+    disabled: number;
+    members: number;
+  };
+};
+
+export type AdminPermissionListResult = {
+  items: AdminPermissionItem[];
+  summary: {
+    total: number;
+    active: number;
+    disabled: number;
+    modules: number;
+  };
+};

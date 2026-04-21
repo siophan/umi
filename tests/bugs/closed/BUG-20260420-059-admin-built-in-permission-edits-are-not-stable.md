@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -71,7 +71,7 @@
 | 修复说明 | 系统内置权限现在按“共享目录维护”处理：权限列表会标出内置权限并禁用“编辑”，后端 `updateAdminPermission()` 也会直接拒绝编辑内置权限，只保留启停管理，避免再出现“提示更新成功但下次同步被覆盖”或“改码后重新同步出重复权限”的假成功。 |
 | 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 已通过。权限页已区分“系统内置目录 / 自定义权限”，内置权限编辑入口禁用，接口层同步拒绝编辑内置权限，三项验证均通过。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前 `/api/admin/permissions` 返回项已包含 `isBuiltIn`，权限表格会给内置权限打“内置”标记并禁用前端“编辑”按钮；后端 `apps/api/src/modules/admin/system-permissions.ts` 的 `updateAdminPermission()` 也会直接拒绝编辑内置权限，原先“编辑成功但下一次目录同步回写覆盖”的假成功链路已被切断。 |
 | 修复提交/变更 | `/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/system.ts`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/permissions-page.tsx`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/api/system.ts`；`/Users/ezreal/Downloads/joy/umi/apps/api/src/routes/openapi/schemas/admin.ts` |
 
 ## Director Re-review

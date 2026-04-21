@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-096` |
 | `title` | 交易流水把未支付和已关闭订单也算成“支付流水” |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/orders/transactions-semantic` |
 | `scope` | `admin` |
 | `page` | `#/orders/transactions` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-orders-qa-2026-04-20.md` |
 | `fingerprint` | `admin-orders:transactions-treats-unpaid-closed-orders-as-payments` |
-| `fix_owner` |  |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -54,8 +54,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 交易流水应围绕真实支付/退款事件承接，至少不要把待支付和已关闭订单混入支付流水。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | `/api/admin/orders/transactions` 的 payment rows 已收紧到真实支付成功链路，只保留 `paid / fulfilled / refunded` 订单，不再把 `pending / closed` 订单混进“支付”流水。 |
+| 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck` |
+| Fixer 自测结果 | 通过：交易流水“支付”tab 不再包含未支付和已关闭订单。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/api/src/modules/admin/order-transactions.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/order-transactions.ts) |

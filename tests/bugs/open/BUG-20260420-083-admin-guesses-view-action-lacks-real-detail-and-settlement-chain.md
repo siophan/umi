@@ -7,18 +7,18 @@
 | `bug_id` | `BUG-20260420-083` |
 | `title` | 竞猜列表“查看”只有摘要抽屉，缺少真实详情、审核上下文和开奖链路 |
 | `severity` | `P1` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/guesses/detail` |
 | `scope` | `admin` |
 | `page` | `#/guesses/list` |
 | `api` | `/api/admin/guesses` |
-| `owner` | `测试狗` |
+| `owner` | `用户端全栈一` |
 | `source_run` | `admin-guesses-qa-2026-04-20.md` |
 | `fingerprint` | `admin-guesses:view-action-lacks-real-detail-chain` |
-| `fix_owner` |  |
+| `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -55,8 +55,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 恢复真实竞猜详情链路，把审核备注、统计、评论、证据和开奖动作接回后台详情页，而不是停留在本地摘要抽屉。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 已把“查看”从本地摘要抽屉切回真实详情链路：新增 `GET /api/admin/guesses/{id}` 聚合详情接口，返回竞猜基础信息、选项与投注统计、审核日志、评论和 Oracle 证据；后台新增 `#/guesses/detail/:id` 详情页和对应路由承接，列表“查看”改为跳转详情页，旧摘要抽屉已删除。当前工作区尚无后台开奖/取消写接口，因此详情页不会再暴露假动作按钮。 |
+| 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过。竞猜列表“查看”现在会进入真实详情页，能查看基础信息、审核日志、下注统计、评论和 Oracle 证据，并可在详情页继续完成审核通过/拒绝；API 与 admin 构建验证均通过。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | `/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/guess-management.ts`；`/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/routes/content-routes.ts`；`/Users/ezreal/Downloads/joy/umi/apps/api/src/routes/openapi/paths/admin.ts`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/guess-detail-page.tsx`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/guesses-page.tsx`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-page-registry.tsx`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-navigation.tsx`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/api/catalog-guesses.ts`；`/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/api/catalog-shared.ts` |

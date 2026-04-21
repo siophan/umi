@@ -682,6 +682,10 @@ async function getCartPurchaseRows(
   });
 }
 
+/**
+ * 创建真实商城订单。
+ * 商品直购和购物车结算都走这里，库存扣减、优惠券核销、履约单创建在同一事务里完成。
+ */
 async function createOrder(userId: string, payload: CreateOrderPayload): Promise<CreateOrderResult> {
   const db = getDbPool();
   const connection = await db.getConnection();
@@ -836,6 +840,10 @@ async function createOrder(userId: string, payload: CreateOrderPayload): Promise
   }
 }
 
+/**
+ * 用户确认收货。
+ * 会同步推进订单状态、履约状态，并记录状态流转日志。
+ */
 async function confirmOrder(userId: string, orderId: string): Promise<ConfirmOrderResult> {
   const db = getDbPool();
   const connection = await db.getConnection();

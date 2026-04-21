@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -66,7 +66,7 @@
 | 修复说明 | 新增分类弹层的父分类下拉已改成只展示当前业务域中的启用分类，停用父分类不会再作为可选项暴露出来，页面口径和后端“请先启用父分类”的校验保持一致。 |
 | 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 已通过。新增弹层父分类下拉现在只保留启用节点，后台两项验证均通过。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前分类页父分类选项已经下沉到 `apps/admin/src/lib/admin-categories.tsx` 的 `buildCategoryParentOptions()`，这里明确额外过滤了 `item.status === 'active'`，新增/编辑弹层不会再把停用父分类暴露成可选项。 |
 | 修复提交/变更 | `/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/categories-page.tsx` |
 
 ## Director Re-review

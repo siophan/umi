@@ -3,126 +3,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { NoviceGuessGame } from './novice-guess-game';
+import {
+  CONFETTI,
+  formatPrice,
+  QUESTIONS,
+  STREAK_REWARDS,
+  TICKER_ITEMS,
+  type ProductReward,
+} from './novice-guess-helpers';
+import { NoviceGuessResult } from './novice-guess-result';
+import { NoviceGuessSplash } from './novice-guess-splash';
 import styles from './page.module.css';
-
-type ProductReward = {
-  name: string;
-  img: string;
-  price: number;
-  guessPrice: number;
-  badge: string;
-};
-
-type QuestionItem = {
-  category: string;
-  categoryIcon: string;
-  img: string;
-  question: string;
-  options: string[];
-  correct: number;
-  hint: string;
-  pcts: number[];
-  product: ProductReward;
-};
-
-const QUESTIONS: QuestionItem[] = [
-  {
-    category: '萌宠百科',
-    categoryIcon: '🐾',
-    img: '/legacy/images/products/p001-lays.jpg',
-    question: '猫咪平均每天要睡多少个小时？',
-    options: ['6-8小时', '8-10小时', '12-16小时', '18-22小时'],
-    correct: 2,
-    hint: '猫咪是出了名的“睡神”，一天大部分时间都在补眠。',
-    pcts: [8, 18, 52, 22],
-    product: {
-      name: '乐事原味薯片 70g',
-      img: '/legacy/images/products/p001-lays.jpg',
-      price: 9.9,
-      guessPrice: 0,
-      badge: '首题奖励',
-    },
-  },
-  {
-    category: '生活趣知',
-    categoryIcon: '☕',
-    img: '/legacy/images/products/p002-oreo.jpg',
-    question: '冰淇淋在什么温度下最好吃？',
-    options: ['-18°C 以下', '-14°C 左右', '-8°C 左右', '0°C 刚好'],
-    correct: 2,
-    hint: '太冷会让舌头麻木，反而吃不出香味。',
-    pcts: [22, 18, 45, 15],
-    product: {
-      name: '奥利奥原味夹心饼干',
-      img: '/legacy/images/products/p002-oreo.jpg',
-      price: 16.8,
-      guessPrice: 0,
-      badge: '二连奖励',
-    },
-  },
-  {
-    category: '美食百科',
-    categoryIcon: '🍜',
-    img: '/legacy/images/products/p003-squirrels.jpg',
-    question: '花生其实属于什么类植物？',
-    options: ['坚果类', '豆科植物', '根茎类', '谷物类'],
-    correct: 1,
-    hint: '花生虽然常被当作坚果，但它其实和大豆是亲戚。',
-    pcts: [35, 42, 13, 10],
-    product: {
-      name: '三只松鼠坚果礼盒',
-      img: '/legacy/images/products/p003-squirrels.jpg',
-      price: 59.9,
-      guessPrice: 0,
-      badge: '终极大奖',
-    },
-  },
-];
-
-const TICKER_ITEMS = [
-  {
-    name: '鼠鼠补给站',
-    avatar: '/legacy/images/mascot/mouse-main.png',
-    prize: '智慧达人礼包',
-  },
-  {
-    name: '零食侦探社',
-    avatar: '/legacy/images/mascot/mouse-happy.png',
-    prize: '星巴克兑换券',
-  },
-  {
-    name: '甜品公主',
-    avatar: '/legacy/images/mascot/mouse-casual.png',
-    prize: '零食大礼包',
-  },
-  {
-    name: '品牌观察员',
-    avatar: '/legacy/images/products/p007-dove.jpg',
-    prize: '神秘大奖',
-  },
-  {
-    name: '乐事官方',
-    avatar: '/legacy/images/products/p001-lays.jpg',
-    prize: '价值¥99礼盒',
-  },
-];
-
-const STREAK_REWARDS = [
-  { emoji: '🌟', name: '智慧达人奖', desc: '第1题奖品' },
-  { emoji: '🎁', name: '小神秘奖品', desc: '连续猜对2题解锁' },
-  { emoji: '🎊', name: '大神秘奖品', desc: '3连全胜解锁' },
-];
-
-const CONFETTI = Array.from({ length: 24 }, (_, index) => ({
-  id: index,
-  left: `${(index * 13) % 100}%`,
-  delay: `${(index % 6) * 0.12}s`,
-  duration: `${4 + (index % 4) * 0.45}s`,
-}));
-
-function formatPrice(value: number) {
-  return `¥${value.toFixed(1)}`;
-}
 
 export default function NoviceGuessPage() {
   const router = useRouter();
@@ -361,7 +253,7 @@ export default function NoviceGuessPage() {
               <button className={styles.modalSecondaryButton} type="button" onClick={handleShare}>
                 晒战绩
               </button>
-              <button className={styles.modalSecondaryButton} type="button" onClick={() => router.push('/all-features')}>
+              <button className={styles.modalSecondaryButton} type="button" onClick={() => router.push('/features')}>
                 继续体验
               </button>
             </div>
@@ -369,317 +261,41 @@ export default function NoviceGuessPage() {
         </div>
       </div>
 
-      <section className={`${styles.phaseSplash} ${phase !== 'splash' ? styles.phaseHidden : ''}`}>
-        <div className={styles.splashParticles}>
-          {Array.from({ length: 16 }, (_, index) => (
-            <span
-              key={index}
-              className={styles.particle}
-              style={{
-                left: `${(index * 17) % 100}%`,
-                animationDelay: `${(index % 6) * 0.7}s`,
-                animationDuration: `${11 + (index % 4) * 2}s`,
-              }}
-            />
-          ))}
-        </div>
+      {phase === 'splash' ? (
+        <NoviceGuessSplash liveCount={liveCount} tickerLoop={tickerLoop} onStart={startGame} onEnterHome={() => router.push('/')} />
+      ) : null}
 
-        <span className={styles.giftFloat} style={{ top: '18%', left: '8%', animationDelay: '0s' }}>🎁</span>
-        <span className={styles.giftFloat} style={{ top: '24%', right: '12%', animationDelay: '-2s' }}>✨</span>
-        <span className={styles.giftFloat} style={{ bottom: '28%', left: '15%', animationDelay: '-4s' }}>🎯</span>
-        <span className={styles.giftFloat} style={{ bottom: '22%', right: '8%', animationDelay: '-6s' }}>🏆</span>
+      {phase === 'game' ? (
+        <NoviceGuessGame
+          liveCount={liveCount}
+          currentRound={currentRound}
+          remaining={remaining}
+          timerPercent={timerPercent}
+          revealed={revealed}
+          wins={wins}
+          totalPrize={totalPrize}
+          allPrizeValue={allPrizeValue}
+          question={question}
+          onClose={() => router.push('/')}
+          onResolveRound={handleResolveRound}
+          optionState={optionState}
+        />
+      ) : null}
 
-        <div className={styles.liveTicker}>
-          <div className={styles.tickerTrack}>
-            {tickerLoop.map((item, index) => (
-              <div className={styles.tickerItem} key={`${item.name}-${index}`}>
-                <img className={styles.tickerAvatar} src={item.avatar} alt={item.name} />
-                <span>{item.name} 正在体验</span>
-                <span className={styles.prize}>{item.prize}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.splashCenter}>
-          <div className={styles.splashBrand}>⚡ 新用户专属福利</div>
-          <div className={styles.splashLogo}>Umi</div>
-          <div className={styles.splashSlogan}>先体验一轮猜题流程</div>
-          <div className={styles.splashSub}>静态演示页 · 用来熟悉玩法</div>
-          <div className={styles.splashLive}>
-            <span className={styles.dot} />
-            <span className={styles.count}>{liveCount.toLocaleString()}</span>
-            <span>人正在猜</span>
-          </div>
-          <button className={styles.splashCta} type="button" onClick={startGame}>
-            <span className={styles.ctaShine} />
-            <span className={styles.ctaIcon}>🎁</span>
-            开始体验
-            <span className={styles.ctaSub}>演示模式 · 不发放真实奖励</span>
-          </button>
-          <button className={styles.splashSkip} type="button" onClick={() => router.push('/')}>
-            已有账号，直接进入
-            <span className={styles.skipArrow}>→</span>
-          </button>
-        </div>
-      </section>
-
-      <section className={`${styles.phaseGame} ${phase === 'game' ? styles.phaseActive : ''}`}>
-        <div className={styles.gameHeader}>
-          <div className={styles.headerLeft}>
-            <div className={styles.headerBadge}>🎁 新手福利场</div>
-            <div className={styles.headerLive}>
-              <span className={styles.liveDot} />
-              <span>{liveCount.toLocaleString()} 在线</span>
-            </div>
-          </div>
-          <button className={styles.closeBtn} type="button" onClick={() => router.push('/')}>
-            <i className="fa-solid fa-xmark" />
-          </button>
-        </div>
-
-        <div className={styles.timerBar}>
-          <div
-            className={`${styles.timerFill} ${remaining <= 5 ? styles.danger : ''}`}
-            style={{ width: `${timerPercent}%` }}
-          />
-        </div>
-
-        <div className={styles.streakBar}>
-          {STREAK_REWARDS.map((item, index) => {
-            const stateClass =
-              index < wins ? styles.streakDone : index === currentRound ? styles.streakCurrent : '';
-            return (
-              <div key={item.name} className={`${styles.streakStep} ${stateClass}`}>
-                <div className={styles.rewardIcon}>{item.emoji}</div>
-                <div className={styles.streakFill} />
-                <div className={styles.streakLabel}>{index + 1} 连胜</div>
-              </div>
-            );
-          })}
-          <div className={styles.streakLegend}>连胜挑战</div>
-        </div>
-
-        <div className={styles.questionArea}>
-          <div className={styles.questionCard}>
-            <div className={styles.questionImageWrap}>
-              <img
-                className={`${styles.questionImage} ${revealed ? styles.reveal : styles.blur}`}
-                src={question.img}
-                alt={question.question}
-              />
-              <div className={styles.questionOverlay}>
-                <div className={styles.questionText}>{question.question}</div>
-              </div>
-              <div className={styles.roundBadge}>第 {currentRound + 1}/3 题 · {question.categoryIcon} {question.category}</div>
-            </div>
-          </div>
-
-          <div className={styles.optionsArea}>
-            {question.options.map((option, index) => (
-              <button
-                key={option}
-                className={`${styles.optionBtn} ${optionState(index)}`}
-                type="button"
-                onClick={() => handleResolveRound(index)}
-              >
-                <span className={styles.optionLetter}>{String.fromCharCode(65 + index)}</span>
-                <span className={styles.optionText}>{option}</span>
-                <span className={styles.optionPct}>{selectedIndex === null ? `${question.pcts[index]}%` : index === question.correct ? `${question.pcts[index]}%` : ''}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.gameBottom}>
-          <div className={styles.gameInfo}>
-            <span>
-              第 <b>{currentRound + 1}</b>/3 题
-            </span>
-            <div className={styles.timerPill}>⏱ {remaining}s</div>
-          </div>
-          <div className={styles.prizeBar}>
-            <div className={styles.prizeIcon}>🎁</div>
-            <div className={styles.prizeInfo}>
-              <div className={styles.prizeLabel}>
-                <span className={styles.dot} />
-                猜中即可点亮体验奖励
-              </div>
-              <div className={styles.prizeValueRow}>
-                <span className={styles.prizeValue}>{formatPrice(question.product.guessPrice)}</span>
-                <span className={styles.prizeOrig}>{formatPrice(question.product.price)}</span>
-              </div>
-            </div>
-            <div className={styles.prizeTag}>体验模式</div>
-          </div>
-          <div className={styles.totalLine}>
-            🎁 本场共 {QUESTIONS.length} 件体验商品展示 · 总价值 <span className={styles.totalValue}>{formatPrice(allPrizeValue)}</span> · 已点亮{' '}
-            <span className={styles.totalValue}>{formatPrice(totalPrize)}</span>
-          </div>
-        </div>
-      </section>
-
-      <section className={`${styles.phaseResult} ${phase === 'result' ? styles.phaseActive : ''}`}>
-        {isLose ? (
-          <div className={styles.resultBody}>
-            <div className={styles.resultHero}>
-              <div className={styles.modalPrizeIcon}>😢</div>
-              <div className={styles.loseTitle}>这次差一点</div>
-              <div className={styles.loseSub}>别灰心，继续体验下一轮，后面的演示内容还在等你。</div>
-            </div>
-
-            <div className={styles.challengeCard}>
-              <div className={styles.challengeTitle}>连胜奖励进度</div>
-              <div className={styles.challengeSub}>
-                正确答案是「{question.options[question.correct]}」
-                <br />
-                没关系，这里仍是新手体验模式。
-              </div>
-              <div className={styles.challengeList}>
-                {STREAK_REWARDS.map((item, index) => (
-                  <div className={`${styles.challengeItem} ${styles.challengeLocked}`} key={item.name}>
-                    <div className={styles.challengeNumber}>{index + 1}</div>
-                    <div className={styles.challengeInfo}>
-                      <div className={styles.challengeName}>{item.name}</div>
-                      <div className={styles.challengeDesc}>{item.desc}</div>
-                    </div>
-                    <div className={styles.challengeEmoji}>{item.emoji}</div>
-                  </div>
-                ))}
-              </div>
-              <div className={styles.challengeWarning}>
-                <span className={styles.warningIcon}>⚠</span>
-                当前页面仅作演示，结果不会进入真实账户或仓库。
-              </div>
-            </div>
-
-            <div className={styles.revivalBox}>
-              <div className={styles.revivalTitle}>🔄 继续体验</div>
-              <div className={styles.revivalDesc}>
-                连胜中断，但你仍可以继续体验：
-                <br />
-                • 分享演示战绩 → 生成体验海报
-                <br />
-                • 返回功能页 → 探索更多真实能力
-              </div>
-              <div className={styles.revivalButtons}>
-                <button className={styles.revivalPrimary} type="button" onClick={handleShare}>
-                  📤 分享战绩
-                </button>
-                <button className={styles.revivalGhost} type="button" onClick={() => router.push('/all-features')}>
-                  继续逛逛
-                </button>
-              </div>
-            </div>
-            <div className={styles.loginHint}>
-              去 <button className={styles.inlineLink} type="button" onClick={() => router.push('/register')}>登录</button> 后体验真实业务页面。
-            </div>
-          </div>
-        ) : (
-          <div className={`${styles.resultBody} ${styles.winScroll}`}>
-            <div className={styles.winHero}>
-              <div className={styles.winGlow} />
-              <div className={styles.winRays}>
-                {Array.from({ length: 10 }, (_, index) => (
-                  <span
-                    key={index}
-                    className={styles.winRay}
-                    style={{ transform: `translate(-50%, -60%) rotate(${index * 36}deg)` }}
-                  />
-                ))}
-              </div>
-              <div className={styles.winTrophy}>{isFullWin ? '🏆' : '🎉'}</div>
-              <div className={`${styles.winTitle} ${isFullWin ? styles.full : styles.partial}`}>
-                {isFullWin ? '🔥 全部猜中！' : `恭喜猜中 ${wins} 题！`}
-              </div>
-              <div className={styles.winTagline}>当前展示的是体验奖励，不会发放到真实账户</div>
-            </div>
-
-            <div className={styles.lootGrid}>
-              {wonProducts.map((item, index) => (
-                <div className={styles.lootCard} key={item.name}>
-                  <img className={styles.lootImage} src={item.img} alt={item.name} />
-                  <div className={styles.lootBadge}>第{index + 1}题</div>
-                  <div className={styles.lootGlow} />
-                  <div className={styles.lootInfo}>
-                    <div className={styles.lootName}>{item.name}</div>
-                    <div className={styles.lootPrice}>{formatPrice(item.price)}</div>
-                    <div className={styles.lootStatus}>✅ 体验模式已点亮</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className={styles.statsRibbon}>
-              <div className={styles.stat}>
-                <div className={`${styles.statNum} ${styles.gold}`}>{wonProducts.length}</div>
-                <div className={styles.statLabel}>赢得商品</div>
-              </div>
-              <div className={styles.stat}>
-                <div className={`${styles.statNum} ${styles.green}`}>{wins}</div>
-                <div className={styles.statLabel}>连胜纪录</div>
-              </div>
-              <div className={styles.stat}>
-                <div className={`${styles.statNum} ${styles.cyan}`}>{formatPrice(totalPrize)}</div>
-                <div className={styles.statLabel}>总价值</div>
-              </div>
-            </div>
-            {isFullWin ? <div className={styles.statBadge}>💎 全胜之王</div> : null}
-
-            <div className={styles.brandStrip}>
-              <span className={styles.brandLogo}>Umi</span>
-              <span className={styles.brandDot} />
-              <span className={styles.brandText}>先熟悉猜题体验</span>
-              <span className={styles.brandDot} />
-              <span className={styles.brandText}>{brandDate}</span>
-            </div>
-
-            <div className={styles.challengeCard}>
-              <div className={styles.challengeTitle}>连续奖励进度</div>
-              <div className={styles.challengeSub}>继续完成后续题目，可把剩下的体验奖励一起点亮。</div>
-              <div className={styles.challengeList}>
-                {STREAK_REWARDS.map((item, index) => {
-                  const stateClass =
-                    index < wins ? styles.challengeDone : index === wins ? styles.challengeNext : styles.challengeLocked;
-                  return (
-                    <div className={`${styles.challengeItem} ${stateClass}`} key={item.name}>
-                      <div className={styles.challengeNumber}>{index + 1}</div>
-                      <div className={styles.challengeInfo}>
-                        <div className={styles.challengeName}>{item.name}</div>
-                        <div className={styles.challengeDesc}>{item.desc}</div>
-                      </div>
-                      <div className={styles.challengeEmoji}>{item.emoji}</div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className={styles.challengeWarning}>
-                <span className={styles.warningIcon}>⚠</span>
-                当前页是静态体验页，奖励和结果都不会进入真实账户。
-              </div>
-            </div>
-
-            <div className={styles.resultActions}>
-              <button className={styles.primaryAction} type="button" onClick={() => router.push('/all-features')}>
-                <span className={styles.buttonShine} />
-                探索更多竞猜话题
-                <span className={styles.ctaArrow}>→</span>
-              </button>
-              <div className={styles.secondaryRow}>
-                <button className={styles.secondaryAction} type="button" onClick={handleShare}>
-                  晒战绩
-                </button>
-                <button className={styles.secondaryAction} type="button" onClick={() => router.push('/all-features')}>
-                  继续体验
-                </button>
-              </div>
-              <div className={styles.loginHint}>
-                去 <button className={styles.inlineLink} type="button" onClick={() => router.push('/register')}>登录</button> 后体验真实业务链路。
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
+      {phase === 'result' ? (
+        <NoviceGuessResult
+          isLose={isLose}
+          isFullWin={isFullWin}
+          wins={wins}
+          question={question}
+          wonProducts={wonProducts}
+          totalPrize={totalPrize}
+          brandDate={brandDate}
+          onShare={handleShare}
+          onExplore={() => router.push('/features')}
+          onRegister={() => router.push('/register')}
+        />
+      ) : null}
     </main>
   );
 }

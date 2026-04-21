@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-098` |
 | `title` | 物流管理“物流方式”筛选值和返回文案不一致，大部分选项永远筛不出来 |
 | `severity` | `P2` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/logistics/shipping-type-filter` |
 | `scope` | `admin` |
 | `page` | `#/orders/logistics` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-orders-qa-2026-04-20.md` |
 | `fingerprint` | `admin-logistics:shipping-type-filter-does-not-match-returned-labels` |
-| `fix_owner` |  |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -53,8 +53,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 把物流方式筛选改成对同一语义字段过滤，不要用不同文案直接比较。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 物流方式筛选已改成基于真实 `shippingType` 枚举值过滤，选项文案与页面返回标签对齐为 `快递物流 / 同城配送 / 用户自提 / 待确认`，不再拿不同文案硬比较。 |
+| 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
+| Fixer 自测结果 | 通过：物流管理“物流方式”筛选值和记录字段现在一一对应。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/admin/src/pages/order-logistics-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/order-logistics-page.tsx) |

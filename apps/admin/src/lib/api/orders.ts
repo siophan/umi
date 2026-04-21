@@ -1,6 +1,14 @@
-import type { OrderItem } from '@umi/shared';
+import type {
+  CompleteAdminOrderRefundPayload,
+  CompleteAdminOrderRefundResult,
+  OrderItem,
+  ReviewAdminOrderRefundPayload,
+  ReviewAdminOrderRefundResult,
+  ShipAdminOrderPayload,
+  ShipAdminOrderResult,
+} from '@umi/shared';
 
-import { getJson } from './shared';
+import { getJson, putJson } from './shared';
 
 export interface AdminOrderRecord {
   id: string;
@@ -61,7 +69,9 @@ export interface AdminOrderRecord {
     statusCode: number | null;
     refundAmount: number;
     reason: string | null;
+    reviewNote: string | null;
     requestedAt: string | null;
+    reviewedAt: string | null;
     completedAt: string | null;
   } | null;
   items: Array<
@@ -142,6 +152,34 @@ export function fetchAdminOrders() {
   return getJson<{ items: AdminOrderRecord[] }>('/api/admin/orders');
 }
 
+export function fetchAdminOrderDetail(id: string) {
+  return getJson<AdminOrderRecord>(`/api/admin/orders/${id}`);
+}
+
+export function shipAdminOrder(id: string, payload: ShipAdminOrderPayload) {
+  return putJson<ShipAdminOrderResult, ShipAdminOrderPayload>(
+    `/api/admin/orders/${id}/ship`,
+    payload,
+  );
+}
+
+export function reviewAdminOrderRefund(id: string, payload: ReviewAdminOrderRefundPayload) {
+  return putJson<ReviewAdminOrderRefundResult, ReviewAdminOrderRefundPayload>(
+    `/api/admin/orders/${id}/refund/review`,
+    payload,
+  );
+}
+
+export function completeAdminOrderRefund(
+  id: string,
+  payload: CompleteAdminOrderRefundPayload = {},
+) {
+  return putJson<CompleteAdminOrderRefundResult, CompleteAdminOrderRefundPayload>(
+    `/api/admin/orders/${id}/refund/complete`,
+    payload,
+  );
+}
+
 export function fetchAdminTransactions() {
   return getJson<{ items: AdminTransactionRow[] }>('/api/admin/orders/transactions');
 }
@@ -150,6 +188,14 @@ export function fetchAdminLogistics() {
   return getJson<{ items: AdminLogisticsRow[] }>('/api/admin/orders/logistics');
 }
 
+export function fetchAdminLogisticsDetail(id: string) {
+  return getJson<AdminLogisticsRow>(`/api/admin/orders/logistics/${id}`);
+}
+
 export function fetchAdminConsignRows() {
   return getJson<{ items: AdminConsignRow[] }>('/api/admin/orders/consign');
+}
+
+export function fetchAdminConsignDetail(id: string) {
+  return getJson<AdminConsignRow>(`/api/admin/orders/consign/${id}`);
 }

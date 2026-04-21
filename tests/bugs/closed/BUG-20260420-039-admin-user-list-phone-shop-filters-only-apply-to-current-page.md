@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -68,7 +68,7 @@
 | 修复说明 | “手机号 / 店铺名称” 已进入 `/api/admin/users` 真实查询参数，页面不再对当前页做本地二次过滤，列表、分页和总条数统一使用后端结果口径。 |
 | 验证命令 | `cd /Users/ezreal/Downloads/joy/umi && pnpm --filter @umi/api typecheck`；`cd /Users/ezreal/Downloads/joy/umi && pnpm --filter @umi/admin typecheck` |
 | Fixer 自测结果 | 通过 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前用户列表会把 `phone / shopName` 直接带进 `fetchAdminUsersPage()` 请求；`packages/shared/src/api.ts` 与 `apps/api/src/modules/users/admin-store.ts` 也都已承接这两个真实查询字段，页面不再对当前页做本地二次过滤。 |
 | 修复提交/变更 | [apps/admin/src/pages/users-page.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/pages/users-page.tsx)、[apps/admin/src/lib/api/users.ts](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/api/users.ts)、[packages/shared/src/api.ts](/Users/ezreal/Downloads/joy/umi/packages/shared/src/api.ts)、[apps/api/src/modules/admin/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/router.ts)、[apps/api/src/modules/users/admin-store.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/users/admin-store.ts)、[apps/api/src/routes/openapi/paths/admin.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/routes/openapi/paths/admin.ts) |
 
 ## Fixer

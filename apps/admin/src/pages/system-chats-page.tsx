@@ -1,6 +1,6 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Select, Tag, Typography } from 'antd';
+import { Alert, Button, ConfigProvider, Form, Input, Select, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
@@ -32,7 +32,6 @@ export function SystemChatsPage({ refreshToken = 0 }: SystemChatsPageProps) {
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<ChatFilters>({});
   const [status, setStatus] = useState<'all' | AdminChatItem['status']>('all');
-  const [selected, setSelected] = useState<AdminChatItem | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -91,7 +90,17 @@ export function SystemChatsPage({ refreshToken = 0 }: SystemChatsPageProps) {
       width: 100,
       fixed: 'right',
       valueType: 'option',
-      render: (_, record) => <Button size="small" type="link" onClick={() => setSelected(record)}>查看</Button>,
+      render: (_, record) => (
+        <Button
+          size="small"
+          type="link"
+          onClick={() => {
+            window.location.hash = `#/system/chats/detail/${record.id}`;
+          }}
+        >
+          查看
+        </Button>
+      ),
     },
   ];
 
@@ -146,19 +155,6 @@ export function SystemChatsPage({ refreshToken = 0 }: SystemChatsPageProps) {
           toolBarRender={() => []}
         />
       </ConfigProvider>
-      <Drawer open={selected != null} title="聊天详情" width={460} onClose={() => setSelected(null)}>
-        {selected ? (
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="用户 A">{selected.userA.name}</Descriptions.Item>
-            <Descriptions.Item label="用户 B">{selected.userB.name}</Descriptions.Item>
-            <Descriptions.Item label="消息数">{selected.messages}</Descriptions.Item>
-            <Descriptions.Item label="未读消息">{selected.unreadMessages}</Descriptions.Item>
-            <Descriptions.Item label="风险等级">{selected.riskLevel === 'high' ? '高风险' : selected.riskLevel === 'medium' ? '中风险' : '低风险'}</Descriptions.Item>
-            <Descriptions.Item label="状态">{selected.status}</Descriptions.Item>
-            <Descriptions.Item label="更新时间">{formatDateTime(selected.updatedAt)}</Descriptions.Item>
-          </Descriptions>
-        ) : null}
-      </Drawer>
     </div>
   );
 }

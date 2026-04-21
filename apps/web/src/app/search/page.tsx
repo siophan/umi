@@ -2,63 +2,25 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type {
-  ProductFeedItem,
-  SearchHotKeywordItem,
-  SearchSort,
-  SearchSuggestItem,
-  SearchTab,
-} from '@umi/shared';
+import type { SearchHotKeywordItem, SearchSort, SearchSuggestItem, SearchTab } from '@umi/shared';
 
 import {
   fetchSearchHotKeywords,
   fetchSearchResult,
   fetchSearchSuggestions,
 } from '../../lib/api/search';
+import { SearchBeforeView } from './search-before-view';
+import {
+  clearStoredHistory,
+  formatGuessItem,
+  formatProductItem,
+  highlightKeyword,
+  SEARCH_HISTORY_KEY,
+  type SearchGuessItem,
+  type SearchProductItem,
+} from './search-helpers';
+import { SearchResultsView } from './search-results-view';
 import styles from './page.module.css';
-
-const SEARCH_HISTORY_KEY = 'gj_search_history';
-
-type SearchProductItem = ProductFeedItem & {
-  salesText: string;
-  ratingText: string | null;
-  tagText: string;
-};
-
-type SearchGuessItem = {
-  id: string;
-  title: string;
-  meta: string;
-  options: string[];
-  img: string;
-};
-
-function formatSalesCount(value: number) {
-  return value >= 1000 ? `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k` : String(value);
-}
-
-function formatProductItem(item: ProductFeedItem): SearchProductItem {
-  return {
-    ...item,
-    salesText: `${formatSalesCount(item.sales)}已售`,
-    ratingText: item.rating > 0 ? item.rating.toFixed(1) : null,
-    tagText: [item.brand, item.category].filter(Boolean).join(' · ') || item.tag,
-  };
-}
-
-function formatGuessItem(item: Awaited<ReturnType<typeof fetchSearchResult>>['guesses']['items'][number]): SearchGuessItem {
-  const totalVotes = item.options.reduce((sum, option) => sum + option.voteCount, 0);
-  const metaSource = item.product.brand || item.category || '优米竞猜';
-  return {
-    id: item.id,
-    title: item.title,
-    meta: `${formatSalesCount(totalVotes)}人参与 · ${metaSource}`,
-    options: item.options
-      .slice(0, 3)
-      .map((option) => `${option.optionText} ×${Number(option.odds ?? 0).toFixed(1).replace(/\.0$/, '')}`),
-    img: item.product.img || '/legacy/images/placeholder/product-fallback.svg',
-  };
-}
 
 function SearchPageInner() {
   const router = useRouter();
@@ -270,21 +232,6 @@ function SearchPageInner() {
     syncSearchParams(trimmed, 'all', 'default');
   };
 
-  const highlight = (text: string) => {
-    const keyword = query.trim() || inputValue.trim();
-    if (!keyword) return text;
-    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return text.split(new RegExp(`(${escaped})`, 'gi')).map((part, index) =>
-      part.toLowerCase() === keyword.toLowerCase() ? (
-        <span className={styles.highlight} key={`${part}-${index}`}>
-          {part}
-        </span>
-      ) : (
-        <span key={`${part}-${index}`}>{part}</span>
-      ),
-    );
-  };
-
   const noResults = hasQuery && productTotal === 0 && guessTotal === 0;
   const showProductEmpty = !searching && hasQuery && tab === 'product' && productTotal === 0;
   const showGuessEmpty = !searching && hasQuery && tab === 'guess' && guessTotal === 0;
@@ -342,7 +289,9 @@ function SearchPageInner() {
                       onClick={() => commitSearch(item.text)}
                     >
                       <i className="fa-solid fa-magnifying-glass" />
-                      <span className={styles.suggestText}>{highlight(item.text)}</span>
+                      <span className={styles.suggestText}>
+                        {highlightKeyword(item.text, query.trim() || inputValue.trim())}
+                      </span>
                       <span className={styles.suggestType}>
                         {item.type === 'product' ? '商品' : item.type === 'guess' ? '竞猜' : '品牌'}
                       </span>
@@ -359,251 +308,49 @@ function SearchPageInner() {
       </header>
 
       {hasQuery ? (
-        <>
-          <nav className={styles.tabs}>
-            <button
-              className={`${styles.tab} ${tab === 'all' ? styles.active : ''}`}
-              type="button"
-              onClick={() => {
-                setTab('all');
-                syncSearchParams(query, 'all', sort);
-              }}
-            >
-              综合
-            </button>
-            <button
-              className={`${styles.tab} ${tab === 'product' ? styles.active : ''}`}
-              type="button"
-              onClick={() => {
-                setTab('product');
-                syncSearchParams(query, 'product', sort);
-              }}
-            >
-              商品
-              <span className={styles.tabCount}>{productTotal ? `(${productTotal})` : ''}</span>
-            </button>
-            <button
-              className={`${styles.tab} ${tab === 'guess' ? styles.active : ''}`}
-              type="button"
-              onClick={() => {
-                setTab('guess');
-                syncSearchParams(query, 'guess', sort);
-              }}
-            >
-              竞猜
-              <span className={styles.tabCount}>{guessTotal ? `(${guessTotal})` : ''}</span>
-            </button>
-          </nav>
-
-          <div className={styles.filterBar} style={{ display: tab === 'guess' ? 'none' : 'flex' }}>
-            {[
-              ['default', '综合'],
-              ['sales', '销量'],
-              ['price-asc', '价格↑'],
-              ['price-desc', '价格↓'],
-              ['rating', '评分'],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={`${styles.filter} ${sort === key ? styles.filterActive : ''}`}
-                onClick={() => {
-                  setSort(key as SearchSort);
-                  syncSearchParams(query, tab, key as SearchSort);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.results}>
-            {searching ? (
-              <div className={styles.empty}>
-                <i className={`fa-solid fa-spinner fa-spin ${styles.emptyIcon}`} />
-                <p className={styles.emptyText}>搜索中</p>
-                <div className={styles.emptyTip}>正在查找相关商品和竞猜...</div>
-              </div>
-            ) : null}
-
-            {!searching && noResults ? (
-              <div className={styles.empty}>
-                <i className={`fa-regular fa-face-meh ${styles.emptyIcon}`} />
-                <p className={styles.emptyText}>未找到"{query}"相关内容</p>
-                <div className={styles.emptyTip}>试试换个关键词搜索</div>
-              </div>
-            ) : null}
-
-            {!searching && showGuessEmpty ? (
-              <div className={styles.empty}>
-                <i className={`fa-regular fa-face-meh ${styles.emptyIcon}`} />
-                <p className={styles.emptyText}>无相关竞猜</p>
-              </div>
-            ) : null}
-
-            {!searching && showProductEmpty ? (
-              <div className={styles.empty}>
-                <i className={`fa-regular fa-face-meh ${styles.emptyIcon}`} />
-                <p className={styles.emptyText}>无相关商品</p>
-              </div>
-            ) : null}
-
-            {!searching && (tab === 'all' || tab === 'guess') && guesses.length > 0 ? (
-              <section className={styles.guessSection}>
-                {tab === 'all' ? <div className={styles.resultTitle}>🎰 竞猜话题 ({guessTotal})</div> : null}
-                <div className={styles.guessList}>
-                  {(tab === 'all' ? guesses.slice(0, 4) : guesses).map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={styles.guessCard}
-                      onClick={() => router.push(`/guess/${item.id}`)}
-                    >
-                      <img className={styles.guessImg} src={item.img} alt={item.title} />
-                      <div className={styles.guessInfo}>
-                        <div className={styles.guessTitle}>{highlight(item.title)}</div>
-                        <div className={styles.guessMeta}>👥 {item.meta}</div>
-                        <div className={styles.guessOptions}>
-                          {item.options.map((option, index) => (
-                            <span key={`${item.id}-${option}`} className={index === 0 ? styles.optHot : styles.opt}>
-                              {highlight(option)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                {tab === 'all' && guessTotal > 4 ? (
-                  <div className={styles.viewAllWrap}>
-                    <button
-                      className={styles.viewAll}
-                      type="button"
-                      onClick={() => {
-                        setTab('guess');
-                        syncSearchParams(query, 'guess', sort);
-                      }}
-                    >
-                      查看全部{guessTotal}个竞猜 →
-                    </button>
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-
-            {!searching && (tab === 'all' || tab === 'product') && products.length > 0 ? (
-              <section>
-                {tab === 'all' ? <div className={styles.resultTitle}>🛍️ 商品 ({productTotal})</div> : null}
-                <div className={styles.grid}>
-                  {(tab === 'all' ? products.slice(0, 6) : products).map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={styles.productCard}
-                      onClick={() => router.push(`/product/${item.id}`)}
-                    >
-                      <img src={item.img} alt={item.name} />
-                      <div className={styles.productBody}>
-                        <div className={styles.productName}>{highlight(item.name)}</div>
-                        <div className={styles.productRow}>
-                          <div className={styles.price}>
-                            <em>¥</em>
-                            {item.price}
-                          </div>
-                          <div className={styles.orig}>¥{item.originalPrice}</div>
-                        </div>
-                        <div className={styles.productMeta}>
-                          <span className={styles.productSales}>{item.salesText}</span>
-                          {item.ratingText ? (
-                            <span className={styles.productRating}>★ {item.ratingText}</span>
-                          ) : (
-                            <span className={styles.productRatingEmpty}>暂无评分</span>
-                          )}
-                        </div>
-                        <div className={styles.productTag}>{item.tagText}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                {tab === 'all' && productTotal > 6 ? (
-                  <div className={styles.viewAllWrap}>
-                    <button
-                      className={styles.viewAll}
-                      type="button"
-                      onClick={() => {
-                        setTab('product');
-                        syncSearchParams(query, 'product', sort);
-                      }}
-                    >
-                      查看全部{productTotal}件商品 →
-                    </button>
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-          </div>
-        </>
+        <SearchResultsView
+          tab={tab}
+          sort={sort}
+          query={query}
+          inputValue={inputValue}
+          searching={searching}
+          noResults={noResults}
+          showGuessEmpty={showGuessEmpty}
+          showProductEmpty={showProductEmpty}
+          guessTotal={guessTotal}
+          productTotal={productTotal}
+          guesses={guesses}
+          products={products}
+          priceAsc={sort === 'price-asc'}
+          onTabChange={(nextTab) => {
+            setTab(nextTab);
+            syncSearchParams(query, nextTab, sort);
+          }}
+          onSortChange={(nextSort) => {
+            setSort(nextSort);
+            syncSearchParams(query, tab, nextSort);
+          }}
+          onTogglePriceSort={() => {
+            const nextSort = sort === 'price-asc' ? 'price-desc' : 'price-asc';
+            setSort(nextSort);
+            syncSearchParams(query, tab, nextSort);
+          }}
+          onOpenGuess={(id) => router.push(`/guess/${id}`)}
+          onOpenProduct={(id) => router.push(`/product/${id}`)}
+        />
       ) : (
-        <div className={styles.before}>
-          {histories.length > 0 ? (
-            <div className={styles.historySection}>
-              <div className={styles.sectionHeader}>
-                <span>🕐 搜索历史</span>
-                <button
-                  type="button"
-                  className={styles.iconBtn}
-                  onClick={() => {
-                    setHistories([]);
-                    try {
-                      window.localStorage.removeItem(SEARCH_HISTORY_KEY);
-                    } catch {
-                      // ignore storage errors
-                    }
-                    showToast('搜索历史已清空');
-                  }}
-                >
-                  <i className="fa-solid fa-trash-can" />
-                </button>
-              </div>
-              <div className={styles.tags}>
-                {histories.map((item) => (
-                  <button key={item} type="button" className={styles.tag} onClick={() => commitSearch(item)}>
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className={styles.sectionHeader}>
-            <span>🔥 热门搜索</span>
-          </div>
-          {ready && hotSearches.length ? (
-            <div className={styles.hotList}>
-              {hotSearches.map((item) => (
-                <button key={`${item.rank}-${item.keyword}`} type="button" className={styles.hotItem} onClick={() => commitSearch(item.keyword)}>
-                  <div
-                    className={`${styles.rank} ${item.rank === 1 ? styles.rank1 : item.rank === 2 ? styles.rank2 : item.rank === 3 ? styles.rank3 : styles.rankNormal}`}
-                  >
-                    {item.rank}
-                  </div>
-                  <div className={styles.hotText}>{item.keyword}</div>
-                  {item.badge ? (
-                    <div
-                      className={`${styles.hotBadge} ${item.badge === '热' ? styles.badgeHot : item.badge === '新' ? styles.badgeNew : styles.badgeRise}`}
-                    >
-                      {item.badge}
-                    </div>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          ) : ready ? (
-            <div className={styles.sectionEmpty}>暂无热门搜索</div>
-          ) : (
-            <div className={styles.sectionEmpty}>热门搜索加载中...</div>
-          )}
-        </div>
+        <SearchBeforeView
+          ready={ready}
+          histories={histories}
+          hotSearches={hotSearches}
+          onCommitSearch={commitSearch}
+          onClearHistory={() =>
+            clearStoredHistory(() => {
+              setHistories([]);
+              showToast('搜索历史已清空');
+            })
+          }
+        />
       )}
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}

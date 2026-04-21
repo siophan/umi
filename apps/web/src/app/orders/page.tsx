@@ -30,6 +30,10 @@ const emptyMap: Record<OrderTab, { icon: string; title: string; desc: string }> 
   refund: { icon: '💰', title: '暂无退款订单', desc: '一切顺利，继续保持！' },
 };
 
+/**
+ * 把订单真实状态映射成页面 Tab。
+ * 订单页的“待发货/已发货/已完成/退款”是展示分组，不和底层状态码一一对应。
+ */
 function mapOrderToTab(status: OrderSummary['status']): OrderTab {
   if (status === 'pending' || status === 'paid') {
     return 'pending';
@@ -43,6 +47,9 @@ function mapOrderToTab(status: OrderSummary['status']): OrderTab {
   return 'refund';
 }
 
+/**
+ * 订单状态标签对应的样式类。
+ */
 function getOrderStatusClass(status: OrderSummary['status']) {
   const tab = mapOrderToTab(status);
   if (tab === 'pending') {
@@ -57,6 +64,10 @@ function getOrderStatusClass(status: OrderSummary['status']) {
   return styles.statusRefund;
 }
 
+/**
+ * 订单状态文案。
+ * 这里把 paid / delivered 等底层状态收成用户端统一可读文案。
+ */
 function getOrderStatusText(status: OrderSummary['status']) {
   switch (status) {
     case 'pending':
@@ -80,6 +91,10 @@ function getOrderStatusText(status: OrderSummary['status']) {
   }
 }
 
+/**
+ * 生成订单卡片的店头文案。
+ * 竞猜奖励和普通商城订单的展示口径不同，这里统一收口。
+ */
 function getShopName(order: OrderSummary) {
   if (order.orderType === 'guess' || order.guessId) {
     return '竞猜奖励';
@@ -90,6 +105,9 @@ function getShopName(order: OrderSummary) {
   return '订单中心';
 }
 
+/**
+ * 生成订单卡片店头图标。
+ */
 function getShopIcon(order: OrderSummary) {
   if (order.orderType === 'guess' || order.guessId) {
     return 'fa-solid fa-trophy';
@@ -97,6 +115,10 @@ function getShopIcon(order: OrderSummary) {
   return 'fa-solid fa-store';
 }
 
+/**
+ * 物流辅助文案。
+ * 这里只补充卡片摘要，详细进度仍以订单详情页为准。
+ */
 function getExpressText(order: OrderSummary) {
   if (order.status === 'shipping') {
     return '物流运输中';
@@ -107,6 +129,10 @@ function getExpressText(order: OrderSummary) {
   return '';
 }
 
+/**
+ * 订单列表页主组件。
+ * 订单数据走真实接口，列表结构和交互节奏按老订单页对齐。
+ */
 export default function OrdersPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -125,6 +151,10 @@ export default function OrdersPage() {
     };
   }, []);
 
+  /**
+   * 拉取订单列表。
+   * 通过 shouldIgnore 处理组件卸载后的竞态，避免旧请求覆盖新状态。
+   */
   const loadOrders = useCallback(async (shouldIgnore: () => boolean = () => false) => {
     setLoading(true);
     setError(null);
@@ -176,6 +206,10 @@ export default function OrdersPage() {
     toastTimer.current = window.setTimeout(() => setToast(null), 1800);
   };
 
+  /**
+   * 处理订单卡片上的动作按钮。
+   * 不同动作会跳详情、确认收货、催发货或跳转到商品/评价链路。
+   */
   const handleAction = async (order: OrderSummary, action: OrderAction) => {
     if (action.text === '查看物流' || action.text === '查看详情') {
       router.push(`/order-detail?id=${encodeURIComponent(order.id)}`);

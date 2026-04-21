@@ -7,7 +7,7 @@
 | `bug_id` | `BUG-20260420-097` |
 | `title` | 交易流水把所有退款状态都压成“退款链路” |
 | `severity` | `P2` |
-| `status` | `triaged` |
+| `status` | `fixed_pending_verify` |
 | `area` | `admin/orders/refund-status` |
 | `scope` | `admin` |
 | `page` | `#/orders/transactions` |
@@ -15,7 +15,7 @@
 | `owner` | `测试狗` |
 | `source_run` | `admin-orders-qa-2026-04-20.md` |
 | `fingerprint` | `admin-orders:transactions-collapse-refund-statuses` |
-| `fix_owner` |  |
+| `fix_owner` | `管理后台全栈` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
 | `last_seen_at` | `2026-04-20` |
@@ -54,8 +54,8 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 修复说明 | 把退款状态文案细分回真实阶段，避免交易页吞掉审核语义。 |
-| 验证命令 | 待补 |
-| Fixer 自测结果 | 待补 |
+| 修复说明 | 后端退款状态文案已恢复真实阶段映射：`待审核 / 审核中 / 已通过 / 已拒绝 / 已完成`，交易流水列表和详情会直接显示真实退款阶段。 |
+| 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck` |
+| Fixer 自测结果 | 通过：交易流水不再把所有退款都压成“退款链路”。 |
 | Verifier 复测结果 | 待补 |
-| 修复提交/变更 | 待补 |
+| 修复提交/变更 | [apps/api/src/modules/admin/orders-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/orders-shared.ts)；[apps/api/src/modules/admin/order-transactions.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/order-transactions.ts) |

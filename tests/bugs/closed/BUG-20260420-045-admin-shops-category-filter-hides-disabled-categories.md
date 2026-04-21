@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -65,7 +65,7 @@
 | 修复说明 | 已调整店铺列表类目筛选：优先展示启用类目，同时补回“停用但仍被当前店铺引用”的类目；如果列表中出现分类主数据里已不存在的历史类目，也会以“历史类目”补进下拉选项。 |
 | 验证命令 | `pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 通过。管理台类型检查和生产构建均通过，筛选下拉不再遗漏停用/历史类目。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前类目筛选已改成 `buildShopCategoryOptions()` 统一生成：启用类目正常展示，停用但仍被当前店铺引用的类目会标记“已停用”，缺主数据的历史值会标记“历史类目”，现存店铺类目都能正式筛出。 |
 | 修复提交/变更 | `apps/admin/src/pages/shops-page.tsx` |
 
 ## Fixer

@@ -408,6 +408,38 @@ export const adminPaths = {
                 401: errorResponse(401, '请先登录'),
             },
         },
+        post: {
+            tags: ['Admin'],
+            summary: '管理台创建竞猜',
+            security: bearerSecurity,
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/CreateAdminGuessPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/CreateAdminGuessResult',
+                }),
+                400: errorResponse(400, '创建竞猜失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '竞猜分类或关联商品不存在'),
+            },
+        },
+    },
+    '/api/admin/guesses/{id}': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台竞猜详情',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '竞猜 ID')],
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    additionalProperties: true,
+                }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '竞猜不存在'),
+            },
+        },
     },
     '/api/admin/guesses/{id}/review': {
         put: {
@@ -441,6 +473,79 @@ export const adminPaths = {
                     },
                 }),
                 401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/orders/{id}': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台订单详情',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '订单 ID')],
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    additionalProperties: true,
+                }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '订单不存在'),
+            },
+        },
+    },
+    '/api/admin/orders/{id}/ship': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台订单发货',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '订单 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/ShipAdminOrderPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/ShipAdminOrderResult',
+                }),
+                400: errorResponse(400, '订单发货失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '订单不存在'),
+            },
+        },
+    },
+    '/api/admin/orders/{id}/refund/review': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台审核订单退款',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '订单 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/ReviewAdminOrderRefundPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/ReviewAdminOrderRefundResult',
+                }),
+                400: errorResponse(400, '退款审核失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '订单不存在'),
+            },
+        },
+    },
+    '/api/admin/orders/{id}/refund/complete': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台完成订单退款',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '订单 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/CompleteAdminOrderRefundPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/CompleteAdminOrderRefundResult',
+                }),
+                400: errorResponse(400, '完成退款失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '订单不存在'),
             },
         },
     },
@@ -487,6 +592,8 @@ export const adminPaths = {
                 { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
                 { name: 'pageSize', in: 'query', schema: { type: 'integer', example: 20 } },
                 { name: 'keyword', in: 'query', schema: { type: 'string', example: 'Nike' } },
+                { name: 'brandId', in: 'query', schema: { type: 'string', example: '18' } },
+                { name: 'categoryId', in: 'query', schema: { type: 'string', example: '201' } },
                 {
                     name: 'status',
                     in: 'query',
@@ -581,6 +688,28 @@ export const adminPaths = {
             },
         },
     },
+    '/api/admin/pk/stats': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台 PK 对战统计',
+            security: bearerSecurity,
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    properties: {
+                        total: { type: 'integer' },
+                        pending: { type: 'integer' },
+                        active: { type: 'integer' },
+                        completed: { type: 'integer' },
+                        cancelled: { type: 'integer' },
+                        totalStakeAmount: { type: 'integer' },
+                    },
+                    required: ['total', 'pending', 'active', 'completed', 'cancelled', 'totalStakeAmount'],
+                }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
     '/api/admin/orders/transactions': {
         get: {
             tags: ['Admin'],
@@ -613,6 +742,22 @@ export const adminPaths = {
             },
         },
     },
+    '/api/admin/orders/logistics/{id}': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台物流详情',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '物流记录 ID')],
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    additionalProperties: true,
+                }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '物流记录不存在'),
+            },
+        },
+    },
     '/api/admin/orders/consign': {
         get: {
             tags: ['Admin'],
@@ -626,6 +771,22 @@ export const adminPaths = {
                     },
                 }),
                 401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/orders/consign/{id}': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台寄售详情',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '寄售记录 ID')],
+            responses: {
+                200: successResponse({
+                    type: 'object',
+                    additionalProperties: true,
+                }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '寄售记录不存在'),
             },
         },
     },
@@ -1321,31 +1482,51 @@ export const adminPaths = {
             },
         },
     },
+    '/api/admin/shops/products/{id}/status': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台更新店铺商品状态',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '店铺商品 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/UpdateAdminShopProductStatusPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/UpdateAdminShopProductStatusResult',
+                }),
+                400: errorResponse(400, '更新店铺商品状态失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '店铺商品不存在'),
+            },
+        },
+    },
     '/api/admin/notifications': {
         get: {
             tags: ['Admin'],
             summary: '管理台通知批次列表',
             security: bearerSecurity,
-            responses: {
-                200: successResponse({
-                    type: 'object',
-                    properties: {
-                        items: {
-                            type: 'array',
-                            items: {
-                                type: 'object',
-                                properties: {
-                                    id: { type: 'string' },
-                                    title: { type: 'string' },
-                                    content: { type: 'string', nullable: true },
-                                },
-                                additionalProperties: true,
-                            },
-                        },
-                        summary: { type: 'object', additionalProperties: true },
-                        basis: { type: 'string', example: '按通知内容聚合后的已发送批次视图' },
+            parameters: [
+                { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, example: 1 } },
+                { name: 'pageSize', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, example: 10 } },
+                { name: 'keyword', in: 'query', schema: { type: 'string', example: '系统维护通知' } },
+                {
+                    name: 'type',
+                    in: 'query',
+                    schema: { type: 'string', enum: ['system', 'order', 'guess', 'social'], example: 'system' },
+                },
+                {
+                    name: 'audience',
+                    in: 'query',
+                    schema: {
+                        type: 'string',
+                        enum: ['all_users', 'order_users', 'guess_users', 'post_users', 'chat_users'],
+                        example: 'all_users',
                     },
-                }),
+                },
+            ],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminNotificationListResult' }),
                 401: errorResponse(401, '请先登录'),
             },
         },
@@ -1369,15 +1550,21 @@ export const adminPaths = {
             summary: '管理台聊天会话列表',
             security: bearerSecurity,
             responses: {
-                200: successResponse({
-                    type: 'object',
-                    properties: {
-                        items: { type: 'array', items: { type: 'object', additionalProperties: true } },
-                        summary: { type: 'object', additionalProperties: true },
-                        basis: { type: 'string', example: '按 chat_message 聚合的双人会话视图' },
-                    },
-                }),
+                200: successResponse({ $ref: '#/components/schemas/AdminChatListResult' }),
                 401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/chats/{id}': {
+        get: {
+            tags: ['Admin'],
+            summary: '管理台聊天会话详情',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '会话 ID，如 12:103')],
+            responses: {
+                200: successResponse({ $ref: '#/components/schemas/AdminChatDetailResult' }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '聊天会话不存在'),
             },
         },
     },

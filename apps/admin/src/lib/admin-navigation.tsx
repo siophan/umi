@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { MenuProps } from 'antd';
 import {
   ADMIN_PERMISSION_DEFINITION_BY_CODE,
   findAdminMenuPermissionByPath,
@@ -7,7 +8,6 @@ import {
 
 import {
   AimOutlined,
-  AudioOutlined,
   BellOutlined,
   CalendarOutlined,
   CarOutlined,
@@ -45,6 +45,83 @@ export type AdminMenuNode = {
   };
 };
 
+export const DASHBOARD_PATH = '/dashboard';
+
+const PATH_ALIASES: Record<string, string> = {
+  '/users': '/users/list',
+  '/products': '/products/list',
+  '/guesses': '/guesses/list',
+  '/orders': '/orders/list',
+  '/shops': '/shops/list',
+  '/shops/brand-auth/records': '/shops/brand-auth',
+  '/brands': '/brands/list',
+  '/warehouse': '/warehouse/virtual',
+  '/community': '/community/posts',
+  '/live': '/live/list',
+};
+
+const ADMIN_DETAIL_ROUTE_META = [
+  {
+    prefix: '/orders/detail/',
+    selectedPath: '/orders/list',
+    accessPath: '/orders/list',
+    name: '订单详情',
+    parentName: '订单管理',
+  },
+  {
+    prefix: '/orders/logistics/detail/',
+    selectedPath: '/orders/list',
+    accessPath: '/orders/logistics',
+    name: '物流详情',
+    parentName: '订单管理',
+  },
+  {
+    prefix: '/guesses/detail/',
+    selectedPath: '/guesses/list',
+    accessPath: '/guesses/list',
+    name: '竞猜详情',
+    parentName: '竞猜管理',
+  },
+  {
+    prefix: '/warehouse/virtual/detail/',
+    selectedPath: '/warehouse/virtual',
+    accessPath: '/warehouse/virtual',
+    name: '虚拟仓详情',
+    parentName: '履约管理',
+  },
+  {
+    prefix: '/warehouse/physical/detail/',
+    selectedPath: '/warehouse/physical',
+    accessPath: '/warehouse/physical',
+    name: '实体仓详情',
+    parentName: '履约管理',
+  },
+  {
+    prefix: '/warehouse/consign/detail/',
+    selectedPath: '/warehouse/consign',
+    accessPath: '/warehouse/consign',
+    name: '寄售详情',
+    parentName: '履约管理',
+  },
+  {
+    prefix: '/system/chats/detail/',
+    selectedPath: '/system/chats',
+    accessPath: '/system/chats',
+    name: '聊天详情',
+    parentName: '内容管理',
+  },
+] as const;
+
+const ADMIN_HIDDEN_PAGE_META = [
+  {
+    path: '/orders/logistics',
+    selectedPath: '/orders/list',
+    accessPath: '/orders/logistics',
+    name: '物流管理',
+    parentName: '订单管理',
+  },
+] as const;
+
 function menuAccess(path: string) {
   const definition = findAdminMenuPermissionByPath(path);
 
@@ -56,6 +133,32 @@ type AdminPageMeta = {
   name: string;
   parentName?: string;
 };
+
+function findAdminDetailRoute(path: string) {
+  return ADMIN_DETAIL_ROUTE_META.find(
+    (item) => path.startsWith(item.prefix) && path.length > item.prefix.length,
+  );
+}
+
+export function resolveAdminSelectedPath(path: string) {
+  const detailRoute = findAdminDetailRoute(path);
+  if (detailRoute) {
+    return detailRoute.selectedPath;
+  }
+
+  return (
+    ADMIN_HIDDEN_PAGE_META.find((item) => item.path === path)?.selectedPath ?? path
+  );
+}
+
+function resolveAdminAccessPath(path: string) {
+  const detailRoute = findAdminDetailRoute(path);
+  if (detailRoute) {
+    return detailRoute.accessPath;
+  }
+
+  return ADMIN_HIDDEN_PAGE_META.find((item) => item.path === path)?.accessPath ?? path;
+}
 
 const adminMenuTree: AdminMenuNode[] = [
   {
@@ -183,13 +286,6 @@ const adminMenuTree: AdminMenuNode[] = [
     name: '履约管理',
     children: [
       {
-        key: '/orders/logistics',
-        path: '/orders/logistics',
-        icon: <CarOutlined />,
-        name: '物流管理',
-        access: menuAccess('/orders/logistics'),
-      },
-      {
         key: '/warehouse/virtual',
         path: '/warehouse/virtual',
         icon: <InboxOutlined />,
@@ -295,13 +391,6 @@ const adminMenuTree: AdminMenuNode[] = [
         access: menuAccess('/live/list'),
       },
       {
-        key: '/live/danmaku',
-        path: '/live/danmaku',
-        icon: <AudioOutlined />,
-        name: '弹幕管理',
-        access: menuAccess('/live/danmaku'),
-      },
-      {
         key: '/system/chats',
         path: '/system/chats',
         icon: <MessageOutlined />,
@@ -364,14 +453,92 @@ function flattenMenu(items: AdminMenuNode[], parentName?: string): AdminPageMeta
   });
 }
 
-const adminPageMeta = flattenMenu(adminMenuTree);
+const adminPageMeta = [
+  ...flattenMenu(adminMenuTree),
+  ...ADMIN_HIDDEN_PAGE_META.map((item) => ({
+    path: item.path,
+    name: item.name,
+    parentName: item.parentName,
+  })),
+];
 
 export function findAdminPageMeta(path: string) {
+  const detailRoute = findAdminDetailRoute(path);
+  if (detailRoute) {
+    return { path, name: detailRoute.name, parentName: detailRoute.parentName };
+  }
+
   return adminPageMeta.find((item) => item.path === path) ?? adminPageMeta[0];
 }
 
 export function getAdminMenuTree() {
   return adminMenuTree;
+}
+
+export function normalizeAdminPath(hash: string) {
+  const raw = hash.replace(/^#/, '').trim();
+  if (!raw || raw === '/') {
+    return DASHBOARD_PATH;
+  }
+
+  const normalized = raw.startsWith('/') ? raw : `/${raw}`;
+  return PATH_ALIASES[normalized] ?? normalized;
+}
+
+export function toAdminMenuItems(
+  nodes: AdminMenuNode[],
+): NonNullable<MenuProps['items']> {
+  return nodes.map((node) => {
+    if (node.children?.length) {
+      return {
+        key: node.key,
+        icon: node.icon,
+        label: node.name,
+        children: toAdminMenuItems(node.children),
+      };
+    }
+
+    const path = node.path ?? node.key;
+    return {
+      key: path,
+      icon: node.icon,
+      label: node.name,
+    };
+  });
+}
+
+export function findAdminMenuOpenKeys(
+  nodes: AdminMenuNode[],
+  targetPath: string,
+  parentKeys: string[] = [],
+): string[] {
+  const resolvedTargetPath = resolveAdminSelectedPath(targetPath);
+
+  for (const node of nodes) {
+    if (node.path === resolvedTargetPath) {
+      return parentKeys;
+    }
+
+    if (node.children?.length) {
+      const nextKeys = findAdminMenuOpenKeys(node.children, targetPath, [
+        ...parentKeys,
+        node.key,
+      ]);
+      if (nextKeys.length > 0) {
+        return nextKeys;
+      }
+    }
+  }
+
+  return [];
+}
+
+export function sameAdminKeys(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((key, index) => key === right[index]);
 }
 
 function hasNodeAccess(node: AdminMenuNode, currentUser: AdminProfile) {
@@ -432,6 +599,17 @@ export function isAdminPathAccessible(
   path: string,
   currentUser: AdminProfile,
 ): boolean {
+  const resolvedPath = resolveAdminAccessPath(path);
+  const permissions = currentUser.permissions ?? [];
+  const definition = findAdminMenuPermissionByPath(resolvedPath);
+
+  if (definition) {
+    return (
+      permissions.includes(definition.code) ||
+      Boolean(definition.parentCode && permissions.includes(definition.parentCode))
+    );
+  }
+
   const traverse = (items: AdminMenuNode[]): boolean => {
     for (const item of items) {
       if (item.children?.length) {
@@ -441,7 +619,7 @@ export function isAdminPathAccessible(
         continue;
       }
 
-      if (item.path === path) {
+      if (item.path === resolvedPath) {
         return hasNodeAccess(item, currentUser);
       }
     }

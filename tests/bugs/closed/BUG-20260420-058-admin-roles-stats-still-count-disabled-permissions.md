@@ -18,7 +18,7 @@
 | `fix_owner` | `用户端全栈一` |
 | `verify_owner` | `测试狗` |
 | `created_at` | `2026-04-20` |
-| `last_seen_at` | `2026-04-20` |
+| `last_seen_at` | `2026-04-21` |
 
 ## Expected
 
@@ -68,7 +68,7 @@
 | 修复说明 | 后端角色统计查询已改成只统计 `admin_permission.status = 10` 的权限，角色列表和详情抽屉里的权限数、权限模块现在都和权限矩阵、实际鉴权口径一致，不再把停用权限继续算进去。 |
 | 验证命令 | `pnpm --filter @umi/api typecheck`；`pnpm --filter @umi/admin typecheck`；`pnpm --filter @umi/admin build` |
 | Fixer 自测结果 | 已通过。角色统计 SQL 现在只对启用权限做 `COUNT DISTINCT / GROUP_CONCAT`，三项验证均通过。 |
-| Verifier 复测结果 | 待补 |
+| Verifier 复测结果 | `2026-04-21` 代码复测通过。当前角色统计已迁到 `apps/api/src/modules/admin/system-rbac-shared.ts`，`fetchAdminRolesWithStats()` 的 `permission_count` 和 `permission_modules` 都明确只统计 `admin_permission.status = active` 的权限，和权限矩阵、实际鉴权口径一致。 |
 | 修复提交/变更 | `/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/system.ts` |
 
 ## Director Re-review

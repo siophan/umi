@@ -1,28 +1,20 @@
-import type {
-  AdminCheckinRewardConfigStatus,
-  AdminCheckinRewardType,
-  CreateAdminCheckinRewardConfigPayload,
-  UpdateAdminCheckinRewardConfigPayload,
-} from '@umi/shared';
+import type { AdminCheckinRewardConfigStatus } from '@umi/shared';
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import {
   Alert,
   Button,
   ConfigProvider,
-  Descriptions,
-  Drawer,
   Form,
   Input,
   InputNumber,
-  Modal,
   Select,
-  Tag,
-  Typography,
   message,
 } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { AdminCheckinDetailDrawer } from '../components/admin-checkin-detail-drawer';
+import { AdminCheckinFormModal } from '../components/admin-checkin-form-modal';
 import {
   createAdminCheckinRewardConfig,
   fetchAdminCheckinRewardConfigs,
@@ -31,60 +23,20 @@ import {
   type AdminCheckinRewardConfigItem,
 } from '../lib/api/checkin';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
-import { AdminSearchPanel, AdminStatusTabs, SEARCH_THEME } from '../components/admin-list-controls';
-import { formatDateTime, formatNumber } from '../lib/format';
+import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import {
+  buildCheckinColumns,
+  buildCheckinPayload,
+  buildCheckinStatusItems,
+  buildCreateCheckinFormValues,
+  buildEditCheckinFormValues,
+  REWARD_TYPE_OPTIONS,
+  type CheckinFilters,
+  type CheckinFormValues,
+} from '../lib/admin-checkin';
 
 interface MarketingCheckinPageProps {
   refreshToken?: number;
-}
-
-type CheckinFilters = {
-  dayNo?: number;
-  rewardType?: AdminCheckinRewardType;
-  title?: string;
-};
-
-type CheckinFormValues = {
-  dayNo: number;
-  rewardType: AdminCheckinRewardType;
-  rewardValue: number;
-  rewardRefId?: string;
-  title?: string;
-  sort?: number;
-  status: AdminCheckinRewardConfigStatus;
-};
-
-const REWARD_TYPE_OPTIONS = [
-  { label: '零食币', value: 'coin' },
-  { label: '优惠券', value: 'coupon' },
-  { label: '实物', value: 'physical' },
-] as const;
-
-const STATUS_OPTIONS = [
-  { label: '启用', value: 'active' },
-  { label: '停用', value: 'disabled' },
-] as const;
-
-function rewardStatusColor(status: AdminCheckinRewardConfigItem['status']) {
-  return status === 'active' ? 'success' : 'default';
-}
-
-function formatRewardContent(record: AdminCheckinRewardConfigItem) {
-  if (record.rewardType === 'coin') {
-    return `${formatNumber(record.rewardValue)} 零食币`;
-  }
-  if (record.rewardType === 'coupon') {
-    return `优惠券 × ${formatNumber(record.rewardValue)}${record.rewardRefId ? ` · 模板ID ${record.rewardRefId}` : ''}`;
-  }
-  return `实物 × ${formatNumber(record.rewardValue)}${record.rewardRefId ? ` · 奖品ID ${record.rewardRefId}` : ''}`;
-}
-
-function normalizeRewardRefIdInput(value: string | undefined) {
-  const text = value?.trim() ?? '';
-  if (!text) {
-    return null;
-  }
-  return /^\d+$/.test(text) ? (text as `${bigint}`) : null;
 }
 
 export function MarketingCheckinPage({ refreshToken = 0 }: MarketingCheckinPageProps) {
@@ -141,109 +93,17 @@ export function MarketingCheckinPage({ refreshToken = 0 }: MarketingCheckinPageP
     };
   }, [actionSeed, filters.dayNo, filters.rewardType, filters.title, refreshToken, status]);
 
-  const summary = useMemo(
-    () => ({
-      total: rows.length,
-      active: rows.filter((item) => item.status === 'active').length,
-      disabled: rows.filter((item) => item.status === 'disabled').length,
-    }),
-    [rows],
-  );
-
-  const statusItems = useMemo(
-    () => [
-      { key: 'all', label: '全部', count: summary.total },
-      { key: 'active', label: '启用', count: summary.active },
-      { key: 'disabled', label: '停用', count: summary.disabled },
-    ],
-    [summary],
-  );
-
-  const columns: ProColumns<AdminCheckinRewardConfigItem>[] = [
-    {
-      title: '签到天数',
-      dataIndex: 'dayNo',
-      width: 120,
-      render: (_, record) => <Typography.Text strong>第 {formatNumber(record.dayNo)} 天</Typography.Text>,
+  const statusItems = buildCheckinStatusItems(rows);
+  const columns: ProColumns<AdminCheckinRewardConfigItem>[] = buildCheckinColumns({
+    onView: (record) => setSelected(record),
+    onEdit: (record) => {
+      configForm.resetFields();
+      configForm.setFieldsValue(buildEditCheckinFormValues(record));
+      setEditingItem(record);
+      setModalOpen(true);
     },
-    {
-      title: '奖励类型',
-      dataIndex: 'rewardTypeLabel',
-      width: 120,
-    },
-    {
-      title: '奖励内容',
-      width: 240,
-      render: (_, record) => formatRewardContent(record),
-    },
-    {
-      title: '奖励标题',
-      dataIndex: 'title',
-      width: 180,
-      render: (_, record) => record.title || '-',
-    },
-    {
-      title: '排序',
-      dataIndex: 'sort',
-      width: 100,
-      render: (_, record) => formatNumber(record.sort),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 120,
-      render: (_, record) => (
-        <Tag color={rewardStatusColor(record.status)}>{record.statusLabel}</Tag>
-      ),
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      width: 180,
-      render: (_, record) => formatDateTime(record.updatedAt),
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 180,
-      fixed: 'right',
-      valueType: 'option',
-      render: (_, record) => (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="small" type="link" onClick={() => setSelected(record)}>
-            查看
-          </Button>
-          <Button
-            size="small"
-            type="link"
-            onClick={() => {
-              configForm.resetFields();
-              configForm.setFieldsValue({
-                dayNo: record.dayNo,
-                rewardType: record.rewardType,
-                rewardValue: record.rewardValue,
-                rewardRefId: record.rewardRefId ?? undefined,
-                title: record.title ?? undefined,
-                sort: record.sort,
-                status: record.status,
-              });
-              setEditingItem(record);
-              setModalOpen(true);
-            }}
-          >
-            编辑
-          </Button>
-          <Button
-            size="small"
-            type="link"
-            onClick={() => void handleToggleStatus(record)}
-          >
-            {record.status === 'active' ? '停用' : '启用'}
-          </Button>
-        </div>
-      ),
-    },
-  ];
+    onToggleStatus: (record) => void handleToggleStatus(record),
+  });
 
   return (
     <div className="page-stack">
@@ -301,13 +161,7 @@ export function MarketingCheckinPage({ refreshToken = 0 }: MarketingCheckinPageP
               type="primary"
               onClick={() => {
                 configForm.resetFields();
-                configForm.setFieldsValue({
-                  dayNo: rows.length + 1,
-                  rewardType: 'coin',
-                  rewardValue: 10,
-                  sort: rows.length + 1,
-                  status: 'active',
-                });
+                configForm.setFieldsValue(buildCreateCheckinFormValues(rows));
                 setEditingItem(null);
                 setModalOpen(true);
               }}
@@ -318,108 +172,31 @@ export function MarketingCheckinPage({ refreshToken = 0 }: MarketingCheckinPageP
         />
       </ConfigProvider>
 
-      <Drawer
+      <AdminCheckinDetailDrawer
         open={selected != null}
-        title="签到奖励详情"
-        width={460}
+        selected={selected}
         onClose={() => setSelected(null)}
-      >
-        {selected ? (
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="签到天数">第 {formatNumber(selected.dayNo)} 天</Descriptions.Item>
-            <Descriptions.Item label="奖励类型">{selected.rewardTypeLabel}</Descriptions.Item>
-            <Descriptions.Item label="奖励数值">{formatNumber(selected.rewardValue)}</Descriptions.Item>
-            <Descriptions.Item label="奖励关联 ID">{selected.rewardRefId ?? '-'}</Descriptions.Item>
-            <Descriptions.Item label="奖励标题">{selected.title || '-'}</Descriptions.Item>
-            <Descriptions.Item label="排序">{formatNumber(selected.sort)}</Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <Tag color={rewardStatusColor(selected.status)}>{selected.statusLabel}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="创建时间">{formatDateTime(selected.createdAt)}</Descriptions.Item>
-            <Descriptions.Item label="更新时间">{formatDateTime(selected.updatedAt)}</Descriptions.Item>
-          </Descriptions>
-        ) : null}
-      </Drawer>
+      />
 
-      <Modal
+      <AdminCheckinFormModal
         open={modalOpen}
-        title={editingItem ? '编辑签到奖励' : '新增签到奖励'}
-        okText="确定"
-        cancelText="取消"
-        confirmLoading={submitting}
-        destroyOnClose
+        editing={editingItem}
+        rewardType={rewardType}
+        form={configForm}
+        submitting={submitting}
         onCancel={() => {
           setModalOpen(false);
           setEditingItem(null);
         }}
-        onOk={() => void handleSubmit()}
-      >
-        <ConfigProvider theme={SEARCH_THEME}>
-          <Form form={configForm} layout="vertical" preserve={false}>
-            <Form.Item
-              label="签到天数"
-              name="dayNo"
-              rules={[{ required: true, message: '请输入签到天数' }]}
-            >
-              <InputNumber min={1} max={365} precision={0} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item
-              label="奖励类型"
-              name="rewardType"
-              rules={[{ required: true, message: '请选择奖励类型' }]}
-            >
-              <Select options={REWARD_TYPE_OPTIONS as never} placeholder="奖励类型" />
-            </Form.Item>
-            <Form.Item
-              label="奖励数值"
-              name="rewardValue"
-              rules={[{ required: true, message: '请输入奖励数值' }]}
-            >
-              <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="奖励数值" />
-            </Form.Item>
-            {rewardType === 'coupon' || rewardType === 'physical' ? (
-              <Form.Item
-                label="奖励关联 ID"
-                name="rewardRefId"
-                rules={[{ required: true, message: '请输入奖励关联 ID' }]}
-              >
-                <Input allowClear placeholder="奖励关联 ID" />
-              </Form.Item>
-            ) : null}
-            <Form.Item label="奖励标题" name="title">
-              <Input allowClear placeholder="奖励标题" />
-            </Form.Item>
-            <Form.Item label="排序" name="sort">
-              <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="排序" />
-            </Form.Item>
-            <Form.Item
-              label="状态"
-              name="status"
-              rules={[{ required: true, message: '请选择状态' }]}
-            >
-              <Select options={STATUS_OPTIONS as never} placeholder="状态" />
-            </Form.Item>
-          </Form>
-        </ConfigProvider>
-      </Modal>
+        onSubmit={() => void handleSubmit()}
+      />
     </div>
   );
 
   async function handleSubmit() {
     try {
       const values = await configForm.validateFields();
-      const payload: CreateAdminCheckinRewardConfigPayload | UpdateAdminCheckinRewardConfigPayload = {
-        dayNo: values.dayNo,
-        rewardType: values.rewardType,
-        rewardValue: values.rewardValue,
-        rewardRefId:
-          values.rewardType === 'coupon' || values.rewardType === 'physical'
-            ? normalizeRewardRefIdInput(values.rewardRefId)
-            : null,
-        title: values.title?.trim() || null,
-        sort: values.sort ?? values.dayNo,
-        ...(editingItem ? {} : { status: values.status }),
-      };
+      const payload = buildCheckinPayload(values, editingItem != null);
 
       setSubmitting(true);
       if (editingItem) {
