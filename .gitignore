@@ -16,3 +16,6 @@ skills
 tests-results
 tests
 *.tsbuildinfo
+release
+.pnpm-store/
+scripts/

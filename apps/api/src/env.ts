@@ -20,6 +20,10 @@ export const env = {
   port: Number(process.env.PORT ?? 4000),
   logLevel: process.env.LOG_LEVEL ?? 'info',
   smsCodePepper: process.env.SMS_CODE_PEPPER ?? '',
+  smsAutoFillCode:
+    (process.env.SMS_AUTO_FILL_CODE ?? '').trim().toLowerCase() === 'true' ||
+    ((process.env.SMS_AUTO_FILL_CODE ?? '').trim() === '' &&
+      (process.env.NODE_ENV ?? 'development') !== 'production'),
   adminTokenSecret:
     process.env.ADMIN_TOKEN_SECRET ??
     process.env.SMS_CODE_PEPPER ??

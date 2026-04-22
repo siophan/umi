@@ -32,6 +32,10 @@ function createInitialsAvatar(seed: string) {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
+/**
+ * 店铺详情页主组件。
+ * 页面保留老系统详情节奏，但数据来源完全走当前真实店铺详情接口。
+ */
 function ShopDetailPageInner() {
   const routeParams = useParams<{ id: string }>();
   const router = useRouter();
@@ -63,6 +67,9 @@ function ShopDetailPageInner() {
   useEffect(() => {
     let ignore = false;
 
+    /**
+     * 店铺详情失败时要明确落到错误态，不能退回假店铺信息继续渲染。
+     */
     async function load() {
       if (!ignore) {
         setLoading(true);
@@ -162,6 +169,9 @@ function ShopDetailPageInner() {
     document.title = `${meta?.full || '店铺详情'} - UMI`;
   }, [meta?.full]);
 
+  /**
+   * 顶部快捷入口会直接带着 tab 跳到主体内容区，保持老店铺页的浏览节奏。
+   */
   function jumpToMainContent(nextTab: TabKey) {
     setTab(nextTab);
     window.setTimeout(() => {

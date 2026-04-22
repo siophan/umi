@@ -22,6 +22,10 @@ import {
 import { SearchResultsView } from './search-results-view';
 import styles from './page.module.css';
 
+/**
+ * 搜索页主组件。
+ * 这里同时承接历史、热搜、联想词和结果列表，但搜索状态仍以 URL 参数为准，保证前进后退时界面可恢复。
+ */
 function SearchPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,6 +48,9 @@ function SearchPageInner() {
   const [suggesting, setSuggesting] = useState(false);
   const [toast, setToast] = useState('');
 
+  /**
+   * 统一控制页面级轻提示，避免多个请求分支各自持有一套计时器。
+   */
   function showToast(message: string) {
     setToast(message);
     if (toastTimerRef.current) {
@@ -208,6 +215,10 @@ function SearchPageInner() {
     });
   };
 
+  /**
+   * 搜索页的真实状态源是 URL。
+   * 本地 state 负责即时交互，URL 负责刷新和返回时的状态恢复。
+   */
   const syncSearchParams = (nextQuery: string, nextTab: SearchTab, nextSort: SearchSort) => {
     const params = new URLSearchParams();
     if (nextQuery.trim()) params.set('q', nextQuery.trim());
@@ -216,6 +227,9 @@ function SearchPageInner() {
     router.replace(`/search${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false });
   };
 
+  /**
+   * 提交搜索时统一重置 tab 和排序，避免沿用上一次结果页的局部筛选误导新关键词。
+   */
   const commitSearch = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) {

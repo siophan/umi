@@ -29,6 +29,9 @@ type RankingRow = {
   level: number | string | null;
 };
 
+/**
+ * 对外兼容几种旧参数命名，最终统一映射到当前榜单类型枚举。
+ */
 function mapRankingType(input: string): RankingType {
   const value = input.trim();
   if (value === 'guessWins' || value === 'earnings' || value === 'wins') {
@@ -77,6 +80,9 @@ function mapPeriodTypeCode(type: RankingPeriodType) {
   return PERIOD_ALL_TIME;
 }
 
+/**
+ * 排行榜额外统计挂在 extra_json，解析失败时直接降级为空对象，不能把榜单接口整条打挂。
+ */
 function parseExtraJson(raw: string | Record<string, unknown> | null) {
   if (!raw) {
     return {} as Record<string, unknown>;
@@ -92,6 +98,9 @@ function parseExtraJson(raw: string | Record<string, unknown> | null) {
   }
 }
 
+/**
+ * 榜单展示值优先使用 extra_json 里的业务口径，score 只作为兜底原始分值。
+ */
 function formatRankingValue(type: RankingType, score: number, extraJson: Record<string, unknown>) {
   if (type === 'winRate') {
     const winRateValue = Number(extraJson.winRate ?? extraJson.win_rate ?? score ?? 0);

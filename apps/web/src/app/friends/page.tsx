@@ -32,6 +32,10 @@ import {
 import { FriendsTabSections } from './friends-tab-sections';
 import styles from './page.module.css';
 
+/**
+ * 好友页主组件。
+ * 社交关系、热门竞猜和竞猜历史来自不同接口，这里按板块独立容错，避免一处失败把整页打空。
+ */
 export default function FriendsPage() {
   const router = useRouter();
   const toastTimer = useRef<number | null>(null);
@@ -58,6 +62,10 @@ export default function FriendsPage() {
   useEffect(() => {
     let ignore = false;
 
+    /**
+     * 首屏并行读取社交概览、热门竞猜和竞猜历史。
+     * 三块数据允许分别失败，页面按区块提示，而不是整页降级成空态。
+     */
     async function load() {
       setSocialError(null);
       setGuessError(null);
@@ -170,6 +178,9 @@ export default function FriendsPage() {
     );
   }
 
+  /**
+   * 统一控制好友页的短提示，避免关注、好友申请和 PK 提示互相覆盖时丢失计时器。
+   */
   function showToast(message: string) {
     setToast(message);
     if (toastTimer.current) {
@@ -178,6 +189,9 @@ export default function FriendsPage() {
     toastTimer.current = window.setTimeout(() => setToast(''), 1800);
   }
 
+  /**
+   * 好友排序只在前端当前结果集上切换，不重新请求服务端。
+   */
   function toggleSort() {
     const nextSort = sortBy === 'online' ? 'winRate' : sortBy === 'winRate' ? 'name' : 'online';
     const labels: Record<FriendSort, string> = {
@@ -203,6 +217,9 @@ export default function FriendsPage() {
     router.push(`/user/${encodeURIComponent(uid)}`);
   }
 
+  /**
+   * 关注列表里的取消关注/重新关注会同步修正粉丝列表的回关状态，保证两边口径一致。
+   */
   async function handleToggleFollowing(item: FollowingItem) {
     try {
       setFollowSavingId(item.id);
@@ -231,6 +248,9 @@ export default function FriendsPage() {
     }
   }
 
+  /**
+   * 粉丝回关除了更新粉丝卡片，还要补齐关注列表，避免用户需要刷新才能看到新增互关。
+   */
   async function handleToggleFanFollow(item: FanItem) {
     try {
       setFollowSavingId(item.id);

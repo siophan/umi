@@ -45,6 +45,9 @@ type GuessVoteRow = {
   vote_count: number | string;
 };
 
+/**
+ * 直播卡片里的当前竞猜摘要统一在后端组装，避免前端再拼选项、赔率和投票占比。
+ */
 function buildCurrentGuess(
   row: GuessRow,
   optionRows: GuessOptionRow[],
@@ -76,6 +79,9 @@ function buildCurrentGuess(
   };
 }
 
+/**
+ * 直播主表查询保持薄层，只负责拿直播与主播基础信息。
+ */
 async function fetchLiveRows(liveId?: string) {
   const db = getDbPool();
   const params: Array<string | number> = [];
@@ -107,6 +113,9 @@ async function fetchLiveRows(liveId?: string) {
   return rows as LiveRow[];
 }
 
+/**
+ * 直播列表还要补齐主播当前竞猜、竞猜场次和参与人数，这里集中做一次批量组装。
+ */
 async function buildLiveItems(liveRows: LiveRow[]) {
   if (liveRows.length === 0) {
     return [] as LiveListItem[];

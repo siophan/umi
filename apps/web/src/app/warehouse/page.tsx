@@ -26,6 +26,9 @@ const emptyMap: Record<WarehouseTab, { icon: string; title: string; desc: string
   consigning: { icon: 'fa-solid fa-box-open', title: '暂无寄售中商品', desc: '把仓库好物挂出来试试。' },
 };
 
+/**
+ * 仓库页的页签口径和后端状态码并不一一对应，这里统一收敛成用户端可理解的四类。
+ */
 function mapWarehouseTab(item: WarehouseItem): Exclude<WarehouseTab, 'all'> {
   if (item.status === 'consigning') {
     return 'consigning';
@@ -52,6 +55,10 @@ function getWarehouseStatusClass(tab: WarehouseTab) {
   return styles.statusConsigning;
 }
 
+/**
+ * 我的仓库页主组件。
+ * 页面同时展示虚拟仓和实体仓，因此首屏需要并行拉取两套数据后再合并排序。
+ */
 export default function WarehousePage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -73,6 +80,9 @@ export default function WarehousePage() {
     };
   }, []);
 
+  /**
+   * 虚拟仓和实体仓来自两条独立接口，任一条失败时整页直接报错，不伪造部分成功结果。
+   */
   const loadWarehouse = useCallback(async (shouldIgnore: () => boolean = () => false) => {
     setLoading(true);
     setError(null);
@@ -150,6 +160,9 @@ export default function WarehousePage() {
               ? { title: '预计 5 日内出售', desc: '接近市场价，需要一定等待时间', level: 1 }
               : { title: '预计 7 日内出售', desc: '高于市场价，出售可能较慢', level: 0 };
 
+  /**
+   * 寄售动作先做前端价格和数量校验，再调用真实寄售接口，避免把明显无效请求打到后端。
+   */
   const submitSell = async () => {
     if (!sellItem) return;
     const quantity = Number.parseInt(sellQty, 10);

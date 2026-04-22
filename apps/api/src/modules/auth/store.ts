@@ -180,7 +180,7 @@ export async function sendCode(phone: string, bizType: SmsBizType): Promise<Send
 
   return {
     sent: true,
-    ...(env.nodeEnv !== 'production' ? { devCode: code } : {}),
+    ...(env.smsAutoFillCode ? { devCode: code } : {}),
   };
 }
 

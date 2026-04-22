@@ -81,6 +81,10 @@ type ShopApplyRow = {
   created_at: Date | string;
 };
 
+/**
+ * 读取用户当前有效店铺。
+ * 一个用户可能有历史申请或历史店铺记录，这里只取当前最应被用户端消费的那一条。
+ */
 async function getCurrentShop(userId: string) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -103,6 +107,9 @@ async function getCurrentShop(userId: string) {
   return (rows[0] as ShopRow | undefined) ?? null;
 }
 
+/**
+ * 开店状态页只关心最近一次申请，用它来驱动“审核中/已拒绝/待重新申请”等分支。
+ */
 async function getLatestShopApplication(userId: string) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -129,6 +136,9 @@ async function getLatestShopApplication(userId: string) {
   return (rows[0] as ShopApplyRow | undefined) ?? null;
 }
 
+/**
+ * 开店分类固定来自店铺业务域 category，不允许前端再从当前店铺数据里自行推分类。
+ */
 async function listShopCategories() {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -156,6 +166,9 @@ function mapApplicationStatus(status: number) {
   return 'rejected';
 }
 
+/**
+ * 把店铺主记录、最近申请和分类池整合成开店状态页需要的最小结果集。
+ */
 function toShopStatusResult(
   shop: ShopRow | null,
   latestApplication: ShopApplyRow | null,
@@ -216,6 +229,9 @@ function toShopStatusResult(
   };
 }
 
+/**
+ * 我的店铺页需要店铺概览、品牌授权和在售商品三块数据，这里集中做一次聚合查询。
+ */
 async function getMyShopResult(userId: string): Promise<MyShopResult> {
   const db = getDbPool();
   const shop = await getCurrentShop(userId);

@@ -30,6 +30,9 @@ function formatNum(value: number) {
   return `${value}`;
 }
 
+/**
+ * 直播状态优先尊重后端状态，再用开播时间兜底，避免旧数据只给时间不显式给状态时展示错误。
+ */
 function getStatus(item: LiveListItem) {
   const raw = String(item.status || '').toLowerCase();
   if (raw.includes('replay') || raw.includes('done') || raw.includes('completed')) {
@@ -41,6 +44,9 @@ function getStatus(item: LiveListItem) {
   return 'live';
 }
 
+/**
+ * 直播页的部分筛选仍是前端轻规则，例如“零食开箱/品牌PK”，后续如果有运营分类再替换掉这里。
+ */
 function matchesFilter(item: LiveListItem, filter: LiveFilter) {
   const title = `${item.title} ${item.currentGuess?.title || ''}`.toLowerCase();
   const status = getStatus(item);
@@ -78,6 +84,10 @@ type LivesPageClientProps = {
   initialError: string | null;
 };
 
+/**
+ * 直播列表客户端页。
+ * 当前只消费服务端预取结果，本地筛选不再额外请求接口。
+ */
 export default function LivesPageClient({ initialItems, initialError }: LivesPageClientProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<LiveFilter>('all');

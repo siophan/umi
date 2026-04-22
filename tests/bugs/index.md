@@ -47,10 +47,6 @@
 | `BUG-20260420-126` | `P2` | `admin/login-openapi` | `#/login` | 后台登录 OpenAPI 没有声明真实的 401/403 错误契约 | `triaged` | `测试狗` | `admin-login-qa-2026-04-20.md` | `2026-04-20` |
 | `BUG-20260420-127` | `P2` | `admin/change-password-openapi` | `后台壳层` | 后台改密 OpenAPI 没有声明真实的 403/404 错误契约 | `triaged` | `测试狗` | `admin-login-qa-2026-04-20.md` | `2026-04-21` |
 | `BUG-20260420-128` | `P1` | `admin/notifications-local-window` | `#/system/notifications` | 系统通知页只覆盖最近 100 个批次，搜索和分页都退化成本地截断结果 | `fixed_pending_verify` | `测试狗` | `admin-permissions-system-qa-2026-04-20.md` | `2026-04-21` |
-| `BUG-20260420-064` | `P1` | `shop/my-shop-actions` | `/my-shop` | 我的店铺页暴露了未承接的店铺设置和商品管理操作 | `verified` | `测试猫` | `user-page-parity-round1-2026-04-20.md` | `2026-04-21` |
-| `BUG-20260420-066` | `P2` | `address/manage-mode` | `/address` | 收货地址页“管理/完成”切换只是空状态切换，没有实际管理模式 | `verified` | `测试猫` | `user-page-parity-round1-2026-04-20.md` | `2026-04-21` |
-| `BUG-20260420-068` | `P2` | `review/context` | `/review` | 评价页缺少订单上下文校验，缺参时仍渲染完整评价表单 | `verified` | `测试猫` | `user-page-parity-round1-2026-04-20.md` | `2026-04-21` |
-| `BUG-20260420-069` | `P1` | `shop/detail-actions` | `/shop/[id]` | 店铺详情页把关注、收藏、客服保留成本地假互动 | `verified` | `测试猫` | `user-page-parity-round1-2026-04-20.md` | `2026-04-21` |
 
 ## Rules
 

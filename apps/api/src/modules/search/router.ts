@@ -142,6 +142,10 @@ function buildFeedMiniTag(
   return 'mt-hot';
 }
 
+/**
+ * 把搜索结果里的商品行统一映射成商城 feed 结构。
+ * 这里沿用商城页的展示派生规则，保证搜索商品卡和商城卡片口径一致。
+ */
 function sanitizeProductFeedItem(row: ProductRow, index: number): ProductFeedItem {
   const price = Number(row.price ?? 0) / 100;
   const originalPrice = Number(row.original_price ?? row.price ?? 0) / 100;
@@ -261,6 +265,10 @@ async function getFavoritedProductIdSet(userId: string, productIds: string[]) {
   return new Set((rows as Array<{ product_id: number | string }>).map((row) => toEntityId(row.product_id)));
 }
 
+/**
+ * 商品搜索主查询。
+ * 搜索命中范围固定在商品名、品牌、分类和店铺名，不从前端当前结果里再做二次假筛选。
+ */
 async function searchProducts(
   query: string,
   sort: SearchSort,
@@ -344,6 +352,9 @@ async function searchProducts(
   };
 }
 
+/**
+ * 竞猜搜索需要补齐选项和投票数，避免列表页再逐条发请求拼竞猜摘要。
+ */
 async function getGuessOptionsAndVotes(guessIds: string[]) {
   if (!guessIds.length) {
     return {
@@ -392,6 +403,9 @@ async function getGuessOptionsAndVotes(guessIds: string[]) {
   return { optionsByGuess, votesByGuess };
 }
 
+/**
+ * 竞猜搜索只返回已审核且仍可展示的竞猜，和用户端其他竞猜列表的可见性口径保持一致。
+ */
 async function searchGuesses(query: string, limit: number): Promise<SearchResult['guesses']> {
   const db = getDbPool();
   const like = `%${query}%`;
@@ -471,6 +485,9 @@ async function searchGuesses(query: string, limit: number): Promise<SearchResult
   };
 }
 
+/**
+ * 热搜目前没有独立统计表，先用商品销量和竞猜参与热度混排，后续再替换成真实搜索统计源。
+ */
 async function getHotSearches(limit: number): Promise<SearchHotResult> {
   const db = getDbPool();
   const [productRows, guessRows] = await Promise.all([
@@ -524,6 +541,9 @@ async function getHotSearches(limit: number): Promise<SearchHotResult> {
   return { items };
 }
 
+/**
+ * 联想词同时覆盖商品、品牌和竞猜，前端按 type 区分展示，不再额外猜测来源。
+ */
 async function getSearchSuggestions(query: string, limit: number): Promise<SearchSuggestResult> {
   const keyword = query.trim();
   if (!keyword) {

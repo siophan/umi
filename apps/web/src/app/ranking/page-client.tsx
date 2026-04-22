@@ -26,6 +26,10 @@ type RankingPageClientProps = {
   initialStateMap: Record<RankTab, RankTabState>;
 };
 
+/**
+ * 排行榜客户端页。
+ * 服务端已预取三类榜单，这里只做本地 tab 切换，不再重复发请求。
+ */
 export default function RankingPageClient({ initialStateMap }: RankingPageClientProps) {
   const router = useRouter();
   const [tab, setTab] = useState<RankTab>('winRate');

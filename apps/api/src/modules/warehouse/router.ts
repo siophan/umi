@@ -75,6 +75,9 @@ function mapVirtualStatus(code: number): WarehouseItem['status'] {
   return 'stored';
 }
 
+/**
+ * 虚拟仓记录统一映射成前端仓库卡片结构，避免页面直接感知库表字段差异。
+ */
 function sanitizeVirtualRow(row: VirtualWarehouseRow): WarehouseItem {
   return {
     id: toEntityId(row.id),
@@ -91,6 +94,9 @@ function sanitizeVirtualRow(row: VirtualWarehouseRow): WarehouseItem {
   };
 }
 
+/**
+ * 实体仓和履约出库记录在前端共用一套卡片，因此这里统一折成同一返回结构。
+ */
 function sanitizePhysicalRow(row: PhysicalWarehouseRow): WarehouseItem {
   return {
     id: toEntityId(row.id),
@@ -109,6 +115,9 @@ function sanitizePhysicalRow(row: PhysicalWarehouseRow): WarehouseItem {
   };
 }
 
+/**
+ * 后台虚拟仓列表直接面向仓库主表，保留全部可运营状态，不跟用户端页签口径混用。
+ */
 async function getAdminVirtualWarehouseItems() {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -147,6 +156,9 @@ async function getAdminVirtualWarehouseItemDetail(itemId: string) {
   return matched;
 }
 
+/**
+ * 后台实体仓需要同时合并履约中的商品和已入实体仓的记录，才能还原完整仓库视角。
+ */
 async function getAdminPhysicalWarehouseItems() {
   const db = getDbPool();
   const [fulfillmentRows] = await db.execute<mysql.RowDataPacket[]>(
@@ -372,6 +384,9 @@ warehouseRouter.get(
   }),
 );
 
+/**
+ * 当前寄售预计天数仍是规则估算，不是独立撮合模型结果；这里集中收口，避免前后端口径漂移。
+ */
 function computeEstimateDays(priceYuan: number, marketPriceYuan: number): number {
   if (marketPriceYuan <= 0) return 5;
   const ratio = priceYuan / marketPriceYuan;
