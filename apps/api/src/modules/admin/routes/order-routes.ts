@@ -2,6 +2,7 @@ import type { Router as ExpressRouter } from 'express';
 
 import type {
   CompleteAdminOrderRefundPayload,
+  DeliverAdminLogisticsPayload,
   ReviewAdminOrderRefundPayload,
   ShipAdminOrderPayload,
 } from '@umi/shared';
@@ -9,7 +10,9 @@ import type {
 import { asyncHandler } from '../../../lib/errors';
 import { ok } from '../../../lib/http';
 import {
+  cancelAdminConsign,
   completeAdminOrderRefund,
+  deliverAdminLogistics,
   getAdminConsignDetail,
   getAdminOrderDetail,
   getAdminConsignRows,
@@ -52,6 +55,34 @@ export function registerAdminOrderRoutes(adminRouter: ExpressRouter) {
     }),
   );
 
+  adminRouter.put(
+    '/orders/logistics/:id/deliver',
+    asyncHandler(async (request, response) => {
+      try {
+        ok(
+          response,
+          await deliverAdminLogistics(
+            getRouteParam(request.params.id),
+            request.body as DeliverAdminLogisticsPayload,
+          ),
+        );
+      } catch (error) {
+        throw toRouteHttpError(
+          error,
+          {
+            status: 400,
+            code: 'ADMIN_LOGISTICS_DELIVER_FAILED',
+            message: '标记签收失败',
+          },
+          [
+            { message: '物流记录不存在', status: 404, code: 'ADMIN_LOGISTICS_NOT_FOUND' },
+            { message: '当前物流状态不支持标记签收', status: 400, code: 'ADMIN_LOGISTICS_STATUS_INVALID' },
+          ],
+        );
+      }
+    }),
+  );
+
   adminRouter.get(
     '/orders/consign',
     asyncHandler(async (_request, response) => {
@@ -63,6 +94,31 @@ export function registerAdminOrderRoutes(adminRouter: ExpressRouter) {
     '/orders/consign/:id',
     asyncHandler(async (request, response) => {
       ok(response, await getAdminConsignDetail(getRouteParam(request.params.id)));
+    }),
+  );
+
+  adminRouter.put(
+    '/orders/consign/:id/cancel',
+    asyncHandler(async (request, response) => {
+      try {
+        ok(
+          response,
+          await cancelAdminConsign(getRouteParam(request.params.id)),
+        );
+      } catch (error) {
+        throw toRouteHttpError(
+          error,
+          {
+            status: 400,
+            code: 'ADMIN_CONSIGN_CANCEL_FAILED',
+            message: '强制下架失败',
+          },
+          [
+            { message: '寄售记录不存在', status: 404, code: 'ADMIN_CONSIGN_NOT_FOUND' },
+            { message: '当前寄售状态不支持强制下架', status: 400, code: 'ADMIN_CONSIGN_STATUS_INVALID' },
+          ],
+        );
+      }
     }),
   );
 

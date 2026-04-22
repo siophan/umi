@@ -1,6 +1,6 @@
 # 当前交接状态
 
-最后更新：2026-04-21（admin 架构已过线，开始扫描 web 和非 admin API 剩余架构点）
+最后更新：2026-04-22（admin 架构已过线，继续清理 web 和非 admin API 剩余架构点）
 
 本文档只保留当前阶段最小必要上下文，用于新线程快速接手，减少历史对话 token。
 
@@ -115,9 +115,9 @@
 - `/product/[id]`：收藏、加入购物车、立即购买已切真实链路
 - `/product/[id]`：页面结构已开始从大页本体往“协调层 + 子组件”收口，头图、摘要区、内容区、换购弹层已拆到 `product-detail-*`
 - `/community`：推荐流 / 关注流 / 发现区 / 搜索 / 发布 / 点赞 / 收藏 / 转发 / 评论回复都已切真实接口，关注横条统一为稳定用户 ID 跳转，`mentionUsers` 补齐 ID
-- `/community`：页面结构已开始从大页本体往“协调层 + 子组件”收口，`follow bar / recommend highlights / feed list / page helpers` 已从主文件拆出
-- `/post/[id]`：页面结构已开始从大页本体往“协调层 + 子组件”收口，正文卡片、评论区、分享/举报弹层已拆到 `post-detail-*`
-- `/friends`：页面结构已开始从大页本体往“协调层 + 子组件”收口，数据归一化、四个 tab 列表和 PK 弹层已拆到 `friends-*`
+- `/community`：页面结构已进一步收成“协调层 + 子组件 + 页面状态 hook”，`follow bar / recommend highlights / feed list / composer overlays / use-community-page-state / page helpers` 已从主文件拆出
+- `/post/[id]`：页面结构已进一步收成“协调层 + 子组件 + 页面状态 hook”，正文卡片、评论区、分享/举报弹层、相关推荐和详情状态机已拆到 `post-detail-* / use-post-detail-state`
+- `/friends`：页面结构已进一步收成“协调层 + 子组件 + 页面状态 hook”，顶部统计/快捷入口/热门竞猜和详情状态机已拆到 `friends-overview-sections / use-friends-page-state / friends-*`
 - `/me`：页面结构已开始从大页本体往“协调层 + 子组件”收口，主页摘要、内容分区和设置/搜索/开店弹层已拆到 `me-*`
 - `/user/[uid]`：公开主页路由已统一切到 `uid_code`，复制提示改回 `已复制优米号`
 - `/live/[id]`：没有进行中的竞猜时，主按钮不再误提示成功
@@ -140,10 +140,10 @@
 - 旧的兼容路由壳已经删除：`/detail`、`/product-detail`、`/post-detail`、`/live`、`/profile`、`/user-profile`、`/my-orders`、`/all-features`、`/myshop`、`/shop-detail`、`/chat-detail`
 - 后续不要再把旧路径兼容页重新加回工作区；如果没有正式需求，就直接维护主路由
 - `apps/web/src/lib/api` 当前还是按业务域拆分；`shared.ts` 仍只承担 token 和基础请求，暂未回退成总接口文件
-- `apps/web/src/app/community/page.tsx` 已从 `1122` 行降到 `757` 行，当前主文件已不再直接承载关注横条、推荐高亮区和整段 feed 卡片渲染
+- `apps/web/src/app/community/page.tsx` 已从 `1122` 行降到 `179` 行，关注横条、推荐高亮区、feed 列表、四个弹层和页面状态机已拆到 `community-* / use-community-page-state`
 - `apps/web/src/app/product/[id]/page.tsx` 已从 `1028` 行降到 `396` 行
-- `apps/web/src/app/post/[id]/page.tsx` 已从 `942` 行降到 `584` 行
-- `apps/web/src/app/friends/page.tsx` 已从 `889` 行降到 `496` 行
+- `apps/web/src/app/post/[id]/page.tsx` 已从 `942` 行降到 `169` 行，正文卡片、评论区、分享/举报弹层、相关推荐和详情状态机已拆到 `post-detail-* / use-post-detail-state`
+- `apps/web/src/app/friends/page.tsx` 已从 `889` 行降到 `120` 行，顶部统计/快捷入口/热门竞猜和详情状态机已拆到 `friends-overview-sections / use-friends-page-state / friends-*`
 - `apps/web/src/app/me/page.tsx` 已从 `827` 行降到 `333` 行
 - `apps/web/src/app/payment/page.tsx` 已从 `676` 行降到 `319` 行，订单主体和弹层已拆到 `payment-order-sections / payment-overlays / payment-helpers`
 - `apps/web/src/app/community-search/page.tsx` 已从 `691` 行降到 `421` 行，默认态、结果态和 helper 已拆到 `default-view / results-view / page-helpers`
@@ -153,15 +153,21 @@
 - `apps/web/src/app/search/page.tsx` 已从 `620` 行降到 `367` 行，搜索前态和结果态已拆到 `search-before-view / search-results-view / search-helpers`
 - `apps/web/src/app/user/[uid]/page.tsx` 已从 `602` 行降到 `385` 行，主页主体和私信浮层已拆到 `user-profile-sections / user-profile-chat-overlay`
 - `apps/web/src/app/shop/[id]/page.tsx` 已从 `601` 行降到 `258` 行，店铺主体内容已拆到 `shop-detail-content`
+- `apps/web/src/app/guess/[id]/page.tsx` 已从 `553` 行降到 `239` 行，主视觉、对战区和分享/下注弹层已拆到 `guess-hero / guess-battle-panel / guess-detail-overlays / guess-detail-helpers`
+- `apps/web/src/app/cart/page.tsx` 已从 `551` 行降到 `389` 行，店铺分组、推荐流和底部结算栏已拆到 `cart-shop-groups / cart-recommend / cart-footer-bar / cart-helpers`
+- `apps/web/src/app/edit-profile/page.tsx` 已从 `534` 行降到 `300` 行，资料主体区块和等级/资料弹层已拆到 `edit-profile-main-sections / edit-profile-overlays / edit-profile-helpers`
+- `apps/web/src/app/warehouse/page.tsx` 已从 `492` 行降到 `214` 行，仓库摘要、页签、列表和寄售弹层已拆到 `warehouse-summary / warehouse-tabs / warehouse-list / warehouse-consign-modal / warehouse-helpers`
+- `apps/web/src/app/address/page.tsx` 已从 `473` 行降到 `264` 行，请求已回到 `lib/api/address.ts`，地址列表和表单弹层已拆到 `address-list / address-form-modal / address-helpers`
+- `apps/web/src/app/orders/page.tsx` 已从 `439` 行降到 `189` 行，订单统计、tabs 和列表已拆到 `orders-summary / orders-list / order-helpers`
+- `apps/api/src/modules/search/router.ts` 已从 `680` 行降到 `76` 行，商品搜索、竞猜搜索、热搜和联想词已拆到 `search-products / search-guesses / search-discovery / search-shared`
+- `apps/api/src/modules/order/router.ts` 已从 `1109` 行降到 `102` 行，订单读取、详情、后台概览和写链路已拆到 `order-read / order-write / order-shared`
+- `apps/api/src/modules/shop/router.ts` 已从 `942` 行降到 `152` 行，店铺状态、我的店铺、公开店铺、品牌授权已拆到 `shop-my / shop-public / shop-brand-auth / shop-shared`
+- `apps/api/src/modules/product/router.ts` 已从 `888` 行降到 `78` 行，商品详情、商品流和收藏动作已拆到 `product-detail / product-feed / product-favorite / product-shared`
+- `apps/api/src/modules/warehouse/router.ts` 已从 `558` 行降到 `95` 行，用户仓库读链、寄售写链、后台仓库视图已拆到 `warehouse-user / warehouse-consign / warehouse-admin / warehouse-shared`
+- `apps/api/src/modules/guess/router.ts` 已从 `500` 行降到 `49` 行，竞猜读链和个人历史已拆到 `guess-read / guess-history / guess-shared`
+- `apps/api/src/modules/community/store.ts` 已从 `900` 行降到 `19` 行，社区读链和写链已拆到 `community-read / community-write`
 - `packages/shared/src/api.ts` 当前只剩薄导出层，`packages/shared` 不是当前主阻塞
-- `apps/api` 非 `admin` 域当前最大的结构热点主要是：
-  - `apps/api/src/modules/order/router.ts`
-  - `apps/api/src/modules/shop/router.ts`
-  - `apps/api/src/modules/product/router.ts`
-  - `apps/api/src/modules/search/router.ts`
-  - `apps/api/src/modules/warehouse/router.ts`
-  - `apps/api/src/modules/guess/router.ts`
-  - `apps/api/src/modules/community/store.ts`
+- `apps/api` 非 `admin` 域当前已经没有明显的超大入口文件；后续如果还要继续做架构，优先只盯单业务域内部是否再次膨胀，不再按入口层继续机械拆分
 
 ## 当前正在做
 
@@ -169,12 +175,12 @@
 2. `login` 页由其他线程处理，当前不要改动
 3. 在接真实接口时，优先保留旧页 fallback 和旧页交互，不要为了联调破坏 UI；`/` 当前首屏依赖真实 `/api/banners /api/guesses /api/rankings /api/lives`，`/mall` 当前主商品流依赖真实 `/api/products`，`/cart` 依赖真实 `/api/cart`，`/payment` 依赖真实 `/api/addresses + /api/coupons + /api/orders`
 4. `apps/admin` 当前默认不再机械拆页面；只保留防回退约束
-5. `apps/web` 后续优先处理高频大页边界，不要重新引入包装页模式
+5. `apps/web` 后续除 `/create` 外已基本过线；不要重新把已拆开的状态机、弹层和区块塞回主页面，也不要重新引入包装页模式
 6. 若再发现零散差异，仍然先对照对应旧 `frontend/*.html` 再改
 
 当前已知的残留说明：
 
-- `/community`、`/post/[id]` 的转发 `prompt`
+- `/community` 的转发 `prompt`
 - `/my-shop` 的下架 `confirm`
 - `/me` 设置抽屉中的“语言切换开发中 / 帮助中心开发中 / 意见反馈开发中”
 
@@ -187,14 +193,11 @@
 - `/lives`
 - `/mall`
 - `/me`
-- `/community`
 - `/product/[id]`
-- `/post/[id]`
 - `/friends`
 - `/shop/[id]`
 - `/live/[id]`
 - `/novice-guess`
-- `apps/api` 非 `admin` 大 router/store
 - `apps/web` 高频页继续对齐旧 `frontend`
 
 ## 下一步建议顺序
@@ -213,9 +216,9 @@ pnpm --dir apps/web exec tsc -p tsconfig.json --pretty false
 
 如果继续做架构：
 
-1. 先打 `apps/web` 仍然最重的页面，优先 `community / post/[id] / guess/[id] / cart / edit-profile / create`
+1. 先打 `apps/web` 仍然最重的页面，优先 `create`
 2. 保持当前“只留正式路由”的状态，不再重建旧路径兼容页
-3. 然后处理 `apps/api` 非 `admin` 的超大 router/store，优先 `order / shop / product / search`
+3. 然后继续只盯 `apps/web` 剩余重页面和 `apps/api` 单业务域内部是否再次膨胀，不再按入口层继续机械拆分
 4. `apps/admin` 只做防回退，不再默认继续机械拆页
 
 ## 常用参考文件

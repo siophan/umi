@@ -1,11 +1,29 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Form, Input, Select, Typography } from 'antd';
+import {
+  Alert,
+  Button,
+  ConfigProvider,
+  Form,
+  Input,
+  Popconfirm,
+  Select,
+  Typography,
+  message,
+} from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
+import {
+  AdminOrderShipModal,
+  type AdminOrderShipFormValues,
+} from '../components/admin-order-ship-modal';
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminLogisticsRow } from '../lib/api/orders';
-import { fetchAdminLogistics } from '../lib/api/orders';
+import {
+  deliverAdminLogistics,
+  fetchAdminLogistics,
+  shipAdminOrder,
+} from '../lib/api/orders';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import { buildOptions } from '../lib/admin-filter-options';
 import { formatDateTime } from '../lib/format';
@@ -23,12 +41,18 @@ type LogisticsFilters = {
 const emptyRows: AdminLogisticsRow[] = [];
 
 export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps) {
+  const [messageApi, contextHolder] = message.useMessage();
   const [searchForm] = Form.useForm<LogisticsFilters>();
+  const [shipForm] = Form.useForm<AdminOrderShipFormValues>();
   const [rows, setRows] = useState<AdminLogisticsRow[]>(emptyRows);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<LogisticsFilters>({});
   const [status, setStatus] = useState<'all' | AdminLogisticsRow['status']>('all');
+  const [reloadToken, setReloadToken] = useState(0);
+  const [shipTarget, setShipTarget] = useState<AdminLogisticsRow | null>(null);
+  const [shipSubmitting, setShipSubmitting] = useState(false);
+  const [deliveringId, setDeliveringId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -51,7 +75,62 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
     return () => {
       alive = false;
     };
-  }, [refreshToken]);
+  }, [refreshToken, reloadToken]);
+
+  function triggerReload(successMessage: string) {
+    messageApi.success(successMessage);
+    setReloadToken((current) => current + 1);
+  }
+
+  function openShipModal(record: AdminLogisticsRow) {
+    if (!record.orderId) {
+      messageApi.error('当前物流记录缺少订单信息，暂不能发货');
+      return;
+    }
+
+    shipForm.setFieldsValue({
+      shippingType: record.shippingType === 'unknown' ? 'express' : record.shippingType,
+      trackingNo: record.trackingNo || undefined,
+    });
+    setShipTarget(record);
+  }
+
+  async function handleShip() {
+    if (!shipTarget?.orderId) {
+      return;
+    }
+
+    try {
+      const values = await shipForm.validateFields();
+      setShipSubmitting(true);
+      await shipAdminOrder(shipTarget.orderId, {
+        shippingType: values.shippingType,
+        trackingNo: values.trackingNo?.trim() || null,
+      });
+      setShipTarget(null);
+      triggerReload('物流已发货');
+    } catch (error) {
+      if (error instanceof Error) {
+        messageApi.error(error.message);
+      }
+    } finally {
+      setShipSubmitting(false);
+    }
+  }
+
+  async function handleDeliver(record: AdminLogisticsRow) {
+    try {
+      setDeliveringId(record.id);
+      await deliverAdminLogistics(record.id, {});
+      triggerReload('已标记签收');
+    } catch (error) {
+      if (error instanceof Error) {
+        messageApi.error(error.message);
+      }
+    } finally {
+      setDeliveringId(null);
+    }
+  }
 
   const carrierOptions = useMemo(() => buildOptions(rows, 'carrier'), [rows]);
   const filteredRows = useMemo(
@@ -89,25 +168,49 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
     {
       title: '操作',
       key: 'actions',
-      width: 100,
+      width: 220,
       fixed: 'right',
       valueType: 'option',
       render: (_, record) => (
-        <Button
-          size="small"
-          type="link"
-          onClick={() => {
-            window.location.hash = `#/orders/logistics/detail/${record.id}`;
-          }}
-        >
-          查看
-        </Button>
+        <div className="inline-actions">
+          <Button
+            size="small"
+            type="link"
+            onClick={() => {
+              window.location.hash = `#/orders/logistics/detail/${record.id}`;
+            }}
+          >
+            查看
+          </Button>
+          {record.status === 'stored' ? (
+            <Button size="small" type="link" onClick={() => openShipModal(record)}>
+              发货
+            </Button>
+          ) : null}
+          {record.status === 'shipping' ? (
+            <Popconfirm
+              title="确认标记签收？"
+              okText="确认"
+              cancelText="取消"
+              onConfirm={() => void handleDeliver(record)}
+            >
+              <Button
+                size="small"
+                type="link"
+                loading={deliveringId === record.id}
+              >
+                标记签收
+              </Button>
+            </Popconfirm>
+          ) : null}
+        </div>
       ),
     },
   ];
 
   return (
     <div className="page-stack">
+      {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={searchForm}
@@ -162,6 +265,14 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
           toolBarRender={() => []}
         />
       </ConfigProvider>
+      <AdminOrderShipModal
+        open={shipTarget != null}
+        submitting={shipSubmitting}
+        orderSn={shipTarget?.orderSn || null}
+        form={shipForm}
+        onCancel={() => setShipTarget(null)}
+        onSubmit={() => void handleShip()}
+      />
     </div>
   );
 }

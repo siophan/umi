@@ -1,7 +1,7 @@
 import { toEntityId } from '@umi/shared';
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
-import { FULFILLMENT_PENDING, FULFILLMENT_PROCESSING, FULFILLMENT_SHIPPED, ORDER_CLOSED, ORDER_PENDING, ORDER_REFUNDED, REFUND_APPROVED, REFUND_COMPLETED, REFUND_PENDING, REFUND_REJECTED, REFUND_REVIEWING, SHIPPING_EXPRESS, SHIPPING_SAME_CITY, SHIPPING_SELF_PICKUP, } from './orders-shared';
+import { FULFILLMENT_PENDING, FULFILLMENT_PROCESSING, FULFILLMENT_SHIPPED, FULFILLMENT_COMPLETED, ORDER_CLOSED, ORDER_PENDING, ORDER_REFUNDED, REFUND_APPROVED, REFUND_COMPLETED, REFUND_PENDING, REFUND_REJECTED, REFUND_REVIEWING, SHIPPING_EXPRESS, SHIPPING_SAME_CITY, SHIPPING_SELF_PICKUP, } from './orders-shared';
 function toShippingTypeCode(value) {
     if (value === 'same_city') {
         return SHIPPING_SAME_CITY;
@@ -197,6 +197,51 @@ export async function completeAdminOrderRefund(orderId, _payload, adminUserId) {
         return {
             id: toEntityId(order.id),
             refundId: toEntityId(refund.id),
+            status: 'completed',
+            completedAt,
+        };
+    }
+    catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally {
+        connection.release();
+    }
+}
+export async function deliverAdminLogistics(fulfillmentId, _payload) {
+    const db = getDbPool();
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [rows] = await connection.execute(`
+        SELECT id, order_id, status
+        FROM fulfillment_order
+        WHERE id = ?
+        LIMIT 1
+        FOR UPDATE
+      `, [fulfillmentId]);
+        const fulfillment = rows[0] ?? null;
+        if (!fulfillment?.order_id) {
+            throw new HttpError(404, 'ADMIN_LOGISTICS_NOT_FOUND', '物流记录不存在');
+        }
+        const fulfillmentStatus = Number(fulfillment.status ?? 0);
+        if (fulfillmentStatus !== FULFILLMENT_SHIPPED) {
+            throw new Error('当前物流状态不支持标记签收');
+        }
+        const completedAt = new Date().toISOString();
+        await connection.execute(`
+        UPDATE fulfillment_order
+        SET
+          status = ?,
+          completed_at = CURRENT_TIMESTAMP(3),
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+      `, [FULFILLMENT_COMPLETED, fulfillment.id]);
+        await connection.commit();
+        return {
+            id: toEntityId(fulfillment.id),
+            orderId: toEntityId(fulfillment.order_id),
             status: 'completed',
             completedAt,
         };

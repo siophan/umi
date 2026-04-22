@@ -427,6 +427,13 @@ export const adminSchemas = {
             },
         },
     },
+    StopAdminLiveRoomResult: {
+        type: 'object',
+        required: ['item'],
+        properties: {
+            item: { $ref: '#/components/schemas/AdminLiveRoomItem' },
+        },
+    },
     AdminCategoryItem: {
         type: 'object',
         required: [
@@ -682,6 +689,79 @@ export const adminSchemas = {
             items: {
                 type: 'array',
                 items: { $ref: '#/components/schemas/AdminRankingEntryItem' },
+            },
+        },
+    },
+    RefreshAdminRankingItem: {
+        type: 'object',
+        required: ['boardType', 'periodType', 'periodValue', 'entryCount', 'generatedAt'],
+        properties: {
+            boardType: {
+                type: 'string',
+                enum: ['guessWins', 'winRate', 'inviteCount'],
+                example: 'guessWins',
+            },
+            periodType: {
+                type: 'string',
+                enum: ['daily', 'weekly', 'monthly', 'allTime'],
+                example: 'daily',
+            },
+            periodValue: { type: 'string', example: '20260421' },
+            entryCount: { type: 'integer', example: 50 },
+            generatedAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2026-04-22T08:30:00.000Z',
+            },
+        },
+    },
+    RefreshAdminRankingsPayload: {
+        type: 'object',
+        properties: {
+            boardType: {
+                type: 'string',
+                nullable: true,
+                enum: ['guessWins', 'winRate', 'inviteCount'],
+                example: 'guessWins',
+            },
+            periodType: {
+                type: 'string',
+                nullable: true,
+                enum: ['daily', 'weekly', 'monthly', 'allTime'],
+                example: 'daily',
+            },
+            periodValue: {
+                type: 'string',
+                nullable: true,
+                example: '20260421',
+            },
+        },
+    },
+    RefreshAdminRankingsResult: {
+        type: 'object',
+        required: ['items'],
+        properties: {
+            items: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/RefreshAdminRankingItem' },
+            },
+        },
+    },
+    CancelAdminConsignResult: {
+        type: 'object',
+        required: ['id', 'physicalItemId', 'status', 'canceledAt'],
+        properties: {
+            id: { type: 'string', example: '301' },
+            physicalItemId: { type: 'string', nullable: true, example: '9001' },
+            status: {
+                type: 'string',
+                enum: ['canceled'],
+                example: 'canceled',
+            },
+            canceledAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2026-04-22T08:30:00.000Z',
             },
         },
     },
@@ -1447,7 +1527,7 @@ export const adminSchemas = {
             imageUrl: { type: 'string', example: 'https://example.com/banner.png' },
             targetType: {
                 type: 'string',
-                enum: ['guess', 'post', 'product', 'shop', 'external'],
+                enum: ['guess', 'post', 'product', 'shop', 'page', 'external'],
                 example: 'guess',
             },
             targetTypeLabel: { type: 'string', example: '竞猜' },
@@ -1517,7 +1597,7 @@ export const adminSchemas = {
             imageUrl: { type: 'string', example: 'https://example.com/banner.png' },
             targetType: {
                 type: 'string',
-                enum: ['guess', 'post', 'product', 'shop', 'external'],
+                enum: ['guess', 'post', 'product', 'shop', 'page', 'external'],
                 example: 'guess',
             },
             targetId: { type: 'string', nullable: true, example: '901' },
@@ -1549,7 +1629,7 @@ export const adminSchemas = {
             imageUrl: { type: 'string', example: 'https://example.com/banner.png' },
             targetType: {
                 type: 'string',
-                enum: ['guess', 'post', 'product', 'shop', 'external'],
+                enum: ['guess', 'post', 'product', 'shop', 'page', 'external'],
                 example: 'guess',
             },
             targetId: { type: 'string', nullable: true, example: '901' },
@@ -2227,6 +2307,24 @@ export const adminSchemas = {
                 type: 'string',
                 format: 'date-time',
                 example: '2026-04-21T10:30:00.000Z',
+            },
+        },
+    },
+    DeliverAdminLogisticsPayload: {
+        type: 'object',
+        properties: {},
+    },
+    DeliverAdminLogisticsResult: {
+        type: 'object',
+        required: ['id', 'orderId', 'status', 'completedAt'],
+        properties: {
+            id: { type: 'string', example: '5001' },
+            orderId: { type: 'string', example: '1201' },
+            status: { type: 'string', enum: ['completed'], example: 'completed' },
+            completedAt: {
+                type: 'string',
+                format: 'date-time',
+                example: '2026-04-22T10:40:00.000Z',
             },
         },
     },

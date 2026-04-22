@@ -9,7 +9,7 @@ export interface BannerItem {
   title: string;
   subtitle: string | null;
   imageUrl: string | null;
-  targetType: 'guess' | 'post' | 'product' | 'shop' | 'external';
+  targetType: 'guess' | 'post' | 'product' | 'shop' | 'page' | 'external';
   targetId: EntityId | null;
   actionUrl: string | null;
   sort: number;

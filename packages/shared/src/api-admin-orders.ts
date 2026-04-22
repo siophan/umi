@@ -16,6 +16,22 @@ export interface ShipAdminOrderResult {
   shippedAt: string;
 }
 
+export interface DeliverAdminLogisticsPayload {}
+
+export interface DeliverAdminLogisticsResult {
+  id: EntityId;
+  orderId: EntityId;
+  status: 'completed';
+  completedAt: string;
+}
+
+export interface CancelAdminConsignResult {
+  id: EntityId;
+  physicalItemId: EntityId | null;
+  status: 'canceled';
+  canceledAt: string;
+}
+
 export interface ReviewAdminOrderRefundPayload {
   status: 'approved' | 'rejected';
   reviewNote?: string | null;

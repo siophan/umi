@@ -2,6 +2,7 @@ import type { Router as ExpressRouter } from 'express';
 
 import type {
   CreateAdminBrandProductPayload,
+  RefreshAdminRankingsPayload,
   UpdateAdminBrandProductPayload,
 } from '@umi/shared';
 
@@ -13,7 +14,7 @@ import {
   getAdminProducts,
   updateAdminBrandProduct,
 } from '../products';
-import { getAdminRankingDetail, getAdminRankings } from '../rankings';
+import { getAdminRankingDetail, getAdminRankings, refreshAdminRankings } from '../rankings';
 import { getRouteParam, toRouteHttpError } from '../route-helpers';
 
 export function registerAdminCatalogRoutes(adminRouter: ExpressRouter) {
@@ -56,6 +57,16 @@ export function registerAdminCatalogRoutes(adminRouter: ExpressRouter) {
     }),
   );
 
+  adminRouter.post(
+    '/rankings/refresh',
+    asyncHandler(async (request, response) => {
+      ok(
+        response,
+        await refreshAdminRankings(request.body as RefreshAdminRankingsPayload),
+      );
+    }),
+  );
+
   adminRouter.get(
     '/products',
     asyncHandler(async (request, response) => {
@@ -67,6 +78,14 @@ export function registerAdminCatalogRoutes(adminRouter: ExpressRouter) {
           keyword:
             typeof request.query.keyword === 'string'
               ? request.query.keyword
+              : undefined,
+          categoryId:
+            typeof request.query.categoryId === 'string'
+              ? request.query.categoryId
+              : undefined,
+          shopName:
+            typeof request.query.shopName === 'string'
+              ? request.query.shopName
               : undefined,
           status:
             typeof request.query.status === 'string'

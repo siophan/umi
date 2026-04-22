@@ -109,6 +109,7 @@ export function sanitizeAdminProduct(row) {
         id: String(row.id),
         name: row.name,
         brand: row.brand_name || '未知品牌',
+        categoryId: row.category_id == null ? null : String(row.category_id),
         category: row.category_name || '未分类',
         shopId: row.shop_id == null ? null : String(row.shop_id),
         shopName: row.shop_name || '未归属店铺',
@@ -148,33 +149,43 @@ export function sanitizeAdminBrandLibrary(row) {
         brandStatusCode: toNullableNumber(row.brand_status),
     };
 }
-export function buildAdminProductFilters(query) {
+export function buildAdminProductFilters(query, options = { includeStatus: true }) {
     const whereClauses = ['1 = 1'];
     const params = [];
     const keyword = query.keyword?.trim();
+    const categoryId = query.categoryId?.trim();
+    const shopName = query.shopName?.trim();
     const status = query.status ?? 'all';
     if (keyword) {
         const like = `%${keyword}%`;
         whereClauses.push('(p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ? OR s.name LIKE ?)');
         params.push(like, like, like, like);
     }
-    if (status === 'active') {
+    if (categoryId) {
+        whereClauses.push('bp.category_id = ?');
+        params.push(categoryId);
+    }
+    if (shopName) {
+        whereClauses.push('s.name LIKE ?');
+        params.push(`%${shopName}%`);
+    }
+    if (options.includeStatus && status === 'active') {
         whereClauses.push('p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (p.stock - COALESCE(p.frozen_stock, 0)) > ?');
         params.push(PRODUCT_STATUS_ACTIVE, SHOP_STATUS_ACTIVE, SHOP_STATUS_PAUSED, BRAND_STATUS_ACTIVE, BRAND_STATUS_DISABLED, BRAND_PRODUCT_STATUS_ACTIVE, BRAND_PRODUCT_STATUS_DISABLED, LOW_STOCK_THRESHOLD);
     }
-    else if (status === 'low_stock') {
+    else if (options.includeStatus && status === 'low_stock') {
         whereClauses.push('p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (p.stock - COALESCE(p.frozen_stock, 0)) <= ?');
         params.push(PRODUCT_STATUS_ACTIVE, SHOP_STATUS_ACTIVE, SHOP_STATUS_PAUSED, BRAND_STATUS_ACTIVE, BRAND_STATUS_DISABLED, BRAND_PRODUCT_STATUS_ACTIVE, BRAND_PRODUCT_STATUS_DISABLED, LOW_STOCK_THRESHOLD);
     }
-    else if (status === 'paused') {
+    else if (options.includeStatus && status === 'paused') {
         whereClauses.push('COALESCE(s.status, ?) = ?');
         params.push(SHOP_STATUS_ACTIVE, SHOP_STATUS_PAUSED);
     }
-    else if (status === 'off_shelf') {
+    else if (options.includeStatus && status === 'off_shelf') {
         whereClauses.push('p.status = ?');
         params.push(PRODUCT_STATUS_OFF_SHELF);
     }
-    else if (status === 'disabled') {
+    else if (options.includeStatus && status === 'disabled') {
         whereClauses.push('(p.status = ? OR COALESCE(b.status, ?) = ? OR COALESCE(bp.status, ?) = ?)');
         params.push(PRODUCT_STATUS_DISABLED, BRAND_STATUS_ACTIVE, BRAND_STATUS_DISABLED, BRAND_PRODUCT_STATUS_ACTIVE, BRAND_PRODUCT_STATUS_DISABLED);
     }

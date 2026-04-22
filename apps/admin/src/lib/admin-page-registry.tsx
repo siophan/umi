@@ -24,7 +24,6 @@ import { OrdersPage } from '../pages/orders-page';
 import { OrderTransactionsPage } from '../pages/order-transactions-page';
 import { PermissionsPage } from '../pages/permissions-page';
 import { PkMatchesPage } from '../pages/pk-matches-page';
-import { ProductsPage } from '../pages/products-page';
 import { RolesPage } from '../pages/roles-page';
 import { ShopAppliesPage } from '../pages/shop-applies-page';
 import { ShopBrandAuthAppliesPage } from '../pages/shop-brand-auth-applies-page';
@@ -63,7 +62,6 @@ const PAGE_COMPONENTS: Record<string, ComponentType<AdminPageProps>> = {
   '/orders/transactions': OrderTransactionsPage,
   '/pk': PkMatchesPage,
   '/products/brands': BrandLibraryPage,
-  '/products/list': ProductsPage,
   '/shops/apply': ShopAppliesPage,
   '/shops/brand-auth': ShopBrandAuthAppliesPage,
   '/shops/list': ShopsPage,

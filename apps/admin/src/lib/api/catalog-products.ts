@@ -7,8 +7,8 @@ import type {
 
 import { getJson, postJson, putJson } from './shared';
 import type {
+  AdminProductListResult,
   AdminBrandLibraryItem,
-  AdminProduct,
   PaginatedListResult,
 } from './catalog-shared';
 
@@ -17,6 +17,8 @@ export function fetchAdminProducts(
     page?: number;
     pageSize?: number;
     keyword?: string;
+    categoryId?: string;
+    shopName?: string;
     status?: 'all' | 'active' | 'low_stock' | 'paused' | 'off_shelf' | 'disabled';
   } = {},
 ) {
@@ -24,9 +26,11 @@ export function fetchAdminProducts(
   if (query.page != null) search.set('page', String(query.page));
   if (query.pageSize != null) search.set('pageSize', String(query.pageSize));
   if (query.keyword) search.set('keyword', query.keyword.trim());
+  if (query.categoryId) search.set('categoryId', query.categoryId);
+  if (query.shopName) search.set('shopName', query.shopName.trim());
   if (query.status) search.set('status', query.status);
   const suffix = search.size > 0 ? `?${search.toString()}` : '';
-  return getJson<PaginatedListResult<AdminProduct>>(`/api/admin/products${suffix}`);
+  return getJson<AdminProductListResult>(`/api/admin/products${suffix}`);
 }
 
 export function fetchAdminBrandLibrary(

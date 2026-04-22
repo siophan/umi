@@ -152,15 +152,17 @@
 当前工作区的架构状态先按下面这组事实理解：
 
 - `apps/admin` 整体架构已经过线；后续默认不要再为了把 `250` 行页面拆到 `150` 行而机械扩散文件数量。
-- `apps/web` 当前剩余的主问题不是总接口文件，而是少量中高频页面仍然偏重：`/community`、`/post/[id]`、`/guess/[id]`、`/cart`、`/edit-profile`、`/create`
-- `apps/web` 已开始收口的页面：`/community`、`/product/[id]`、`/post/[id]`、`/friends`；后续优先在现有“协调层 + 子组件”边界上继续收，不要再把这些子块重新塞回主文件
+- `apps/web` 当前剩余的主问题不是总接口文件，而是 `/create` 仍然偏重；除该页外，其余高频页已基本收成“协调层 + 子组件 + 页面状态 hook”的结构
+- `apps/web` 已开始收口的页面：`/community`、`/product/[id]`、`/post/[id]`、`/friends`；后续优先在现有“协调层 + 子组件 + 页面状态 hook”边界上继续收，不要再把这些子块重新塞回主文件
 - `apps/web` 已开始收口的页面还包括：`/me`；主页摘要、活动分区和弹层边界已经拆出，后续不要重新堆回单文件
 - `apps/web` 已开始收口的页面还包括：`/payment`；订单区块、价格区块和弹层边界已经拆出，后续不要重新堆回单文件
 - `apps/web` 已开始收口的页面还包括：`/community-search`、`/my-shop`；默认态 / 结果态 / 开店申请态 / 已开店态等区块边界已经拆出，后续不要重新堆回单文件
 - `apps/web` 已开始收口的页面还包括：`/create-user`、`/novice-guess`、`/search`、`/user/[uid]`、`/shop/[id]`；启动态 / 主体区块 / 结果态 / 私信浮层 / 店铺主体内容等边界已经拆出，后续不要重新堆回单文件
+- `apps/web` 已开始收口的页面还包括：`/guess/[id]`、`/cart`、`/edit-profile`；竞猜主视觉 / 对战区 / 弹层、购物车店铺分组 / 推荐流 / 底栏、资料主体区块 / 资料弹层都已经拆出，后续不要重新堆回单文件
+- `apps/web` 已开始收口的页面还包括：`/warehouse`、`/address`、`/orders`；仓库摘要 / 列表 / 寄售弹层、地址列表 / 地址表单弹层、订单统计 / tabs / 列表都已经拆出，后续不要重新堆回单文件
 - 老的兼容路由壳已经删除，不要再重新加回 `/detail`、`/product-detail`、`/post-detail`、`/live`、`/profile`、`/user-profile`、`/my-orders`、`/all-features`、`/myshop`、`/shop-detail`、`/chat-detail`
 - `packages/shared` 当前已经过线：`api.ts` 只剩薄导出层，不要再把页面级 DTO、临时后台字段或局部 UI 需求塞回共享层。
-- 非 `admin` API 当前最大的结构热点主要在：`order/router.ts`、`shop/router.ts`、`product/router.ts`、`search/router.ts`、`warehouse/router.ts`、`guess/router.ts`、`community/store.ts`
+- 非 `admin` API 当前已基本收平超大入口：`search / order / shop / product / warehouse / guess` 的 `router.ts` 都已是薄路由层，`community/store.ts` 也已收成薄 barrel；后续更适合只盯单业务域内部是否再次膨胀，不再按入口层继续机械拆分
 - 后续如果继续做架构工作，默认顺序是：`apps/web` 兼容壳和大页边界 > `apps/api` 非 admin 大 router/store > 防止 `packages/shared` 重新膨胀
 
 ## Known Anti-Patterns

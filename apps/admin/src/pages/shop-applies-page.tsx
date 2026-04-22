@@ -33,6 +33,7 @@ export function ShopAppliesPage({ refreshToken = 0 }: ShopAppliesPageProps) {
   const [data, setData] = useState<ShopAppliesPageData>(EMPTY_SHOP_APPLIES_DATA);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
+  const [categoryIssue, setCategoryIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<ShopApplyFilters>({});
   const [status, setStatus] = useState<'all' | AdminShopApplyItem['status']>('all');
   const [selected, setSelected] = useState<AdminShopApplyItem | null>(null);
@@ -46,15 +47,27 @@ export function ShopAppliesPage({ refreshToken = 0 }: ShopAppliesPageProps) {
     async function loadPageData() {
       setLoading(true);
       setIssue(null);
+      setCategoryIssue(null);
       try {
-        const [shopApplies, categories] = await Promise.all([
-          fetchAdminShopApplies().then((result) => result.items),
-          fetchAdminCategories().then((result) => result.items),
-        ]);
+        const shopApplies = await fetchAdminShopApplies().then((result) => result.items);
         if (!alive) {
           return;
         }
-        setData({ categories, shopApplies });
+        setData((current) => ({ ...current, shopApplies }));
+
+        try {
+          const categories = await fetchAdminCategories().then((result) => result.items);
+          if (!alive) {
+            return;
+          }
+          setData({ categories, shopApplies });
+        } catch (error) {
+          if (!alive) {
+            return;
+          }
+          setData({ categories: [], shopApplies });
+          setCategoryIssue(error instanceof Error ? error.message : '主营类目字典加载失败');
+        }
       } catch (error) {
         if (!alive) {
           return;
@@ -139,6 +152,7 @@ export function ShopAppliesPage({ refreshToken = 0 }: ShopAppliesPageProps) {
     <div className="page-stack">
       {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
+      {categoryIssue ? <Alert showIcon type="warning" message={categoryIssue} /> : null}
 
       <AdminSearchPanel
         form={searchForm}

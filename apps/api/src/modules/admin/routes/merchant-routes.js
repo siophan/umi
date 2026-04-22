@@ -38,8 +38,17 @@ export function registerAdminMerchantRoutes(adminRouter) {
             ]);
         }
     }));
-    adminRouter.get('/shops/products', asyncHandler(async (_request, response) => {
-        ok(response, await getAdminShopProducts());
+    adminRouter.get('/shops/products', asyncHandler(async (request, response) => {
+        ok(response, await getAdminShopProducts({
+            page: typeof request.query.page === 'string' ? Number(request.query.page) : undefined,
+            pageSize: typeof request.query.pageSize === 'string' ? Number(request.query.pageSize) : undefined,
+            shopName: typeof request.query.shopName === 'string' ? request.query.shopName : undefined,
+            productName: typeof request.query.productName === 'string' ? request.query.productName : undefined,
+            brandName: typeof request.query.brandName === 'string' ? request.query.brandName : undefined,
+            status: typeof request.query.status === 'string'
+                ? request.query.status
+                : undefined,
+        }));
     }));
     adminRouter.put('/shops/products/:id/status', asyncHandler(async (request, response) => {
         try {

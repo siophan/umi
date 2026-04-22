@@ -84,6 +84,24 @@ export interface AdminRankingDetailResult {
   items: AdminRankingEntryItem[];
 }
 
+export interface RefreshAdminRankingsPayload {
+  boardType?: RankingType | null;
+  periodType?: RankingPeriodType | null;
+  periodValue?: string | null;
+}
+
+export interface RefreshAdminRankingItem {
+  boardType: RankingType;
+  periodType: RankingPeriodType;
+  periodValue: string;
+  entryCount: number;
+  generatedAt: string;
+}
+
+export interface RefreshAdminRankingsResult {
+  items: RefreshAdminRankingItem[];
+}
+
 export type AdminCommunityPostType = 'post' | 'guess' | 'repost';
 export type AdminCommunityPostScope = 'public' | 'followers' | 'private' | 'unknown';
 
@@ -224,6 +242,10 @@ export interface AdminLiveRoomListResult {
     upcoming: number;
     ended: number;
   };
+}
+
+export interface StopAdminLiveRoomResult {
+  item: AdminLiveRoomItem;
 }
 
 export interface CreateAdminGuessPayload {

@@ -40,6 +40,7 @@ export const TARGET_TYPE_OPTIONS = [
   { label: '动态', value: 'post' },
   { label: '商品', value: 'product' },
   { label: '店铺', value: 'shop' },
+  { label: '站内页面', value: 'page' },
   { label: '外部链接', value: 'external' },
 ] as const;
 
@@ -126,15 +127,15 @@ export function buildEditBannerFormValues(record: AdminBannerItem): BannerFormVa
 export function buildBannerPayload(
   values: BannerFormValues,
 ): CreateAdminBannerPayload | UpdateAdminBannerPayload {
+  const usesActionUrl = values.targetType === 'external' || values.targetType === 'page';
   return {
     position: values.position,
     title: values.title.trim(),
     subtitle: values.subtitle?.trim() || null,
     imageUrl: values.imageUrl.trim(),
     targetType: values.targetType,
-    targetId:
-      values.targetType === 'external' ? null : ((values.targetId?.trim() || null) as EntityId | null),
-    actionUrl: values.targetType === 'external' ? values.actionUrl?.trim() || null : null,
+    targetId: usesActionUrl ? null : ((values.targetId?.trim() || null) as EntityId | null),
+    actionUrl: usesActionUrl ? values.actionUrl?.trim() || null : null,
     sort: values.sort ?? 0,
     status: values.status,
     startAt: values.startAt || null,
@@ -205,7 +206,7 @@ export function buildBannerColumns(args: {
       title: '跳转目标',
       width: 220,
       render: (_, record) => {
-        if (record.targetType === 'external') {
+        if (record.targetType === 'external' || record.targetType === 'page') {
           return record.actionUrl || '-';
         }
         return record.targetName || record.targetId || '-';

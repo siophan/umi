@@ -41,18 +41,22 @@ export function getCheckinRewardStatusColor(status: AdminCheckinRewardConfigItem
   return status === 'active' ? 'success' : 'default';
 }
 
-export function buildCheckinStatusItems(rows: AdminCheckinRewardConfigItem[]) {
+export function buildCheckinStatusItems(summary: {
+  total: number;
+  active: number;
+  disabled: number;
+}) {
   return [
-    { key: 'all', label: '全部', count: rows.length },
+    { key: 'all', label: '全部', count: summary.total },
     {
       key: 'active',
       label: '启用',
-      count: rows.filter((item) => item.status === 'active').length,
+      count: summary.active,
     },
     {
       key: 'disabled',
       label: '停用',
-      count: rows.filter((item) => item.status === 'disabled').length,
+      count: summary.disabled,
     },
   ] satisfies Array<{
     key: 'all' | AdminCheckinRewardConfigStatus;

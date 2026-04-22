@@ -118,3 +118,11 @@ export type SummaryListResult<TItem, TSummary> = {
   items: TItem[];
   summary: TSummary;
 };
+
+export type PaginatedSummaryListResult<TItem, TSummary> = {
+  items: TItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: TSummary;
+};

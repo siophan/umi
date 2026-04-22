@@ -14,6 +14,7 @@ const TARGET_GUESS = 10;
 const TARGET_POST = 20;
 const TARGET_PRODUCT = 30;
 const TARGET_SHOP = 40;
+const TARGET_PAGE = 50;
 const TARGET_EXTERNAL = 90;
 const GUESS_ACTIVE = 30;
 const GUESS_SETTLED = 40;
@@ -104,6 +105,9 @@ function mapTargetType(code: number | string | null): BannerListResult['items'][
   if (value === TARGET_SHOP) {
     return 'shop';
   }
+  if (value === TARGET_PAGE) {
+    return 'page';
+  }
   return 'external';
 }
 
@@ -112,7 +116,7 @@ function buildTargetPath(
   targetId: string | null,
   actionUrl: string | null,
 ) {
-  if (targetType === 'external') {
+  if (targetType === 'external' || targetType === 'page') {
     return actionUrl;
   }
   if (!targetId) {

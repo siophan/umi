@@ -2,7 +2,7 @@ import { HttpError, asyncHandler } from '../../../lib/errors';
 import { ok } from '../../../lib/http';
 import { listUsersForAdmin, setUserBanned } from '../../users/admin-store';
 import { getAdminDashboardStats } from '../dashboard';
-import { deleteAdminCommunityComment, deleteAdminCommunityPost, getAdminCommunityComments, getAdminCommunityPosts, getAdminCommunityReports, getAdminLiveRooms, updateAdminCommunityReport, } from '../content';
+import { deleteAdminCommunityComment, deleteAdminCommunityPost, getAdminCommunityComments, getAdminCommunityPosts, getAdminCommunityReports, getAdminLiveRooms, stopAdminLiveRoom, updateAdminCommunityReport, } from '../content';
 import { getAdminEquityAccounts, getAdminEquityDetail, adjustAdminEquity } from '../equity';
 import { createAdminGuess, getAdminGuessDetail, getAdminFriendGuesses, getAdminGuesses, getAdminPkMatchStats, getAdminPkMatches, reviewAdminGuess, } from '../guesses';
 import { getAdminUserGuesses, getAdminUserOrders } from '../users';
@@ -50,6 +50,21 @@ export function registerAdminContentRoutes(adminRouter) {
             host: getRouteParam(request.query.host),
             guessTitle: getRouteParam(request.query.guessTitle),
         }));
+    }));
+    adminRouter.put('/lives/:id/stop', asyncHandler(async (request, response) => {
+        try {
+            ok(response, await stopAdminLiveRoom(getRouteParam(request.params.id)));
+        }
+        catch (error) {
+            throw toRouteHttpError(error, {
+                status: 400,
+                code: 'ADMIN_LIVE_STOP_FAILED',
+                message: '强制下播失败',
+            }, [
+                { message: '直播不存在', status: 404, code: 'ADMIN_LIVE_NOT_FOUND' },
+                { message: '仅直播中的房间允许强制下播', status: 400, code: 'ADMIN_LIVE_NOT_ACTIVE' },
+            ]);
+        }
     }));
     adminRouter.get('/users', asyncHandler(async (request, response) => {
         ok(response, await listUsersForAdmin({

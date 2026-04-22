@@ -40,6 +40,7 @@ export function buildOrderStatusItems(orders: AdminOrderRecord[]) {
     { key: 'pending', label: '待支付', count: orders.filter((item) => item.status === 'pending').length },
     { key: 'paid', label: '已支付', count: orders.filter((item) => item.status === 'paid').length },
     { key: 'shipping', label: '配送中', count: orders.filter((item) => item.status === 'shipping').length },
+    { key: 'delivered', label: '已送达', count: orders.filter((item) => item.status === 'delivered').length },
     { key: 'completed', label: '已完成', count: orders.filter((item) => item.status === 'completed').length },
     {
       key: 'refund_pending',

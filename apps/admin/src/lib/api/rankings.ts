@@ -1,11 +1,13 @@
 import type {
   AdminRankingDetailResult,
   AdminRankingListResult,
+  RefreshAdminRankingsPayload,
+  RefreshAdminRankingsResult,
   RankingPeriodType,
   RankingType,
 } from '@umi/shared';
 
-import { getJson } from './shared';
+import { getJson, postJson } from './shared';
 
 type FetchAdminRankingsParams = {
   boardType?: RankingType;
@@ -43,5 +45,12 @@ export function fetchAdminRankingDetail(
 ) {
   return getJson<AdminRankingDetailResult>(
     `/api/admin/rankings/${boardType}/${periodType}/${encodeURIComponent(periodValue)}`,
+  );
+}
+
+export function refreshAdminRankings(payload: RefreshAdminRankingsPayload) {
+  return postJson<RefreshAdminRankingsResult, RefreshAdminRankingsPayload>(
+    '/api/admin/rankings/refresh',
+    payload,
   );
 }

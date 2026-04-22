@@ -1,6 +1,9 @@
 import type {
+  CancelAdminConsignResult,
   CompleteAdminOrderRefundPayload,
   CompleteAdminOrderRefundResult,
+  DeliverAdminLogisticsPayload,
+  DeliverAdminLogisticsResult,
   OrderItem,
   ReviewAdminOrderRefundPayload,
   ReviewAdminOrderRefundResult,
@@ -192,10 +195,27 @@ export function fetchAdminLogisticsDetail(id: string) {
   return getJson<AdminLogisticsRow>(`/api/admin/orders/logistics/${id}`);
 }
 
+export function deliverAdminLogistics(
+  id: string,
+  payload: DeliverAdminLogisticsPayload = {},
+) {
+  return putJson<DeliverAdminLogisticsResult, DeliverAdminLogisticsPayload>(
+    `/api/admin/orders/logistics/${id}/deliver`,
+    payload,
+  );
+}
+
 export function fetchAdminConsignRows() {
   return getJson<{ items: AdminConsignRow[] }>('/api/admin/orders/consign');
 }
 
 export function fetchAdminConsignDetail(id: string) {
   return getJson<AdminConsignRow>(`/api/admin/orders/consign/${id}`);
+}
+
+export function cancelAdminConsign(id: string) {
+  return putJson<CancelAdminConsignResult, Record<string, never>>(
+    `/api/admin/orders/consign/${id}/cancel`,
+    {},
+  );
 }

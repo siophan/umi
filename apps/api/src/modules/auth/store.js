@@ -126,7 +126,7 @@ export async function sendCode(phone, bizType) {
     `, [phone, bizTypeCode, codeHash, SMS_STATUS_SENT, expiresAt]);
     return {
         sent: true,
-        ...(env.nodeEnv !== 'production' ? { devCode: code } : {}),
+        ...(env.smsAutoFillCode ? { devCode: code } : {}),
     };
 }
 async function requireCode(phone, code, bizType) {

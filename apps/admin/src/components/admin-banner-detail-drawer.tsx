@@ -32,7 +32,7 @@ export function AdminBannerDetailDrawer({
             <Descriptions.Item label="投放位">{selected.positionLabel}</Descriptions.Item>
             <Descriptions.Item label="跳转类型">{selected.targetTypeLabel}</Descriptions.Item>
             <Descriptions.Item label="跳转目标">
-              {selected.targetType === 'external'
+              {selected.targetType === 'external' || selected.targetType === 'page'
                 ? selected.actionUrl || '-'
                 : selected.targetName || selected.targetId || '-'}
             </Descriptions.Item>

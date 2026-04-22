@@ -46,7 +46,7 @@
 - `apps/web` 当前保留 `46` 个正式页面入口；旧的 `/detail / product-detail / post-detail / live / profile / user-profile / my-orders / all-features / myshop / shop-detail / chat-detail` 兼容壳已删除，后续只维护正式业务路由
 - `apps/web` 已覆盖旧静态页主要用户路径，`/`、`/ranking`、`/lives`、`mall / cart / me / community / user / friends / notifications / chat / shop / guess / product` 等高频页已多轮收口
 - `/search` 已切到独立搜索域，统一走 `/api/search`、`/api/search/hot`、`/api/search/suggest`，不再由页面自行拼商品和竞猜接口
-- `apps/web` 的一批高频重页面已收成“协调层 + 子组件”结构：`/community`、`/product/[id]`、`/post/[id]`、`/friends`、`/me`、`/payment`、`/community-search`、`/my-shop`、`/create-user`、`/novice-guess`、`/search`、`/user/[uid]`、`/shop/[id]`
+- `apps/web` 的一批高频重页面已收成“协调层 + 子组件”结构：`/community`、`/product/[id]`、`/post/[id]`、`/guess/[id]`、`/friends`、`/me`、`/payment`、`/cart`、`/edit-profile`、`/community-search`、`/my-shop`、`/create-user`、`/novice-guess`、`/search`、`/user/[uid]`、`/shop/[id]`
 - `apps/admin` 已完成路由拆分、单页单文件收口和按业务 API 拆分，具备 `dashboard / users / products / guesses / orders / warehouse / system / marketing` 等页面骨架
 - `apps/admin/src/lib/api` 已收成按业务域子模块 + 薄 barrel 入口，`system / merchant / catalog` 不再是前端总接口文件
 - `apps/admin` 当前热点大页已大批收口成“页面协调层 + state/helper + 子组件”，`users / system-users / roles / warehouse / marketing-coupons / dashboard / rankings / guess-create / community-reports / shop-applies` 等页面已不再是 300+ / 400+ 行中心文件

@@ -1,6 +1,6 @@
 # 项目进度
 
-最后更新：2026-04-21
+最后更新：2026-04-22
 
 本文档只记录当前仓库代码能直接确认的事实，不写无法从代码、脚本或构建结果直接证明的判断。
 
@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | 整体完成度 | `65%` | 页面覆盖已较完整，但“后台可运营闭环 + 测试覆盖 + 未收口链路”仍明显拖分 |
 | 用户端 | `70%` | 高频主链路大多已存在真实 API 接入，但仍有 `8` 个静态/本地态页面，且 `invite`、`checkin` 链路未闭环 |
-| 管理后台 | `65%` | 核心列表和权限体系已成型，内容治理与直播列表已接入真实后台接口；当前主要问题转为少量半闭环页和大量页面专项测试未补 |
+| 管理后台 | `65%` | 核心列表和权限体系已成型，内容治理与直播列表已接入真实后台接口；寄售市场已补强制下架，排行榜已补后台刷新动作；当前主要问题转为少量半闭环页和大量页面专项测试未补 |
 | 后端 API | `75%` | `apps/api/src/app.ts` 已注册 `20` 个业务模块，主资源域较完整，但仍有缺失路由和部分后台业务闭环不足 |
 | 测试覆盖 | `50%` | 已有一批 API integration/smoke，但绝大多数页面级测试缺失，营销和治理后台专项测试不足 |
 | 部署准备 | `70%` | 工程底座、部署文档和构建链路已具备基础交付条件，但功能闭环不足仍会影响“上线后可运营程度” |
@@ -84,22 +84,24 @@
 
 ### 当前架构热点
 
-当前 `apps/web` 主要剩下的结构问题，是少量中高频页面仍然偏重：`/community`、`/post/[id]`、`/guess/[id]`、`/cart`、`/edit-profile`、`/create`
+当前 `apps/web` 主要剩下的结构问题，是少量页面仍然偏重：`/create`；其余高频页已基本收成“协调层 + 子组件 + 页面状态 hook”的结构。
 
-其中 `/community` 已开始收口：
+其中 `/community` 已进一步收口：
 
-- [apps/web/src/app/community/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/page.tsx:1) 已从 `1122` 行降到 `757` 行
-- 关注横条、推荐高亮区、feed 列表和页面 helper 已拆到：
+- [apps/web/src/app/community/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/page.tsx:1) 已从 `1122` 行降到 `179` 行
+- 关注横条、推荐高亮区、feed 列表、四个发布/转发/权限/表情弹层和页面状态机已拆到：
   - [apps/web/src/app/community/community-follow-bar.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/community-follow-bar.tsx:1)
   - [apps/web/src/app/community/community-recommend-highlights.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/community-recommend-highlights.tsx:1)
   - [apps/web/src/app/community/community-feed-list.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/community-feed-list.tsx:1)
+  - [apps/web/src/app/community/community-composer-overlays.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/community-composer-overlays.tsx:1)
+  - [apps/web/src/app/community/use-community-page-state.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/use-community-page-state.ts:1)
   - [apps/web/src/app/community/page-helpers.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/page-helpers.ts:1)
 
 `/product/[id]`、`/post/[id]`、`/friends` 这轮也已经开始收口：
 
 - [apps/web/src/app/product/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/product/[id]/page.tsx:1) 已从 `1028` 行降到 `396` 行，头图、摘要区、内容区、换购弹层已拆到 `product-detail-*` 子文件
-- [apps/web/src/app/post/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/post/[id]/page.tsx:1) 已从 `942` 行降到 `584` 行，正文卡片、评论区、分享/举报弹层已拆到 `post-detail-*` 子文件
-- [apps/web/src/app/friends/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/friends/page.tsx:1) 已从 `889` 行降到 `496` 行，关系归一化、四个 tab 列表和 PK 弹层已拆到 `friends-*` 子文件
+- [apps/web/src/app/post/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/post/[id]/page.tsx:1) 已从 `942` 行降到 `169` 行，正文卡片、评论区、分享/举报弹层、相关推荐和详情状态机已拆到 `post-detail-* / use-post-detail-state`
+- [apps/web/src/app/friends/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/friends/page.tsx:1) 已从 `889` 行降到 `120` 行，顶部统计/快捷入口/热门竞猜和详情状态机已拆到 `friends-overview-sections / use-friends-page-state / friends-*`
 
 `/me` 这轮也已经开始收口：
 
@@ -141,6 +143,18 @@
 - [apps/web/src/app/search/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/search/page.tsx:1) 已从 `620` 行降到 `367` 行，搜索前态和结果态已拆到 `search-before-view / search-results-view / search-helpers`
 - [apps/web/src/app/user/[uid]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/user/[uid]/page.tsx:1) 已从 `602` 行降到 `385` 行，主页主体和私信浮层已拆到 `user-profile-sections / user-profile-chat-overlay`
 - [apps/web/src/app/shop/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/shop/[id]/page.tsx:1) 已从 `601` 行降到 `258` 行，店铺主体内容已拆到 `shop-detail-content`
+
+`/guess/[id]`、`/cart`、`/edit-profile` 这轮也已经开始收口：
+
+- [apps/web/src/app/guess/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/guess/[id]/page.tsx:1) 已从 `553` 行降到 `239` 行，主视觉、对战区和分享/下注弹层已拆到 `guess-hero / guess-battle-panel / guess-detail-overlays / guess-detail-helpers`
+- [apps/web/src/app/cart/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/cart/page.tsx:1) 已从 `551` 行降到 `389` 行，店铺分组、推荐流和底部结算栏已拆到 `cart-shop-groups / cart-recommend / cart-footer-bar / cart-helpers`
+- [apps/web/src/app/edit-profile/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/edit-profile/page.tsx:1) 已从 `534` 行降到 `300` 行，资料主体区块和等级/资料弹层已拆到 `edit-profile-main-sections / edit-profile-overlays / edit-profile-helpers`
+
+`/warehouse`、`/address`、`/orders` 这轮也已经开始收口：
+
+- [apps/web/src/app/warehouse/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/warehouse/page.tsx:1) 已从 `492` 行降到 `214` 行，仓库摘要、页签、列表和寄售弹层已拆到 `warehouse-summary / warehouse-tabs / warehouse-list / warehouse-consign-modal / warehouse-helpers`
+- [apps/web/src/app/address/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/address/page.tsx:1) 已从 `473` 行降到 `264` 行，地址请求已回到 `lib/api/address.ts`，地址列表和表单弹层已拆到 `address-list / address-form-modal / address-helpers`
+- [apps/web/src/app/orders/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/orders/page.tsx:1) 已从 `439` 行降到 `189` 行，订单统计、tabs 和列表已拆到 `orders-summary / orders-list / order-helpers`
 
 旧的兼容路由壳已经删除；后续线程不应把 `/detail`、`/product-detail`、`/post-detail`、`/live`、`/profile`、`/user-profile`、`/my-orders`、`/all-features`、`/myshop`、`/shop-detail`、`/chat-detail` 这类旧路径重新加回工作区。
 
@@ -280,14 +294,14 @@
 - 用户页
 - 店铺页、开店审核页（店铺列表已支持启用/暂停/关闭，且已关闭店铺可重新启用；开店审核已支持通过/拒绝审核）
 - 品牌管理页（已支持直接新增/编辑品牌，不再保留品牌入驻审核页）
-- 轮播管理页（已支持列表、详情、新增、编辑、启停、删除）
+- 轮播管理页（已支持列表、详情、新增、编辑、启停、删除，并恢复站内页面跳转类型）
 - 品牌授权页（已统一为单列表状态流，支持待审核/已授权/已拒绝/已过期/已撤销筛选、查看、通过/拒绝、撤销授权）
-- 品牌商品、商品列表
+- 品牌商品（已支持新增/编辑；后台已不再保留独立“商品列表”菜单页）
 - 竞猜列表、好友竞猜、PK 对战、创建竞猜（竞猜列表已支持通过/拒绝审核，创建竞猜已支持后台直接创建并发布）
-- 店铺商品已支持后台上架 / 下架
-- 订单列表、交易流水、物流、寄售（订单详情已改成独立子页，并在详情页内支持发货、退款审核、完成退款；退款信息区按实际退款记录显示，不再对所有订单固定展示；详情页结构已统一成分区块；物流详情与寄售详情也已改成独立子页；物流管理已从左侧菜单移除，作为订单管理下的非菜单页保留；交易流水已补流水号/订单号/用户/渠道搜索和详情查看）
+- 店铺商品已支持后台上架 / 下架，并改成服务端分页/筛选
+- 订单列表、交易流水、物流、寄售（订单列表状态 Tabs 已补回 `已送达`；订单详情已改成独立子页，并在详情页内支持发货、退款审核、完成退款；退款信息区按实际退款记录显示，不再对所有订单固定展示；详情页结构已统一成分区块；物流详情与寄售详情也已改成独立子页；物流列表和详情页都支持 `发货 / 标记签收`；物流管理已从左侧菜单移除，作为订单管理下的非菜单页保留；交易流水已补流水号/订单号/用户/渠道搜索和详情查看）
 - 权益金管理（已直连 `equity_account / equity_log`，支持账户详情与后台调账）
-- 仓库页、寄售页（虚拟仓已补状态 Tabs、商品/用户/来源搜索与详情子页；实体仓已按单页边界去掉寄售状态并改成独立详情子页；寄售市场已补交易单号/卖家/订单号搜索和结算信息）
+- 仓库页、寄售页（虚拟仓已补状态 Tabs、商品/用户/来源搜索与详情子页；实体仓已按单页边界去掉寄售状态并改成独立详情子页；寄售市场已补交易单号/卖家/订单号搜索、结算信息和强制下架动作）
 - 系统通知、系统聊天、系统用户（系统通知已改成服务端分页/筛选；系统聊天已支持详情子页和真实消息时间线）
 - 角色、权限、分类、系统通知（角色已支持新增/编辑/改状态/分配权限；系统通知已支持发送通知）
 
@@ -471,17 +485,54 @@
 
 ## 非 Admin API 架构热点
 
-当前 `apps/api` 里真正还值得继续做结构优化的，不是 `admin`，而是这些非 `admin` 文件：
+这一轮继续推进后，`apps/api` 非 `admin` 域的超大入口已经基本收平；`search / order / shop / product / warehouse / guess` 的 `router.ts` 都已经变成薄路由层，`community/store.ts` 也已经收成薄 barrel。
 
-- [apps/api/src/modules/order/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/order/router.ts)
-- [apps/api/src/modules/shop/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/shop/router.ts)
-- [apps/api/src/modules/product/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/product/router.ts)
-- [apps/api/src/modules/search/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/search/router.ts)
-- [apps/api/src/modules/warehouse/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/warehouse/router.ts)
-- [apps/api/src/modules/guess/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/guess/router.ts)
-- [apps/api/src/modules/community/store.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/community/store.ts)
+这轮已经收掉一块：
 
-它们当前仍然更接近“超大业务入口”而不是“薄 router + 领域 store/service”。
+- [apps/api/src/modules/search/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/search/router.ts) 已从 `680` 行降到 `76` 行
+- 商品搜索、竞猜搜索、热搜、联想词分别下沉到：
+  - [apps/api/src/modules/search/search-products.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/search/search-products.ts)
+  - [apps/api/src/modules/search/search-guesses.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/search/search-guesses.ts)
+  - [apps/api/src/modules/search/search-discovery.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/search/search-discovery.ts)
+  - [apps/api/src/modules/search/search-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/search/search-shared.ts)
+
+这轮也已经继续收掉一块：
+
+- [apps/api/src/modules/order/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/order/router.ts) 已从 `1109` 行降到 `102` 行
+- 订单读取、详情、后台概览和写链路分别下沉到：
+  - [apps/api/src/modules/order/order-read.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/order/order-read.ts)
+  - [apps/api/src/modules/order/order-write.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/order/order-write.ts)
+  - [apps/api/src/modules/order/order-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/order/order-shared.ts)
+
+这轮继续收掉两块：
+
+- [apps/api/src/modules/shop/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/shop/router.ts) 已从 `942` 行降到 `152` 行
+- 店铺状态、我的店铺、公开店铺、品牌授权分别下沉到：
+  - [apps/api/src/modules/shop/shop-my.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/shop/shop-my.ts)
+  - [apps/api/src/modules/shop/shop-public.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/shop/shop-public.ts)
+  - [apps/api/src/modules/shop/shop-brand-auth.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/shop/shop-brand-auth.ts)
+  - [apps/api/src/modules/shop/shop-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/shop/shop-shared.ts)
+- [apps/api/src/modules/product/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/product/router.ts) 已从 `888` 行降到 `78` 行
+- 商品详情、商品流和收藏动作分别下沉到：
+  - [apps/api/src/modules/product/product-detail.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/product/product-detail.ts)
+  - [apps/api/src/modules/product/product-feed.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/product/product-feed.ts)
+  - [apps/api/src/modules/product/product-favorite.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/product/product-favorite.ts)
+  - [apps/api/src/modules/product/product-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/product/product-shared.ts)
+- [apps/api/src/modules/warehouse/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/warehouse/router.ts) 已从 `558` 行降到 `95` 行
+- 用户仓库读链、寄售写链、后台仓库视图分别下沉到：
+  - [apps/api/src/modules/warehouse/warehouse-user.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/warehouse/warehouse-user.ts)
+  - [apps/api/src/modules/warehouse/warehouse-consign.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/warehouse/warehouse-consign.ts)
+  - [apps/api/src/modules/warehouse/warehouse-admin.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/warehouse/warehouse-admin.ts)
+  - [apps/api/src/modules/warehouse/warehouse-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/warehouse/warehouse-shared.ts)
+- [apps/api/src/modules/guess/router.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/guess/router.ts) 已从 `500` 行降到 `49` 行
+- 竞猜读链和个人历史分别下沉到：
+  - [apps/api/src/modules/guess/guess-read.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/guess/guess-read.ts)
+  - [apps/api/src/modules/guess/guess-history.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/guess/guess-history.ts)
+  - [apps/api/src/modules/guess/guess-shared.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/guess/guess-shared.ts)
+- [apps/api/src/modules/community/store.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/community/store.ts) 已从 `900` 行降到 `19` 行
+- 社区读链和写链分别下沉到：
+  - [apps/api/src/modules/community/community-read.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/community/community-read.ts)
+  - [apps/api/src/modules/community/community-write.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/community/community-write.ts)
 
 ### `packages/db`
 
@@ -508,6 +559,6 @@
 
 1. 优先补齐 `invite`、`checkin` 的后端承接或明确下线页面入口，先收掉“前端已接、后端未见”的伪闭环。
 2. 如果继续做架构工作，优先收口 `apps/web` 仍然过重的高频页，保持当前不再保留旧路径兼容壳的状态。
-3. 再处理 `apps/api` 非 `admin` 域的超大 router/store，优先 `order / shop / product / search`。
+3. 再处理 `apps/api` 非 `admin` 域的超大 router/store，优先 `shop / product / warehouse / guess`。
 4. 给已成型的高频页补页面级或链路级自动化测试，至少优先覆盖首页、商城、订单、后台审核和通知发送。
 5. 由 DBA 先基于 `umi/docs/` 重建一套和当前 `joy-test` 对齐的 schema / migration / seed 资产，再决定是否推进统一 migration runner。

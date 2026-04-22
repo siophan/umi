@@ -1,11 +1,11 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Form, Input, Select, Typography } from 'antd';
+import { Alert, Button, ConfigProvider, Form, Input, Popconfirm, Select, Typography, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminConsignRow } from '../lib/api/orders';
-import { fetchAdminConsignRows } from '../lib/api/orders';
+import { cancelAdminConsign, fetchAdminConsignRows } from '../lib/api/orders';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import { formatDateTime, formatYuanAmount } from '../lib/format';
 
@@ -41,12 +41,15 @@ function getSettlementLabel(record: AdminConsignRow) {
 }
 
 export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageProps) {
+  const [messageApi, contextHolder] = message.useMessage();
   const [searchForm] = Form.useForm<ConsignFilters>();
   const [rows, setRows] = useState<AdminConsignRow[]>(emptyRows);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<ConsignFilters>({});
   const [status, setStatus] = useState<string>('all');
+  const [actionSeed, setActionSeed] = useState(0);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -69,7 +72,20 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
     return () => {
       alive = false;
     };
-  }, [refreshToken]);
+  }, [actionSeed, refreshToken]);
+
+  async function handleCancel(record: AdminConsignRow) {
+    try {
+      setCancellingId(record.id);
+      await cancelAdminConsign(record.id);
+      messageApi.success('寄售商品已强制下架');
+      setActionSeed((value) => value + 1);
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '强制下架失败');
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   const filteredRows = useMemo(
     () =>
@@ -147,21 +163,42 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
       fixed: 'right',
       valueType: 'option',
       render: (_, record) => (
-        <Button
-          size="small"
-          type="link"
-          onClick={() => {
-            window.location.hash = `#/warehouse/consign/detail/${record.id}`;
-          }}
-        >
-          查看
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button
+            size="small"
+            type="link"
+            onClick={() => {
+              window.location.hash = `#/warehouse/consign/detail/${record.id}`;
+            }}
+          >
+            查看
+          </Button>
+          {record.statusLabel === '寄售中' ? (
+            <Popconfirm
+              title="确认强制下架该寄售商品？"
+              description="强制下架后，当前寄售会改成已取消，商品会回到实体仓。"
+              okText="确认"
+              cancelText="取消"
+              onConfirm={() => void handleCancel(record)}
+            >
+              <Button
+                danger
+                loading={cancellingId === record.id}
+                size="small"
+                type="link"
+              >
+                强制下架
+              </Button>
+            </Popconfirm>
+          ) : null}
+        </div>
       ),
     },
   ];
 
   return (
     <div className="page-stack">
+      {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={searchForm}

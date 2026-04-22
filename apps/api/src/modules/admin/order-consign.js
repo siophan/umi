@@ -1,7 +1,8 @@
 import { toEntityId } from '@umi/shared';
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
-import { mapConsignSourceType, mapConsignStatusLabel, toMoney, toNullableIso, } from './orders-shared';
+import { PHYSICAL_STATUS_CONSIGNING, PHYSICAL_STATUS_STORED, } from '../warehouse/warehouse-shared';
+import { CONSIGN_CANCELED, CONSIGN_LISTED, mapConsignSourceType, mapConsignStatusLabel, toMoney, toNullableIso, } from './orders-shared';
 export async function getAdminConsignRows() {
     const db = getDbPool();
     const [rows] = await db.execute(`
@@ -70,4 +71,63 @@ export async function getAdminConsignDetail(consignId) {
         throw new HttpError(404, 'ADMIN_CONSIGN_NOT_FOUND', '寄售记录不存在');
     }
     return matched;
+}
+export async function cancelAdminConsign(consignId) {
+    const db = getDbPool();
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [rows] = await connection.execute(`
+        SELECT
+          id,
+          physical_item_id,
+          status
+        FROM consign_trade
+        WHERE id = ?
+        LIMIT 1
+      `, [consignId]);
+        const record = rows[0];
+        if (!record) {
+            throw new HttpError(404, 'ADMIN_CONSIGN_NOT_FOUND', '寄售记录不存在');
+        }
+        if (Number(record.status) !== CONSIGN_LISTED) {
+            throw new HttpError(400, 'ADMIN_CONSIGN_STATUS_INVALID', '当前寄售状态不支持强制下架');
+        }
+        const canceledAt = new Date();
+        await connection.execute(`
+        UPDATE consign_trade
+        SET
+          status = ?,
+          canceled_at = ?,
+          updated_at = ?
+        WHERE id = ?
+      `, [CONSIGN_CANCELED, canceledAt, canceledAt, consignId]);
+        if (record.physical_item_id != null) {
+            await connection.execute(`
+          UPDATE physical_warehouse
+          SET
+            status = ?,
+            consign_price = NULL,
+            estimate_days = NULL,
+            consign_date = NULL,
+            updated_at = ?
+          WHERE id = ?
+            AND status = ?
+        `, [PHYSICAL_STATUS_STORED, canceledAt, record.physical_item_id, PHYSICAL_STATUS_CONSIGNING]);
+        }
+        await connection.commit();
+        return {
+            id: toEntityId(record.id),
+            physicalItemId: record.physical_item_id == null ? null : toEntityId(record.physical_item_id),
+            status: 'canceled',
+            canceledAt: canceledAt.toISOString(),
+        };
+    }
+    catch (error) {
+        await connection.rollback();
+        throw error;
+    }
+    finally {
+        connection.release();
+    }
 }

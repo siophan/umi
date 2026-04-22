@@ -4,12 +4,15 @@ import type {
   AdminRankingEntryItem,
   AdminRankingListResult,
   AdminRankingSummaryItem,
+  RefreshAdminRankingsPayload,
+  RefreshAdminRankingsResult,
   RankingPeriodType,
   RankingType,
 } from '@umi/shared';
 import { toEntityId } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { BET_LOST, BET_WON } from '../guess/guess-shared';
 
 const BOARD_GUESS_WINS = 10;
 const BOARD_GUESS_WIN_RATE = 20;
@@ -49,6 +52,28 @@ type AdminRankingFilters = {
   periodType?: RankingPeriodType;
   periodValue?: string;
   topUser?: string;
+};
+
+type RefreshRankingTarget = {
+  boardType: RankingType;
+  periodType: RankingPeriodType;
+  periodValue: string;
+};
+
+type GuessWinsRow = {
+  user_id: number | string;
+  wins: number | string;
+};
+
+type WinRateRow = {
+  user_id: number | string;
+  wins: number | string;
+  total_guesses: number | string;
+};
+
+type InviteCountRow = {
+  user_id: number | string;
+  invite_count: number | string;
 };
 
 function mapBoardTypeCode(type: RankingType) {
@@ -207,6 +232,273 @@ function formatPeriodLabel(periodType: RankingPeriodType, periodValue: string) {
 function toDateTimeString(value: Date | string) {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+
+function pad2(value: number) {
+  return String(value).padStart(2, '0');
+}
+
+function getIsoWeekParts(date: Date) {
+  const current = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = current.getUTCDay() || 7;
+  current.setUTCDate(current.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(current.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((current.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return {
+    year: current.getUTCFullYear(),
+    week,
+  };
+}
+
+function resolvePeriodValue(periodType: RankingPeriodType, rawValue?: string | null) {
+  if (periodType === 'allTime') {
+    return '0';
+  }
+
+  const trimmed = rawValue?.trim();
+  if (trimmed) {
+    return trimmed;
+  }
+
+  const now = new Date();
+  if (periodType === 'daily') {
+    return `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}`;
+  }
+  if (periodType === 'weekly') {
+    const { year, week } = getIsoWeekParts(now);
+    return `${year}${pad2(week)}`;
+  }
+  return `${now.getFullYear()}${pad2(now.getMonth() + 1)}`;
+}
+
+function buildRefreshTargets(payload: RefreshAdminRankingsPayload): RefreshRankingTarget[] {
+  const boardTypes = payload.boardType
+    ? [payload.boardType]
+    : (['guessWins', 'winRate', 'inviteCount'] as RankingType[]);
+  const periodType = payload.periodType ?? 'allTime';
+  const periodValue = resolvePeriodValue(periodType, payload.periodValue);
+
+  return boardTypes.map((boardType) => ({
+    boardType,
+    periodType,
+    periodValue,
+  }));
+}
+
+function buildPeriodWhereSql(column: string, target: RefreshRankingTarget) {
+  if (target.periodType === 'allTime') {
+    return { sql: '', params: [] as string[] };
+  }
+  if (target.periodType === 'daily') {
+    return {
+      sql: ` AND DATE_FORMAT(${column}, '%Y%m%d') = ?`,
+      params: [target.periodValue],
+    };
+  }
+  if (target.periodType === 'weekly') {
+    return {
+      sql: ` AND DATE_FORMAT(${column}, '%x%v') = ?`,
+      params: [target.periodValue],
+    };
+  }
+  return {
+    sql: ` AND DATE_FORMAT(${column}, '%Y%m') = ?`,
+    params: [target.periodValue],
+  };
+}
+
+async function fetchGuessWinsRows(
+  connection: mysql.PoolConnection,
+  target: RefreshRankingTarget,
+) {
+  const period = buildPeriodWhereSql('gb.created_at', target);
+  const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        gb.user_id,
+        COUNT(*) AS wins
+      FROM guess_bet gb
+      WHERE gb.status = ?
+      ${period.sql}
+      GROUP BY gb.user_id
+      HAVING wins > 0
+      ORDER BY wins DESC, gb.user_id ASC
+    `,
+    [BET_WON, ...period.params],
+  );
+
+  return rows as GuessWinsRow[];
+}
+
+async function fetchWinRateRows(
+  connection: mysql.PoolConnection,
+  target: RefreshRankingTarget,
+) {
+  const period = buildPeriodWhereSql('gb.created_at', target);
+  const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        gb.user_id,
+        SUM(CASE WHEN gb.status = ? THEN 1 ELSE 0 END) AS wins,
+        COUNT(*) AS total_guesses
+      FROM guess_bet gb
+      WHERE gb.status IN (?, ?)
+      ${period.sql}
+      GROUP BY gb.user_id
+      HAVING total_guesses > 0
+      ORDER BY (wins / total_guesses) DESC, wins DESC, gb.user_id ASC
+    `,
+    [BET_WON, BET_WON, BET_LOST, ...period.params],
+  );
+
+  return rows as WinRateRow[];
+}
+
+async function fetchInviteCountRows(
+  connection: mysql.PoolConnection,
+  target: RefreshRankingTarget,
+) {
+  const period = buildPeriodWhereSql('u.created_at', target);
+  const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        u.invited_by AS user_id,
+        COUNT(*) AS invite_count
+      FROM user u
+      WHERE u.invited_by IS NOT NULL
+      ${period.sql}
+      GROUP BY u.invited_by
+      HAVING invite_count > 0
+      ORDER BY invite_count DESC, u.invited_by ASC
+    `,
+    period.params,
+  );
+
+  return rows as InviteCountRow[];
+}
+
+async function replaceLeaderboardEntries(
+  connection: mysql.PoolConnection,
+  target: RefreshRankingTarget,
+  generatedAt: Date,
+) {
+  const boardTypeCode = mapBoardTypeCode(target.boardType);
+  const periodTypeCode = mapPeriodTypeCode(target.periodType);
+
+  await connection.execute(
+    `
+      DELETE FROM leaderboard_entry
+      WHERE board_type = ?
+        AND period_type = ?
+        AND CAST(period_value AS CHAR) = ?
+    `,
+    [boardTypeCode, periodTypeCode, target.periodValue],
+  );
+
+  if (target.boardType === 'guessWins') {
+    const rows = await fetchGuessWinsRows(connection, target);
+    for (const [index, row] of rows.entries()) {
+      const wins = Number(row.wins ?? 0);
+      await connection.execute(
+        `
+          INSERT INTO leaderboard_entry (
+            board_type,
+            period_type,
+            period_value,
+            user_id,
+            rank_no,
+            score,
+            extra_json,
+            created_at,
+            updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          boardTypeCode,
+          periodTypeCode,
+          target.periodValue,
+          row.user_id,
+          index + 1,
+          wins,
+          JSON.stringify({ wins }),
+          generatedAt,
+          generatedAt,
+        ],
+      );
+    }
+    return rows.length;
+  }
+
+  if (target.boardType === 'winRate') {
+    const rows = await fetchWinRateRows(connection, target);
+    for (const [index, row] of rows.entries()) {
+      const wins = Number(row.wins ?? 0);
+      const totalGuesses = Number(row.total_guesses ?? 0);
+      const winRate = totalGuesses > 0 ? Number(((wins / totalGuesses) * 100).toFixed(1)) : 0;
+      await connection.execute(
+        `
+          INSERT INTO leaderboard_entry (
+            board_type,
+            period_type,
+            period_value,
+            user_id,
+            rank_no,
+            score,
+            extra_json,
+            created_at,
+            updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          boardTypeCode,
+          periodTypeCode,
+          target.periodValue,
+          row.user_id,
+          index + 1,
+          winRate,
+          JSON.stringify({ winRate, wins, totalGuesses }),
+          generatedAt,
+          generatedAt,
+        ],
+      );
+    }
+    return rows.length;
+  }
+
+  const rows = await fetchInviteCountRows(connection, target);
+  for (const [index, row] of rows.entries()) {
+    const inviteCount = Number(row.invite_count ?? 0);
+    await connection.execute(
+      `
+        INSERT INTO leaderboard_entry (
+          board_type,
+          period_type,
+          period_value,
+          user_id,
+          rank_no,
+          score,
+          extra_json,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        boardTypeCode,
+        periodTypeCode,
+        target.periodValue,
+        row.user_id,
+        index + 1,
+        inviteCount,
+        JSON.stringify({ inviteCount }),
+        generatedAt,
+        generatedAt,
+      ],
+    );
+  }
+  return rows.length;
 }
 
 function mapRankingSummaryItem(row: RankingSummaryRow): AdminRankingSummaryItem {
@@ -379,4 +671,37 @@ export async function getAdminRankingDetail(
     totalEntries: rankingRows.length,
     items: rankingRows.map((row) => mapRankingEntryItem(boardType, row)),
   };
+}
+
+export async function refreshAdminRankings(
+  payload: RefreshAdminRankingsPayload,
+): Promise<RefreshAdminRankingsResult> {
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+    const generatedAt = new Date();
+    const targets = buildRefreshTargets(payload);
+    const items: RefreshAdminRankingsResult['items'] = [];
+
+    for (const target of targets) {
+      const entryCount = await replaceLeaderboardEntries(connection, target, generatedAt);
+      items.push({
+        boardType: target.boardType,
+        periodType: target.periodType,
+        periodValue: target.periodValue,
+        entryCount,
+        generatedAt: generatedAt.toISOString(),
+      });
+    }
+
+    await connection.commit();
+    return { items };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }

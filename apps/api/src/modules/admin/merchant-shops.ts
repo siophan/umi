@@ -53,6 +53,62 @@ type ShopProductStatusRow = mysql.RowDataPacket & {
   brand_product_status: number | string | null;
 };
 
+type AdminShopProductQuery = {
+  page?: number;
+  pageSize?: number;
+  shopName?: string;
+  productName?: string;
+  brandName?: string;
+  status?: 'all' | 'active' | 'off_shelf' | 'disabled';
+};
+
+type CountRow = mysql.RowDataPacket & {
+  total?: number | string | null;
+};
+
+function normalizePage(page?: number) {
+  return Math.max(1, Number(page ?? 1) || 1);
+}
+
+function normalizePageSize(pageSize?: number) {
+  const value = Number(pageSize ?? 10) || 10;
+  return Math.min(100, Math.max(1, value));
+}
+
+function buildAdminShopProductFilters(
+  query: AdminShopProductQuery,
+  options: { includeStatus: boolean },
+) {
+  const clauses = ['1 = 1'];
+  const params: Array<string | number> = [];
+  const shopName = query.shopName?.trim();
+  const productName = query.productName?.trim();
+  const brandName = query.brandName?.trim();
+  const status = query.status ?? 'all';
+
+  if (shopName) {
+    clauses.push('s.name LIKE ?');
+    params.push(`%${shopName}%`);
+  }
+  if (productName) {
+    clauses.push('p.name LIKE ?');
+    params.push(`%${productName}%`);
+  }
+  if (brandName) {
+    clauses.push('b.name LIKE ?');
+    params.push(`%${brandName}%`);
+  }
+  if (options.includeStatus && status !== 'all') {
+    clauses.push('p.status = ?');
+    params.push(normalizeAdminShopProductFilterStatus(status));
+  }
+
+  return {
+    whereSql: clauses.join(' AND '),
+    params,
+  };
+}
+
 export async function getAdminShops() {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -575,35 +631,73 @@ export async function reviewAdminShopApply(
   }
 }
 
-export async function getAdminShopProducts() {
+export async function getAdminShopProducts(query: AdminShopProductQuery = {}) {
   const db = getDbPool();
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
-    `
-      SELECT
-        p.id,
-        p.shop_id,
-        s.name AS shop_name,
-        p.brand_product_id,
-        bp.brand_id,
-        b.name AS brand_name,
-        p.name AS product_name,
-        p.price,
-        p.original_price,
-        p.guess_price,
-        p.image_url,
-        p.sales,
-        p.stock,
-        p.frozen_stock,
-        p.status,
-        p.created_at,
-        p.updated_at
-      FROM product p
-      LEFT JOIN shop s ON s.id = p.shop_id
-      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
-      LEFT JOIN brand b ON b.id = bp.brand_id
-      ORDER BY p.created_at DESC, p.id DESC
-    `,
-  );
+  const page = normalizePage(query.page);
+  const pageSize = normalizePageSize(query.pageSize);
+  const offset = (page - 1) * pageSize;
+  const baseFilters = buildAdminShopProductFilters(query, { includeStatus: false });
+  const resultFilters = buildAdminShopProductFilters(query, { includeStatus: true });
+
+  const [[countRows], [summaryRows], [rows]] = await Promise.all([
+    db.query<mysql.RowDataPacket[]>(
+      `
+        SELECT COUNT(*) AS total
+        FROM product p
+        LEFT JOIN shop s ON s.id = p.shop_id
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+        LEFT JOIN brand b ON b.id = bp.brand_id
+        WHERE ${resultFilters.whereSql}
+      `,
+      resultFilters.params,
+    ),
+    db.query<mysql.RowDataPacket[]>(
+      `
+        SELECT
+          COUNT(*) AS total,
+          SUM(CASE WHEN p.status = ${PRODUCT_STATUS_ACTIVE} THEN 1 ELSE 0 END) AS active_count,
+          SUM(CASE WHEN p.status = ${PRODUCT_STATUS_OFF_SHELF} THEN 1 ELSE 0 END) AS off_shelf_count,
+          SUM(CASE WHEN p.status = ${PRODUCT_STATUS_DISABLED} THEN 1 ELSE 0 END) AS disabled_count
+        FROM product p
+        LEFT JOIN shop s ON s.id = p.shop_id
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+        LEFT JOIN brand b ON b.id = bp.brand_id
+        WHERE ${baseFilters.whereSql}
+      `,
+      baseFilters.params,
+    ),
+    db.query<mysql.RowDataPacket[]>(
+      `
+        SELECT
+          p.id,
+          p.shop_id,
+          s.name AS shop_name,
+          p.brand_product_id,
+          bp.brand_id,
+          b.name AS brand_name,
+          p.name AS product_name,
+          p.price,
+          p.original_price,
+          p.guess_price,
+          p.image_url,
+          p.sales,
+          p.stock,
+          p.frozen_stock,
+          p.status,
+          p.created_at,
+          p.updated_at
+        FROM product p
+        LEFT JOIN shop s ON s.id = p.shop_id
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+        LEFT JOIN brand b ON b.id = bp.brand_id
+        WHERE ${resultFilters.whereSql}
+        ORDER BY p.created_at DESC, p.id DESC
+        LIMIT ?
+        OFFSET ?
+      `,
+      [...resultFilters.params, pageSize, offset],
+    ),
+  ]);
 
   const items = (rows as ShopProductListRow[]).map((row) => {
     const status = mapProductStatus(row.status);
@@ -632,19 +726,49 @@ export async function getAdminShopProducts() {
     };
   });
 
+  const total = toNumber((countRows as CountRow[])[0]?.total);
+  const summaryRow = (summaryRows as Array<{
+    total?: number | string | null;
+    active_count?: number | string | null;
+    off_shelf_count?: number | string | null;
+    disabled_count?: number | string | null;
+  }>)[0];
+
   return {
     items,
+    total,
+    page,
+    pageSize,
     summary: {
-      total: items.length,
-      byStatus: summarizeByKey(items, 'status'),
+      total: toNumber(summaryRow?.total),
+      byStatus: {
+        active: toNumber(summaryRow?.active_count),
+        off_shelf: toNumber(summaryRow?.off_shelf_count),
+        disabled: toNumber(summaryRow?.disabled_count),
+      },
     },
   };
+}
+
+function normalizeAdminShopProductFilterStatus(
+  status: Exclude<AdminShopProductQuery['status'], 'all' | undefined>,
+) {
+  if (status === 'off_shelf') {
+    return PRODUCT_STATUS_OFF_SHELF;
+  }
+  if (status === 'disabled') {
+    return PRODUCT_STATUS_DISABLED;
+  }
+  return PRODUCT_STATUS_ACTIVE;
 }
 
 function normalizeAdminShopProductStatus(
   status: UpdateAdminShopProductStatusPayload['status'],
 ) {
-  return status === 'off_shelf' ? PRODUCT_STATUS_OFF_SHELF : PRODUCT_STATUS_ACTIVE;
+  if (status === 'off_shelf') {
+    return PRODUCT_STATUS_OFF_SHELF;
+  }
+  return PRODUCT_STATUS_ACTIVE;
 }
 
 export async function updateAdminShopProductStatus(

@@ -6,34 +6,11 @@ import type { CartItem as CartLineItem, ProductFeedItem } from '@umi/shared';
 
 import { fetchCart, removeCartItem, updateCartItem } from '../../lib/api/cart';
 import { fetchProductList } from '../../lib/api/products';
+import { CartFooterBar } from './cart-footer-bar';
+import { getErrorMessage, getGroupKey } from './cart-helpers';
+import { CartRecommend } from './cart-recommend';
+import { CartShopGroups } from './cart-shop-groups';
 import styles from './page.module.css';
-
-/**
- * 把未知错误收成页面可直接展示的文案。
- */
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
-/**
- * 购物车分组 key。
- * 这里按品牌优先分组，和老购物车页的店铺头展示口径保持一致。
- */
-function getGroupKey(item: CartLineItem) {
-  return item.brand?.trim() || item.shop?.trim() || '其他';
-}
-
-/**
- * 生成购物车店头文案。
- * 优先展示真实店铺名，缺失时再退回“品牌旗舰店”口径。
- */
-function getDisplayShopName(item: CartLineItem) {
-  if (item.shop?.trim() && item.shop !== '未知店铺') {
-    return item.shop;
-  }
-  const groupKey = getGroupKey(item);
-  return `${groupKey}旗舰店`;
-}
 
 /**
  * 购物车页主组件。
@@ -357,105 +334,17 @@ export default function CartPage() {
 
           {!cartError && items.length ? (
             <>
-              <section className={styles.list}>
-                {groupedItems.map(([shop, shopItems]) => {
-                  const shopChecked = shopItems.length > 0 && shopItems.every((item) => item.checked);
-                  const shopDisplayName = getDisplayShopName(shopItems[0]!);
-
-                  return (
-                    <article
-                      key={shop}
-                      className={`${styles.shopGroup} ${styles.fadeIn}`}
-                      style={{ animationDelay: `${groupedItems.findIndex(([key]) => key === shop) * 0.06}s` }}
-                    >
-                      <div className={styles.shopHead}>
-                        <button
-                          className={`${styles.check} ${shopChecked ? styles.checkOn : ''}`}
-                          type="button"
-                          onClick={() => void toggleShop(shop)}
-                        >
-                          <i className="fa-solid fa-check" />
-                        </button>
-                        <span className={styles.shopLogo} aria-hidden="true">
-                          {shop.charAt(0)}
-                        </span>
-                        <div className={styles.shopName}>
-                          {shopDisplayName}
-                          <span className={styles.shopTag}>官方</span>
-                        </div>
-                        <i className={`fa-solid fa-chevron-right ${styles.shopArrow}`} />
-                      </div>
-
-                      {shopItems.map((item) => (
-                        <div
-                          key={item.id}
-                          className={`${styles.itemWrap} ${swipedId === item.id ? styles.itemWrapSwiped : ''}`}
-                          onClick={(event) => event.stopPropagation()}
-                          onTouchEnd={(event) => {
-                            const endX = event.changedTouches[0]?.clientX ?? 0;
-                            const diff = endX - touchStartX.current;
-                            if (diff < -30) setSwipedId(item.id);
-                            if (diff > 30 && swipedId === item.id) setSwipedId(null);
-                          }}
-                          onTouchStart={(event) => {
-                            touchStartX.current = event.touches[0]?.clientX ?? 0;
-                          }}
-                        >
-                          <div className={styles.item}>
-                            <button
-                              className={`${styles.check} ${styles.itemCheck} ${item.checked ? styles.checkOn : ''}`}
-                              type="button"
-                              onClick={() => void toggleItem(item.id)}
-                            >
-                              <i className="fa-solid fa-check" />
-                            </button>
-                            <img
-                              className={styles.itemImg}
-                              src={item.img || '/legacy/images/products/p001-lays.jpg'}
-                              alt={item.name}
-                              onClick={() => router.push(`/product/${item.productId}`)}
-                            />
-                            <div className={styles.itemBody}>
-                              <div className={styles.itemName}>{item.name}</div>
-                              <div className={styles.itemSpecs}>{item.specs}</div>
-                              <div className={styles.itemBottom}>
-                                <div>
-                                  <span className={styles.itemPrice}>
-                                    <small>¥</small>
-                                    {item.price}
-                                  </span>
-                                  <span className={styles.itemOrig}>¥{item.originalPrice}</span>
-                                </div>
-                                <div className={styles.qty}>
-                                  <button
-                                    className={`${styles.qtyBtn} ${item.quantity <= 1 ? styles.qtyBtnDisabled : ''}`}
-                                    type="button"
-                                    onClick={() => void changeQty(item.id, -1)}
-                                  >
-                                    <i className="fa-solid fa-minus" />
-                                  </button>
-                                  <div className={styles.qtyVal}>{item.quantity}</div>
-                                  <button
-                                    className={`${styles.qtyBtn} ${item.stock > 0 && item.quantity >= item.stock ? styles.qtyBtnDisabled : ''}`}
-                                    type="button"
-                                    onClick={() => void changeQty(item.id, 1)}
-                                  >
-                                    <i className="fa-solid fa-plus" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <button className={styles.deleteBtn} type="button" onClick={() => void handleRemoveItem(item.id)}>
-                            <i className="fa-solid fa-trash-can" /> 删除
-                          </button>
-                        </div>
-                      ))}
-                    </article>
-                  );
-                })}
-              </section>
-
+              <CartShopGroups
+                groupedItems={groupedItems}
+                swipedId={swipedId}
+                touchStartX={touchStartX}
+                onSetSwipedId={setSwipedId}
+                onToggleShop={toggleShop}
+                onToggleItem={toggleItem}
+                onChangeQty={changeQty}
+                onRemoveItem={handleRemoveItem}
+                onOpenProduct={(productId) => router.push(`/product/${productId}`)}
+              />
             </>
           ) : null}
 
@@ -470,79 +359,28 @@ export default function CartPage() {
             </section>
           ) : null}
 
-          {!cartError && discoverError ? (
-            <section className={styles.recommendState}>
-              <div className={styles.recommendTitle}>
-                <i className="fa-solid fa-wand-magic-sparkles" />
-                你可能还喜欢
-              </div>
-              <div className={styles.recommendError}>推荐流加载失败：{discoverError}</div>
-              <button className={styles.recommendRetry} type="button" onClick={() => setReloadToken((current) => current + 1)}>
-                重试
-              </button>
-            </section>
-          ) : null}
-
-          {!cartError && !discoverError && recommendItems.length ? (
-            <section className={styles.recommend}>
-              <div className={styles.recommendTitle}>
-                <i className="fa-solid fa-wand-magic-sparkles" />
-                你可能还喜欢
-              </div>
-              <div className={styles.recommendScroll}>
-                {recommendItems.map((item) => (
-                  <article
-                    key={item.id}
-                    className={styles.recommendCard}
-                    onClick={() => router.push(`/product/${item.id}`)}
-                  >
-                    <img className={styles.recommendImg} src={item.img || '/legacy/images/products/p001-lays.jpg'} alt={item.name} />
-                    <div className={styles.recommendInfo}>
-                      <div className={styles.recommendName}>{item.name}</div>
-                      <div className={styles.recommendPrice}>
-                        <small>¥</small>
-                        {item.price}
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
+          <CartRecommend
+            cartError={cartError}
+            discoverError={discoverError}
+            recommendItems={recommendItems}
+            onRetry={() => setReloadToken((current) => current + 1)}
+            onOpenProduct={(productId) => router.push(`/product/${productId}`)}
+          />
         </>
       ) : null}
 
       {!loading && !cartError ? (
-        <footer className={styles.bar}>
-          <div className={styles.barLeft}>
-            <button className={styles.barAll} type="button" onClick={() => void toggleAll()}>
-              <span className={`${styles.check} ${allChecked ? styles.checkOn : ''}`}>
-                <i className="fa-solid fa-check" />
-              </span>
-              <span>全选</span>
-            </button>
-          </div>
-          <div className={styles.barSpacer} />
-          {editMode ? (
-            <div className={styles.barEditSummary}>已选 {selectedItems.length} 件</div>
-          ) : (
-            <div className={styles.barTotal}>
-              <div className={styles.barTotalLabel}>合计</div>
-              <div className={styles.barTotalPrice}>
-                <small>¥</small>
-                {total.toFixed(1)}
-              </div>
-              <div className={styles.barSaved}>{totalSaved > 0 ? `已省 ¥${totalSaved.toFixed(1)}` : ''}</div>
-            </div>
-          )}
-          <button
-            className={`${styles.barBtn} ${editMode ? styles.barBtnDanger : ''} ${(editMode ? selectedItems.length === 0 : totalCount === 0) ? styles.barBtnDisabled : ''}`}
-            type="button"
-            onClick={editMode ? () => void handleBulkRemove() : handlePay}
-          >
-            {editMode ? `删除(${selectedItems.length})` : `结算(${totalCount})`}
-          </button>
-        </footer>
+        <CartFooterBar
+          editMode={editMode}
+          allChecked={allChecked}
+          selectedItems={selectedItems}
+          total={total}
+          totalSaved={totalSaved}
+          totalCount={totalCount}
+          onToggleAll={toggleAll}
+          onBulkRemove={handleBulkRemove}
+          onPay={handlePay}
+        />
       ) : null}
 
       <div className={`${styles.toast} ${toast ? styles.toastShow : ''}`}>{toast}</div>

@@ -6,6 +6,9 @@ import { ok } from '../../lib/http';
 export const liveRouter = Router();
 const GUESS_ACTIVE = 30;
 const REVIEW_APPROVED = 30;
+/**
+ * 直播卡片里的当前竞猜摘要统一在后端组装，避免前端再拼选项、赔率和投票占比。
+ */
 function buildCurrentGuess(row, optionRows, voteRows) {
     const totalVotes = voteRows.reduce((sum, item) => sum + Number(item.vote_count ?? 0), 0);
     const options = optionRows
@@ -30,6 +33,9 @@ function buildCurrentGuess(row, optionRows, voteRows) {
         endTime: row.end_time ? new Date(row.end_time).toISOString() : null,
     };
 }
+/**
+ * 直播主表查询保持薄层，只负责拿直播与主播基础信息。
+ */
 async function fetchLiveRows(liveId) {
     const db = getDbPool();
     const params = [];
@@ -54,6 +60,9 @@ async function fetchLiveRows(liveId) {
     `, params);
     return rows;
 }
+/**
+ * 直播列表还要补齐主播当前竞猜、竞猜场次和参与人数，这里集中做一次批量组装。
+ */
 async function buildLiveItems(liveRows) {
     if (liveRows.length === 0) {
         return [];

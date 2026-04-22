@@ -49,7 +49,6 @@ export const DASHBOARD_PATH = '/dashboard';
 
 const PATH_ALIASES: Record<string, string> = {
   '/users': '/users/list',
-  '/products': '/products/list',
   '/guesses': '/guesses/list',
   '/orders': '/orders/list',
   '/shops': '/shops/list',

@@ -2,6 +2,7 @@ export interface AdminProduct {
   id: string;
   name: string;
   brand: string;
+  categoryId: string | null;
   category: string;
   shopId: string | null;
   price: number;
@@ -178,4 +179,11 @@ export type PaginatedListResult<T> = {
   total: number;
   page: number;
   pageSize: number;
+};
+
+export type AdminProductListResult = PaginatedListResult<AdminProduct> & {
+  summary: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
 };

@@ -44,6 +44,7 @@ export function MarketingCheckinPage({ refreshToken = 0 }: MarketingCheckinPageP
   const [searchForm] = Form.useForm<CheckinFilters>();
   const [configForm] = Form.useForm<CheckinFormValues>();
   const [rows, setRows] = useState<AdminCheckinRewardConfigItem[]>([]);
+  const [summary, setSummary] = useState({ total: 0, active: 0, disabled: 0 });
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<CheckinFilters>({});
@@ -73,11 +74,13 @@ export function MarketingCheckinPage({ refreshToken = 0 }: MarketingCheckinPageP
           return;
         }
         setRows(result.items);
+        setSummary(result.summary);
       } catch (error) {
         if (!alive) {
           return;
         }
         setRows([]);
+        setSummary({ total: 0, active: 0, disabled: 0 });
         setIssue(error instanceof Error ? error.message : '签到奖励配置加载失败');
       } finally {
         if (alive) {
@@ -93,7 +96,7 @@ export function MarketingCheckinPage({ refreshToken = 0 }: MarketingCheckinPageP
     };
   }, [actionSeed, filters.dayNo, filters.rewardType, filters.title, refreshToken, status]);
 
-  const statusItems = buildCheckinStatusItems(rows);
+  const statusItems = buildCheckinStatusItems(summary);
   const columns: ProColumns<AdminCheckinRewardConfigItem>[] = buildCheckinColumns({
     onView: (record) => setSelected(record),
     onEdit: (record) => {

@@ -1,8 +1,8 @@
-import { Alert, Button, Descriptions, Result, Typography } from 'antd';
+import { Alert, Button, Descriptions, Popconfirm, Result, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
 
 import type { AdminConsignRow } from '../lib/api/orders';
-import { fetchAdminConsignDetail } from '../lib/api/orders';
+import { cancelAdminConsign, fetchAdminConsignDetail } from '../lib/api/orders';
 import { formatDateTime, formatYuanAmount } from '../lib/format';
 
 interface WarehouseConsignDetailPageProps {
@@ -27,9 +27,12 @@ export function WarehouseConsignDetailPage({
   consignId,
   refreshToken = 0,
 }: WarehouseConsignDetailPageProps) {
+  const [messageApi, contextHolder] = message.useMessage();
   const [record, setRecord] = useState<AdminConsignRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
+  const [actionSeed, setActionSeed] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -61,7 +64,24 @@ export function WarehouseConsignDetailPage({
     return () => {
       alive = false;
     };
-  }, [consignId, refreshToken]);
+  }, [actionSeed, consignId, refreshToken]);
+
+  async function handleCancel() {
+    if (!record) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await cancelAdminConsign(record.id);
+      messageApi.success('寄售商品已强制下架');
+      setActionSeed((value) => value + 1);
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '强制下架失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (loading && !record && !issue) {
     return (
@@ -92,10 +112,27 @@ export function WarehouseConsignDetailPage({
 
   return (
     <div className="page-stack">
+      {contextHolder}
       <Button href="#/warehouse/consign" style={{ paddingLeft: 0 }} type="link">
         返回寄售市场
       </Button>
       {issue ? <Alert message={issue} showIcon type="warning" /> : null}
+
+      {record.statusLabel === '寄售中' ? (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Popconfirm
+            title="确认强制下架该寄售商品？"
+            description="强制下架后，当前寄售会改成已取消，商品会回到实体仓。"
+            okText="确认"
+            cancelText="取消"
+            onConfirm={() => void handleCancel()}
+          >
+            <Button danger loading={submitting}>
+              强制下架
+            </Button>
+          </Popconfirm>
+        </div>
+      ) : null}
 
       <Descriptions bordered column={2} size="small" title="寄售信息">
         <Descriptions.Item label="交易单号">{record.tradeNo || record.id}</Descriptions.Item>

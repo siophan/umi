@@ -3,6 +3,7 @@ import type {
   AdminCommunityPostListResult,
   AdminCommunityReportListResult,
   AdminLiveRoomListResult,
+  StopAdminLiveRoomResult,
   DeleteAdminCommunityCommentResult,
   DeleteAdminCommunityPostResult,
   UpdateAdminCommunityReportPayload,
@@ -88,4 +89,8 @@ export function updateAdminCommunityReport(
 export function fetchAdminLiveRooms(params: FetchAdminLiveRoomsParams) {
   const query = buildQuery(params);
   return getJson<AdminLiveRoomListResult>(`/api/admin/lives${query ? `?${query}` : ''}`);
+}
+
+export function stopAdminLiveRoom(id: string) {
+  return putJson<StopAdminLiveRoomResult, Record<string, never>>(`/api/admin/lives/${id}/stop`, {});
 }

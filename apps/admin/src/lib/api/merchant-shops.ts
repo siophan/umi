@@ -13,6 +13,7 @@ import type {
   AdminShopApplyItem,
   AdminShopItem,
   AdminShopProductItem,
+  PaginatedSummaryListResult,
   SummaryListResult,
 } from './merchant-shared';
 
@@ -46,10 +47,27 @@ export function reviewAdminShopApply(id: string, payload: ReviewAdminShopApplyPa
   );
 }
 
-export function fetchAdminShopProducts() {
+export function fetchAdminShopProducts(
+  query: {
+    page?: number;
+    pageSize?: number;
+    shopName?: string;
+    productName?: string;
+    brandName?: string;
+    status?: 'all' | AdminShopProductItem['status'];
+  } = {},
+) {
+  const searchParams = new URLSearchParams();
+  if (query.page != null) searchParams.set('page', String(query.page));
+  if (query.pageSize != null) searchParams.set('pageSize', String(query.pageSize));
+  if (query.shopName) searchParams.set('shopName', query.shopName.trim());
+  if (query.productName) searchParams.set('productName', query.productName.trim());
+  if (query.brandName) searchParams.set('brandName', query.brandName.trim());
+  if (query.status) searchParams.set('status', query.status);
+  const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
   return getJson<
-    SummaryListResult<AdminShopProductItem, { total: number; byStatus: Record<string, number> }>
-  >('/api/admin/shops/products');
+    PaginatedSummaryListResult<AdminShopProductItem, { total: number; byStatus: Record<string, number> }>
+  >(`/api/admin/shops/products${suffix}`);
 }
 
 export function updateAdminShopProductStatus(

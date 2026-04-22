@@ -1,7 +1,7 @@
 import { asyncHandler } from '../../../lib/errors';
 import { ok } from '../../../lib/http';
 import { createAdminBrandProduct, getAdminBrandLibrary, getAdminProducts, updateAdminBrandProduct, } from '../products';
-import { getAdminRankingDetail, getAdminRankings } from '../rankings';
+import { getAdminRankingDetail, getAdminRankings, refreshAdminRankings } from '../rankings';
 import { getRouteParam, toRouteHttpError } from '../route-helpers';
 export function registerAdminCatalogRoutes(adminRouter) {
     adminRouter.get('/rankings', asyncHandler(async (request, response) => {
@@ -21,12 +21,21 @@ export function registerAdminCatalogRoutes(adminRouter) {
     adminRouter.get('/rankings/:boardType/:periodType/:periodValue', asyncHandler(async (request, response) => {
         ok(response, await getAdminRankingDetail(getRouteParam(request.params.boardType), getRouteParam(request.params.periodType), decodeURIComponent(getRouteParam(request.params.periodValue))));
     }));
+    adminRouter.post('/rankings/refresh', asyncHandler(async (request, response) => {
+        ok(response, await refreshAdminRankings(request.body));
+    }));
     adminRouter.get('/products', asyncHandler(async (request, response) => {
         ok(response, await getAdminProducts({
             page: Number(request.query.page ?? 1),
             pageSize: Number(request.query.pageSize ?? 20),
             keyword: typeof request.query.keyword === 'string'
                 ? request.query.keyword
+                : undefined,
+            categoryId: typeof request.query.categoryId === 'string'
+                ? request.query.categoryId
+                : undefined,
+            shopName: typeof request.query.shopName === 'string'
+                ? request.query.shopName
                 : undefined,
             status: typeof request.query.status === 'string'
                 ? request.query.status

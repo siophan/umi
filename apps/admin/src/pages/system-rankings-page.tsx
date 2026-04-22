@@ -5,10 +5,12 @@ import type {
 import { ProTable } from '@ant-design/pro-components';
 import {
   Alert,
+  Button,
   ConfigProvider,
   Form,
   Input,
   Select,
+  message,
 } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -27,6 +29,7 @@ import {
 import {
   fetchAdminRankingDetail,
   fetchAdminRankings,
+  refreshAdminRankings,
 } from '../lib/api/rankings';
 
 interface SystemRankingsPageProps {
@@ -36,6 +39,7 @@ interface SystemRankingsPageProps {
 export function SystemRankingsPage({
   refreshToken = 0,
 }: SystemRankingsPageProps) {
+  const [messageApi, contextHolder] = message.useMessage();
   const [searchForm] = Form.useForm<RankingFilters>();
   const [filters, setFilters] = useState<RankingFilters>({});
   const [boardType, setBoardType] = useState<BoardFilter>('all');
@@ -47,6 +51,7 @@ export function SystemRankingsPage({
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailIssue, setDetailIssue] = useState<string | null>(null);
   const [summary, setSummary] = useState(EMPTY_RANKING_SUMMARY);
+  const [refreshing, setRefreshing] = useState(false);
 
   async function loadRankings() {
     setLoading(true);
@@ -95,8 +100,26 @@ export function SystemRankingsPage({
   const visibleRows = useMemo(() => filterRankingRows(rows, boardType), [boardType, rows]);
   const tabItems = useMemo(() => buildRankingStatusItems(summary), [summary]);
 
+  async function handleRefreshRankings() {
+    try {
+      setRefreshing(true);
+      const result = await refreshAdminRankings({
+        boardType: boardType === 'all' ? null : boardType,
+        periodType: filters.periodType ?? 'allTime',
+        periodValue: filters.periodValue ?? null,
+      });
+      messageApi.success(`排行榜已刷新，共重算 ${result.items.length} 个榜单`);
+      await loadRankings();
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '刷新排行榜失败');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <div className="page-stack">
+      {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
 
       <AdminSearchPanel
@@ -143,7 +166,16 @@ export function SystemRankingsPage({
           }}
           pagination={{ defaultPageSize: 10, showSizeChanger: true }}
           search={false}
-          toolBarRender={() => []}
+          toolBarRender={() => [
+            <Button
+              key="refresh-rankings"
+              loading={refreshing}
+              type="primary"
+              onClick={() => void handleRefreshRankings()}
+            >
+              刷新排行榜
+            </Button>,
+          ]}
         />
       </ConfigProvider>
 

@@ -1,13 +1,12 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, App, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Popconfirm, Select, Tag } from 'antd';
+import { Alert, App, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Popconfirm, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
 import type { AdminShopProductItem } from '../lib/api/merchant';
 import { fetchAdminShopProducts, updateAdminShopProductStatus } from '../lib/api/merchant';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
-import { buildOptions } from '../lib/admin-filter-options';
 import { formatAmount, formatNumber, productStatusMeta } from '../lib/format';
 
 interface ShopProductsPageProps {
@@ -37,6 +36,13 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
   const [selected, setSelected] = useState<AdminShopProductItem | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionSeed, setActionSeed] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState<{ total: number; byStatus: Record<string, number> }>({
+    total: 0,
+    byStatus: {},
+  });
 
   useEffect(() => {
     let alive = true;
@@ -45,16 +51,27 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
       setLoading(true);
       setIssue(null);
       try {
-        const items = await fetchAdminShopProducts().then((result) => result.items);
+        const result = await fetchAdminShopProducts({
+          page,
+          pageSize,
+          shopName: filters.shopName,
+          productName: filters.productName,
+          brandName: filters.brandName,
+          status,
+        });
         if (!alive) {
           return;
         }
-        setRows(items);
+        setRows(result.items);
+        setTotal(result.total);
+        setSummary(result.summary);
       } catch (error) {
         if (!alive) {
           return;
         }
         setRows(emptyRows);
+        setTotal(0);
+        setSummary({ total: 0, byStatus: {} });
         setIssue(error instanceof Error ? error.message : '店铺商品加载失败');
       } finally {
         if (alive) {
@@ -68,40 +85,16 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
     return () => {
       alive = false;
     };
-  }, [actionSeed, refreshToken]);
+  }, [actionSeed, filters.brandName, filters.productName, filters.shopName, page, pageSize, refreshToken, status]);
 
-  const brandOptions = useMemo(() => buildOptions(rows, 'brandName'), [rows]);
   const statusItems = useMemo(
     () => [
-      { key: 'all', label: '全部', count: rows.length },
-      { key: 'active', label: '在售', count: rows.filter((item) => item.status === 'active').length },
-      { key: 'disabled', label: '不可售', count: rows.filter((item) => item.status === 'disabled').length },
-      { key: 'off_shelf', label: '已下架', count: rows.filter((item) => item.status === 'off_shelf').length },
+      { key: 'all', label: '全部', count: summary.total },
+      { key: 'active', label: '在售', count: summary.byStatus.active ?? 0 },
+      { key: 'disabled', label: '不可售', count: summary.byStatus.disabled ?? 0 },
+      { key: 'off_shelf', label: '已下架', count: summary.byStatus.off_shelf ?? 0 },
     ],
-    [rows],
-  );
-
-  const filteredRows = useMemo(
-    () =>
-      rows.filter((record) => {
-        if (status !== 'all' && record.status !== status) {
-          return false;
-        }
-        if (filters.shopName && !record.shopName.toLowerCase().includes(filters.shopName.trim().toLowerCase())) {
-          return false;
-        }
-        if (
-          filters.productName &&
-          !record.productName.toLowerCase().includes(filters.productName.trim().toLowerCase())
-        ) {
-          return false;
-        }
-        if (filters.brandName && record.brandName !== filters.brandName) {
-          return false;
-        }
-        return true;
-      }),
-    [filters.brandName, filters.productName, filters.shopName, rows, status],
+    [summary],
   );
 
   const columns: ProColumns<AdminShopProductItem>[] = [
@@ -185,11 +178,16 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
 
       <AdminSearchPanel
         form={searchForm}
-        onSearch={() => setFilters(searchForm.getFieldsValue())}
+        onSearch={() => {
+          setFilters(searchForm.getFieldsValue());
+          setPage(1);
+        }}
         onReset={() => {
           searchForm.resetFields();
           setFilters({});
           setStatus('all');
+          setPage(1);
+          setPageSize(10);
         }}
       >
         <Form.Item name="shopName">
@@ -199,11 +197,18 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
           <Input allowClear placeholder="商品名称" />
         </Form.Item>
         <Form.Item name="brandName">
-          <Select allowClear options={brandOptions} placeholder="品牌" />
+          <Input allowClear placeholder="品牌" />
         </Form.Item>
       </AdminSearchPanel>
 
-      <AdminStatusTabs activeKey={status} items={statusItems} onChange={(key) => setStatus(key as typeof status)} />
+      <AdminStatusTabs
+        activeKey={status}
+        items={statusItems}
+        onChange={(key) => {
+          setStatus(key as typeof status);
+          setPage(1);
+        }}
+      />
 
       <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
         <ProTable<AdminShopProductItem>
@@ -211,10 +216,21 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
           rowKey="id"
           columns={columns}
           columnsState={{}}
-          dataSource={filteredRows}
+          dataSource={rows}
           loading={loading}
           options={{ reload: true, density: true, fullScreen: false, setting: true }}
-          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            onChange: (nextPage, nextPageSize) => {
+              setPage(nextPage);
+              if (nextPageSize !== pageSize) {
+                setPageSize(nextPageSize);
+              }
+            },
+          }}
           search={false}
           toolBarRender={() => []}
         />

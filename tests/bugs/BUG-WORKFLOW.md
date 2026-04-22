@@ -82,6 +82,7 @@
 - `closed` 不等于“修的人说修好了”，只等于“独立复核通过并归档”
 - 用户端 Bug 只能由测试猫或总控线程改到 `verified`
 - 管理后台 Bug 只能由测试狗或总控线程改到 `verified`
+- 测试总监只处理 `verified -> closed`，不介入 `fixed_pending_verify -> verified`
 - 所有 bug 在进入 `closed` 前，都必须由测试总监按 bug 单 `Repro` 逐单真复测
 - 如果复测失败，不新建重复 Bug，而是把原单退回 `triaged` 或 `in_progress`
 

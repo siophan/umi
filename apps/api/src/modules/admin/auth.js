@@ -333,7 +333,7 @@ function resolveAdminRoutePermissionCodes(method, path) {
     }
     if (matchesRoutePrefix(path, '/products')) {
         return normalizedMethod === 'GET'
-            ? ['product.list.view', 'product.manage']
+            ? ['guess.create.view', 'product.manage']
             : ['product.manage'];
     }
     if (matchesRoutePrefix(path, '/shops/applies')) {

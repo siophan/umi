@@ -159,37 +159,37 @@
 | 开店审核 | `#/shops/apply` | 开店申请列表、状态筛选、通过/拒绝 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/shops/applies`、`GET /api/admin/categories`、`PUT /api/admin/shops/applies/:id/review` | `已接-读写` | `未见专项测试` | 当前页面已支持通过/拒绝审核 |
 | 品牌管理 | `#/brands/list` | 品牌列表、分类过滤、新增/编辑品牌 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/brands`、`GET /api/admin/categories`、`POST /api/admin/brands`、`PUT /api/admin/brands/:id` | `已接-读写` | `未见专项测试` | 当前后台已改成直接在品牌管理页新增/编辑品牌，不再保留品牌入驻审核流程 |
 | 品牌授权 | `#/shops/brand-auth` | 品牌授权列表、状态筛选、查看、通过/拒绝、撤销授权 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/brands/auth-applies`、`PUT /api/admin/brands/auth-applies/:id/review`、`GET /api/admin/brands/auth-records`、`PUT /api/admin/brands/auth-records/:id/revoke` | `已接-读写` | `未见专项测试` | 当前页面已统一为单列表状态流，支持待审核/已授权/已拒绝/已过期/已撤销筛选；撤销后会自动下架该店铺当前品牌在售商品 |
-| 店铺商品 | `#/shops/products` | 店铺商品列表、上架/下架 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/shops/products`、`PUT /api/admin/shops/products/:id/status` | `已接-读写` | `未见专项测试` | 当前已支持按店铺、商品、品牌筛选，并对已下架/在售商品执行上架或下架 |
+| 店铺商品 | `#/shops/products` | 店铺商品列表、上架/下架 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/shops/products`、`PUT /api/admin/shops/products/:id/status` | `已接-读写` | `未见专项测试` | 当前已改成服务端分页与筛选，支持按店铺、商品、品牌搜索，并对已下架/在售商品执行上架或下架 |
 
 ### 4. 商品、竞猜、订单、仓库
 
 | 功能页面 | 路由 | 具体功能点 | UI状态 | 老系统对齐状态 | 接口列表 | 接口状态 | 是否测试 | 问题备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 商品列表 | `#/products/list` | 商品列表、状态筛选、分类筛选 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/products`、`GET /api/admin/categories` | `已接-读` | `未见专项测试` |  |
 | 品牌商品 | `#/products/brands` | 品牌商品列表、新增、编辑 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/products/brand-library`、`GET /api/admin/categories`、`POST /api/admin/products/brand-library`、`PUT /api/admin/products/brand-library/:id` | `已接-读写` | `未见专项测试` | 当前已支持新增与编辑品牌商品 |
 | 竞猜列表 | `#/guesses/list` | 竞猜列表、状态筛选、分类筛选、通过/拒绝审核 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/guesses`、`GET /api/admin/categories`、`PUT /api/admin/guesses/:id/review` | `已接-读写` | `未见专项测试` | 当前列表已支持直接审核待审核竞猜，拒绝时需填写原因 |
 | 创建竞猜 | `#/guesses/create` | 创建竞猜、分类选择、商品搜索、选项维护、发布提交 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/categories`、`GET /api/admin/products`、`POST /api/admin/guesses` | `已接-读写` | `未见专项测试` | 当前已支持后台直接创建并发布公开竞猜 |
 | 好友竞猜 | `#/guesses/friends` | 好友竞猜列表、状态筛选、邀请统计、结果确认统计、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/guesses/friends` | `已接-读` | `未见专项测试` | 当前已补房间/发起人/奖励搜索与详情统计，但未接写操作 |
 | PK 对战 | `#/pk` | PK 列表、状态筛选、发起人/对手搜索、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/pk` | `已接-读` | `未见专项测试` | 当前已补对战双方、选择、结算时间与奖励信息展示，未接写操作 |
-| 订单列表 | `#/orders/list` | 订单列表、状态筛选、订单号/买家/商品搜索、订单详情子页、发货、退款处理 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders`、`GET /api/admin/orders/:id`、`PUT /api/admin/orders/:id/ship`、`PUT /api/admin/orders/:id/refund/review`、`PUT /api/admin/orders/:id/refund/complete` | `已接-读写` | `有 admin 订单 overview / smoke，但非页面专项测试` | 当前订单详情页已改成独立子页，并在详情页内支持发货、退款审核和完成退款；退款信息区仅在存在退款记录时显示，详情布局已收成分区块结构；后端已直连 MySQL，见 [admin/orders.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/orders.ts:1) |
+| 订单列表 | `#/orders/list` | 订单列表、状态筛选、订单号/买家/商品搜索、订单详情子页、发货、退款处理 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders`、`GET /api/admin/orders/:id`、`PUT /api/admin/orders/:id/ship`、`PUT /api/admin/orders/:id/refund/review`、`PUT /api/admin/orders/:id/refund/complete` | `已接-读写` | `有 admin 订单 overview / smoke，但非页面专项测试` | 当前订单列表状态 Tabs 已补回 `已送达`；订单详情页已改成独立子页，并在详情页内支持发货、退款审核和完成退款；退款信息区仅在存在退款记录时显示，详情布局已收成分区块结构；后端已直连 MySQL，见 [admin/orders.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/modules/admin/orders.ts:1) |
 | 交易流水 | `#/orders/transactions` | 交易流水列表、方向筛选、流水号/订单号/用户搜索、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/transactions` | `已接-读` | `未见专项测试` | 当前已补流水号、订单号、用户、渠道搜索与详情信息展示 |
-| 物流管理 | `#/orders/logistics` | 履约物流列表、订单号/承运商/物流方式搜索、物流详情子页 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/logistics`、`GET /api/admin/orders/logistics/:id` | `已接-读` | `未见专项测试` | 当前已从详情抽屉改成独立子页 `#/orders/logistics/detail/:id`；左侧菜单已去掉该子菜单，页面作为 `订单管理` 下的非菜单页保留 |
+| 物流管理 | `#/orders/logistics` | 履约物流列表、订单号/承运商/物流方式搜索、物流详情子页、发货、标记签收 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/logistics`、`GET /api/admin/orders/logistics/:id`、`PUT /api/admin/orders/:id/ship`、`PUT /api/admin/orders/logistics/:id/deliver` | `已接-读写` | `未见专项测试` | 当前已从详情抽屉改成独立子页 `#/orders/logistics/detail/:id`；列表页和详情页都支持 `发货 / 标记签收`；左侧菜单已去掉该子菜单，页面作为 `订单管理` 下的非菜单页保留 |
 | 虚拟仓/实体仓 | `#/warehouse/virtual`、`#/warehouse/physical` | 仓库列表、状态筛选、商品/用户/来源搜索、仓库详情子页 | `已落地-已接API` | `需对齐-未核对` | `GET /api/warehouse/admin/virtual`、`GET /api/warehouse/admin/virtual/:id`、`GET /api/warehouse/admin/physical`、`GET /api/warehouse/admin/physical/:id` | `已接-读` | `后台仓库有 integration` | 当前虚拟仓/实体仓都已改成独立详情子页，不再使用抽屉；对应测试：`api-warehouse-admin.db.ts` |
-| 寄售市场 | `#/warehouse/consign` | 寄售成交列表、状态筛选、交易单号/商品/卖家/订单号搜索、寄售详情子页 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/consign`、`GET /api/admin/orders/consign/:id` | `已接-读` | `未见专项测试` | 当前已补交易单号、卖家/买家、卖家到账、结算状态和成交时间展示，并改成独立详情子页 |
+| 寄售市场 | `#/warehouse/consign` | 寄售成交列表、状态筛选、交易单号/商品/卖家/订单号搜索、寄售详情子页、强制下架 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/orders/consign`、`GET /api/admin/orders/consign/:id`、`PUT /api/admin/orders/consign/:id/cancel` | `已接-读写` | `未见专项测试` | 当前已补交易单号、卖家/买家、卖家到账、结算状态和成交时间展示，并改成独立详情子页；寄售中记录支持后台强制下架 |
 
 ### 5. 营销、内容、风控
 
 | 功能页面 | 路由 | 具体功能点 | UI状态 | 老系统对齐状态 | 接口列表 | 接口状态 | 是否测试 | 问题备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 权益金管理 | `#/equity` | 权益金账户列表、详情、调账、日志查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/equity`、`GET /api/admin/equity/:id`、`POST /api/admin/equity/adjust` | `已接-读写` | `未见专项测试` | 当前已直连 `equity_account / equity_log`，支持后台调账 |
-| 营销-轮播管理 | `#/marketing/banners` | 轮播列表、详情、新增、编辑、启停、删除 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/banners`、`POST /api/admin/banners`、`PUT /api/admin/banners/:id`、`PUT /api/admin/banners/:id/status`、`DELETE /api/admin/banners/:id` | `已接-读写` | `未见专项测试` | 当前已直连 `banner` 真表，状态按启停 + 时间窗派生显示 |
+| 营销-轮播管理 | `#/marketing/banners` | 轮播列表、详情、新增、编辑、启停、删除 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/banners`、`POST /api/admin/banners`、`PUT /api/admin/banners/:id`、`PUT /api/admin/banners/:id/status`、`DELETE /api/admin/banners/:id` | `已接-读写` | `未见专项测试` | 当前已直连 `banner` 真表，状态按启停 + 时间窗派生显示，并已恢复“站内页面”跳转类型 |
 | 营销-签到管理 | `#/marketing/checkin` | 签到奖励配置列表、新增、编辑、启停 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/checkin/rewards`、`POST /api/admin/checkin/rewards`、`PUT /api/admin/checkin/rewards/:id`、`PUT /api/admin/checkin/rewards/:id/status` | `已接-读写` | `未见专项测试` | 当前已直连 `checkin_reward_config` 真表，支持按签到天数、奖励类型、奖励标题筛选，并维护奖励配置 |
 | 营销-优惠券管理 | `#/marketing/coupons` | 优惠券模板列表、详情、新增、编辑、发券、启停 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/coupons`、`GET /api/admin/coupons/:id/batches`、`POST /api/admin/coupons`、`PUT /api/admin/coupons/:id`、`PUT /api/admin/coupons/:id/status`、`POST /api/admin/coupons/:id/grants` | `已接-读写` | `未见专项测试` | 当前已直连 `coupon_template / coupon_grant_batch / coupon` 真表，模板与发券批次已闭环 |
-| 营销-邀请管理 | `#/marketing/invite` | 邀请奖励配置、邀请记录列表、配置编辑 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/invites/config`、`PUT /api/admin/invites/config`、`GET /api/admin/invites/records` | `已接-读写` | `未见专项测试` | 当前已直连 `invite_reward_config` 和 `user.invited_by` 关系，支持维护邀请奖励配置并查看邀请记录 |
+| 营销-邀请管理 | `#/marketing/invite` | 邀请奖励配置、邀请记录列表、配置编辑 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/invites/config`、`PUT /api/admin/invites/config`、`GET /api/admin/invites/records` | `已接-读写` | `未见专项测试` | 当前按现行邀请模型直连 `invite_reward_config` 和 `user.invited_by` 关系，支持维护邀请奖励配置并查看邀请关系记录；当前流程未单独承接奖励发放流水表 |
 | 社区评论管理 | `#/community/comments` | 评论管理表、查看、删除 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/community/comments`、`DELETE /api/admin/community/comments/:id` | `已接-读写` | `未见专项测试` | 当前已接真实评论治理链路 |
 | 社区动态管理 | `#/community/posts` | 动态管理表、查看、删除 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/community/posts`、`DELETE /api/admin/community/posts/:id` | `已接-读写` | `未见专项测试` | 当前已接真实动态治理链路 |
 | 举报管理 | `#/community/reports` | 举报记录管理、处理中/采纳/驳回/封禁 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/community/reports`、`PUT /api/admin/community/reports/:id` | `已接-读写` | `未见专项测试` | 当前已直连 `report_item` 真表和处理动作 |
-| 直播管理 | `#/live/list` | 直播列表管理、详情查看 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/lives` | `已接-读` | `未见专项测试` | 当前已按真实 `live` 主表接入后台列表 |
+| 直播管理 | `#/live/list` | 直播列表管理、详情查看、强制下播 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/lives`、`PUT /api/admin/lives/:id/stop` | `已接-读写` | `未见专项测试` | 当前已按真实 `live` 主表接入后台列表，并支持对直播中的房间执行强制下播；页面不再保留旧式顶部统计卡 |
+| 排行榜配置 | `#/system/rankings` | 榜单结果列表、期次筛选、结果详情、刷新排行榜 | `已落地-已接API` | `需对齐-未核对` | `GET /api/admin/rankings`、`GET /api/admin/rankings/:boardType/:periodType/:periodValue`、`POST /api/admin/rankings/refresh` | `已接-读写` | `未见专项测试` | 当前页面定位为排行榜结果管理页，支持按当前筛选条件触发后台重算并刷新结果 |
 
 ## 测试现状汇总
 

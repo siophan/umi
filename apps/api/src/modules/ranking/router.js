@@ -11,6 +11,9 @@ const PERIOD_DAILY = 10;
 const PERIOD_WEEKLY = 20;
 const PERIOD_MONTHLY = 30;
 const PERIOD_ALL_TIME = 40;
+/**
+ * 对外兼容几种旧参数命名，最终统一映射到当前榜单类型枚举。
+ */
 function mapRankingType(input) {
     const value = input.trim();
     if (value === 'guessWins' || value === 'earnings' || value === 'wins') {
@@ -55,6 +58,9 @@ function mapPeriodTypeCode(type) {
     }
     return PERIOD_ALL_TIME;
 }
+/**
+ * 排行榜额外统计挂在 extra_json，解析失败时直接降级为空对象，不能把榜单接口整条打挂。
+ */
 function parseExtraJson(raw) {
     if (!raw) {
         return {};
@@ -70,6 +76,9 @@ function parseExtraJson(raw) {
         return {};
     }
 }
+/**
+ * 榜单展示值优先使用 extra_json 里的业务口径，score 只作为兜底原始分值。
+ */
 function formatRankingValue(type, score, extraJson) {
     if (type === 'winRate') {
         const winRateValue = Number(extraJson.winRate ?? extraJson.win_rate ?? score ?? 0);

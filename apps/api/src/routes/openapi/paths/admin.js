@@ -16,6 +16,8 @@ export const adminPaths = {
                     },
                 }),
                 400: errorResponse(400, '用户名或密码错误'),
+                401: errorResponse(401, '用户名或密码错误', '用户名或密码错误', 'ADMIN_INVALID_CREDENTIALS'),
+                403: errorResponse(403, '管理员账号已停用', '管理员账号已停用', 'ADMIN_ACCOUNT_DISABLED'),
             },
         },
     },
@@ -49,6 +51,8 @@ export const adminPaths = {
                 }),
                 400: errorResponse(400, '修改密码失败'),
                 401: errorResponse(401, '请先登录'),
+                403: errorResponse(403, '管理员账号已停用', '管理员账号已停用', 'ADMIN_ACCOUNT_DISABLED'),
+                404: errorResponse(404, '管理员账号不存在', '管理员账号不存在', 'ADMIN_USER_NOT_FOUND'),
             },
         },
     },
@@ -295,6 +299,22 @@ export const adminPaths = {
             responses: {
                 200: successResponse({ $ref: '#/components/schemas/AdminLiveRoomListResult' }),
                 401: errorResponse(401, '请先登录'),
+            },
+        },
+    },
+    '/api/admin/lives/{id}/stop': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台强制下播直播间',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '直播间 ID')],
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/StopAdminLiveRoomResult',
+                }),
+                400: errorResponse(400, '强制下播失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '直播不存在'),
             },
         },
     },
@@ -558,6 +578,8 @@ export const adminPaths = {
                 { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
                 { name: 'pageSize', in: 'query', schema: { type: 'integer', example: 20 } },
                 { name: 'keyword', in: 'query', schema: { type: 'string', example: 'Panda' } },
+                { name: 'categoryId', in: 'query', schema: { type: 'string', example: '201' } },
+                { name: 'shopName', in: 'query', schema: { type: 'string', example: 'Joy Select' } },
                 {
                     name: 'status',
                     in: 'query',
@@ -571,12 +593,20 @@ export const adminPaths = {
             responses: {
                 200: successResponse({
                     type: 'object',
-                    required: ['items', 'total', 'page', 'pageSize'],
+                    required: ['items', 'total', 'page', 'pageSize', 'summary'],
                     properties: {
                         items: { type: 'array', items: { type: 'object', additionalProperties: true } },
                         total: { type: 'integer', example: 128 },
                         page: { type: 'integer', example: 1 },
                         pageSize: { type: 'integer', example: 20 },
+                        summary: {
+                            type: 'object',
+                            required: ['total', 'byStatus'],
+                            properties: {
+                                total: { type: 'integer', example: 128 },
+                                byStatus: { type: 'object', additionalProperties: { type: 'integer' } },
+                            },
+                        },
                     },
                 }),
                 401: errorResponse(401, '请先登录'),
@@ -758,6 +788,25 @@ export const adminPaths = {
             },
         },
     },
+    '/api/admin/orders/logistics/{id}/deliver': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台物流标记签收',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '物流记录 ID')],
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/DeliverAdminLogisticsPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/DeliverAdminLogisticsResult',
+                }),
+                400: errorResponse(400, '标记签收失败'),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '物流记录不存在'),
+            },
+        },
+    },
     '/api/admin/orders/consign': {
         get: {
             tags: ['Admin'],
@@ -785,6 +834,22 @@ export const adminPaths = {
                     type: 'object',
                     additionalProperties: true,
                 }),
+                401: errorResponse(401, '请先登录'),
+                404: errorResponse(404, '寄售记录不存在'),
+            },
+        },
+    },
+    '/api/admin/orders/consign/{id}/cancel': {
+        put: {
+            tags: ['Admin'],
+            summary: '管理台强制下架寄售商品',
+            security: bearerSecurity,
+            parameters: [pathIdParameter('id', '寄售记录 ID')],
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/CancelAdminConsignResult',
+                }),
+                400: errorResponse(400, '强制下架失败'),
                 401: errorResponse(401, '请先登录'),
                 404: errorResponse(404, '寄售记录不存在'),
             },
@@ -1102,6 +1167,21 @@ export const adminPaths = {
                 200: successResponse({
                     $ref: '#/components/schemas/AdminRankingListResult',
                 }),
+                401: errorResponse(401, '请先登录'),
+            },
+        },
+        post: {
+            tags: ['Admin'],
+            summary: '后台刷新排行榜结果',
+            security: bearerSecurity,
+            requestBody: jsonRequestBody({
+                $ref: '#/components/schemas/RefreshAdminRankingsPayload',
+            }),
+            responses: {
+                200: successResponse({
+                    $ref: '#/components/schemas/RefreshAdminRankingsResult',
+                }),
+                400: errorResponse(400, '刷新排行榜失败'),
                 401: errorResponse(401, '请先登录'),
             },
         },
@@ -1470,12 +1550,35 @@ export const adminPaths = {
             tags: ['Admin'],
             summary: '管理台店铺商品列表',
             security: bearerSecurity,
+            parameters: [
+                { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, example: 1 } },
+                { name: 'pageSize', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, example: 10 } },
+                { name: 'shopName', in: 'query', schema: { type: 'string', example: 'Joy Select' } },
+                { name: 'productName', in: 'query', schema: { type: 'string', example: '熊猫盲盒' } },
+                { name: 'brandName', in: 'query', schema: { type: 'string', example: 'Panda' } },
+                {
+                    name: 'status',
+                    in: 'query',
+                    schema: { type: 'string', enum: ['all', 'active', 'off_shelf', 'disabled'], example: 'active' },
+                },
+            ],
             responses: {
                 200: successResponse({
                     type: 'object',
+                    required: ['items', 'total', 'page', 'pageSize', 'summary'],
                     properties: {
                         items: { type: 'array', items: { type: 'object', additionalProperties: true } },
-                        summary: { type: 'object', additionalProperties: true },
+                        total: { type: 'integer', example: 86 },
+                        page: { type: 'integer', example: 1 },
+                        pageSize: { type: 'integer', example: 10 },
+                        summary: {
+                            type: 'object',
+                            required: ['total', 'byStatus'],
+                            properties: {
+                                total: { type: 'integer', example: 86 },
+                                byStatus: { type: 'object', additionalProperties: { type: 'integer' } },
+                            },
+                        },
                     },
                 }),
                 401: errorResponse(401, '请先登录'),

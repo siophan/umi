@@ -3,6 +3,8 @@ import type mysql from 'mysql2/promise';
 import type {
   CompleteAdminOrderRefundPayload,
   CompleteAdminOrderRefundResult,
+  DeliverAdminLogisticsPayload,
+  DeliverAdminLogisticsResult,
   ReviewAdminOrderRefundPayload,
   ReviewAdminOrderRefundResult,
   ShipAdminOrderPayload,
@@ -16,6 +18,7 @@ import {
   FULFILLMENT_PENDING,
   FULFILLMENT_PROCESSING,
   FULFILLMENT_SHIPPED,
+  FULFILLMENT_COMPLETED,
   ORDER_CLOSED,
   ORDER_PENDING,
   ORDER_REFUNDED,
@@ -319,6 +322,66 @@ export async function completeAdminOrderRefund(
     return {
       id: toEntityId(order.id),
       refundId: toEntityId(refund.id),
+      status: 'completed',
+      completedAt,
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function deliverAdminLogistics(
+  fulfillmentId: string,
+  _payload: DeliverAdminLogisticsPayload,
+): Promise<DeliverAdminLogisticsResult> {
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id, order_id, status
+        FROM fulfillment_order
+        WHERE id = ?
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [fulfillmentId],
+    );
+
+    const fulfillment = (rows[0] as (FulfillmentActionRow & { order_id?: number | string | null }) | undefined) ?? null;
+    if (!fulfillment?.order_id) {
+      throw new HttpError(404, 'ADMIN_LOGISTICS_NOT_FOUND', '物流记录不存在');
+    }
+
+    const fulfillmentStatus = Number(fulfillment.status ?? 0);
+    if (fulfillmentStatus !== FULFILLMENT_SHIPPED) {
+      throw new Error('当前物流状态不支持标记签收');
+    }
+
+    const completedAt = new Date().toISOString();
+    await connection.execute(
+      `
+        UPDATE fulfillment_order
+        SET
+          status = ?,
+          completed_at = CURRENT_TIMESTAMP(3),
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+      `,
+      [FULFILLMENT_COMPLETED, fulfillment.id],
+    );
+
+    await connection.commit();
+
+    return {
+      id: toEntityId(fulfillment.id),
+      orderId: toEntityId(fulfillment.order_id),
       status: 'completed',
       completedAt,
     };

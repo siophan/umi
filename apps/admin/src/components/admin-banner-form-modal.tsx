@@ -71,13 +71,21 @@ export function AdminBannerFormModal({
           >
             <Select options={TARGET_TYPE_OPTIONS as never} placeholder="跳转类型" />
           </Form.Item>
-          {targetType === 'external' ? (
+          {targetType === 'external' || targetType === 'page' ? (
             <Form.Item
-              label="外部链接"
+              label={targetType === 'page' ? '页面路径' : '外部链接'}
               name="actionUrl"
-              rules={[{ required: true, message: '请输入外部链接' }]}
+              rules={[
+                {
+                  required: true,
+                  message: targetType === 'page' ? '请输入页面路径' : '请输入外部链接',
+                },
+              ]}
             >
-              <Input allowClear placeholder="https://example.com" />
+              <Input
+                allowClear
+                placeholder={targetType === 'page' ? '/mall' : 'https://example.com'}
+              />
             </Form.Item>
           ) : (
             <Form.Item

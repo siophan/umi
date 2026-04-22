@@ -81,21 +81,12 @@ export const ADMIN_PERMISSION_DEFINITIONS = [
         sort: 500,
     },
     {
-        code: 'product.list.view',
-        name: '商品列表',
-        module: 'product',
-        action: 'view',
-        parentCode: 'product.manage',
-        sort: 510,
-        path: '/products/list',
-    },
-    {
         code: 'product.brands.view',
         name: '品牌商品',
         module: 'product',
         action: 'view',
         parentCode: 'product.manage',
-        sort: 520,
+        sort: 510,
         path: '/products/brands',
     },
     {

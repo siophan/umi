@@ -9,13 +9,15 @@ import {
   Drawer,
   Form,
   Input,
+  Popconfirm,
   Tag,
   Typography,
+  message,
 } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
-import { fetchAdminLiveRooms } from '../lib/api/content';
+import { fetchAdminLiveRooms, stopAdminLiveRoom } from '../lib/api/content';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import { formatDateTime, formatNumber } from '../lib/format';
 
@@ -38,6 +40,7 @@ function getStatusColor(status: AdminLiveRoomItem['status']) {
 }
 
 export function LiveListPage({ refreshToken = 0 }: LiveListPageProps) {
+  const [messageApi, contextHolder] = message.useMessage();
   const [searchForm] = Form.useForm<LiveFilters>();
   const [result, setResult] = useState<AdminLiveRoomListResult>({
     items: [],
@@ -48,6 +51,8 @@ export function LiveListPage({ refreshToken = 0 }: LiveListPageProps) {
   const [filters, setFilters] = useState<LiveFilters>({});
   const [status, setStatus] = useState<LiveStatusFilter>('all');
   const [selected, setSelected] = useState<AdminLiveRoomItem | null>(null);
+  const [actionSeed, setActionSeed] = useState(0);
+  const [stoppingId, setStoppingId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -82,7 +87,21 @@ export function LiveListPage({ refreshToken = 0 }: LiveListPageProps) {
     return () => {
       alive = false;
     };
-  }, [filters, refreshToken]);
+  }, [actionSeed, filters, refreshToken]);
+
+  async function handleStop(record: AdminLiveRoomItem) {
+    try {
+      setStoppingId(record.id);
+      await stopAdminLiveRoom(record.id);
+      messageApi.success('直播已强制下播');
+      setSelected((current) => (current?.id === record.id ? null : current));
+      setActionSeed((value) => value + 1);
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '强制下播失败');
+    } finally {
+      setStoppingId(null);
+    }
+  }
 
   const rows = useMemo(
     () =>
@@ -149,15 +168,36 @@ export function LiveListPage({ refreshToken = 0 }: LiveListPageProps) {
       width: 100,
       fixed: 'right',
       render: (_, record) => (
-        <Button size="small" type="link" onClick={() => setSelected(record)}>
-          查看
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button size="small" type="link" onClick={() => setSelected(record)}>
+            查看
+          </Button>
+          {record.status === 'live' ? (
+            <Popconfirm
+              title="确认强制下播该直播间？"
+              description="强制下播后，直播间状态会改成已结束。"
+              okText="确认"
+              cancelText="取消"
+              onConfirm={() => void handleStop(record)}
+            >
+              <Button
+                danger
+                loading={stoppingId === record.id}
+                size="small"
+                type="link"
+              >
+                强制下播
+              </Button>
+            </Popconfirm>
+          ) : null}
+        </div>
       ),
     },
   ];
 
   return (
     <div className="page-stack">
+      {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
 
       <AdminSearchPanel

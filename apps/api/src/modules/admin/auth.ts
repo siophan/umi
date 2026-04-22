@@ -474,7 +474,7 @@ function resolveAdminRoutePermissionCodes(method: string, path: string) {
 
   if (matchesRoutePrefix(path, '/products')) {
     return normalizedMethod === 'GET'
-      ? ['product.list.view', 'product.manage']
+      ? ['guess.create.view', 'product.manage']
       : ['product.manage'];
   }
 

@@ -37,6 +37,7 @@ export type AdminProductRow = {
   shop_status: number | string | null;
   brand_name: string | null;
   brand_status: number | string | null;
+  category_id: number | string | null;
   category_name: string | null;
   brand_product_status: number | string | null;
 };
@@ -77,6 +78,7 @@ export interface AdminProductListItem {
   id: string;
   name: string;
   brand: string;
+  categoryId: string | null;
   category: string;
   shopId: string | null;
   shopName: string;
@@ -120,6 +122,10 @@ export interface AdminProductListResult {
   total: number;
   page: number;
   pageSize: number;
+  summary: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
 }
 
 export interface AdminBrandLibraryResult {
@@ -133,6 +139,8 @@ export interface AdminProductQuery {
   page?: number;
   pageSize?: number;
   keyword?: string;
+  categoryId?: string;
+  shopName?: string;
   status?: 'all' | AdminProductStatus;
 }
 
@@ -275,6 +283,7 @@ export function sanitizeAdminProduct(row: AdminProductRow): AdminProductListItem
     id: String(row.id),
     name: row.name,
     brand: row.brand_name || '未知品牌',
+    categoryId: row.category_id == null ? null : String(row.category_id),
     category: row.category_name || '未分类',
     shopId: row.shop_id == null ? null : String(row.shop_id),
     shopName: row.shop_name || '未归属店铺',
@@ -318,10 +327,15 @@ export function sanitizeAdminBrandLibrary(
   };
 }
 
-export function buildAdminProductFilters(query: AdminProductQuery) {
+export function buildAdminProductFilters(
+  query: AdminProductQuery,
+  options: { includeStatus: boolean } = { includeStatus: true },
+) {
   const whereClauses = ['1 = 1'];
   const params: Array<string | number> = [];
   const keyword = query.keyword?.trim();
+  const categoryId = query.categoryId?.trim();
+  const shopName = query.shopName?.trim();
   const status = query.status ?? 'all';
 
   if (keyword) {
@@ -330,7 +344,17 @@ export function buildAdminProductFilters(query: AdminProductQuery) {
     params.push(like, like, like, like);
   }
 
-  if (status === 'active') {
+  if (categoryId) {
+    whereClauses.push('bp.category_id = ?');
+    params.push(categoryId);
+  }
+
+  if (shopName) {
+    whereClauses.push('s.name LIKE ?');
+    params.push(`%${shopName}%`);
+  }
+
+  if (options.includeStatus && status === 'active') {
     whereClauses.push(
       'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (p.stock - COALESCE(p.frozen_stock, 0)) > ?',
     );
@@ -344,7 +368,7 @@ export function buildAdminProductFilters(query: AdminProductQuery) {
       BRAND_PRODUCT_STATUS_DISABLED,
       LOW_STOCK_THRESHOLD,
     );
-  } else if (status === 'low_stock') {
+  } else if (options.includeStatus && status === 'low_stock') {
     whereClauses.push(
       'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (p.stock - COALESCE(p.frozen_stock, 0)) <= ?',
     );
@@ -358,13 +382,13 @@ export function buildAdminProductFilters(query: AdminProductQuery) {
       BRAND_PRODUCT_STATUS_DISABLED,
       LOW_STOCK_THRESHOLD,
     );
-  } else if (status === 'paused') {
+  } else if (options.includeStatus && status === 'paused') {
     whereClauses.push('COALESCE(s.status, ?) = ?');
     params.push(SHOP_STATUS_ACTIVE, SHOP_STATUS_PAUSED);
-  } else if (status === 'off_shelf') {
+  } else if (options.includeStatus && status === 'off_shelf') {
     whereClauses.push('p.status = ?');
     params.push(PRODUCT_STATUS_OFF_SHELF);
-  } else if (status === 'disabled') {
+  } else if (options.includeStatus && status === 'disabled') {
     whereClauses.push(
       '(p.status = ? OR COALESCE(b.status, ?) = ? OR COALESCE(bp.status, ?) = ?)',
     );

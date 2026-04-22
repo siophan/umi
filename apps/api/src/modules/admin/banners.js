@@ -7,6 +7,7 @@ const TARGET_GUESS = 10;
 const TARGET_POST = 20;
 const TARGET_PRODUCT = 30;
 const TARGET_SHOP = 40;
+const TARGET_PAGE = 50;
 const TARGET_EXTERNAL = 90;
 function toIso(value) {
     return value ? new Date(value).toISOString() : null;
@@ -41,6 +42,8 @@ function mapBannerTargetTypeCode(targetType) {
         return TARGET_PRODUCT;
     if (targetType === 'shop')
         return TARGET_SHOP;
+    if (targetType === 'page')
+        return TARGET_PAGE;
     return TARGET_EXTERNAL;
 }
 function mapBannerTargetType(targetType) {
@@ -53,6 +56,8 @@ function mapBannerTargetType(targetType) {
         return 'product';
     if (code === TARGET_SHOP)
         return 'shop';
+    if (code === TARGET_PAGE)
+        return 'page';
     return 'external';
 }
 function mapBannerTargetTypeLabel(targetType) {
@@ -64,6 +69,8 @@ function mapBannerTargetTypeLabel(targetType) {
         return '商品';
     if (targetType === 'shop')
         return '店铺';
+    if (targetType === 'page')
+        return '站内页面';
     return '外部链接';
 }
 function mapBannerPositionLabel(position) {
@@ -102,6 +109,8 @@ function getBannerTargetName(row, targetType) {
         return row.product_name ?? null;
     if (targetType === 'shop')
         return row.shop_name ?? null;
+    if (targetType === 'page')
+        return row.action_url ?? null;
     return row.action_url ?? null;
 }
 function sanitizeBanner(row) {
@@ -232,9 +241,9 @@ async function normalizeBannerPayload(connection, payload) {
     if (startAt && endAt && startAt.getTime() > endAt.getTime()) {
         throw new HttpError(400, 'ADMIN_BANNER_INVALID_PAYLOAD', '开始时间不能晚于结束时间');
     }
-    if (targetType === 'external') {
+    if (targetType === 'external' || targetType === 'page') {
         if (!actionUrl) {
-            throw new HttpError(400, 'ADMIN_BANNER_INVALID_PAYLOAD', '外部链接不能为空');
+            throw new HttpError(400, 'ADMIN_BANNER_INVALID_PAYLOAD', targetType === 'page' ? '页面路径不能为空' : '外部链接不能为空');
         }
     }
     else {
@@ -249,8 +258,8 @@ async function normalizeBannerPayload(connection, payload) {
         subtitle,
         imageUrl,
         targetType,
-        targetId: targetType === 'external' ? null : targetId,
-        actionUrl: targetType === 'external' ? actionUrl : null,
+        targetId: targetType === 'external' || targetType === 'page' ? null : targetId,
+        actionUrl: targetType === 'external' || targetType === 'page' ? actionUrl : null,
         sort,
         status,
         startAt,

@@ -9,6 +9,7 @@ const ACTION_CODE_MAP = {
 const PERMISSION_STATUS_ACTIVE = 10;
 const OBSOLETE_PERMISSION_CODES = [
     'brand.apply.view',
+    'product.list.view',
     'product.auth.list.view',
     'product.auth.records.view',
 ];
