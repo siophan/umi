@@ -1,0 +1,317 @@
+import type mysql from 'mysql2/promise';
+
+import { toEntityId, type CreateGuessPayload, type CreateGuessResult } from '@umi/shared';
+
+import { getDbPool } from '../../lib/db';
+
+const GUESS_TYPE_STANDARD = 10;
+const GUESS_SOURCE_USER = 10;
+const GUESS_STATUS_ACTIVE = 30;
+const REVIEW_APPROVED = 30;
+const GUESS_SCOPE_PUBLIC = 10;
+const GUESS_SCOPE_FRIENDS = 20;
+const SETTLEMENT_MODE_ORACLE = 10;
+const GUESS_PRODUCT_SOURCE_PLATFORM = 10;
+const GUESS_PRODUCT_SOURCE_SHOP = 20;
+const INVITATION_PENDING = 10;
+
+type GuessCategoryRow = {
+  id: number | string;
+  name: string;
+  status: number | string;
+  biz_type: number | string;
+};
+
+type CreateGuessProductRow = {
+  id: number | string;
+  shop_id: number | string | null;
+  image_url: string | null;
+  status: number | string;
+  stock: number | string | null;
+  frozen_stock: number | string | null;
+  shop_status: number | string | null;
+  brand_status: number | string | null;
+  brand_product_status: number | string | null;
+};
+
+function normalizeOptionTexts(optionTexts: string[]) {
+  const normalized = optionTexts.map((item) => item.trim()).filter((item) => item.length > 0);
+
+  if (normalized.length < 2) {
+    throw new Error('至少填写两个有效选项');
+  }
+
+  const uniqueCount = new Set(normalized.map((item) => item.toLowerCase())).size;
+  if (uniqueCount !== normalized.length) {
+    throw new Error('竞猜选项不能重复');
+  }
+
+  return normalized;
+}
+
+function normalizeEndTime(endTime: string) {
+  const value = endTime.trim();
+  if (!value) {
+    throw new Error('请设置截止时间');
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('截止时间不合法');
+  }
+
+  if (parsed.getTime() <= Date.now()) {
+    throw new Error('截止时间必须晚于当前时间');
+  }
+
+  return parsed;
+}
+
+/**
+ * 创建页当前没有单独的竞猜分类选择器。
+ * 用户端创建时优先吃显式分类；没有时回落到已启用的默认竞猜分类，优先选“美食”。
+ */
+async function resolveGuessCategoryId(categoryId?: string | null) {
+  const db = getDbPool();
+
+  if (categoryId?.trim()) {
+    const [rows] = await db.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT id, name, status, biz_type
+        FROM category
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [categoryId],
+    );
+    const category = (rows[0] as GuessCategoryRow | undefined) ?? null;
+    if (!category || Number(category.biz_type) !== 40) {
+      throw new Error('竞猜分类不存在');
+    }
+    if (Number(category.status) !== 10) {
+      throw new Error('竞猜分类未启用');
+    }
+    return String(category.id);
+  }
+
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
+    `
+      SELECT id, name, status, biz_type
+      FROM category
+      WHERE biz_type = 40 AND status = 10
+      ORDER BY CASE WHEN name = '美食' THEN 0 ELSE 1 END, sort ASC, id ASC
+      LIMIT 1
+    `,
+  );
+
+  const category = (rows[0] as GuessCategoryRow | undefined) ?? null;
+  if (!category) {
+    throw new Error('竞猜分类未配置');
+  }
+
+  return String(category.id);
+}
+
+async function requireProductForGuessCreate(productId: string) {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        p.id,
+        p.shop_id,
+        p.image_url,
+        p.status,
+        p.stock,
+        p.frozen_stock,
+        s.status AS shop_status,
+        b.status AS brand_status,
+        bp.status AS brand_product_status
+      FROM product p
+      LEFT JOIN shop s ON s.id = p.shop_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand b ON b.id = bp.brand_id
+      WHERE p.id = ?
+      LIMIT 1
+    `,
+    [productId],
+  );
+
+  const product = (rows[0] as CreateGuessProductRow | undefined) ?? null;
+  if (!product) {
+    throw new Error('关联商品不存在');
+  }
+
+  if (Number(product.status) !== 10) {
+    throw new Error('关联商品不可用于创建竞猜');
+  }
+
+  if (product.shop_status != null && Number(product.shop_status) !== 10) {
+    throw new Error('关联商品所属店铺不可用于创建竞猜');
+  }
+
+  if (product.brand_status != null && Number(product.brand_status) !== 10) {
+    throw new Error('关联商品所属品牌不可用于创建竞猜');
+  }
+
+  if (product.brand_product_status != null && Number(product.brand_product_status) !== 10) {
+    throw new Error('关联商品所属品牌商品不可用于创建竞猜');
+  }
+
+  if (Number(product.stock ?? 0) - Number(product.frozen_stock ?? 0) <= 0) {
+    throw new Error('关联商品可用库存不足');
+  }
+
+  return product;
+}
+
+async function resolveInviteeIds(invitedFriendIds: Array<string | number> | undefined, creatorId: string) {
+  const normalizedIds = Array.from(
+    new Set(
+      (invitedFriendIds ?? [])
+        .map((item) => String(item).trim())
+        .filter((item) => /^\d+$/.test(item) && item !== creatorId),
+    ),
+  );
+
+  if (normalizedIds.length === 0) {
+    return [] as string[];
+  }
+
+  const db = getDbPool();
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
+    `
+      SELECT id
+      FROM user
+      WHERE id IN (?)
+    `,
+    [normalizedIds],
+  );
+
+  return rows.map((row) => String(row.id));
+}
+
+export async function createUserGuess(
+  payload: CreateGuessPayload,
+  creatorId: string,
+): Promise<CreateGuessResult> {
+  const title = payload.title.trim();
+  if (!title) {
+    throw new Error('竞猜标题不能为空');
+  }
+
+  const endTime = normalizeEndTime(payload.endTime);
+  const optionTexts = normalizeOptionTexts(payload.optionTexts);
+  const scope = payload.scope === 'friends' ? 'friends' : 'public';
+  const scopeCode = scope === 'friends' ? GUESS_SCOPE_FRIENDS : GUESS_SCOPE_PUBLIC;
+  const categoryId = await resolveGuessCategoryId(payload.categoryId ? String(payload.categoryId) : null);
+  const product = payload.productId ? await requireProductForGuessCreate(String(payload.productId)) : null;
+  const inviteeIds = await resolveInviteeIds(payload.invitedFriendIds, creatorId);
+
+  const description = payload.description?.trim() || null;
+  const imageUrl = payload.imageUrl?.trim() || product?.image_url || null;
+  const guessProductSourceType =
+    product?.shop_id == null ? GUESS_PRODUCT_SOURCE_PLATFORM : GUESS_PRODUCT_SOURCE_SHOP;
+
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [guessResult] = await connection.execute<mysql.ResultSetHeader>(
+      `
+        INSERT INTO guess (
+          title,
+          type,
+          source_type,
+          image_url,
+          status,
+          end_time,
+          creator_id,
+          category_id,
+          description,
+          review_status,
+          scope,
+          settlement_mode
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        title,
+        GUESS_TYPE_STANDARD,
+        GUESS_SOURCE_USER,
+        imageUrl,
+        GUESS_STATUS_ACTIVE,
+        endTime,
+        creatorId,
+        categoryId,
+        description,
+        REVIEW_APPROVED,
+        scopeCode,
+        SETTLEMENT_MODE_ORACLE,
+      ],
+    );
+
+    const guessId = String(guessResult.insertId);
+
+    if (product && payload.productId) {
+      await connection.execute(
+        `
+          INSERT INTO guess_product (
+            guess_id,
+            product_id,
+            option_idx,
+            source_type,
+            shop_id,
+            quantity
+          ) VALUES (?, ?, 0, ?, ?, 1)
+        `,
+        [guessId, payload.productId, guessProductSourceType, product.shop_id],
+      );
+    }
+
+    for (const [index, optionText] of optionTexts.entries()) {
+      await connection.execute(
+        `
+          INSERT INTO guess_option (
+            guess_id,
+            option_index,
+            option_text,
+            odds,
+            is_result
+          ) VALUES (?, ?, ?, 1, 0)
+        `,
+        [guessId, index, optionText],
+      );
+    }
+
+    if (scope === 'friends' && inviteeIds.length > 0) {
+      for (const inviteeId of inviteeIds) {
+        await connection.execute(
+          `
+            INSERT INTO guess_invitation (
+              guess_id,
+              inviter_id,
+              invitee_id,
+              status
+            ) VALUES (?, ?, ?, ?)
+          `,
+          [guessId, creatorId, inviteeId, INVITATION_PENDING],
+        );
+      }
+    }
+
+    await connection.commit();
+
+    return {
+      id: toEntityId(guessId),
+      status: 'active',
+      reviewStatus: 'approved',
+      scope,
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}

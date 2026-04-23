@@ -100,6 +100,59 @@ export const commercePaths = {
         }),
       },
     },
+    post: {
+      tags: ['Guess'],
+      summary: '创建当前用户竞猜',
+      security: bearerSecurity,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['title', 'endTime', 'optionTexts'],
+              properties: {
+                title: { type: 'string', example: '乐事新口味谁更能打？' },
+                endTime: { type: 'string', format: 'date-time' },
+                optionTexts: {
+                  type: 'array',
+                  minItems: 2,
+                  items: { type: 'string' },
+                  example: ['番茄味更强', '黄瓜味逆袭'],
+                },
+                scope: {
+                  type: 'string',
+                  enum: ['public', 'friends'],
+                  example: 'friends',
+                },
+                categoryId: { type: 'string', nullable: true, example: '1308' },
+                description: { type: 'string', nullable: true },
+                imageUrl: { type: 'string', nullable: true },
+                productId: { type: 'string', nullable: true, example: '502' },
+                invitedFriendIds: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  nullable: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: '40122' },
+            status: { type: 'string', example: 'active' },
+            reviewStatus: { type: 'string', example: 'approved' },
+            scope: { type: 'string', example: 'friends' },
+          },
+        }),
+        400: errorResponse(400, '创建竞猜失败'),
+        401: errorResponse(401, '请先登录'),
+      },
+    },
   },
   '/api/guesses/{id}': {
     get: {

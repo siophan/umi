@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 import { fetchChatDetail, sendChatMessage } from '../../../lib/api/chat';
+import { hasAuthToken } from '../../../lib/api/shared';
 import styles from './page.module.css';
 
 type MessageItem = {
@@ -63,9 +64,19 @@ export default function ChatDetailPage() {
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     async function load() {
+      if (!hasAuthToken()) {
+        setReady(true);
+        return;
+      }
       setError(null);
       try {
         const result = await fetchChatDetail(peerId);

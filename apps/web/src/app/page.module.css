@@ -16,6 +16,10 @@
   border: 1px solid rgba(255, 215, 0, 0.12);
   border-radius: 16px;
   background: rgba(255, 215, 0, 0.06);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    border-color 0.3s;
 }
 
 .breakingBar::before {
@@ -26,6 +30,10 @@
   background-size: 200% 100%;
   animation: tickerShimmer 4s ease infinite;
   pointer-events: none;
+}
+
+.breakingBar:active {
+  transform: scale(0.99);
 }
 
 .breakingTag {
@@ -71,13 +79,24 @@
   flex: 1;
   overflow: hidden;
   white-space: nowrap;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
 
 .breakingInner {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: rgba(255, 255, 255, 0.75);
   font-size: 11px;
   font-weight: 600;
+  animation: breakingTicker 22s linear infinite;
+}
+
+.breakingEvt {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .highlight {
@@ -115,20 +134,53 @@
   opacity: 0.25;
 }
 
+@keyframes breakingTicker {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 .heroSwiper {
-  margin: 8px 16px 0;
+  position: relative;
+  margin: 12px 0 0;
+  overflow: hidden;
 }
 
 .heroTrack {
   display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 0 16px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.heroTrack::-webkit-scrollbar {
+  display: none;
 }
 
 .heroSlide {
   position: relative;
+  flex-shrink: 0;
   overflow: hidden;
-  width: 100%;
+  width: calc(100% - 32px);
   border-radius: 24px;
   cursor: pointer;
+  scroll-snap-align: center;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(255, 215, 0, 0.06);
+}
+
+.heroSlide:active {
+  transform: scale(0.99);
+  transition: transform 0.15s;
 }
 
 .heroSlide img {
@@ -141,47 +193,56 @@
 .heroRank {
   position: absolute;
   top: 12px;
-  left: 12px;
+  right: 10px;
   z-index: 2;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(15, 15, 25, 0.72);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
+  background: linear-gradient(135deg, #ffd700, #f7971e);
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+  color: #1a1a2e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
 .heroOverlay {
   position: absolute;
-  inset: auto 0 0;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   padding: 16px;
-  background: linear-gradient(transparent 20%, rgba(0, 0, 0, 0.72));
+  background: linear-gradient(transparent 20%, rgba(15, 15, 25, 0.92));
 }
 
 .heroBadge {
   display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 10px;
   border-radius: 999px;
   background: rgba(255, 215, 0, 0.18);
   color: #ffd700;
   font-size: 11px;
   font-weight: 700;
+  margin-bottom: 8px;
 }
 
 .heroTitle {
-  margin-top: 10px;
   color: #fff;
   font-size: 20px;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .heroMeta {
   display: flex;
+  align-items: center;
   gap: 12px;
   margin-top: 8px;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
 }
 
 .heroPk {
@@ -190,27 +251,58 @@
 
 .heroPkLabels {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
   color: rgba(255, 255, 255, 0.92);
-  font-size: 11px;
+  font-size: 8px;
   font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.heroPkLeftLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #ffd700;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.heroPkVs {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 7px;
+  letter-spacing: 1px;
+}
+
+.heroPkRightLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #26c6da;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .heroPkBar {
   display: flex;
   overflow: hidden;
-  height: 6px;
-  margin-top: 4px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.18);
+  height: 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .heroPkLeft {
-  background: linear-gradient(90deg, #60a5fa, #3b82f6);
+  border-right: 1px solid rgba(255, 255, 255, 0.45);
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.8), rgba(247, 201, 72, 0.75));
 }
 
 .heroPkRight {
-  background: linear-gradient(90deg, #f87171, #ef4444);
+  background: linear-gradient(90deg, rgba(38, 198, 218, 0.75), rgba(0, 188, 212, 0.7));
 }
 
 .heroDots {
@@ -230,9 +322,10 @@
 }
 
 .heroDotActive {
-  width: 18px;
-  border-radius: 999px;
-  background: #ffd700;
+  width: 20px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ffd700, #f7971e);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
 }
 
 .pkBanner {
@@ -246,6 +339,23 @@
   border: 1px solid rgba(255, 215, 0, 0.1);
   border-radius: 16px;
   background: linear-gradient(135deg, #1a1a2e, #16213e);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.pkBanner:active {
+  transform: scale(0.98);
+}
+
+.pkBanner::before {
+  content: '';
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.12) 0%, transparent 70%);
 }
 
 .pkLive {
@@ -257,6 +367,7 @@
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  animation: livePulse 1.5s infinite;
 }
 
 .pkPlayers {
@@ -284,6 +395,7 @@
   color: #1a1a2e;
   font-size: 8px;
   font-weight: 800;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.35);
 }
 
 .pkInfo {
@@ -308,6 +420,63 @@
   font-size: 9px;
 }
 
+.pkProgressWrap {
+  display: none;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 380px) {
+  .pkProgressWrap {
+    display: block;
+  }
+}
+
+.pkProgressTrack {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pkProgressLeft,
+.pkProgressRight {
+  min-width: 15%;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 10px;
+  text-align: center;
+  transition: width 0.5s;
+}
+
+.pkProgressLeft {
+  background: linear-gradient(90deg, #ffd700, #f7971e);
+  color: #1a1a2e;
+}
+
+.pkProgressRight {
+  background: linear-gradient(90deg, #26c6da, #00e676);
+  color: #1a1a2e;
+}
+
+.pkProgressLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  gap: 8px;
+  font-size: 8px;
+}
+
+.pkProgressLabels span:first-child {
+  color: #ffd700;
+}
+
+.pkProgressLabels span:last-child {
+  color: #26c6da;
+  text-align: right;
+}
+
 .pkBtn {
   flex-shrink: 0;
   padding: 4px 12px;
@@ -316,6 +485,11 @@
   color: #1a1a2e;
   font-size: 10px;
   font-weight: 700;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.25);
+}
+
+.pkBtn:active {
+  transform: scale(0.95);
 }
 
 .catBar {
@@ -387,6 +561,31 @@
   color: #66bb6a;
 }
 
+.catFinance .catIcon {
+  background: rgba(255, 215, 64, 0.14);
+  color: #ffd54f;
+}
+
+.catTech .catIcon {
+  background: rgba(38, 198, 218, 0.14);
+  color: #26c6da;
+}
+
+.catGame .catIcon {
+  background: rgba(126, 87, 194, 0.16);
+  color: #9575cd;
+}
+
+.catSociety .catIcon {
+  background: rgba(171, 71, 188, 0.14);
+  color: #ba68c8;
+}
+
+.catWeather .catIcon {
+  background: rgba(66, 165, 245, 0.14);
+  color: #64b5f6;
+}
+
 .catChip.catActive.catHot {
   background: linear-gradient(135deg, rgba(255, 61, 0, 0.18), rgba(255, 107, 53, 0.08));
 }
@@ -401,6 +600,26 @@
 
 .catChip.catActive.catSport {
   background: linear-gradient(135deg, rgba(46, 125, 50, 0.18), rgba(76, 175, 80, 0.06));
+}
+
+.catChip.catActive.catFinance {
+  background: linear-gradient(135deg, rgba(255, 214, 0, 0.18), rgba(255, 235, 59, 0.06));
+}
+
+.catChip.catActive.catTech {
+  background: linear-gradient(135deg, rgba(0, 188, 212, 0.18), rgba(38, 198, 218, 0.06));
+}
+
+.catChip.catActive.catGame {
+  background: linear-gradient(135deg, rgba(103, 58, 183, 0.18), rgba(149, 117, 205, 0.06));
+}
+
+.catChip.catActive.catSociety {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.18), rgba(186, 104, 200, 0.06));
+}
+
+.catChip.catActive.catWeather {
+  background: linear-gradient(135deg, rgba(30, 136, 229, 0.18), rgba(100, 181, 246, 0.06));
 }
 
 .catChip.catActive .catText {
@@ -429,6 +648,26 @@
   background: linear-gradient(135deg, #43a047, #1b5e20);
 }
 
+.catChip.catActive.catFinance .catIcon {
+  background: linear-gradient(135deg, #ffd54f, #ffb300);
+}
+
+.catChip.catActive.catTech .catIcon {
+  background: linear-gradient(135deg, #26c6da, #00838f);
+}
+
+.catChip.catActive.catGame .catIcon {
+  background: linear-gradient(135deg, #7e57c2, #4527a0);
+}
+
+.catChip.catActive.catSociety .catIcon {
+  background: linear-gradient(135deg, #ba68c8, #8e24aa);
+}
+
+.catChip.catActive.catWeather .catIcon {
+  background: linear-gradient(135deg, #64b5f6, #1e88e5);
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -449,10 +688,20 @@
 }
 
 .sectionMore {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.sectionMore:active {
+  opacity: 0.7;
+  transform: translateX(1px);
 }
 
 .sectionNotice {
@@ -548,6 +797,8 @@
   gap: 12px;
   padding: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
 .guessCard:active {
@@ -560,6 +811,7 @@
   overflow: hidden;
   width: 110px;
   height: 82px;
+  border: 1px solid rgba(255, 215, 0, 0.1);
   border-radius: 16px;
 }
 
@@ -581,15 +833,18 @@
 }
 
 .hot {
-  background: #f44336;
+  background: linear-gradient(135deg, #ff3d00, #ff6d00);
+  box-shadow: 0 0 8px rgba(255, 61, 0, 0.3);
 }
 
 .ending {
-  background: #ff9800;
+  background: linear-gradient(135deg, #ffd700, #f7971e);
+  color: #1a1a2e;
 }
 
 .new {
-  background: #e8511a;
+  background: linear-gradient(135deg, #00e676, #00c853);
+  color: #1a1a2e;
 }
 
 .cardCountdown {
@@ -603,6 +858,11 @@
   gap: 2px;
   padding: 3px 6px 4px;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+}
+
+.cardCountdownUrgent .cdNum {
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
 }
 
 .cdNum {
@@ -682,11 +942,20 @@
 
 .duelLabels {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 2px;
   color: rgba(255, 255, 255, 0.72);
   font-size: 8px;
   font-weight: 700;
+}
+
+.duelVs {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.26);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
 }
 
 .duelBar {
@@ -718,18 +987,33 @@
   padding: 3px 8px;
   background: linear-gradient(135deg, #ffd700, #f7971e);
   color: #1a1a2e;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.25);
 }
 
 .joinBtn {
   padding: 3px 10px;
   background: linear-gradient(135deg, #ffd700, #f7971e);
   color: #1a1a2e;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.25);
+}
+
+.pkMiniBtn:active,
+.joinBtn:active {
+  box-shadow: 0 0 4px rgba(255, 215, 0, 0.4);
+}
+
+.cardBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
 }
 
 .cardMeta {
   margin-top: 6px;
   color: rgba(255, 255, 255, 0.35);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .divider {
@@ -749,6 +1033,10 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.resultItem:last-child {
+  border-bottom: 0;
+}
+
 .resultIcon {
   display: flex;
   align-items: center;
@@ -766,19 +1054,20 @@
 
 .resultTitle {
   color: #f0f0f0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .resultDetail {
   margin-top: 1px;
   color: rgba(255, 255, 255, 0.35);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .resultAmount {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .won {
@@ -808,6 +1097,10 @@
   padding: 8px 0;
 }
 
+.rankRow + .rankRow {
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
 .rankNo {
   width: 20px;
   color: #ffd700;
@@ -820,17 +1113,18 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  object-fit: cover;
 }
 
 .rankName {
   flex: 1;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .rankRate {
   color: #ffd700;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -862,6 +1156,12 @@
   color: rgba(255, 255, 255, 0.5);
   font-size: 12px;
   font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.liveCatChip:active {
+  transform: scale(0.95);
 }
 
 .liveCatActive {
@@ -881,6 +1181,11 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
+  transition: transform 0.15s;
+}
+
+.liveFeedCard:active {
+  transform: scale(0.99);
 }
 
 .liveFeedHost {
@@ -921,6 +1226,7 @@
 
 .liveFeedStatusLive {
   background: #f44336;
+  animation: livePulse 2s ease infinite;
 }
 
 .liveFeedStatusUpcoming {
@@ -940,6 +1246,7 @@
   overflow: hidden;
   border: 0;
   background: #111;
+  cursor: pointer;
 }
 
 .liveFeedCover img {
@@ -973,6 +1280,7 @@
   color: #fff;
   font-size: 14px;
   font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .livePk {
@@ -1004,6 +1312,11 @@
   margin-left: auto;
   color: rgba(255, 255, 255, 0.4);
   font-size: 10px;
+}
+
+.livePkHot i {
+  font-size: 9px;
+  color: #f44336;
 }
 
 .livePkBar {
@@ -1071,6 +1384,12 @@
 .livePkQuestion {
   color: rgba(255, 255, 255, 0.3);
   font-size: 10px;
+  overflow: hidden;
+  flex: 1;
+  padding: 0 6px;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .livePkCta {
@@ -1087,4 +1406,22 @@
   color: #1a1a2e;
   font-size: 11px;
   font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
+}
+
+.livePkBtn:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }

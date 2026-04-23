@@ -19,7 +19,6 @@ export function HomeHeader() {
         </button>
         <button className="hv3-action" type="button">
           <i className="fa-regular fa-bell" />
-          <span className="notif-dot" />
         </button>
       </div>
     </header>

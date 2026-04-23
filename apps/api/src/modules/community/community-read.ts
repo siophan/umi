@@ -33,7 +33,7 @@ import {
 } from './serializer';
 
 export async function getCommunityFeed(
-  userId: string,
+  userId: string | null,
   tab: 'recommend' | 'follow',
 ): Promise<CommunityFeedResult> {
   const rows = await fetchCommunityFeedRows(userId, tab);
@@ -358,9 +358,10 @@ export async function searchCommunity(userId: string, q: string): Promise<Commun
   };
 }
 
-export async function getCommunityDiscovery(userId: string): Promise<CommunityDiscoveryResult> {
+export async function getCommunityDiscovery(userId: string | null): Promise<CommunityDiscoveryResult> {
   const db = getDbPool();
   const visibilitySql = buildPostVisibilityClause('p');
+  const viewerId = userId && userId.trim() ? userId : '0';
   const [heroRows] = await db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
@@ -444,13 +445,13 @@ export async function getCommunityDiscovery(userId: string): Promise<CommunityDi
     [
       POST_INTERACTION_LIKE,
       COMMENT_TARGET_POST,
-      userId,
+      viewerId,
       POST_INTERACTION_LIKE,
-      userId,
+      viewerId,
       POST_INTERACTION_BOOKMARK,
-      userId,
-      userId,
-      userId,
+      viewerId,
+      viewerId,
+      viewerId,
     ],
   );
   const heroRow = (heroRows[0] as PostRow | undefined) ?? null;

@@ -65,6 +65,8 @@
   - 用户端 `invite`、`checkin` 页面已直连接口，但当前 `apps/api/src/app.ts` 中未见对应 router 注册
   - 大量页面仍缺页面级专项测试，当前测试重心主要在 API integration / smoke
   - 仍有不少页面的 `老系统对齐状态` 只能保守标成 `未核对`
+- 当前工程收尾规则已补充：如果本地 `3000 / 4000` 原服务本来就在跑，改完不只看 `typecheck / build`，还要顺手确认服务仍然存活
+- 本地 `web` 曾出现过 `apps/web/.next/routes-manifest.json` 缺失导致 `3000` 上 `next dev` 进程存活但页面 `500` 的情况；当前恢复口径已固定为“停进程 -> 清 `apps/web/.next` -> 原地重启 `3000`”
 
 ## 用户端 Web
 
@@ -84,7 +86,7 @@
 
 ### 当前架构热点
 
-当前 `apps/web` 主要剩下的结构问题，是少量页面仍然偏重：`/create`；其余高频页已基本收成“协调层 + 子组件 + 页面状态 hook”的结构。
+当前 `apps/web` 已没有 `800+ / 1000+` 的高频大页中心；首页客户端层和 `/create` 这两个原本还偏重的点也已继续收口，前者从 `1049` 行降到 `130` 行，后者从 `1324` 行降到 `298` 行，其余高频页也都已基本收成“协调层 + 子组件/区块 + 页面状态 hook”的结构。
 
 其中 `/community` 已进一步收口：
 
@@ -96,6 +98,8 @@
   - [apps/web/src/app/community/community-composer-overlays.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/community-composer-overlays.tsx:1)
   - [apps/web/src/app/community/use-community-page-state.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/use-community-page-state.ts:1)
   - [apps/web/src/app/community/page-helpers.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/community/page-helpers.ts:1)
+- 推荐流和发现区当前已支持匿名访问；未登录时“为您推荐”可直接浏览，“你的关注”页签只保留普通空态，不再显示“动态加载失败”
+- 社区推荐流和发现区当前已支持匿名访问；未登录时“为您推荐”可以直接浏览，“你的关注”页签只保留普通空态，不再显示“动态加载失败”
 
 `/product/[id]`、`/post/[id]`、`/friends` 这轮也已经开始收口：
 
@@ -144,6 +148,17 @@
 - [apps/web/src/app/user/[uid]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/user/[uid]/page.tsx:1) 已从 `602` 行降到 `385` 行，主页主体和私信浮层已拆到 `user-profile-sections / user-profile-chat-overlay`
 - [apps/web/src/app/shop/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/shop/[id]/page.tsx:1) 已从 `601` 行降到 `258` 行，店铺主体内容已拆到 `shop-detail-content`
 
+`/create` 这轮也已经继续收口：
+
+- [apps/web/src/app/create/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/create/page.tsx:1) 已从 `1324` 行降到 `298` 行，主页面现在主要只保留模板选择、页面拼装和底部动作；静态配置、页面状态、基本信息、竞猜选项、好友 PK、开奖设置和整组预览/商品选择/分享/发布/成功弹层已拆到：
+  - [apps/web/src/app/create/create-helpers.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/create/create-helpers.ts:1)
+  - [apps/web/src/app/create/use-create-page-state.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/create/use-create-page-state.ts:1)
+  - [apps/web/src/app/create/create-basic-info-section.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/create/create-basic-info-section.tsx:1)
+  - [apps/web/src/app/create/create-options-section.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/create/create-options-section.tsx:1)
+  - [apps/web/src/app/create/create-pk-section.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/create/create-pk-section.tsx:1)
+  - [apps/web/src/app/create/create-settings-section.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/create/create-settings-section.tsx:1)
+  - [apps/web/src/app/create/create-overlays.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/create/create-overlays.tsx:1)
+
 `/guess/[id]`、`/cart`、`/edit-profile` 这轮也已经开始收口：
 
 - [apps/web/src/app/guess/[id]/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/guess/[id]/page.tsx:1) 已从 `553` 行降到 `239` 行，主视觉、对战区和分享/下注弹层已拆到 `guess-hero / guess-battle-panel / guess-detail-overlays / guess-detail-helpers`
@@ -186,6 +201,8 @@
 从页面代码中的直接 import 可以确认，下列页面或组件已接入 API client：
 
 - 首页客户端层：[page-client.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/page-client.tsx:1)
+- 首页客户端状态与映射：[use-home-page-state.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/use-home-page-state.ts:1)、[home-page-helpers.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/home-page-helpers.ts:1)
+- 首页客户端视图：[home-guess-view.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/home-guess-view.tsx:1)、[home-live-view.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/home-live-view.tsx:1)
 - 首页服务端首屏数据：[page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/page.tsx:1)
 - 榜单页：[ranking/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/ranking/page.tsx:1)
 - 直播列表页：[lives/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/lives/page.tsx:1)
@@ -209,6 +226,8 @@
   - `/api/guesses`
   - `/api/lives`
   - `/api/rankings`
+- 首页客户端 [use-home-page-state.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/use-home-page-state.ts:1) 当前不再重复请求首屏 `Banner / 竞猜 / 直播 / 榜单`，只补历史区和发现区；未登录访问时也不再请求 `fetchGuessHistory()`
+- 首页 [page-client.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/page-client.tsx:1) 当前已移除固定通知红点；通知入口未登录时直接跳 `/login`
 - 榜单页 [ranking/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/ranking/page.tsx:1) 在服务端直接请求 `/api/rankings`
 - 直播列表页 [lives/page.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/lives/page.tsx:1) 在服务端直接请求 `/api/lives`
 - 通用请求封装位于 [apps/web/src/lib/api/shared.ts](/Users/ezreal/Downloads/joy/umi/apps/web/src/lib/api/shared.ts:1)，当前统一走 `ApiEnvelope` 和 Bearer token

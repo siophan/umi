@@ -98,19 +98,24 @@ export async function buildCommunityGuessInfoMap(rows: PostRow[]) {
   return guessInfoMap;
 }
 
-export async function fetchCommunityFeedRows(userId: string, tab: 'recommend' | 'follow') {
+export async function fetchCommunityFeedRows(userId: string | null, tab: 'recommend' | 'follow') {
   const db = getDbPool();
   const visibilitySql = buildPostVisibilityClause('p');
+  const viewerId = userId && userId.trim() ? userId : '0';
   const baseParams: Array<string | number> = [
     POST_INTERACTION_LIKE,
     COMMENT_TARGET_POST,
-    userId,
+    viewerId,
     POST_INTERACTION_LIKE,
-    userId,
+    viewerId,
     POST_INTERACTION_BOOKMARK,
   ];
 
   if (tab === 'follow') {
+    if (viewerId === '0') {
+      return [];
+    }
+
     const [rows] = await db.execute<mysql.RowDataPacket[]>(
       `
         SELECT
@@ -175,7 +180,7 @@ export async function fetchCommunityFeedRows(userId: string, tab: 'recommend' | 
         ORDER BY p.created_at DESC, p.id DESC
         LIMIT 20
       `,
-      [...baseParams, userId, userId, userId, userId],
+      [...baseParams, viewerId, viewerId, viewerId, viewerId],
     );
     return rows as PostRow[];
   }
@@ -243,7 +248,7 @@ export async function fetchCommunityFeedRows(userId: string, tab: 'recommend' | 
       ORDER BY p.created_at DESC, p.id DESC
       LIMIT 20
     `,
-    [...baseParams, userId, userId, userId],
+    [...baseParams, viewerId, viewerId, viewerId],
   );
   return rows as PostRow[];
 }

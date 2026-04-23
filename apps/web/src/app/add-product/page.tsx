@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import type { BrandId } from '@umi/shared';
 import { addShopProducts, fetchBrandAuthOverview, fetchBrandProducts } from '../../lib/api/shops';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
 type BrandProduct = Awaited<ReturnType<typeof fetchBrandProducts>>['items'][number];
@@ -43,9 +44,18 @@ export default function AddProductPage() {
   const [toast, setToast] = useState('');
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     async function loadBrands() {
+      if (!hasAuthToken()) {
+        return;
+      }
       try {
         const data = await fetchBrandAuthOverview();
         if (ignore) {
@@ -84,6 +94,11 @@ export default function AddProductPage() {
     let ignore = false;
 
     async function loadProducts() {
+      if (!hasAuthToken()) {
+        setProducts([]);
+        setSelectedProducts([]);
+        return;
+      }
       if (!selectedBrandId) {
         setProducts([]);
         setSelectedProducts([]);

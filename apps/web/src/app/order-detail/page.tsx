@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { OrderDetailResult } from '@umi/shared';
 
 import { confirmOrder, fetchOrderDetail } from '../../lib/api/orders';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
 /**
@@ -46,6 +47,12 @@ function OrderDetailPageInner() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     /**
@@ -53,6 +60,10 @@ function OrderDetailPageInner() {
      * 通过 ignore 避免路由切换后旧请求回写页面状态。
      */
     async function load() {
+      if (!hasAuthToken()) {
+        setLoading(false);
+        return;
+      }
       const orderId = searchParams.get('id');
       if (!orderId) {
         setLoading(false);

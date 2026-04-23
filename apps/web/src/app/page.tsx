@@ -7,14 +7,8 @@ import type {
 } from '@umi/shared';
 
 import { serverApiBaseUrl } from '../lib/env';
+import type { HomeSectionErrors } from './home-page-types';
 import HomePageClient from './page-client';
-
-type HomeSectionErrors = {
-  banners: string | null;
-  guesses: string | null;
-  lives: string | null;
-  rankings: string | null;
-};
 
 async function fetchServerData<T>(path: string) {
   const response = await fetch(`${serverApiBaseUrl}${path}`, {

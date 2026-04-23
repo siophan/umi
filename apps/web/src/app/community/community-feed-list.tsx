@@ -195,6 +195,10 @@ export function CommunityFeedList({
   onOpenRepost,
   onToggleBookmark,
 }: CommunityFeedListProps) {
+  const hideFeedError = currentTab === 'follow';
+  const emptyTitle = feedError && !hideFeedError ? '动态加载失败' : currentTab === 'follow' ? '暂无关注动态' : '暂无该分类内容';
+  const emptyDesc = feedError && !hideFeedError ? feedError : currentTab === 'follow' ? '去关注一些猜友后再来看看吧~' : '换个分类看看吧~';
+
   return (
     <section className={styles.feed}>
       {!feedReady ? (
@@ -222,9 +226,9 @@ export function CommunityFeedList({
         ))
       ) : (
         <div className={styles.empty}>
-          <i className={`fa-solid ${feedError ? 'fa-triangle-exclamation' : 'fa-inbox'}`} />
-          <div className={styles.emptyTitle}>{feedError ? '动态加载失败' : '暂无该分类内容'}</div>
-          <div className={styles.emptyDesc}>{feedError || '换个分类看看吧~'}</div>
+          <i className={`fa-solid ${feedError && !hideFeedError ? 'fa-triangle-exclamation' : 'fa-inbox'}`} />
+          <div className={styles.emptyTitle}>{emptyTitle}</div>
+          <div className={styles.emptyDesc}>{emptyDesc}</div>
         </div>
       )}
     </section>

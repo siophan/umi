@@ -8,7 +8,6 @@
 
 | bug_id | severity | area | page_or_api | title | status | owner | source_run | last_seen_at |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `BUG-20260420-052` | `P2` | `post/detail/header` | `/post/[id]` | 动态详情页顶栏缺失旧页作者信息和关注入口 | `triaged` | `测试猫` | `user-page-parity-round1-2026-04-20.md` | `2026-04-20` |
 
 ## Rules
 

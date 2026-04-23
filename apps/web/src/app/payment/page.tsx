@@ -9,6 +9,7 @@ import { fetchCart } from '../../lib/api/cart';
 import { fetchCoupons } from '../../lib/api/coupons';
 import { createOrder } from '../../lib/api/orders';
 import { fetchProductDetail } from '../../lib/api/products';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 import { PaymentOrderSections } from './payment-order-sections';
 import { PaymentOverlays } from './payment-overlays';
@@ -42,6 +43,12 @@ function PaymentPageInner() {
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     /**
@@ -49,6 +56,10 @@ function PaymentPageInner() {
      * 地址、优惠券、商品来源分开处理，避免一条弱依赖失败把整页拖垮。
      */
     async function load() {
+      if (!hasAuthToken()) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setAddressError(null);
       setCouponError(null);

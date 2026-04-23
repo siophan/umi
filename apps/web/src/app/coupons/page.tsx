@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { CouponListItem } from '@umi/shared';
 
 import { fetchCoupons } from '../../lib/api/coupons';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
 /**
@@ -20,6 +21,12 @@ export default function CouponsPage() {
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     /**
@@ -27,6 +34,10 @@ export default function CouponsPage() {
      * 接口失败时明确展示错误，不伪装成“暂无优惠券”。
      */
     async function load() {
+      if (!hasAuthToken()) {
+        setLoading(false);
+        return;
+      }
       try {
         const result = await fetchCoupons();
         if (!ignore) {

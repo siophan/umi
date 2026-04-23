@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { fetchBrandAuthOverview, submitBrandAuthApplication } from '../../lib/api/shops';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
 const brandLogoMap: Record<string, string> = {
@@ -34,9 +35,19 @@ export default function BrandAuthPage() {
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     async function loadData() {
+      if (!hasAuthToken()) {
+        setLoading(false);
+        return;
+      }
       if (!ignore) {
         setLoading(true);
         setError(null);

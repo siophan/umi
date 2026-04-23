@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { NotificationItem } from '@umi/shared';
 
 import { fetchNotifications, markAllNotificationsRead, markNotificationRead } from '../../lib/api/notifications';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
 const icons: Record<'guess' | 'social' | 'system' | 'order', string> = {
@@ -24,6 +25,12 @@ export default function NotificationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [markAllSaving, setMarkAllSaving] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+
+  useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
 
   function formatTime(value: string) {
     const timestamp = new Date(value).getTime();
@@ -52,6 +59,10 @@ export default function NotificationsPage() {
     let ignore = false;
 
     async function load() {
+      if (!hasAuthToken()) {
+        setReady(true);
+        return;
+      }
       setError(null);
       try {
         const result = await fetchNotifications();

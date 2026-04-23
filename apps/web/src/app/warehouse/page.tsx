@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { WarehouseItem } from '@umi/shared';
 
 import { cancelConsignWarehouseItem, consignWarehouseItem, fetchPhysicalWarehouse, fetchVirtualWarehouse } from '../../lib/api/warehouse';
+import { hasAuthToken } from '../../lib/api/shared';
 import { MobileShell } from '../../components/mobile-shell';
 import { WarehouseConsignModal } from './warehouse-consign-modal';
 import {
@@ -35,6 +36,12 @@ export default function WarehousePage() {
   const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     return () => {
       if (toastTimer.current) {
         window.clearTimeout(toastTimer.current);
@@ -46,6 +53,10 @@ export default function WarehousePage() {
    * 虚拟仓和实体仓来自两条独立接口，任一条失败时整页直接报错，不伪造部分成功结果。
    */
   const loadWarehouse = useCallback(async (shouldIgnore: () => boolean = () => false) => {
+    if (!hasAuthToken()) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

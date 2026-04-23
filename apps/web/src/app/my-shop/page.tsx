@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { fetchMyShop, fetchShopStatus, submitShopApplication } from '../../lib/api/shops';
+import { hasAuthToken } from '../../lib/api/shared';
 import { ActiveShopContent } from './active-shop-content';
 import {
   buildShopOverview,
@@ -34,6 +35,12 @@ export default function MyShopPage() {
   });
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     if (!toast) {
       return undefined;
     }
@@ -43,6 +50,10 @@ export default function MyShopPage() {
   }, [toast]);
 
   async function loadPage(shouldIgnore: () => boolean = () => false) {
+    if (!hasAuthToken()) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

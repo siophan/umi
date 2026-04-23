@@ -14,6 +14,7 @@ import {
   unlikeCommunityPost,
 } from '../../lib/api/community';
 import { fetchSocialOverview } from '../../lib/api/friends';
+import { hasAuthToken } from '../../lib/api/shared';
 import type { EmojiCategory, FeedItem, FollowUser, HotTopic, PublishScope } from './page-helpers';
 import {
   defaultFollowedUsers,
@@ -128,35 +129,44 @@ export function useCommunityPageState() {
     let ignore = false;
 
     async function loadFeed() {
-      try {
-        const [recommendResult, followResult, discoveryResult] = await Promise.all([
-          fetchCommunityFeed('recommend'),
-          fetchCommunityFeed('follow'),
-          fetchCommunityDiscovery(),
-        ]);
-        if (ignore) {
-          return;
-        }
+      const authed = hasAuthToken();
+      const [recommendResult, followResult, discoveryResult] = await Promise.allSettled([
+        fetchCommunityFeed('recommend'),
+        authed ? fetchCommunityFeed('follow') : Promise.resolve({ items: [] }),
+        fetchCommunityDiscovery(),
+      ]);
 
-        setRecommendFeed(recommendResult.items.map(mapCommunityFeedItem));
-        setFollowFeed(followResult.items.map(mapCommunityFeedItem));
-        setHeroPost(discoveryResult.hero ? mapCommunityFeedItem(discoveryResult.hero) : null);
-        setHotTopics(discoveryResult.hotTopics);
+      if (ignore) {
+        return;
+      }
+
+      if (recommendResult.status === 'fulfilled') {
+        setRecommendFeed(recommendResult.value.items.map(mapCommunityFeedItem));
         setFeedError('');
-      } catch (error) {
-        if (ignore) {
-          return;
-        }
+      } else {
         setRecommendFeed([]);
+        setFeedError(
+          recommendResult.reason instanceof Error
+            ? recommendResult.reason.message
+            : '社区动态加载失败',
+        );
+      }
+
+      if (followResult.status === 'fulfilled') {
+        setFollowFeed(followResult.value.items.map(mapCommunityFeedItem));
+      } else {
         setFollowFeed([]);
+      }
+
+      if (discoveryResult.status === 'fulfilled') {
+        setHeroPost(discoveryResult.value.hero ? mapCommunityFeedItem(discoveryResult.value.hero) : null);
+        setHotTopics(discoveryResult.value.hotTopics);
+      } else {
         setHeroPost(null);
         setHotTopics([]);
-        setFeedError(error instanceof Error ? error.message : '社区动态加载失败');
-      } finally {
-        if (!ignore) {
-          setFeedReady(true);
-        }
       }
+
+      setFeedReady(true);
     }
 
     void loadFeed();

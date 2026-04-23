@@ -6,6 +6,7 @@ import type { ProductCategoryItem, ProductFeedItem } from '@umi/shared';
 
 import { fetchCart } from '../lib/api/cart';
 import { favoriteProduct, fetchProductList, unfavoriteProduct } from '../lib/api/products';
+import { hasAuthToken } from '../lib/api/shared';
 
 type MallTab = 'recommend' | 'seckill' | 'new' | 'category' | 'sale';
 type MallSort = 'default' | 'salesDesc' | 'priceAsc' | 'priceDesc' | 'discountDesc';
@@ -227,7 +228,10 @@ export function MallHome() {
       }
 
       try {
-        const [result, cartResult] = await Promise.allSettled([fetchProductList(50), fetchCart()]);
+        const [result, cartResult] = await Promise.allSettled([
+          fetchProductList(50),
+          hasAuthToken() ? fetchCart() : Promise.resolve({ items: [] }),
+        ]);
         if (!ignore) {
           if (result.status === 'fulfilled') {
             setMallItems(applyLegacyGridMeta(result.value.items));

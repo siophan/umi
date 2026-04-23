@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { createAddress, deleteAddress, fetchAddresses, updateAddress } from '../../lib/api/address';
+import { hasAuthToken } from '../../lib/api/shared';
 import { AddressFormModal } from './address-form-modal';
 import { AddressList } from './address-list';
 import { normalizeAddress, type AddressItem, type AddressTag } from './address-helpers';
@@ -46,9 +47,18 @@ export default function AddressPage() {
   const [form, setForm] = useState<AddressFormState>(createEmptyForm);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     async function load() {
+      if (!hasAuthToken()) {
+        return;
+      }
       try {
         const result = await fetchAddresses();
         if (!ignore) {

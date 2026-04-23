@@ -46,10 +46,17 @@
 - `apps/web` 当前保留 `46` 个正式页面入口；旧的 `/detail / product-detail / post-detail / live / profile / user-profile / my-orders / all-features / myshop / shop-detail / chat-detail` 兼容壳已删除，后续只维护正式业务路由
 - `apps/web` 已覆盖旧静态页主要用户路径，`/`、`/ranking`、`/lives`、`mall / cart / me / community / user / friends / notifications / chat / shop / guess / product` 等高频页已多轮收口
 - `/search` 已切到独立搜索域，统一走 `/api/search`、`/api/search/hot`、`/api/search/suggest`，不再由页面自行拼商品和竞猜接口
-- `apps/web` 的一批高频重页面已收成“协调层 + 子组件”结构：`/community`、`/product/[id]`、`/post/[id]`、`/guess/[id]`、`/friends`、`/me`、`/payment`、`/cart`、`/edit-profile`、`/community-search`、`/my-shop`、`/create-user`、`/novice-guess`、`/search`、`/user/[uid]`、`/shop/[id]`
+- `/community` 的推荐流和发现区已支持匿名访问；未登录时“为您推荐”可直接浏览，“你的关注”保持空态，不再冒“动态加载失败”提示
+- 首页 `/` 当前已收掉客户端对首屏 `Banner / 竞猜 / 直播 / 榜单` 的二次重复请求，未登录访问也不再额外请求“我的开奖记录”；首页通知入口未登录时会直接跳 `/login`
+- 登录/注册短信验证码的开发态自动回填已改成显式后端开关 `SMS_AUTO_FILL_CODE`，不再硬绑 `NODE_ENV`
+- `apps/web` 的一批高频重页面已收成“协调层 + 子组件 + 页面状态 hook”结构：`/community`、`/product/[id]`、`/post/[id]`、`/guess/[id]`、`/friends`、`/me`、`/payment`、`/cart`、`/edit-profile`、`/community-search`、`/my-shop`、`/create-user`、`/novice-guess`、`/search`、`/user/[uid]`、`/shop/[id]`
+- 首页客户端层也已收成“协调层 + 页面状态 hook + 映射 helper + guess/live 视图”结构：[apps/web/src/app/page-client.tsx](/Users/ezreal/Downloads/joy/umi/apps/web/src/app/page-client.tsx) 已从 `1049` 行降到 `130` 行，真实二次拉数与派生状态已拆到 `use-home-page-state / home-page-helpers / home-guess-view / home-live-view`
+- `/create` 也已收成“协调层 + 页面状态 hook + 区块 + 弹层”结构：静态配置、页面状态、基本信息、竞猜选项、好友 PK、开奖设置、整组弹层已拆到 `create-helpers / use-create-page-state / create-basic-info-section / create-options-section / create-pk-section / create-settings-section / create-overlays`，主页面已从 `1324` 行降到 `298` 行
+- 当前 `apps/web` 页面层架构已基本过线；后续默认以防回退和局部对齐旧页为主，不再机械拆分已经收口的高频页
 - `apps/admin` 已完成路由拆分、单页单文件收口和按业务 API 拆分，具备 `dashboard / users / products / guesses / orders / warehouse / system / marketing` 等页面骨架
 - `apps/admin/src/lib/api` 已收成按业务域子模块 + 薄 barrel 入口，`system / merchant / catalog` 不再是前端总接口文件
 - `apps/admin` 当前热点大页已大批收口成“页面协调层 + state/helper + 子组件”，`users / system-users / roles / warehouse / marketing-coupons / dashboard / rankings / guess-create / community-reports / shop-applies` 等页面已不再是 300+ / 400+ 行中心文件
+- `apps/admin` 的自维护导航层也已拆成菜单配置、路由元数据和导航 helper：`admin-menu-config / admin-route-meta / admin-navigation`
 - `apps/admin` 当前菜单权限已按真实 `admin_permission.code` 做页面级控制，不再使用登录后整后台预加载或模块级粗粒度权限猜测
 - 后台权限目录当前采用“模块根权限 + 菜单叶子页权限”模型，叶子页权限与实际后台菜单页一一对应
 - 共享权限目录由 `packages/shared/src/admin-permissions.ts` 维护，应用层会同步到 `admin_permission`
@@ -155,7 +162,18 @@
 - `GET /api/admin/roles`
 - `POST /api/admin/roles`
 
-当前状态不是“接口全是 demo”。用户端高频链路里，认证、找回密码、首页 Banner/榜单/直播列表、个人资料、通知、聊天、社交、社区、竞猜列表/详情、商品列表/搜索/详情、商品收藏、购物车、地址、优惠券、支付下单、订单列表/详情、催发货、商品评价、仓库寄售、店铺申请与品牌授权都已经有真实接口承接；仍然偏 demo 的主要是 Admin 和部分次级业务页。
+当前状态不是“接口全是 demo”。用户端高频链路里，认证、找回密码、首页 Banner/榜单/直播列表、个人资料、通知、聊天、社交、社区、竞猜列表/详情、商品列表/搜索/详情、商品收藏、购物车、地址、优惠券、支付下单、订单列表/详情、催发货、商品评价、仓库寄售、店铺申请与品牌授权都已经有真实接口承接；首页当前也已收掉首屏二次拉数、匿名历史请求和假通知红点；仍然偏 demo 的主要是 Admin 和部分次级业务页。
+
+## 环境开关
+
+- `SMS_AUTO_FILL_CODE=true`
+  - `POST /api/auth/send-code` 会返回开发态 `devCode`
+  - 登录页和注册页会自动回填验证码
+- `SMS_AUTO_FILL_CODE=false`
+  - 后端不返回 `devCode`
+  - 前端走正常短信输入流程
+
+这个开关定义在 [apps/api/src/env.ts](/Users/ezreal/Downloads/joy/umi/apps/api/src/env.ts)。
 
 ## API 契约约定
 
@@ -234,6 +252,21 @@ pnpm --filter @umi/api dev
 pnpm --filter @umi/web dev
 pnpm --filter @umi/admin dev
 ```
+
+本地默认端口约定：
+
+- `3000`：`apps/web`
+- `4000`：`apps/api`
+
+如果改动前这两个服务本来就在跑，收尾时不只看 `typecheck / build`，还要顺手确认端口仍能响应。
+
+`apps/web` 本地开发如果遇到 `ENOENT: ... apps/web/.next/routes-manifest.json`，按下面顺序恢复：
+
+1. 停掉当前 `3000` 上的 `next dev`
+2. 删除 `apps/web/.next`
+3. 只在 `3000` 原地重启 `apps/web`
+
+不要改用别的端口绕过去。
 
 ## 当前约束
 

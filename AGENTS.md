@@ -128,6 +128,7 @@
 7. 这轮拆分后，是否已实际跑过对应应用的 `typecheck`；如果影响到构建入口，是否也跑过 `build`？
 8. 如果改的是 `apps/web`，有没有继续保留或新增没有明确参数承接的兼容壳、包装页或别名页？
 9. 如果改的是非 `admin` API，是否还把多个用户端业务域继续堆在单个超大 router/store 文件里？
+10. 如果本地原服务正在跑，这轮结束前有没有补看 `3000 / 4000` 是否仍然存活，而不是只看 `typecheck / build`？
 
 如果以上任一问题答不上来，默认说明这轮还不能结束。
 
@@ -152,7 +153,7 @@
 当前工作区的架构状态先按下面这组事实理解：
 
 - `apps/admin` 整体架构已经过线；后续默认不要再为了把 `250` 行页面拆到 `150` 行而机械扩散文件数量。
-- `apps/web` 当前剩余的主问题不是总接口文件，而是 `/create` 仍然偏重；除该页外，其余高频页已基本收成“协调层 + 子组件 + 页面状态 hook”的结构
+- `apps/web` 当前已没有 `800+ / 1000+` 的高频大页中心；`/create` 也已从 `1324` 行降到 `298` 行，当前用户端高频页已基本收成“协调层 + 子组件/区块 + 页面状态 hook”的结构
 - `apps/web` 已开始收口的页面：`/community`、`/product/[id]`、`/post/[id]`、`/friends`；后续优先在现有“协调层 + 子组件 + 页面状态 hook”边界上继续收，不要再把这些子块重新塞回主文件
 - `apps/web` 已开始收口的页面还包括：`/me`；主页摘要、活动分区和弹层边界已经拆出，后续不要重新堆回单文件
 - `apps/web` 已开始收口的页面还包括：`/payment`；订单区块、价格区块和弹层边界已经拆出，后续不要重新堆回单文件
@@ -160,9 +161,14 @@
 - `apps/web` 已开始收口的页面还包括：`/create-user`、`/novice-guess`、`/search`、`/user/[uid]`、`/shop/[id]`；启动态 / 主体区块 / 结果态 / 私信浮层 / 店铺主体内容等边界已经拆出，后续不要重新堆回单文件
 - `apps/web` 已开始收口的页面还包括：`/guess/[id]`、`/cart`、`/edit-profile`；竞猜主视觉 / 对战区 / 弹层、购物车店铺分组 / 推荐流 / 底栏、资料主体区块 / 资料弹层都已经拆出，后续不要重新堆回单文件
 - `apps/web` 已开始收口的页面还包括：`/warehouse`、`/address`、`/orders`；仓库摘要 / 列表 / 寄售弹层、地址列表 / 地址表单弹层、订单统计 / tabs / 列表都已经拆出，后续不要重新堆回单文件
+- `apps/web` 已开始收口的页面还包括：首页 `/`；首页客户端层已从 `1049` 行降到 `130` 行，二次拉数、派生映射和 guess/live 两套视图已拆到 `use-home-page-state / home-page-helpers / home-guess-view / home-live-view`，后续不要重新把这些内容塞回 `page-client.tsx`
+- `apps/web` 已开始收口的页面还包括：`/create`；静态配置、页面状态、基本信息、竞猜选项、好友 PK、开奖设置和整组预览/商品选择/分享/发布/成功弹层已拆到 `create-helpers / use-create-page-state / create-basic-info-section / create-options-section / create-pk-section / create-settings-section / create-overlays`，后续不要重新回退成大页中心
+- `apps/admin` 当前自维护导航层已拆成 `admin-menu-config / admin-route-meta / admin-navigation`；后续不要把菜单配置、路径别名、详情路由元数据重新堆回单个导航文件
 - 老的兼容路由壳已经删除，不要再重新加回 `/detail`、`/product-detail`、`/post-detail`、`/live`、`/profile`、`/user-profile`、`/my-orders`、`/all-features`、`/myshop`、`/shop-detail`、`/chat-detail`
 - `packages/shared` 当前已经过线：`api.ts` 只剩薄导出层，不要再把页面级 DTO、临时后台字段或局部 UI 需求塞回共享层。
 - 非 `admin` API 当前已基本收平超大入口：`search / order / shop / product / warehouse / guess` 的 `router.ts` 都已是薄路由层，`community/store.ts` 也已收成薄 barrel；后续更适合只盯单业务域内部是否再次膨胀，不再按入口层继续机械拆分
+- 本地服务校验当前固定按 `3000=web`、`4000=api` 处理；改完如果原服务本来就在跑，结束前要补看这两个端口是否还活着
+- `apps/web` 的 `next dev` 如果出现 `ENOENT: ... .next/routes-manifest.json`，按“停掉当前 `3000` 进程 -> 删除 `apps/web/.next` -> 仅在 `3000` 原地重启”的顺序恢复，不要再起其他端口绕过去
 - 后续如果继续做架构工作，默认顺序是：`apps/web` 兼容壳和大页边界 > `apps/api` 非 admin 大 router/store > 防止 `packages/shared` 重新膨胀
 
 ## Known Anti-Patterns

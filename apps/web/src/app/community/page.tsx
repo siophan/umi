@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { MobileShell } from '../../components/mobile-shell';
+import { hasAuthToken } from '../../lib/api/shared';
 import { CommunityComposerOverlays } from './community-composer-overlays';
 import { CommunityFeedList } from './community-feed-list';
 import { CommunityFollowBar } from './community-follow-bar';
@@ -67,6 +68,10 @@ export default function CommunityPage() {
     defaultFollowedUsers,
   } = useCommunityPageState();
 
+  function openNotifications() {
+    router.push(hasAuthToken() ? '/notifications' : '/login');
+  }
+
   return (
     <MobileShell tab="community" tone="light">
       <main className={styles.page}>
@@ -78,7 +83,7 @@ export default function CommunityPage() {
           <button className={styles.iconBtn} type="button" onClick={() => router.push('/community-search')}>
             <i className="fa-solid fa-magnifying-glass" />
           </button>
-          <button className={styles.iconBtn} type="button" onClick={() => router.push('/notifications')}>
+          <button className={styles.iconBtn} type="button" onClick={openNotifications}>
             <i className="fa-regular fa-bell" />
           </button>
         </header>

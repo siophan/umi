@@ -17,6 +17,25 @@ export interface GuessListResult {
   items: GuessSummary[];
 }
 
+export interface CreateGuessPayload {
+  title: string;
+  endTime: string;
+  optionTexts: string[];
+  scope?: 'public' | 'friends';
+  categoryId?: CategoryId | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  productId?: ProductId | null;
+  invitedFriendIds?: UserId[];
+}
+
+export interface CreateGuessResult {
+  id: GuessId;
+  status: 'active';
+  reviewStatus: 'approved';
+  scope: 'public' | 'friends';
+}
+
 export interface ProductFeedItem {
   id: ProductId;
   name: string;

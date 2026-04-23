@@ -15,7 +15,8 @@
 3. `apps/admin` 保持现有分层，不再回退到“大文件中心”；
 4. `apps/api/src/modules/admin` 继续保持按业务域模块组织，不回退到后台总域大文件；
 5. 开始关注 `apps/api` 非 `admin` 域的超大 router/store；
-6. 保持 `@umi/web / @umi/admin / @umi/api` 的 typecheck / build 持续通过。
+6. 保持 `@umi/web / @umi/admin / @umi/api` 的 typecheck / build 持续通过；
+7. 如果本地原服务本来就在跑，结束前顺手确认 `3000 / 4000` 没被这轮改动带挂。
 
 ## 当前硬约束
 
@@ -76,12 +77,12 @@
 - 调试页 `/test-api`
 
 4. 当前仍保留的一批旧页 fallback：
-- `/notifications` 接口失败不再跳登录，直接回退到旧通知列表形态
-- `/friends` 接口失败不再跳登录，直接回退到旧好友/关注/粉丝/申请形态
-- `/chat` 接口失败不再跳登录，直接回退到旧消息列表形态
+- `/notifications` 当前已收成强登录页；未登录进入会直接跳 `/login`
+- `/friends` 当前已收成强登录页；未登录进入会直接跳 `/login`，登录后再读取好友/关注/粉丝/申请链路
+- `/chat` 当前已收成强登录页；未登录进入会直接跳 `/login`
 - `/me` 接口失败不再整页空白，直接回退到旧个人主页内容形态
 - `/guess/[id]` 无真实数据时继续保留旧页静态链路，不跳登录
-- `/brand-auth`、`/add-product`、`/create-user` 已清掉远程占位图和 demo 默认选中，改回旧页本地素材与空态
+- `/brand-auth`、`/add-product`、`/create-user` 已清掉远程占位图和 demo 默认选中，改回旧页本地素材与空态；其中 `/brand-auth`、`/add-product` 当前也已收成强登录页
 
 5. 底部导航已按旧系统持续收口，字号和布局已单独调过。
 
@@ -97,27 +98,34 @@
 - 私信浮层发送按钮补回输入联动态
 
 8. 近几轮新收口的高频页：
-- `/orders`、`/order-detail`、`/warehouse`：状态文案、物流弹层、底部按钮状态机、寄售/提货行为继续按旧页收平；订单详情和确认收货已切真实链路
-- `/guess/[id]`、`/product/[id]`、`/guess-order`、`/payment`：PK 进度条、下注/支付链路、商品支付信息、价格明细与底部动作已继续对齐旧页；`/payment` 已切真实地址、优惠券和下单接口
-- `/friends`、`/notifications`、`/chat`、`/chat/[id]`、`/community-search`：社交消息流的头部、列表结构、fallback、搜索历史与提示文案已继续对齐旧页，通知已补单条已读，好友页热猜与 PK 入口已改成真实竞猜跳转
+- `/orders`、`/order-detail`、`/warehouse`：状态文案、物流弹层、底部按钮状态机、寄售/提货行为继续按旧页收平；订单详情和确认收货已切真实链路，这三页当前都已收成强登录页
+- `/guess/[id]`、`/product/[id]`、`/guess-order`、`/payment`：PK 进度条、下注/支付链路、商品支付信息、价格明细与底部动作已继续对齐旧页；`/payment` 已切真实地址、优惠券和下单接口，当前也已收成强登录页
+- `/friends`、`/notifications`、`/chat`、`/chat/[id]`、`/community-search`：社交消息流的头部、列表结构、搜索历史与提示文案已继续对齐旧页，通知已补单条已读，好友页热猜与 PK 入口已改成真实竞猜跳转；其中 `/friends / notifications / chat / chat/[id]` 当前都已收成强登录页
 - `/search`：已切独立搜索域，统一走 `/api/search`、`/api/search/hot`、`/api/search/suggest`；商品与竞猜结果、热搜和联想建议都不再由页面本地拼装
 - `/brand-auth`、`/add-product`、`/create-user`、`/edit-profile`、`/test-api`：远程占位资源、开发态文案和旧页偏移结构已继续清理
 
 9. 最近继续收口并接真的页面：
 - `/`：首页首屏已改成服务端直接带真实 `/api/banners /api/guesses /api/rankings /api/lives`，不再先吐前端 loading 壳；Banner 为空时按真实空态展示
+- `/`：首页客户端当前不再重复拉取首屏 `Banner / 竞猜 / 直播 / 榜单`；未登录访问时不再请求“我的开奖记录”，通知入口也会直接跳 `/login`
 - `/ranking`：已按旧页结构收成 podium + 列表 + 我的排名，首屏已接真实 `/api/rankings`
 - `/lives`：已按旧页结构收成热门直播 + 更多直播，首屏已接真实 `/api/lives`；当前页面空态来自库里没有直播数据，不是假数据回退
 - `/mall`：主商品流已切真实 `/api/products`，商品收藏已接真实 `product_interaction`，并继续补回动态分类、分类选择自动收起、推荐态 `hero`、联名卡、底部 `banner`、加载更多节奏和瀑布流高低差；当前 `tag / miniTag / isNew / height` 仍是派生字段，`秒杀 / 新品 / 特卖`、hero、联名卡和底部 `banner` 仍是基于商品流的页面规则
+- `/mall`：未登录时不再提前请求购物车，也不再显示购物车登录提醒；点击购物车后交由 `/cart` 自己处理登录跳转
 - `/cart`：已切真实 `cart_item` 读写，支持读取购物车、勾选、改数量、删除、批量删除和从推荐商品加入购物车；结算会带真实购物车项进入支付页
+- `/cart`：当前也已收成强登录页；未登录从商城点入时，会直接跳 `/login`
 - `/payment`：已切真实地址 `/api/addresses`、优惠券 `/api/coupons` 和下单 `/api/orders`
+- 认证：`/api/auth/send-code` 返回开发态 `devCode` 已改成显式环境开关 `SMS_AUTO_FILL_CODE` 控制，不再硬绑 `NODE_ENV`
 - `/order-detail`：已切真实订单详情 `/api/orders/:id`
 - `/coupons`：已切真实 `/api/coupons`，不再回退本地 `fallbackCoupons`
+- `/coupons`、`/address`、`/my-shop` 当前也已收成强登录页；未登录进入会直接跳 `/login`
 - `/product/[id]`：收藏、加入购物车、立即购买已切真实链路
 - `/product/[id]`：页面结构已开始从大页本体往“协调层 + 子组件”收口，头图、摘要区、内容区、换购弹层已拆到 `product-detail-*`
 - `/community`：推荐流 / 关注流 / 发现区 / 搜索 / 发布 / 点赞 / 收藏 / 转发 / 评论回复都已切真实接口，关注横条统一为稳定用户 ID 跳转，`mentionUsers` 补齐 ID
+- `/community`：推荐流和发现区当前已支持匿名访问；未登录时“为您推荐”可直接浏览，“你的关注”页签不再显示“动态加载失败”，只保留普通空态
 - `/community`：页面结构已进一步收成“协调层 + 子组件 + 页面状态 hook”，`follow bar / recommend highlights / feed list / composer overlays / use-community-page-state / page helpers` 已从主文件拆出
 - `/post/[id]`：页面结构已进一步收成“协调层 + 子组件 + 页面状态 hook”，正文卡片、评论区、分享/举报弹层、相关推荐和详情状态机已拆到 `post-detail-* / use-post-detail-state`
 - `/friends`：页面结构已进一步收成“协调层 + 子组件 + 页面状态 hook”，顶部统计/快捷入口/热门竞猜和详情状态机已拆到 `friends-overview-sections / use-friends-page-state / friends-*`
+- `/create`：页面已收成“协调层 + 页面状态 hook + 区块 + 弹层”结构，静态配置、页面状态、基本信息、竞猜选项、好友 PK、开奖设置和整组预览/商品选择/分享/发布/成功弹层已拆到 `create-helpers / use-create-page-state / create-basic-info-section / create-options-section / create-pk-section / create-settings-section / create-overlays`，主页面已从 `1324` 行降到 `298` 行
 - `/me`：页面结构已开始从大页本体往“协调层 + 子组件”收口，主页摘要、内容分区和设置/搜索/开店弹层已拆到 `me-*`
 - `/user/[uid]`：公开主页路由已统一切到 `uid_code`，复制提示改回 `已复制优米号`
 - `/live/[id]`：没有进行中的竞猜时，主按钮不再误提示成功
@@ -140,10 +148,12 @@
 - 旧的兼容路由壳已经删除：`/detail`、`/product-detail`、`/post-detail`、`/live`、`/profile`、`/user-profile`、`/my-orders`、`/all-features`、`/myshop`、`/shop-detail`、`/chat-detail`
 - 后续不要再把旧路径兼容页重新加回工作区；如果没有正式需求，就直接维护主路由
 - `apps/web/src/lib/api` 当前还是按业务域拆分；`shared.ts` 仍只承担 token 和基础请求，暂未回退成总接口文件
+- `apps/web/src/app/page-client.tsx` 已从 `1049` 行降到 `130` 行；首页客户端层现在只保留模式切换、顶部动作和视图装配，二次拉数、派生状态、卡片映射和 guess/live 两套视图已拆到 `use-home-page-state / home-page-helpers / home-guess-view / home-live-view`
 - `apps/web/src/app/community/page.tsx` 已从 `1122` 行降到 `179` 行，关注横条、推荐高亮区、feed 列表、四个弹层和页面状态机已拆到 `community-* / use-community-page-state`
 - `apps/web/src/app/product/[id]/page.tsx` 已从 `1028` 行降到 `396` 行
 - `apps/web/src/app/post/[id]/page.tsx` 已从 `942` 行降到 `169` 行，正文卡片、评论区、分享/举报弹层、相关推荐和详情状态机已拆到 `post-detail-* / use-post-detail-state`
 - `apps/web/src/app/friends/page.tsx` 已从 `889` 行降到 `120` 行，顶部统计/快捷入口/热门竞猜和详情状态机已拆到 `friends-overview-sections / use-friends-page-state / friends-*`
+- `apps/web/src/app/create/page.tsx` 已从 `1324` 行降到 `298` 行，静态配置、页面状态、表单区块和整组弹层已拆到 `create-helpers / use-create-page-state / create-basic-info-section / create-options-section / create-pk-section / create-settings-section / create-overlays`
 - `apps/web/src/app/me/page.tsx` 已从 `827` 行降到 `333` 行
 - `apps/web/src/app/payment/page.tsx` 已从 `676` 行降到 `319` 行，订单主体和弹层已拆到 `payment-order-sections / payment-overlays / payment-helpers`
 - `apps/web/src/app/community-search/page.tsx` 已从 `691` 行降到 `421` 行，默认态、结果态和 helper 已拆到 `default-view / results-view / page-helpers`
@@ -168,6 +178,8 @@
 - `apps/api/src/modules/community/store.ts` 已从 `900` 行降到 `19` 行，社区读链和写链已拆到 `community-read / community-write`
 - `packages/shared/src/api.ts` 当前只剩薄导出层，`packages/shared` 不是当前主阻塞
 - `apps/api` 非 `admin` 域当前已经没有明显的超大入口文件；后续如果还要继续做架构，优先只盯单业务域内部是否再次膨胀，不再按入口层继续机械拆分
+- 这轮已把“改完补看原服务是否还活着”正式纳入默认收尾项；当前约定端口固定按 `3000=web`、`4000=api`
+- 本地 `web` 如果出现 `ENOENT: ... apps/web/.next/routes-manifest.json`，不要误判成页面代码炸掉；先停掉 `3000` 上的 `next dev`，删掉 `apps/web/.next`，再只在 `3000` 原地重启
 
 ## 当前正在做
 
@@ -175,7 +187,7 @@
 2. `login` 页由其他线程处理，当前不要改动
 3. 在接真实接口时，优先保留旧页 fallback 和旧页交互，不要为了联调破坏 UI；`/` 当前首屏依赖真实 `/api/banners /api/guesses /api/rankings /api/lives`，`/mall` 当前主商品流依赖真实 `/api/products`，`/cart` 依赖真实 `/api/cart`，`/payment` 依赖真实 `/api/addresses + /api/coupons + /api/orders`
 4. `apps/admin` 当前默认不再机械拆页面；只保留防回退约束
-5. `apps/web` 后续除 `/create` 外已基本过线；不要重新把已拆开的状态机、弹层和区块塞回主页面，也不要重新引入包装页模式
+5. `apps/web` 当前已基本过线；不要重新把已拆开的首页二次拉数/派生映射、页面状态 hook、弹层和区块塞回主页面，也不要重新引入包装页模式
 6. 若再发现零散差异，仍然先对照对应旧 `frontend/*.html` 再改
 
 当前已知的残留说明：
@@ -216,7 +228,7 @@ pnpm --dir apps/web exec tsc -p tsconfig.json --pretty false
 
 如果继续做架构：
 
-1. 先打 `apps/web` 仍然最重的页面，优先 `create`
+1. 如果继续收 `apps/web`，只在 `/create` 或其他高频页再次出现明显职责混杂时再下沉，不再为了压行数机械扩散文件
 2. 保持当前“只留正式路由”的状态，不再重建旧路径兼容页
 3. 然后继续只盯 `apps/web` 剩余重页面和 `apps/api` 单业务域内部是否再次膨胀，不再按入口层继续机械拆分
 4. `apps/admin` 只做防回退，不再默认继续机械拆页

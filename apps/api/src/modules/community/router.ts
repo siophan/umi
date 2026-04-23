@@ -8,7 +8,7 @@ import type {
   CreateCommunityReportPayload,
 } from '@umi/shared';
 
-import { getRequestUser, requireUser } from '../../lib/auth';
+import { getRequestUser, optionalUser, requireUser } from '../../lib/auth';
 import { HttpError, asyncHandler, withErrorBoundary } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import {
@@ -32,20 +32,26 @@ export const communityRouter: ExpressRouter = Router();
 
 communityRouter.get(
   '/feed',
-  requireUser,
+  optionalUser,
   asyncHandler(async (request, response) => {
-    const user = getRequestUser(request);
     const tab = request.query.tab === 'follow' ? 'follow' : 'recommend';
-    ok(response, await getCommunityFeed(user.id, tab));
+    const user = request.user ? getRequestUser(request) : null;
+
+    if (tab === 'follow' && !user) {
+      ok(response, { items: [] });
+      return;
+    }
+
+    ok(response, await getCommunityFeed(user?.id ?? null, tab));
   }),
 );
 
 communityRouter.get(
   '/discovery',
-  requireUser,
+  optionalUser,
   asyncHandler(async (request, response) => {
-    const user = getRequestUser(request);
-    ok(response, await getCommunityDiscovery(user.id));
+    const user = request.user ? getRequestUser(request) : null;
+    ok(response, await getCommunityDiscovery(user?.id ?? null));
   }),
 );
 

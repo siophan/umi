@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { OrderSummary } from '@umi/shared';
 
 import { confirmOrder, fetchOrders, urgeOrder } from '../../lib/api/orders';
+import { hasAuthToken } from '../../lib/api/shared';
 import { MobileShell } from '../../components/mobile-shell';
 import { OrdersList } from './orders-list';
 import {
@@ -30,6 +31,12 @@ export default function OrdersPage() {
   const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     return () => {
       if (toastTimer.current) {
         window.clearTimeout(toastTimer.current);
@@ -42,6 +49,10 @@ export default function OrdersPage() {
    * 通过 shouldIgnore 处理组件卸载后的竞态，避免旧请求覆盖新状态。
    */
   const loadOrders = useCallback(async (shouldIgnore: () => boolean = () => false) => {
+    if (!hasAuthToken()) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

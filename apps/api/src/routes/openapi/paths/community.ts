@@ -11,7 +11,6 @@ export const communityPaths = {
     get: {
       tags: ['Community'],
       summary: '获取社区动态流',
-      security: bearerSecurity,
       parameters: [
         {
           name: 'tab',
@@ -35,7 +34,6 @@ export const communityPaths = {
             },
           },
         }),
-        401: errorResponse(401, '请先登录'),
       },
     },
   },
@@ -43,7 +41,6 @@ export const communityPaths = {
     get: {
       tags: ['Community'],
       summary: '获取社区发现区数据',
-      security: bearerSecurity,
       responses: {
         200: successResponse({
           type: 'object',
@@ -55,7 +52,6 @@ export const communityPaths = {
             },
           },
         }),
-        401: errorResponse(401, '请先登录'),
       },
     },
   },

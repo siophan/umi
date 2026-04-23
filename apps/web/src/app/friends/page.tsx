@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { hasAuthToken } from '../../lib/api/shared';
 import { FriendsPkModal } from './friends-pk-modal';
 import { FriendsOverviewSections } from './friends-overview-sections';
 import { FriendsTabSections } from './friends-tab-sections';
@@ -14,6 +16,13 @@ import styles from './page.module.css';
  */
 export default function FriendsPage() {
   const router = useRouter();
+
+  useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
   const {
     tab,
     setTab,

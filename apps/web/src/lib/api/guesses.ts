@@ -1,10 +1,12 @@
 import type {
+  CreateGuessPayload,
+  CreateGuessResult,
   GuessHistoryResult,
   GuessListResult,
   GuessSummary,
 } from '@umi/shared';
 
-import { getJson } from './shared';
+import { getJson, postJson } from './shared';
 
 export function fetchGuessList(options?: number | { limit?: number; q?: string }) {
   const searchParams = new URLSearchParams();
@@ -29,4 +31,8 @@ export function fetchGuess(id: string) {
 
 export function fetchGuessHistory() {
   return getJson<GuessHistoryResult>('/api/guesses/user/history');
+}
+
+export function createGuess(payload: CreateGuessPayload) {
+  return postJson<CreateGuessResult, CreateGuessPayload>('/api/guesses', payload);
 }

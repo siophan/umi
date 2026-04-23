@@ -6,6 +6,7 @@ import type { CartItem as CartLineItem, ProductFeedItem } from '@umi/shared';
 
 import { fetchCart, removeCartItem, updateCartItem } from '../../lib/api/cart';
 import { fetchProductList } from '../../lib/api/products';
+import { hasAuthToken } from '../../lib/api/shared';
 import { CartFooterBar } from './cart-footer-bar';
 import { getErrorMessage, getGroupKey } from './cart-helpers';
 import { CartRecommend } from './cart-recommend';
@@ -32,6 +33,12 @@ export default function CartPage() {
   const toastTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     /**
@@ -39,6 +46,10 @@ export default function CartPage() {
      * 两条链路独立容错，避免推荐流失败时把购物车主体一起打空。
      */
     async function load() {
+      if (!hasAuthToken()) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setCartError(null);
       setDiscoverError(null);

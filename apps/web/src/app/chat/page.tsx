@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { fetchChats } from '../../lib/api/chat';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
 function formatChatTime(value: string) {
@@ -46,9 +47,19 @@ export default function ChatListPage() {
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     async function load() {
+      if (!hasAuthToken()) {
+        setReady(true);
+        return;
+      }
       setError(null);
       try {
         const result = await fetchChats();
