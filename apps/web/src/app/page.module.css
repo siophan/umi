@@ -345,7 +345,7 @@
   padding: 8px 12px;
   border: 1px solid rgba(255, 215, 0, 0.1);
   border-radius: 16px;
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  background: linear-gradient(135deg, #1a0a2e, #0d1b3a);
   cursor: pointer;
   transition: transform 0.15s;
 }
@@ -1238,6 +1238,14 @@
   color: rgba(255, 255, 255, 0.72);
   font-size: 8px;
   font-weight: 700;
+}
+
+.duelLabels > span:nth-child(1) {
+  color: #ffd700;
+}
+
+.duelLabels > span:nth-child(3) {
+  color: #26c6da;
 }
 
 .duelVs {
