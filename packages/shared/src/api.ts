@@ -7,3 +7,4 @@ export * from './api-admin-ops';
 export * from './api-admin-governance';
 export * from './api-user-social';
 export * from './api-user-commerce';
+export * from './api-user-upload';

@@ -17,5 +17,6 @@ export const openApiTags = [
   { name: 'Wallet', description: '余额流水接口' },
   { name: 'Warehouse', description: '仓库接口' },
   { name: 'Shop', description: '店铺与品牌授权接口' },
+  { name: 'Upload', description: '文件上传接口' },
   { name: 'Admin', description: '管理台接口' },
 ] as const;

@@ -24,6 +24,7 @@ import { guessRouter } from './modules/guess/router';
 import { orderRouter } from './modules/order/router';
 import { productRouter } from './modules/product/router';
 import { shopRouter } from './modules/shop/router';
+import { uploadRouter } from './modules/upload/router';
 import { walletRouter } from './modules/wallet/router';
 import { warehouseRouter } from './modules/warehouse/router';
 
@@ -57,7 +58,7 @@ export function createApp(): Express {
     next();
   });
 
-  app.use(express.json());
+  app.use(express.json({ limit: '16mb' }));
 
   registerHealthRoutes(app);
   registerOpenApiRoutes(app);
@@ -78,6 +79,7 @@ export function createApp(): Express {
   app.use('/api/products', productRouter);
   app.use('/api/search', searchRouter);
   app.use('/api/shops', shopRouter);
+  app.use('/api/uploads', uploadRouter);
   app.use('/api/wallet', walletRouter);
   app.use('/api/warehouse', warehouseRouter);
   app.use('/api/admin', adminRouter);

@@ -206,9 +206,15 @@ export async function createUserGuess(
   const categoryId = await resolveGuessCategoryId(payload.categoryId ? String(payload.categoryId) : null);
   const product = payload.productId ? await requireProductForGuessCreate(String(payload.productId)) : null;
   const inviteeIds = await resolveInviteeIds(payload.invitedFriendIds, creatorId);
+  if (scope === 'friends' && inviteeIds.length === 0) {
+    throw new Error('好友PK必须选择参战好友');
+  }
 
   const description = payload.description?.trim() || null;
-  const imageUrl = payload.imageUrl?.trim() || product?.image_url || null;
+  const imageUrl = (payload.imageUrl ?? '').trim();
+  if (!imageUrl) {
+    throw new Error('封面图片不能为空');
+  }
   const guessProductSourceType =
     product?.shop_id == null ? GUESS_PRODUCT_SOURCE_PLATFORM : GUESS_PRODUCT_SOURCE_SHOP;
 

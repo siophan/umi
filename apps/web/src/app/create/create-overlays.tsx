@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
 import {
   formatSalesLabel,
   getDiscountPercent,
   templates,
-  type CouponType,
   type FriendItem,
   type ProductItem,
   type TemplateId,
@@ -23,11 +21,6 @@ type Props = {
   deadline: string;
   selectedProduct: ProductItem | null;
   options: string[];
-  couponEnabled: boolean;
-  couponType: CouponType;
-  couponDiscount: string;
-  couponAmount: string;
-  previewCoupon: string;
   handlePublish: () => void;
   productPickerOpen: boolean;
   closeProductPicker: () => void;
@@ -50,15 +43,11 @@ type Props = {
   shareOpen: boolean;
   setShareOpen: Dispatch<SetStateAction<boolean>>;
   selectedFriendList: FriendItem[];
-  showToast: (message: string) => void;
-  qrPanelOpen: boolean;
-  setQrPanelOpen: Dispatch<SetStateAction<boolean>>;
+  currentUser: { name: string; avatar?: string | null } | null;
   inviteLink: string;
-  shareClickCount: number;
   linkCopied: boolean;
-  regenerateInviteLink: () => void;
   copyInviteLink: () => void;
-  shareVia: (channel: 'wechat' | 'qq' | 'moments' | 'poster') => void;
+  shareVia: (channel: 'wechat' | 'qq' | 'moments' | 'poster') => void | Promise<void>;
   publishing: boolean;
   publishStep: number;
   successOpen: boolean;
@@ -75,11 +64,6 @@ export function CreateOverlays({
   deadline,
   selectedProduct,
   options,
-  couponEnabled,
-  couponType,
-  couponDiscount,
-  couponAmount,
-  previewCoupon,
   handlePublish,
   productPickerOpen,
   closeProductPicker,
@@ -102,13 +86,9 @@ export function CreateOverlays({
   shareOpen,
   setShareOpen,
   selectedFriendList,
-  showToast,
-  qrPanelOpen,
-  setQrPanelOpen,
+  currentUser,
   inviteLink,
-  shareClickCount,
   linkCopied,
-  regenerateInviteLink,
   copyInviteLink,
   shareVia,
   publishing,
@@ -117,7 +97,6 @@ export function CreateOverlays({
   setSuccessOpen,
   routerPushHome,
 }: Props) {
-  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const inviteDeadlineText = deadline
     ? new Date(deadline).toLocaleString('zh-CN', {
         month: 'short',
@@ -126,93 +105,13 @@ export function CreateOverlays({
         minute: '2-digit',
       })
     : '未设定';
-  const publishFinished = publishStep >= 4;
+  const publishFinished = publishStep >= 3;
 
-  useEffect(() => {
-    if (!qrPanelOpen || !inviteLink || !qrCanvasRef.current) {
-      return;
+  function renderFriendAvatar(friend: FriendItem, className: string) {
+    if (friend.avatar) {
+      return <img className={className} src={friend.avatar} alt={friend.name} />;
     }
-
-    const canvas = qrCanvasRef.current;
-    const context = canvas.getContext('2d');
-    if (!context) {
-      return;
-    }
-    const ctx = context;
-
-    const size = 152;
-    canvas.width = size;
-    canvas.height = size;
-    ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, size, size);
-
-    const moduleSize = 4;
-    const modules = Math.floor(size / moduleSize);
-    let seed = 0;
-
-    for (let index = 0; index < inviteLink.length; index += 1) {
-      seed = ((seed << 5) - seed + inviteLink.charCodeAt(index)) & 0xffffffff;
-    }
-
-    function pseudoRandom() {
-      seed = (seed * 16807) % 2147483647;
-      return (seed & 0xffff) / 0xffff;
-    }
-
-    ctx.fillStyle = '#333333';
-
-    function drawFinderPattern(x: number, y: number) {
-      for (let row = 0; row < 7; row += 1) {
-        for (let col = 0; col < 7; col += 1) {
-          if (
-            row === 0 ||
-            row === 6 ||
-            col === 0 ||
-            col === 6 ||
-            (row >= 2 && row <= 4 && col >= 2 && col <= 4)
-          ) {
-            ctx.fillRect((x + col) * moduleSize, (y + row) * moduleSize, moduleSize, moduleSize);
-          }
-        }
-      }
-    }
-
-    drawFinderPattern(1, 1);
-    drawFinderPattern(modules - 9, 1);
-    drawFinderPattern(1, modules - 9);
-
-    for (let row = 0; row < modules; row += 1) {
-      for (let col = 0; col < modules; col += 1) {
-        const inFinder =
-          (row < 10 && col < 10) || (row < 10 && col > modules - 11) || (row > modules - 11 && col < 10);
-        const inCenter = Math.abs(row - modules / 2) < 6 && Math.abs(col - modules / 2) < 6;
-        if (inFinder || inCenter) {
-          continue;
-        }
-        if (pseudoRandom() > 0.55) {
-          ctx.fillRect(col * moduleSize, row * moduleSize, moduleSize, moduleSize);
-        }
-      }
-    }
-  }, [inviteLink, qrPanelOpen]);
-
-  function saveQrCode() {
-    const canvas = qrCanvasRef.current;
-    if (!canvas) {
-      showToast('⚠️ 二维码尚未生成');
-      return;
-    }
-
-    try {
-      const link = document.createElement('a');
-      link.download = '优米PK邀请二维码.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      showToast('📱 二维码已保存到相册，分享给好友扫码加入');
-    } catch {
-      showToast('⚠️ 保存失败，请长按图片保存');
-    }
+    return <span className={className}>{friend.name.slice(0, 1) || '友'}</span>;
   }
 
   return (
@@ -262,16 +161,6 @@ export function CreateOverlays({
                     ))}
                   </div>
                 </>
-              ) : null}
-
-              {couponEnabled ? (
-                <div className={styles.previewCouponCard}>
-                  <span className={styles.previewCouponIcon}>🏷️</span>
-                  <div className={styles.previewCouponInfo}>
-                    <div className={styles.previewCouponAmount}>{couponType === 'discount' ? `${couponDiscount}折` : `¥${couponAmount}`}</div>
-                    <div className={styles.previewCouponCond}>{previewCoupon} · 未中补偿</div>
-                  </div>
-                </div>
               ) : null}
 
               {!title.trim() || title.trim().length < 5 || options.filter((item) => item.trim()).length < 2 || !deadline ? (
@@ -373,9 +262,7 @@ export function CreateOverlays({
                   <img src={tempProduct.img} alt={tempProduct.name} />
                   <div className={styles.ppSelInfo}>
                     <div className={styles.ppSelName}>{tempProduct.name}</div>
-                    <div className={styles.ppSelBrand}>
-                      {tempProduct.brand} <span className={styles.ppSelBrandTag}>官方</span>
-                    </div>
+                    <div className={styles.ppSelBrand}>{tempProduct.shopName ?? tempProduct.brand}</div>
                     <div className={styles.ppSelPriceRow}>
                       <span className={styles.ppSelPrice}>
                         <small>¥</small>
@@ -479,9 +366,6 @@ export function CreateOverlays({
             <div className={styles.linkCard}>
               <div className={styles.linkLabel}>
                 <i className="fa-solid fa-link" /> 邀请链接
-                <span className={styles.linkExpiry}>
-                  <i className="fa-regular fa-clock" /> 24小时有效
-                </span>
               </div>
               <div className={styles.linkRow}>
                 <input className={styles.linkInput} readOnly value={inviteLink} />
@@ -493,12 +377,6 @@ export function CreateOverlays({
                 <div>
                   <i className="fa-solid fa-user-plus" /> 已邀 <b>{selectedFriendList.length}</b> 人
                 </div>
-                <div>
-                  <i className="fa-solid fa-eye" /> 链接被点击 <b>{shareClickCount}</b> 次
-                </div>
-                <button className={styles.linkRefresh} type="button" onClick={regenerateInviteLink}>
-                  <i className="fa-solid fa-rotate" /> <b>换一个链接</b>
-                </button>
               </div>
             </div>
             {selectedFriendList.length ? (
@@ -510,7 +388,7 @@ export function CreateOverlays({
                 <div className={styles.shareFriendsList}>
                   {selectedFriendList.map((friend) => (
                     <div key={friend.id} className={styles.shareFriendChip}>
-                      <img src={friend.avatar} alt={friend.name} />
+                      {renderFriendAvatar(friend, styles.shareFriendAvatar)}
                       <span>{friend.name}</span>
                       <span className={`${styles.shareStatusDot} ${friend.online ? styles.shareStatusOn : styles.shareStatusOff}`} />
                     </div>
@@ -537,12 +415,6 @@ export function CreateOverlays({
                 </div>
                 <div className={styles.shareMethodLabel}>猜友圈</div>
               </button>
-              <button type="button" className={styles.shareMethod} onClick={() => setQrPanelOpen((value) => !value)}>
-                <div className={styles.shareMethodIcon}>
-                  <i className="fa-solid fa-qrcode" />
-                </div>
-                <div className={styles.shareMethodLabel}>二维码</div>
-              </button>
               <button type="button" className={styles.shareMethod} onClick={() => shareVia('poster')}>
                 <div className={styles.shareMethodIcon}>
                   <i className="fa-solid fa-image" />
@@ -550,18 +422,6 @@ export function CreateOverlays({
                 <div className={styles.shareMethodLabel}>生成海报</div>
               </button>
             </div>
-            {qrPanelOpen ? (
-              <div className={styles.qrPanel}>
-                <div className={styles.qrCanvasWrap}>
-                  <canvas ref={qrCanvasRef} className={styles.qrCanvas} />
-                  <div className={styles.qrLogo}>🎯</div>
-                </div>
-                <div className={styles.qrTip}>打开微信扫一扫，邀请好友加入PK</div>
-                <button className={styles.qrSave} type="button" onClick={saveQrCode}>
-                  <i className="fa-solid fa-download" /> 保存到相册
-                </button>
-              </div>
-            ) : null}
             <div className={styles.invitePreview}>
               <div className={styles.invitePreviewTitle}>
                 <i className="fa-solid fa-eye" /> 好友收到的邀请卡片
@@ -569,13 +429,13 @@ export function CreateOverlays({
               <div className={styles.invitePreviewCard}>
                 <div className={styles.invitePreviewHead}>
                   <div className={styles.invitePreviewUser}>
-                    <img
-                      className={styles.invitePreviewAvatar}
-                      src="/legacy/images/mascot/mouse-main.png"
-                      alt="零食达人小猜"
-                    />
+                    {currentUser?.avatar ? (
+                      <img className={styles.invitePreviewAvatar} src={currentUser.avatar} alt={currentUser.name} />
+                    ) : (
+                      <span className={styles.invitePreviewAvatarFallback}>{currentUser?.name.slice(0, 1) || '我'}</span>
+                    )}
                     <div>
-                      <div className={styles.invitePreviewName}>零食达人小猜</div>
+                      <div className={styles.invitePreviewName}>{currentUser?.name || '发起人'}</div>
                       <div className={styles.invitePreviewSub}>邀请你参加好友PK</div>
                     </div>
                   </div>
@@ -615,7 +475,7 @@ export function CreateOverlays({
             <div className={styles.publishTitle}>{publishFinished ? '发布成功！' : '正在发布竞猜...'}</div>
             <div className={styles.publishDesc}>{publishFinished ? '竞猜已创建，快去分享给好友吧' : '请稍候，正在提交您的竞猜'}</div>
             <div className={styles.publishBar}>
-              <div className={styles.publishFill} style={{ width: `${publishStep * 25}%` }} />
+              <div className={styles.publishFill} style={{ width: `${(publishStep / 3) * 100}%` }} />
             </div>
             <div className={styles.publishSteps}>
               <div className={`${styles.publishStep} ${publishStep >= 1 ? styles.publishStepActive : ''} ${publishStep >= 1 ? styles.publishStepDone : ''}`}>
@@ -625,10 +485,7 @@ export function CreateOverlays({
                 <i className={`fa-${publishStep >= 2 ? 'solid' : 'regular'} fa-circle`} /> 上传竞猜数据
               </div>
               <div className={`${styles.publishStep} ${publishStep >= 3 ? styles.publishStepActive : ''} ${publishStep >= 3 ? styles.publishStepDone : ''}`}>
-                <i className={`fa-${publishStep >= 3 ? 'solid' : 'regular'} fa-circle`} /> 生成优惠券
-              </div>
-              <div className={`${styles.publishStep} ${publishStep >= 4 ? styles.publishStepActive : ''} ${publishStep >= 4 ? styles.publishStepDone : ''}`}>
-                <i className={`fa-${publishStep >= 4 ? 'solid' : 'regular'} fa-circle`} /> 发布竞猜
+                <i className={`fa-${publishStep >= 3 ? 'solid' : 'regular'} fa-circle`} /> 发布竞猜
               </div>
             </div>
           </div>
@@ -641,12 +498,7 @@ export function CreateOverlays({
             <div className={styles.successEmoji}>🎉</div>
             <div className={styles.successTitle}>竞猜创建成功！</div>
             <div className={styles.successDesc}>
-              {[
-                selectedProduct ? `📦 关联: ${selectedProduct.name}` : '',
-                couponEnabled ? `🏷️ 补偿: ${couponType === 'discount' ? '折扣券' : couponType === 'no_threshold' ? '无门槛券' : '满减券'}` : '',
-              ]
-                .filter(Boolean)
-                .join(' · ') || '你的竞猜已发布，快分享给好友吧'}
+              {selectedProduct ? `📦 关联: ${selectedProduct.name}` : '你的竞猜已发布，快分享给好友吧'}
             </div>
             <div className={styles.successActions}>
               <button type="button" className={styles.successAction} onClick={copyInviteLink}>

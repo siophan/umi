@@ -110,7 +110,7 @@ export const commercePaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['title', 'endTime', 'optionTexts'],
+              required: ['title', 'endTime', 'optionTexts', 'imageUrl'],
               properties: {
                 title: { type: 'string', example: '乐事新口味谁更能打？' },
                 endTime: { type: 'string', format: 'date-time' },
@@ -127,7 +127,7 @@ export const commercePaths = {
                 },
                 categoryId: { type: 'string', nullable: true, example: '1308' },
                 description: { type: 'string', nullable: true },
-                imageUrl: { type: 'string', nullable: true },
+                imageUrl: { type: 'string', example: 'https://bucket.oss-cn-beijing.aliyuncs.com/uploads/guess_cover/cover.png' },
                 productId: { type: 'string', nullable: true, example: '502' },
                 invitedFriendIds: {
                   type: 'array',

@@ -22,7 +22,7 @@ export default function CreatePage() {
     coverInputRef,
     isMerchantMode,
     template,
-    setTemplate,
+    selectTemplate,
     title,
     setTitle,
     desc,
@@ -47,18 +47,6 @@ export default function CreatePage() {
     setProductSort,
     sortDropdownOpen,
     setSortDropdownOpen,
-    couponEnabled,
-    setCouponEnabled,
-    couponType,
-    setCouponType,
-    couponThreshold,
-    setCouponThreshold,
-    couponAmount,
-    setCouponAmount,
-    couponDiscount,
-    setCouponDiscount,
-    couponMaxOff,
-    setCouponMaxOff,
     previewOpen,
     shareOpen,
     publishing,
@@ -72,15 +60,13 @@ export default function CreatePage() {
     coverPreviewUrl,
     coverUploading,
     coverUploaded,
-    qrPanelOpen,
-    setQrPanelOpen,
     inviteLink,
-    shareClickCount,
     linkCopied,
+    currentUser,
+    authReady,
     steps,
     progress,
     selectedCount,
-    previewCoupon,
     filteredFriends,
     selectedFriendList,
     filteredProducts,
@@ -97,8 +83,6 @@ export default function CreatePage() {
     confirmProductPick,
     refreshTopics,
     pickTopic,
-    openShareInvite,
-    regenerateInviteLink,
     copyInviteLink,
     shareVia,
     openProductPicker,
@@ -106,6 +90,10 @@ export default function CreatePage() {
     handleCoverPick,
     handlePublish,
   } = useCreatePageState();
+
+  if (!authReady) {
+    return <main className={styles.page} />;
+  }
 
   return (
     <main className={styles.page}>
@@ -119,7 +107,7 @@ export default function CreatePage() {
 
       <div className={`${styles.roleBar} ${isMerchantMode ? styles.merchantMode : styles.userMode}`}>
         <span className={styles.roleIcon}>{isMerchantMode ? '🏪' : '👤'}</span>
-        <span className={styles.roleText}>{isMerchantMode ? '商家模式' : '用户模式'}</span>
+        <span className={styles.roleText}>{isMerchantMode ? '店铺模式' : '用户模式'}</span>
         <span className={`${styles.roleBadge} ${!isMerchantMode ? styles.roleBadgeHidden : ''}`}>PRO</span>
         <span className={styles.roleDesc}>{isMerchantMode ? '全功能创建模式' : '仅限好友PK竞猜'}</span>
       </div>
@@ -147,7 +135,7 @@ export default function CreatePage() {
               className={`${styles.templateCard} ${template === item.id ? styles.templateSelected : ''} ${locked ? styles.templateLocked : ''}`}
               onClick={() => {
                 if (!locked) {
-            setTemplate(item.id);
+            selectTemplate(item.id);
             showToast(`${item.name} 模板`);
                 }
               }}
@@ -166,7 +154,7 @@ export default function CreatePage() {
           <div className={styles.merchantHookIcon}>🏪</div>
           <div className={styles.merchantHookInfo}>
             <div className={styles.merchantHookTitle}>想要发布更多竞猜玩法？</div>
-            <div className={styles.merchantHookDesc}>开通商家身份，解锁二选一、多选、数值预测等全模板 + 关联商品 + 自动优惠券</div>
+            <div className={styles.merchantHookDesc}>开通店铺身份，解锁二选一、多选、数值预测等全模板和店铺竞猜设置</div>
           </div>
           <i className={`fa-solid fa-chevron-right ${styles.merchantHookArrow}`} />
         </button>
@@ -197,6 +185,7 @@ export default function CreatePage() {
       <div className={styles.dividerThick} />
 
       <CreateOptionsSection
+        template={template}
         stepDone={steps[2]}
         selectedCount={selectedCount}
         options={options}
@@ -205,7 +194,7 @@ export default function CreatePage() {
         addOption={addOption}
       />
 
-      {template === 'pk' ? (
+      {!isMerchantMode && template === 'pk' ? (
         <>
           <div className={styles.dividerThick} />
           <CreatePkSection
@@ -216,7 +205,6 @@ export default function CreatePage() {
             selectedFriendList={selectedFriendList}
             toggleFriend={toggleFriend}
             showToast={showToast}
-            openShareInvite={openShareInvite}
           />
         </>
       ) : null}
@@ -230,19 +218,6 @@ export default function CreatePage() {
         isMerchantMode={isMerchantMode}
         openProductPicker={openProductPicker}
         selectedProduct={selectedProduct}
-        couponEnabled={couponEnabled}
-        setCouponEnabled={setCouponEnabled}
-        couponType={couponType}
-        setCouponType={setCouponType}
-        couponThreshold={couponThreshold}
-        setCouponThreshold={setCouponThreshold}
-        couponAmount={couponAmount}
-        setCouponAmount={setCouponAmount}
-        couponDiscount={couponDiscount}
-        setCouponDiscount={setCouponDiscount}
-        couponMaxOff={couponMaxOff}
-        setCouponMaxOff={setCouponMaxOff}
-        previewCoupon={previewCoupon}
       />
 
       <div className={styles.bottomBar}>
@@ -263,11 +238,6 @@ export default function CreatePage() {
         deadline={deadline}
         selectedProduct={selectedProduct}
         options={options}
-        couponEnabled={couponEnabled}
-        couponType={couponType}
-        couponDiscount={couponDiscount}
-        couponAmount={couponAmount}
-        previewCoupon={previewCoupon}
         handlePublish={handlePublish}
         productPickerOpen={productPickerOpen}
         closeProductPicker={closeProductPicker}
@@ -290,13 +260,9 @@ export default function CreatePage() {
         shareOpen={shareOpen}
         setShareOpen={setShareOpen}
         selectedFriendList={selectedFriendList}
-        showToast={showToast}
-        qrPanelOpen={qrPanelOpen}
-        setQrPanelOpen={setQrPanelOpen}
+        currentUser={currentUser}
         inviteLink={inviteLink}
-        shareClickCount={shareClickCount}
         linkCopied={linkCopied}
-        regenerateInviteLink={regenerateInviteLink}
         copyInviteLink={copyInviteLink}
         shareVia={shareVia}
         publishing={publishing}

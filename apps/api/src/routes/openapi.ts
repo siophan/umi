@@ -9,6 +9,7 @@ import { notificationPaths } from './openapi/paths/notifications';
 import { searchPaths } from './openapi/paths/search';
 import { shopPaths } from './openapi/paths/shop';
 import { socialPaths } from './openapi/paths/social';
+import { uploadPaths } from './openapi/paths/uploads';
 import { userPaths } from './openapi/paths/users';
 import { adminSchemas } from './openapi/schemas/admin';
 import { authSchemas } from './openapi/schemas/auth';
@@ -58,6 +59,7 @@ const openApiDocument = {
     ...commercePaths,
     ...adminPaths,
     ...shopPaths,
+    ...uploadPaths,
   },
 } as const;
 

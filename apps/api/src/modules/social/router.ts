@@ -8,6 +8,7 @@ import {
   acceptFriendRequest,
   getSocialOverview,
   rejectFriendRequest,
+  searchFriends,
 } from './store';
 
 export const socialRouter: ExpressRouter = Router();
@@ -42,6 +43,22 @@ socialRouter.post(
       ok(response, await rejectFriendRequest(user.id, String(request.params.id)));
     },
   ),
+);
+
+socialRouter.get(
+  '/friends',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(
+      response,
+      await searchFriends(
+        user.id,
+        typeof request.query.q === 'string' ? request.query.q : undefined,
+        request.query.limit,
+      ),
+    );
+  }),
 );
 
 socialRouter.get(

@@ -68,27 +68,29 @@ export function CreateBasicInfoSection({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
         />
-        <div className={styles.topics}>
-          <span className={styles.topicsTag}>
-            <i className="fa-solid fa-fire" />
-            热门
-          </span>
-          <div className={styles.topicsScroll}>
-            {visibleTopics.map((item) => (
-              <button
-                key={item.text}
-                type="button"
-                className={`${styles.topicChip} ${item.hot ? styles.topicChipHot : ''} ${selectedTopic === item.text ? styles.topicChipPicked : ''}`}
-                onClick={() => pickTopic(item.text)}
-              >
-                {item.icon} {item.text}
-              </button>
-            ))}
+        {visibleTopics.length ? (
+          <div className={styles.topics}>
+            <span className={styles.topicsTag}>
+              <i className="fa-solid fa-fire" />
+              热门
+            </span>
+            <div className={styles.topicsScroll}>
+              {visibleTopics.map((item) => (
+                <button
+                  key={item.text}
+                  type="button"
+                  className={`${styles.topicChip} ${item.hot ? styles.topicChipHot : ''} ${selectedTopic === item.text ? styles.topicChipPicked : ''}`}
+                  onClick={() => pickTopic(item.text)}
+                >
+                  {item.icon} {item.text}
+                </button>
+              ))}
+            </div>
+            <button className={styles.topicsMore} type="button" onClick={refreshTopics} title="换一批">
+              <i className="fa-solid fa-rotate" />
+            </button>
           </div>
-          <button className={styles.topicsMore} type="button" onClick={refreshTopics} title="换一批">
-            <i className="fa-solid fa-rotate" />
-          </button>
-        </div>
+        ) : null}
         {titleTipVisible ? (
           <div className={styles.validationTip}>
             <i className="fa-solid fa-circle-exclamation" /> 请输入竞猜标题（至少5个字）
@@ -107,7 +109,9 @@ export function CreateBasicInfoSection({
       </div>
 
       <div className={styles.field}>
-        <label className={styles.label}>封面图片</label>
+        <label className={styles.label}>
+          封面图片<span className={styles.requiredMark}>*</span>
+        </label>
         <button
           className={`${styles.coverUpload} ${coverUploaded ? styles.coverUploadDone : ''}`}
           type="button"

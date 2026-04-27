@@ -177,6 +177,10 @@ export interface SocialOverviewResult {
   requests: SocialUserItem[];
 }
 
+export interface SocialFriendsResult {
+  items: SocialUserItem[];
+}
+
 export interface UserSearchItem {
   id: UserId;
   uid: string;

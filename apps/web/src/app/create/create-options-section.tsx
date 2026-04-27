@@ -1,8 +1,10 @@
 'use client';
 
+import type { TemplateId } from './create-helpers';
 import styles from './page.module.css';
 
 type Props = {
+  template: TemplateId;
   stepDone: boolean;
   selectedCount: number;
   options: string[];
@@ -12,6 +14,7 @@ type Props = {
 };
 
 export function CreateOptionsSection({
+  template,
   stepDone,
   selectedCount,
   options,
@@ -19,6 +22,18 @@ export function CreateOptionsSection({
   removeOption,
   addOption,
 }: Props) {
+  const isMultiTemplate = template === 'multi';
+  const isNumberTemplate = template === 'number';
+  const canAddOption = isMultiTemplate;
+  const canRemoveOption = isMultiTemplate && options.length > 2;
+
+  function getPlaceholder(index: number) {
+    if (isNumberTemplate) {
+      return index === 0 ? '最小值' : '最大值';
+    }
+    return `选项 ${String.fromCharCode(65 + index)}`;
+  }
+
   return (
     <section className={styles.formSection}>
       <h3>
@@ -27,22 +42,27 @@ export function CreateOptionsSection({
       </h3>
       <div className={styles.optionsList}>
         {options.map((item, index) => (
-          <div className={styles.optionRow} key={`${index}-${item}`}>
+          <div className={styles.optionRow} key={`option-${index}`}>
             <input
               className={styles.input}
+              type={isNumberTemplate ? 'number' : 'text'}
               value={item}
-              placeholder={`选项 ${String.fromCharCode(65 + index)}`}
+              placeholder={getPlaceholder(index)}
               onChange={(event) => updateOption(index, event.target.value)}
             />
-            <button className={styles.removeBtn} type="button" onClick={() => removeOption(index)}>
-              <i className="fa-solid fa-circle-minus" />
-            </button>
+            {canRemoveOption ? (
+              <button className={styles.removeBtn} type="button" onClick={() => removeOption(index)}>
+                <i className="fa-solid fa-circle-minus" />
+              </button>
+            ) : null}
           </div>
         ))}
       </div>
-      <button className={styles.addOptionBtn} type="button" onClick={addOption}>
-        <i className="fa-solid fa-plus" /> 添加选项
-      </button>
+      {canAddOption ? (
+        <button className={styles.addOptionBtn} type="button" onClick={addOption}>
+          <i className="fa-solid fa-plus" /> 添加选项
+        </button>
+      ) : null}
     </section>
   );
 }

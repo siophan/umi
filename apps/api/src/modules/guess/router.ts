@@ -50,6 +50,7 @@ guessRouter.post(
         },
         [
           { message: '竞猜标题不能为空', status: 400, code: 'GUESS_TITLE_REQUIRED' },
+          { message: '封面图片不能为空', status: 400, code: 'GUESS_COVER_REQUIRED' },
           { message: '竞猜分类不存在', status: 404, code: 'GUESS_CATEGORY_NOT_FOUND' },
           { message: '竞猜分类未启用', status: 400, code: 'GUESS_CATEGORY_DISABLED' },
           { message: '竞猜分类未配置', status: 500, code: 'GUESS_CATEGORY_MISSING' },
@@ -58,6 +59,7 @@ guessRouter.post(
           { message: '截止时间必须晚于当前时间', status: 400, code: 'GUESS_END_TIME_PAST' },
           { message: '至少填写两个有效选项', status: 400, code: 'GUESS_OPTIONS_REQUIRED' },
           { message: '竞猜选项不能重复', status: 400, code: 'GUESS_OPTIONS_DUPLICATED' },
+          { message: '好友PK必须选择参战好友', status: 400, code: 'GUESS_FRIENDS_REQUIRED' },
           { message: '关联商品不存在', status: 404, code: 'GUESS_PRODUCT_NOT_FOUND' },
           { message: '关联商品不可用于创建竞猜', status: 400, code: 'GUESS_PRODUCT_INVALID' },
           { message: '关联商品所属店铺不可用于创建竞猜', status: 400, code: 'GUESS_PRODUCT_SHOP_INVALID' },

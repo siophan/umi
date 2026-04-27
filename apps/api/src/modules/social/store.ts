@@ -162,6 +162,62 @@ export async function getSocialOverview(userId: string): Promise<SocialOverviewR
   };
 }
 
+function normalizeFriendsLimit(value: unknown) {
+  const limit = Number(value ?? 24);
+  if (!Number.isFinite(limit)) {
+    return 24;
+  }
+  return Math.min(Math.max(Math.floor(limit), 1), 50);
+}
+
+export async function searchFriends(
+  userId: string,
+  q?: string,
+  limitValue?: unknown,
+): Promise<{ items: SocialUserItem[] }> {
+  const db = getDbPool();
+  const keyword = q?.trim() || '';
+  const likeKeyword = `%${keyword}%`;
+  const limit = normalizeFriendsLimit(limitValue);
+
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        u.id,
+        u.uid_code,
+        up.name,
+        up.avatar_url,
+        u.level,
+        u.title,
+        up.signature,
+        COALESCE((SELECT COUNT(*) FROM user_follow f1 WHERE f1.following_id = u.id), 0) AS followers,
+        COALESCE((SELECT COUNT(*) FROM user_follow f2 WHERE f2.follower_id = u.id), 0) AS following,
+        COALESCE((SELECT COUNT(*) FROM guess_bet gb1 WHERE gb1.user_id = u.id), 0) AS total_guess,
+        COALESCE((SELECT COUNT(*) FROM guess_bet gb2 WHERE gb2.user_id = u.id AND gb2.status = 30), 0) AS wins,
+        CASE WHEN EXISTS (SELECT 1 FROM shop s WHERE s.user_id = u.id AND s.status = 10) THEN 1 ELSE 0 END AS shop_verified,
+        f.status
+      FROM user u
+      INNER JOIN friendship f ON f.friend_id = u.id
+      LEFT JOIN user_profile up ON up.user_id = u.id
+      WHERE f.user_id = ?
+        AND f.status = ?
+        AND (
+          ? = ''
+          OR COALESCE(up.name, '') LIKE ?
+          OR COALESCE(up.signature, '') LIKE ?
+          OR COALESCE(u.uid_code, '') LIKE ?
+        )
+      ORDER BY f.updated_at DESC
+      LIMIT ${limit}
+    `,
+    [userId, FRIENDSHIP_ACCEPTED, keyword, likeKeyword, likeKeyword, likeKeyword],
+  );
+
+  return {
+    items: rows.map((row) => sanitizeSocialRow(row as SocialRow)),
+  };
+}
+
 export async function acceptFriendRequest(viewerId: string, requesterId: string) {
   const db = getDbPool();
 

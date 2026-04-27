@@ -24,7 +24,7 @@ export interface CreateGuessPayload {
   scope?: 'public' | 'friends';
   categoryId?: CategoryId | null;
   description?: string | null;
-  imageUrl?: string | null;
+  imageUrl: string;
   productId?: ProductId | null;
   invitedFriendIds?: UserId[];
 }

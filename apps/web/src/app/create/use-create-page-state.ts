@@ -1,29 +1,39 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import type { CreateGuessPayload } from '@umi/shared';
+import type { CreateGuessPayload, UserSummary } from '@umi/shared';
 
-import { fetchSocialOverview } from '../../lib/api/friends';
+import { fetchMe } from '../../lib/api/auth';
+import { fetchSocialFriends } from '../../lib/api/friends';
 import { createGuess } from '../../lib/api/guesses';
 import { fetchProductList } from '../../lib/api/products';
-import { hasAuthToken } from '../../lib/api/shared';
+import { fetchSearchHotKeywords } from '../../lib/api/search';
+import { clearAuthToken, hasAuthToken } from '../../lib/api/shared';
+import { fetchShopStatus } from '../../lib/api/shops';
+import { uploadOssImage } from '../../lib/api/uploads';
 import {
-  friends,
-  hotTopicsPool,
-  initialOptions,
   mapProductFeedToCreateProduct,
+  mapSearchHotKeywordToCreateTopic,
   mapSocialUserToCreateFriend,
   parseSalesCount,
-  products,
-  topicsPerPage,
-  type CouponType,
   type FriendItem,
   type ProductItem,
   type TemplateId,
+  type TopicItem,
 } from './create-helpers';
 
+function mergeFriendItems(current: FriendItem[], incoming: FriendItem[]) {
+  const merged = new Map(current.map((item) => [item.id, item]));
+  for (const item of incoming) {
+    merged.set(item.id, item);
+  }
+  return Array.from(merged.values());
+}
+
 export function useCreatePageState() {
+  const router = useRouter();
   const LAST_CREATED_GUESS_KEY = 'umi_last_created_guess';
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -32,24 +42,19 @@ export function useCreatePageState() {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [deadline, setDeadline] = useState('');
-  const [options, setOptions] = useState(initialOptions);
+  const [options, setOptions] = useState<string[]>(['', '']);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [friendKeyword, setFriendKeyword] = useState('');
-  const [friendItems, setFriendItems] = useState<FriendItem[]>(friends);
+  const [friendItems, setFriendItems] = useState<FriendItem[]>([]);
+  const [visibleFriendItems, setVisibleFriendItems] = useState<FriendItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
-  const [productItems, setProductItems] = useState<ProductItem[]>(products);
+  const [productItems, setProductItems] = useState<ProductItem[]>([]);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [productKeyword, setProductKeyword] = useState('');
   const [tempProductId, setTempProductId] = useState<string | null>(null);
   const [productCategory, setProductCategory] = useState('all');
   const [productSort, setProductSort] = useState<'default' | 'sales' | 'price_asc' | 'rating'>('default');
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  const [couponEnabled, setCouponEnabled] = useState(true);
-  const [couponType, setCouponType] = useState<CouponType>('full_reduce');
-  const [couponThreshold, setCouponThreshold] = useState('50');
-  const [couponAmount, setCouponAmount] = useState('5');
-  const [couponDiscount, setCouponDiscount] = useState('8.5');
-  const [couponMaxOff, setCouponMaxOff] = useState('12');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -58,102 +63,84 @@ export function useCreatePageState() {
   const [toast, setToast] = useState('');
   const [titleTipVisible, setTitleTipVisible] = useState(false);
   const [titleInputError, setTitleInputError] = useState(false);
-  const [topicPage, setTopicPage] = useState(0);
+  const [hotTopicItems, setHotTopicItems] = useState<TopicItem[]>([]);
   const [selectedTopic, setSelectedTopic] = useState('');
   const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUploaded, setCoverUploaded] = useState(false);
   const [coverUploadedUrl, setCoverUploadedUrl] = useState('');
-  const [qrPanelOpen, setQrPanelOpen] = useState(false);
-  const [inviteCode, setInviteCode] = useState('');
   const [createdGuessId, setCreatedGuessId] = useState('');
-  const [shareClickCount, setShareClickCount] = useState(0);
   const [linkCopied, setLinkCopied] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const merchant = window.localStorage.getItem('userRole') === 'merchant';
-    setIsMerchantMode(merchant);
-    if (merchant) {
-      setTemplate('duel');
-    } else {
-      setTemplate('pk');
-      setCouponEnabled(true);
-    }
-  }, []);
+  const [currentUser, setCurrentUser] = useState<Pick<UserSummary, 'name' | 'avatar'> | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const friendSearchRequestId = useRef(0);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadCreateDependencies() {
-      const [productResult, socialResult] = await Promise.allSettled([
+      const tokenReady = hasAuthToken();
+      if (!tokenReady) {
+        router.replace(`/login?redirect=${encodeURIComponent('/create')}&action=${encodeURIComponent('发布竞猜')}`);
+        return;
+      }
+
+      let user: Awaited<ReturnType<typeof fetchMe>> | null = null;
+      try {
+        user = await fetchMe();
+      } catch {
+        clearAuthToken();
+        router.replace(`/login?redirect=${encodeURIComponent('/create')}&action=${encodeURIComponent('发布竞猜')}`);
+        return;
+      }
+
+      setAuthReady(true);
+      const [productResult, topicResult, shopStatusResult] = await Promise.allSettled([
         fetchProductList({ limit: 50 }),
-        fetchSocialOverview(),
-      ]);
+        fetchSearchHotKeywords(6),
+        fetchShopStatus(),
+      ] as const);
 
       if (ignore) {
         return;
       }
 
-      if (productResult.status === 'fulfilled' && productResult.value.items.length > 0) {
+      if (productResult.status === 'fulfilled') {
         setProductItems(productResult.value.items.map(mapProductFeedToCreateProduct));
+      } else {
+        showToast('商品数据加载失败');
       }
 
-      if (socialResult.status === 'fulfilled' && socialResult.value.friends.length > 0) {
-        setFriendItems(socialResult.value.friends.map(mapSocialUserToCreateFriend));
+      if (topicResult.status === 'fulfilled') {
+        setHotTopicItems(topicResult.value.items.map(mapSearchHotKeywordToCreateTopic));
+      } else {
+        showToast('热门数据加载失败');
       }
+
+      if (shopStatusResult.status === 'fulfilled') {
+        const merchant = shopStatusResult.value?.status === 'active';
+        setIsMerchantMode(merchant);
+        setTemplate((current) => {
+          if (merchant) {
+            return current === 'pk' ? 'duel' : current;
+          }
+          return 'pk';
+        });
+      } else {
+        showToast('店铺状态加载失败');
+      }
+
+      setCurrentUser({
+        name: user.name,
+        avatar: user.avatar ?? null,
+      });
     }
 
     void loadCreateDependencies();
     return () => {
       ignore = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const searchParams = new URLSearchParams(window.location.search);
-    const invite = searchParams.get('invite');
-    const pkMode = searchParams.get('pk') === '1';
-    const titleSummary = searchParams.get('t');
-    const friendIds = searchParams.get('friends');
-
-    if (!invite && !pkMode && !titleSummary && !friendIds) {
-      return;
-    }
-
-    if (invite) {
-      setInviteCode(invite);
-    }
-    if (pkMode) {
-      setTemplate('pk');
-    }
-    if (titleSummary) {
-      setTitle((current) => current || titleSummary);
-    }
-    if (friendIds) {
-      const incomingIds = friendIds
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
-      const matchedIds = friendItems.filter((item) => incomingIds.includes(item.id)).map((item) => item.id);
-      setSelectedFriends((current) => (current.length ? current : matchedIds));
-    }
-  }, [friendItems]);
-
-  useEffect(() => {
-    if (!selectedProduct) {
-      return;
-    }
-    setCouponThreshold(String(Math.round(selectedProduct.price * 0.8)));
-    setCouponAmount(String(Math.max(3, Math.round(selectedProduct.price * 0.15))));
-    setCouponMaxOff(String(Math.max(3, Math.round(selectedProduct.price * 0.15))));
-  }, [selectedProduct]);
+  }, [router]);
 
   useEffect(() => {
     if (!sortDropdownOpen || typeof document === 'undefined') {
@@ -178,44 +165,60 @@ export function useCreatePageState() {
   }, [sortDropdownOpen]);
 
   useEffect(() => {
-    if (shareOpen) {
+    if (!shareOpen) {
+      setLinkCopied(false);
+    }
+  }, [shareOpen]);
+
+  useEffect(() => {
+    if (!authReady) {
       return;
     }
-    setQrPanelOpen(false);
-    setLinkCopied(false);
-  }, [shareOpen]);
+
+    const requestId = friendSearchRequestId.current + 1;
+    friendSearchRequestId.current = requestId;
+    const keyword = friendKeyword.trim();
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await fetchSocialFriends({ q: keyword || undefined, limit: 24 });
+        if (friendSearchRequestId.current !== requestId) {
+          return;
+        }
+        const nextItems = result.items.map(mapSocialUserToCreateFriend);
+        setFriendItems((current) => mergeFriendItems(current, nextItems));
+        setVisibleFriendItems(nextItems);
+      } catch {
+        if (friendSearchRequestId.current === requestId) {
+          showToast('好友搜索失败');
+        }
+      }
+    }, keyword ? 250 : 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [authReady, friendKeyword]);
+
+  useEffect(() => {
+    if (template === 'multi') {
+      return;
+    }
+    setOptions((current) => (current.length > 2 ? current.slice(0, 2) : current));
+  }, [template]);
 
   const steps = useMemo(() => {
     const step0 = Boolean(template);
-    const step1 = title.trim().length >= 5;
+    const step1 = title.trim().length >= 5 && Boolean(coverUploadedUrl);
     const step2 = options.filter((item) => item.trim()).length >= 2;
     const step3 = Boolean(deadline);
     return [step0, step1, step2, step3];
-  }, [deadline, options, template, title]);
+  }, [coverUploadedUrl, deadline, options, template, title]);
 
   const progress = useMemo(() => Math.round((steps.filter(Boolean).length / 4) * 100), [steps]);
   const selectedCount = options.filter((item) => item.trim()).length;
 
-  const previewCoupon = useMemo(() => {
-    if (!couponEnabled) {
-      return '未开启自动补偿券';
-    }
-    if (couponType === 'discount') {
-      return `最高减${couponMaxOff}元`;
-    }
-    if (couponType === 'no_threshold') {
-      return '无门槛直接抵扣';
-    }
-    return `满${couponThreshold}元可用`;
-  }, [couponAmount, couponDiscount, couponEnabled, couponMaxOff, couponThreshold, couponType]);
-
-  const filteredFriends = useMemo(() => {
-    const keyword = friendKeyword.trim().toLowerCase();
-    if (!keyword) {
-      return friendItems;
-    }
-    return friendItems.filter((item) => item.name.toLowerCase().includes(keyword));
-  }, [friendItems, friendKeyword]);
+  const filteredFriends = visibleFriendItems;
 
   const selectedFriendList = useMemo(
     () => friendItems.filter((item) => selectedFriends.includes(item.id)),
@@ -264,48 +267,52 @@ export function useCreatePageState() {
     return '综合';
   }, [productSort]);
 
-  const visibleTopics = useMemo(() => {
-    const start = (topicPage * topicsPerPage) % hotTopicsPool.length;
-    return Array.from(
-      { length: topicsPerPage },
-      (_, index) => hotTopicsPool[(start + index) % hotTopicsPool.length],
-    );
-  }, [topicPage]);
+  const visibleTopics = hotTopicItems;
 
   /**
-   * 生成分享邀请链接。
-   * 当前没有老系统 detail 落地页时，先回落到 create 自身承接参数，避免生成死链。
+   * 分享只使用创建成功后的真实竞猜详情地址，不再生成本地邀请码参数。
    */
-  function buildInviteLink(code: string) {
-    if (typeof window === 'undefined' || !code) {
+  function buildInviteLink() {
+    if (typeof window === 'undefined' || !createdGuessId) {
       return '';
     }
-    const params = new URLSearchParams();
-    params.set('invite', code);
-    params.set('pk', '1');
-    if (selectedFriends.length) {
-      params.set('friends', selectedFriends.join(','));
-    }
-    if (title.trim()) {
-      params.set('t', title.trim().slice(0, 20));
-    }
-    const basePath = createdGuessId ? `/guess/${createdGuessId}` : '/create';
-    return `${window.location.origin}${basePath}?${params.toString()}`;
+    return `${window.location.origin}/guess/${createdGuessId}`;
   }
 
   const inviteLink = useMemo(() => {
-    return buildInviteLink(inviteCode);
-  }, [createdGuessId, inviteCode, selectedFriends, title]);
+    return buildInviteLink();
+  }, [createdGuessId]);
 
   function updateOption(index: number, value: string) {
     setOptions((current) => current.map((item, idx) => (idx === index ? value : item)));
   }
 
+  function selectTemplate(nextTemplate: TemplateId) {
+    setTemplate(nextTemplate);
+    setOptions((current) => {
+      if (nextTemplate === 'number') {
+        return ['', ''];
+      }
+      if (nextTemplate === 'multi') {
+        return current.length >= 2 ? current : ['', ''];
+      }
+
+      return current.slice(0, 2);
+    });
+  }
+
   function addOption() {
+    if (template !== 'multi') {
+      showToast('当前模板固定为2个选项');
+      return;
+    }
     setOptions((current) => [...current, '']);
   }
 
   function removeOption(index: number) {
+    if (template !== 'multi') {
+      return;
+    }
     setOptions((current) => current.filter((_, idx) => idx !== index));
   }
 
@@ -329,29 +336,24 @@ export function useCreatePageState() {
     }
   }
 
-  function refreshTopics() {
+  async function refreshTopics() {
     setSelectedTopic('');
-    setTopicPage((current) => current + 1);
-    showToast('🔄 已刷新话题推荐');
-  }
-
-  function generateInviteCode() {
-    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    try {
+      const result = await fetchSearchHotKeywords(6);
+      setHotTopicItems(result.items.map(mapSearchHotKeywordToCreateTopic));
+      showToast(result.items.length ? '已刷新话题推荐' : '暂无话题推荐');
+    } catch {
+      showToast('热门数据加载失败');
+    }
   }
 
   function openShareInvite() {
+    if (!createdGuessId) {
+      showToast('请先创建竞猜，创建成功后才能分享邀请');
+      return;
+    }
     setShareOpen(true);
-    setQrPanelOpen(false);
     setLinkCopied(false);
-    setInviteCode((current) => current || generateInviteCode());
-  }
-
-  function regenerateInviteLink() {
-    setInviteCode(generateInviteCode());
-    setShareClickCount(0);
-    setLinkCopied(false);
-    showToast('🔄 已生成新的邀请链接');
   }
 
   /**
@@ -359,11 +361,11 @@ export function useCreatePageState() {
    * 老设备或浏览器能力不足时，退回到 textarea + execCommand 的兼容路径。
    */
   async function copyInviteLink() {
-    const code = inviteCode || generateInviteCode();
-    if (!inviteCode) {
-      setInviteCode(code);
+    const link = inviteLink;
+    if (!link) {
+      showToast('创建成功后才能复制链接');
+      return;
     }
-    const link = buildInviteLink(code);
     const currentTitle = title.trim() || '好友PK竞猜';
     const filledOptions = options.filter((item) => item.trim());
     const optA = filledOptions[0] || '选项A';
@@ -381,7 +383,6 @@ export function useCreatePageState() {
     try {
       await navigator.clipboard.writeText(content);
       setLinkCopied(true);
-      setShareClickCount((value) => value + 1);
       showToast('✅ 邀请文案+链接已复制，快去粘贴分享吧！');
       window.setTimeout(() => setLinkCopied(false), 2500);
     } catch {
@@ -397,7 +398,6 @@ export function useCreatePageState() {
         document.execCommand('copy');
         document.body.removeChild(textarea);
         setLinkCopied(true);
-        setShareClickCount((value) => value + 1);
         showToast('✅ 邀请文案+链接已复制');
         window.setTimeout(() => setLinkCopied(false), 2500);
       } catch {
@@ -406,23 +406,38 @@ export function useCreatePageState() {
     }
   }
 
-  function shareVia(channel: 'wechat' | 'qq' | 'moments' | 'poster') {
+  async function shareVia(channel: 'wechat' | 'qq' | 'moments' | 'poster') {
+    if (!inviteLink) {
+      showToast('创建成功后才能分享');
+      return;
+    }
+
+    if (channel === 'poster') {
+      showToast('海报生成暂未接入');
+      return;
+    }
+
     const currentTitle = title.trim() || '好友PK竞猜';
-    setShareClickCount((value) => value + 1);
-    if (channel === 'wechat') {
-      showToast(`📤 正在打开微信分享：${currentTitle}`);
+    const shareText = `来优米PK：${currentTitle}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: currentTitle,
+          text: shareText,
+          url: inviteLink,
+        });
+        showToast('已打开系统分享');
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+        showToast('分享失败，请复制链接分享');
+      }
       return;
     }
-    if (channel === 'qq') {
-      showToast(`📤 正在打开QQ分享：${currentTitle}`);
-      return;
-    }
-    if (channel === 'moments') {
-      showToast(`📤 正在分享到猜友圈：${currentTitle}`);
-      return;
-    }
-    showToast('🎨 正在生成PK海报...');
-    window.setTimeout(() => showToast('✅ 海报已生成，长按保存分享'), 800);
+
+    showToast('当前浏览器不支持系统分享，请复制链接分享');
   }
 
   function pickTopic(topicText: string) {
@@ -442,8 +457,22 @@ export function useCreatePageState() {
     setSortDropdownOpen(false);
   }
 
-  function handleCoverPick(file: File | null) {
+  function readFileAsDataUrl(file: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(new Error('图片读取失败'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleCoverPick(file: File | null) {
     if (!file) {
+      return;
+    }
+
+    if (!hasAuthToken()) {
+      showToast('请先登录后再上传封面');
       return;
     }
 
@@ -452,20 +481,40 @@ export function useCreatePageState() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCoverPreviewUrl(String(reader.result ?? ''));
-      setCoverUploading(true);
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      showToast('仅支持 jpg/png/webp/gif 图片');
+      return;
+    }
+
+    setCoverUploading(true);
+    setCoverUploaded(false);
+    setCoverUploadedUrl('');
+    setCoverPreviewUrl('');
+
+    try {
+      const contentBase64 = await readFileAsDataUrl(file);
+      setCoverPreviewUrl(contentBase64);
+      const result = await uploadOssImage({
+        fileName: file.name,
+        contentType: file.type as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+        contentBase64,
+        usage: 'guess_cover',
+      });
+      setCoverPreviewUrl(result.url);
+      setCoverUploadedUrl(result.url);
+      setCoverUploaded(true);
+      showToast('封面已上传到OSS');
+    } catch (error) {
       setCoverUploaded(false);
       setCoverUploadedUrl('');
-      window.setTimeout(() => {
-        setCoverUploading(false);
-        setCoverUploaded(true);
-        setCoverUploadedUrl(`/uploads/guess-cover-${Date.now()}.${file.name.split('.').pop() || 'jpg'}`);
-        showToast('✅ 封面上传成功');
-      }, 800);
-    };
-    reader.readAsDataURL(file);
+      setCoverPreviewUrl('');
+      if (coverInputRef.current) {
+        coverInputRef.current.value = '';
+      }
+      showToast(error instanceof Error ? error.message : '封面上传失败');
+    } finally {
+      setCoverUploading(false);
+    }
   }
 
   function sleep(ms: number) {
@@ -473,31 +522,26 @@ export function useCreatePageState() {
   }
 
   /**
-   * 创建页当前仍是老系统式本地发布流。
-   * 这里先组装与旧页一致的提交对象，并落到 sessionStorage 供成功层和后续页面承接。
+   * 创建接口需要的页面提交对象。
+   * 封面只使用 OSS 返回的真实地址；发布前已校验必传。
    */
   function buildGuessDraftPayload() {
     const currentTitle = title.trim();
     const filledOptions = options.filter((item) => item.trim());
-    const currentScope: 'public' | 'friends' = template === 'pk' ? 'friends' : 'public';
+    const currentScope: 'public' | 'friends' = !isMerchantMode && template === 'pk' ? 'friends' : 'public';
 
     return {
-      id: `draft_${Date.now()}`,
       title: currentTitle,
       description: desc.trim(),
       options: filledOptions,
       endTime: new Date(deadline).toISOString(),
       type: template === 'pk' ? 'pk' : 'user',
       category: selectedProduct?.category ?? '',
-      img: coverUploadedUrl || undefined,
+      img: coverUploadedUrl,
       productId: selectedProduct?.id,
       productName: selectedProduct?.name,
       scope: currentScope,
-      couponEnabled,
-      couponType: couponEnabled ? couponType : null,
-      couponPreview: couponEnabled ? previewCoupon : null,
-      friendIds: template === 'pk' ? selectedFriends : [],
-      inviteCode: inviteCode || null,
+      friendIds: !isMerchantMode && template === 'pk' ? selectedFriends : [],
       createdAt: new Date().toISOString(),
     };
   }
@@ -515,8 +559,47 @@ export function useCreatePageState() {
 
     setTitleTipVisible(false);
 
+    if (coverUploading) {
+      showToast('封面正在上传，请稍后发布');
+      return false;
+    }
+
+    if (!coverUploadedUrl) {
+      showToast('⚠️ 请上传封面图片');
+      return false;
+    }
+
     if (filledOptions.length < 2) {
       showToast('⚠️ 至少需要填写2个竞猜选项');
+      return false;
+    }
+
+    const normalizedOptions = filledOptions.map((item) => item.toLowerCase());
+    if (new Set(normalizedOptions).size !== normalizedOptions.length) {
+      showToast('⚠️ 竞猜选项不能重复');
+      return false;
+    }
+
+    if (template === 'number') {
+      const min = Number(filledOptions[0]);
+      const max = Number(filledOptions[1]);
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        showToast('⚠️ 请输入有效数字范围');
+        return false;
+      }
+      if (min >= max) {
+        showToast('⚠️ 数值预测范围下限必须小于上限');
+        return false;
+      }
+    }
+
+    if (!isMerchantMode && template === 'pk' && selectedFriends.length === 0) {
+      showToast('⚠️ 好友PK必须选择参战好友');
+      return false;
+    }
+
+    if (isMerchantMode && !selectedProduct) {
+      showToast('⚠️ 店铺竞猜必须选择关联商品');
       return false;
     }
 
@@ -550,12 +633,8 @@ export function useCreatePageState() {
     }
 
     const guessDraftPayload = buildGuessDraftPayload();
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(LAST_CREATED_GUESS_KEY, JSON.stringify(guessDraftPayload));
-    }
-
     const realInviteeIds: NonNullable<CreateGuessPayload['invitedFriendIds']> =
-      template === 'pk'
+      !isMerchantMode && template === 'pk'
         ? (selectedFriends.filter((item) => /^\d+$/.test(String(item))) as NonNullable<CreateGuessPayload['invitedFriendIds']>)
         : [];
     const realProductId: CreateGuessPayload['productId'] =
@@ -574,9 +653,6 @@ export function useCreatePageState() {
 
         setPublishStep(2);
         await sleep(650);
-
-        setPublishStep(3);
-        await sleep(couponEnabled ? 650 : 240);
 
         const result = await createGuess({
           title: guessDraftPayload.title,
@@ -603,7 +679,7 @@ export function useCreatePageState() {
         }
         setCreatedGuessId(result.id);
 
-        setPublishStep(4);
+        setPublishStep(3);
         await sleep(600);
         setPublishing(false);
         setSuccessOpen(true);
@@ -621,7 +697,7 @@ export function useCreatePageState() {
     coverInputRef,
     isMerchantMode,
     template,
-    setTemplate,
+    selectTemplate,
     title,
     setTitle,
     desc,
@@ -646,18 +722,6 @@ export function useCreatePageState() {
     setProductSort,
     sortDropdownOpen,
     setSortDropdownOpen,
-    couponEnabled,
-    setCouponEnabled,
-    couponType,
-    setCouponType,
-    couponThreshold,
-    setCouponThreshold,
-    couponAmount,
-    setCouponAmount,
-    couponDiscount,
-    setCouponDiscount,
-    couponMaxOff,
-    setCouponMaxOff,
     previewOpen,
     shareOpen,
     publishing,
@@ -671,15 +735,13 @@ export function useCreatePageState() {
     coverPreviewUrl,
     coverUploading,
     coverUploaded,
-    qrPanelOpen,
-    setQrPanelOpen,
     inviteLink,
-    shareClickCount,
     linkCopied,
+    currentUser,
+    authReady,
     steps,
     progress,
     selectedCount,
-    previewCoupon,
     filteredFriends,
     selectedFriendList,
     filteredProducts,
@@ -697,7 +759,6 @@ export function useCreatePageState() {
     refreshTopics,
     pickTopic,
     openShareInvite,
-    regenerateInviteLink,
     copyInviteLink,
     shareVia,
     openProductPicker,

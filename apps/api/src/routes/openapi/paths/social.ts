@@ -37,6 +37,41 @@ export const socialPaths = {
       },
     },
   },
+  '/api/social/friends': {
+    get: {
+      tags: ['Social'],
+      summary: '搜索当前用户好友',
+      security: bearerSecurity,
+      parameters: [
+        {
+          name: 'q',
+          in: 'query',
+          required: false,
+          description: '按好友昵称、签名或优米号搜索',
+          schema: { type: 'string' },
+        },
+        {
+          name: 'limit',
+          in: 'query',
+          required: false,
+          description: '返回条数，1-50，默认 24',
+          schema: { type: 'integer', minimum: 1, maximum: 50, default: 24 },
+        },
+      ],
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            items: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true },
+            },
+          },
+        }),
+        401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
   '/api/social/requests/{id}/accept': {
     post: {
       tags: ['Social'],

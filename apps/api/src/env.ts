@@ -40,4 +40,9 @@ export const env = {
   dbUser: process.env.DB_USER ?? parsedDatabaseUrl?.username ?? '',
   dbPassword: process.env.DB_PASSWORD ?? parsedDatabaseUrl?.password ?? '',
   dbName: process.env.DB_NAME ?? parsedDatabaseUrl?.pathname.replace(/^\//, '') ?? '',
+  ossAccessKeyId: process.env.OSS_ACCESS_KEY_ID ?? '',
+  ossAccessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? '',
+  ossBucket: process.env.OSS_BUCKET ?? '',
+  ossRegion: process.env.OSS_REGION ?? '',
+  ossBaseUrl: process.env.OSS_BASE_URL ?? '',
 };
