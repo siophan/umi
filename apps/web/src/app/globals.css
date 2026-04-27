@@ -398,6 +398,13 @@ button {
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.3px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color 0.3s ease;
 }
 
 .mini-tab.active {
@@ -434,6 +441,21 @@ button {
   background: #f5f5f8;
   color: #666;
   font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hv3-action:active {
+  background: #e8e8eb;
+  transform: scale(0.9);
+}
+
+.tone-dark .hv3-action:active {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .tone-dark .mini-tab-slider {
@@ -455,6 +477,11 @@ button {
   border-radius: 50%;
   background: #ff3d00;
   border: 2px solid white;
+  box-shadow: 0 0 4px rgba(255, 61, 0, 0.4);
+}
+
+.tone-dark .hv3-action .notif-dot {
+  border-color: #0f0f19;
 }
 
 .tone-dark .notif-dot {

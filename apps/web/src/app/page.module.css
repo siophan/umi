@@ -43,11 +43,18 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.5px;
+  transition: all 0.4s;
 }
 
 .breakingTagBreaking {
   background: rgba(255, 61, 0, 0.8);
   color: #fff;
+  animation: flashTag 2s infinite;
+}
+
+@keyframes flashTag {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .breakingTagBet {
@@ -519,6 +526,27 @@
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.45);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.catChip:active {
+  transform: scale(0.95);
+}
+
+.catChip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.35s;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .catIcon {
@@ -530,15 +558,66 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
   font-size: 11px;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.catIcon i {
+  position: relative;
+  z-index: 2;
+  transition: all 0.35s ease;
+}
+
+.catIcon::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  opacity: 0;
+  z-index: 0;
+  transition: opacity 0.35s;
 }
 
 .catText {
   font-size: 12px;
   font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.catChip:not(.catActive) .catIcon i {
+  animation: gcIdle 3s ease-in-out infinite;
+}
+
+@keyframes gcIdle {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.75; }
 }
 
 .catActive {
   border-color: transparent;
+  padding: 0 14px 0 7px;
+}
+
+.catChip.catActive::before {
+  opacity: 1;
+}
+
+.catChip.catActive .catIcon {
+  transform: scale(1.1);
+}
+
+.catChip.catActive .catIcon::after {
+  opacity: 1;
+}
+
+.catChip.catActive .catIcon i {
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 4px currentColor);
 }
 
 .catHot .catIcon {
@@ -668,6 +747,174 @@
   background: linear-gradient(135deg, #64b5f6, #1e88e5);
 }
 
+/* ===== per-category light streak (::before) + radial halo (::after) + icon animations ===== */
+.catChip.catActive.catHot::before {
+  background: linear-gradient(90deg, rgba(255, 61, 0, 0.12), transparent);
+}
+.catChip.catActive.catHot .catIcon::after {
+  background: radial-gradient(circle, rgba(255, 107, 53, 0.3), transparent);
+}
+.catChip.catActive.catHot .catIcon i {
+  color: #fff;
+  animation: gcFlame 0.5s ease infinite alternate;
+}
+.catChip.catActive.catHot .catText {
+  color: #ff8a65;
+}
+
+.catChip.catActive.catStar::before {
+  background: linear-gradient(90deg, rgba(213, 0, 249, 0.1), transparent);
+}
+.catChip.catActive.catStar .catIcon::after {
+  background: radial-gradient(circle, rgba(224, 64, 251, 0.3), transparent);
+}
+.catChip.catActive.catStar .catIcon i {
+  color: #fff;
+  animation: gcTwinkle 1.2s ease infinite;
+}
+.catChip.catActive.catStar .catText {
+  color: #ea80fc;
+}
+
+.catChip.catActive.catMovie::before {
+  background: linear-gradient(90deg, rgba(255, 152, 0, 0.1), transparent);
+}
+.catChip.catActive.catMovie .catIcon::after {
+  background: radial-gradient(circle, rgba(255, 152, 0, 0.3), transparent);
+}
+.catChip.catActive.catMovie .catIcon i {
+  color: #fff;
+  animation: gcFlash 2s ease infinite;
+}
+.catChip.catActive.catMovie .catText {
+  color: #ffb74d;
+}
+
+.catChip.catActive.catSport::before {
+  background: linear-gradient(90deg, rgba(46, 125, 50, 0.1), transparent);
+}
+.catChip.catActive.catSport .catIcon::after {
+  background: radial-gradient(circle, rgba(76, 175, 80, 0.3), transparent);
+}
+.catChip.catActive.catSport .catIcon i {
+  color: #fff;
+  animation: gcBounce 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite alternate;
+}
+.catChip.catActive.catSport .catText {
+  color: #81c784;
+}
+
+.catChip.catActive.catFinance::before {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.12), transparent);
+}
+.catChip.catActive.catFinance .catIcon::after {
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.35), transparent);
+}
+.catChip.catActive.catFinance .catIcon i {
+  color: #5d4037;
+  animation: gcRise 1.2s ease infinite;
+}
+.catChip.catActive.catFinance .catText {
+  color: #ffd740;
+}
+
+.catChip.catActive.catTech::before {
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.08), transparent);
+}
+.catChip.catActive.catTech .catIcon::after {
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.3), transparent);
+}
+.catChip.catActive.catTech .catIcon i {
+  color: #00e5ff;
+  animation: gcGlitch 3s steps(1) infinite;
+}
+.catChip.catActive.catTech .catText {
+  color: #64b5f6;
+}
+
+.catChip.catActive.catGame::before {
+  background: linear-gradient(90deg, rgba(179, 136, 255, 0.08), transparent);
+}
+.catChip.catActive.catGame .catIcon::after {
+  background: radial-gradient(circle, rgba(179, 136, 255, 0.3), transparent);
+}
+.catChip.catActive.catGame .catIcon i {
+  color: #e0e0e0;
+  animation: gcJoy 0.6s ease infinite;
+}
+.catChip.catActive.catGame .catText {
+  color: #ce93d8;
+}
+
+.catChip.catActive.catSociety::before {
+  background: linear-gradient(90deg, rgba(229, 57, 53, 0.1), transparent);
+}
+.catChip.catActive.catSociety .catIcon::after {
+  background: radial-gradient(circle, rgba(239, 83, 80, 0.3), transparent);
+}
+.catChip.catActive.catSociety .catIcon i {
+  color: #fff;
+  animation: gcAlert 0.8s ease infinite;
+}
+.catChip.catActive.catSociety .catText {
+  color: #ef9a9a;
+}
+
+.catChip.catActive.catWeather::before {
+  background: linear-gradient(90deg, rgba(3, 155, 229, 0.1), transparent);
+}
+.catChip.catActive.catWeather .catIcon::after {
+  background: radial-gradient(circle, rgba(79, 195, 247, 0.3), transparent);
+}
+.catChip.catActive.catWeather .catIcon i {
+  color: #fff176;
+  animation: gcSun 3s ease-in-out infinite;
+}
+.catChip.catActive.catWeather .catText {
+  color: #81d4fa;
+}
+
+@keyframes gcFlame {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.1) translateY(-1px); }
+}
+@keyframes gcTwinkle {
+  0%, 100% { transform: scale(1) rotate(0); }
+  50% { transform: scale(1.2) rotate(15deg); filter: drop-shadow(0 0 6px #ff80ab); }
+}
+@keyframes gcFlash {
+  0%, 100% { transform: scale(1); }
+  8% { transform: scale(1.15); filter: brightness(1.4); }
+  16% { transform: scale(1); }
+}
+@keyframes gcBounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-2px); }
+}
+@keyframes gcRise {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.1) translateY(-1px); }
+}
+@keyframes gcGlitch {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px #00e5ff); }
+  7% { transform: translate(1px, -1px); filter: drop-shadow(2px 0 #ff4081) drop-shadow(-2px 0 #00e5ff); }
+  9% { transform: scale(1); filter: drop-shadow(0 0 4px #00e5ff); }
+}
+@keyframes gcJoy {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-10deg); }
+  60% { transform: rotate(10deg); }
+}
+@keyframes gcAlert {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.2); }
+  30% { transform: scale(1); }
+}
+@keyframes gcSun {
+  0%, 100% { transform: rotate(0); filter: drop-shadow(0 0 3px #fff176); }
+  50% { transform: rotate(20deg); filter: drop-shadow(0 0 8px #ffee58); }
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -788,6 +1035,48 @@
   opacity: 0.7;
 }
 
+.modeChampion .modeName {
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.modeChampion .modeSub {
+  color: #ffecb3;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.modeChampion .modeArrow {
+  color: #ffd700;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.4));
+  opacity: 1;
+}
+
+.modeTriple .modeName {
+  color: #d4bbff;
+  text-shadow: 0 0 10px rgba(179, 136, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.modeTriple .modeSub {
+  color: #e1d5ff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.modeTriple .modeArrow {
+  color: #d4bbff;
+  filter: drop-shadow(0 0 4px rgba(179, 136, 255, 0.4));
+  opacity: 1;
+}
+
+.modeBlind .modeName {
+  color: #67e8f9;
+  text-shadow: 0 0 10px rgba(77, 208, 225, 0.5), 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.modeBlind .modeSub {
+  color: #b2ebf2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.modeBlind .modeArrow {
+  color: #67e8f9;
+  filter: drop-shadow(0 0 4px rgba(77, 208, 225, 0.4));
+  opacity: 1;
+}
+
 .listArea {
   padding: 0 0 4px;
 }
@@ -798,11 +1087,12 @@
   padding: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 0.15s;
 }
 
 .guessCard:active {
   background: rgba(255, 255, 255, 0.03);
+  transform: scale(0.995);
 }
 
 .cardImageWrap {
@@ -981,6 +1271,9 @@
   border-radius: 11px;
   font-size: 10px;
   font-weight: 700;
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .pkMiniBtn {
@@ -1000,6 +1293,7 @@
 .pkMiniBtn:active,
 .joinBtn:active {
   box-shadow: 0 0 4px rgba(255, 215, 0, 0.4);
+  transform: scale(0.95);
 }
 
 .cardBottom {
@@ -1107,6 +1401,11 @@
   font-size: 14px;
   font-weight: 700;
   text-align: center;
+}
+
+.rankRow:nth-child(n + 4) .rankNo {
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: 500;
 }
 
 .rankAvatar {
