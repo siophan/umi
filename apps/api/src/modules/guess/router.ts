@@ -20,11 +20,15 @@ import { getGuessDetail, getGuessList, getGuessStats } from './guess-read';
 import {
   addGuessFavorite,
   likeGuessComment,
-  participateInGuess,
   postGuessComment,
   removeGuessFavorite,
   unlikeGuessComment,
 } from './guess-write';
+import {
+  cancelGuessBet,
+  createGuessBetPayment,
+  queryGuessBetPayStatus,
+} from './guess-pay';
 
 export const guessRouter: ExpressRouter = Router();
 
@@ -162,14 +166,37 @@ guessRouter.post(
   requireUser,
   asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
+    const clientIp =
+      (request.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
+      request.socket.remoteAddress ||
+      '127.0.0.1';
     ok(
       response,
-      await participateInGuess(
+      await createGuessBetPayment(
         user.id,
         String(request.params.id),
         request.body as ParticipateGuessPayload,
+        clientIp,
       ),
     );
+  }),
+);
+
+guessRouter.get(
+  '/bets/:betId/pay-status',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await queryGuessBetPayStatus(user.id, String(request.params.betId)));
+  }),
+);
+
+guessRouter.post(
+  '/bets/:betId/cancel',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await cancelGuessBet(user.id, String(request.params.betId)));
   }),
 );
 

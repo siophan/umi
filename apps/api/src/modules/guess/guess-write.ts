@@ -3,8 +3,6 @@ import type mysql from 'mysql2/promise';
 import {
   toEntityId,
   type GuessCommentSummary,
-  type ParticipateGuessPayload,
-  type ParticipateGuessResult,
   type PostGuessCommentPayload,
   type ToggleGuessFavoriteResult,
 } from '@umi/shared';
@@ -12,108 +10,10 @@ import {
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
 import {
-  BET_PENDING,
   COMMENT_INTERACTION_LIKE,
   COMMENT_TARGET_GUESS,
-  GUESS_ACTIVE,
   GUESS_INTERACTION_FAVORITE,
 } from './guess-shared';
-
-async function loadGuessForBet(guessId: string) {
-  const db = getDbPool();
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
-    `
-      SELECT
-        g.id,
-        g.status,
-        g.end_time,
-        gp.product_id,
-        COALESCE(p.guess_price, p.price) AS product_price
-      FROM guess g
-      LEFT JOIN (
-        SELECT guess_id, MIN(product_id) AS product_id
-        FROM guess_product
-        GROUP BY guess_id
-      ) gp ON gp.guess_id = g.id
-      LEFT JOIN product p ON p.id = gp.product_id
-      WHERE g.id = ?
-      LIMIT 1
-    `,
-    [guessId],
-  );
-  if (!rows.length) {
-    throw new HttpError(404, 'GUESS_NOT_FOUND', '竞猜不存在');
-  }
-  return rows[0] as {
-    id: number | string;
-    status: number | string;
-    end_time: Date | string;
-    product_id: number | string | null;
-    product_price: number | string | null;
-  };
-}
-
-async function ensureGuessOptionExists(guessId: string, choiceIdx: number) {
-  const db = getDbPool();
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
-    'SELECT 1 FROM guess_option WHERE guess_id = ? AND option_index = ? LIMIT 1',
-    [guessId, choiceIdx],
-  );
-  if (!rows.length) {
-    throw new HttpError(400, 'GUESS_OPTION_NOT_FOUND', '竞猜选项不存在');
-  }
-}
-
-export async function participateInGuess(
-  userId: string,
-  guessId: string,
-  payload: ParticipateGuessPayload,
-): Promise<ParticipateGuessResult> {
-  const choiceIdx = Number(payload.choiceIdx);
-  if (!Number.isFinite(choiceIdx) || choiceIdx < 0) {
-    throw new HttpError(400, 'GUESS_CHOICE_INVALID', '请选择竞猜选项');
-  }
-  const quantity = Math.max(1, Math.floor(Number(payload.quantity ?? 1)));
-
-  const guess = await loadGuessForBet(guessId);
-  if (Number(guess.status) !== GUESS_ACTIVE) {
-    throw new HttpError(400, 'GUESS_NOT_ACTIVE', '竞猜不在进行中');
-  }
-  if (new Date(guess.end_time).getTime() <= Date.now()) {
-    throw new HttpError(400, 'GUESS_ENDED', '竞猜已结束');
-  }
-  await ensureGuessOptionExists(guessId, choiceIdx);
-
-  const unitPriceCents = Math.round(Number(guess.product_price ?? 0));
-  const amountCents = unitPriceCents * quantity;
-
-  const db = getDbPool();
-  // 表上有 unique key (user_id, guess_id) — 同一用户每条竞猜只允许一条 bet，
-  // 跟老系统"一锤子买卖"语义一致。重复参与抛 409，前端按已参与态展示。
-  let result: mysql.ResultSetHeader;
-  try {
-    [result] = await db.execute<mysql.ResultSetHeader>(
-      `
-        INSERT INTO guess_bet (
-          user_id, guess_id, choice_idx, amount, product_id, coupon_id, status, reward_type, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
-      `,
-      [userId, guessId, choiceIdx, amountCents, guess.product_id ?? null, BET_PENDING],
-    );
-  } catch (error) {
-    const err = error as { code?: string };
-    if (err?.code === 'ER_DUP_ENTRY') {
-      throw new HttpError(409, 'GUESS_ALREADY_PARTICIPATED', '你已参与本次竞猜');
-    }
-    throw error;
-  }
-
-  return {
-    betId: toEntityId(result.insertId),
-    guessId: toEntityId(guess.id),
-    choiceIdx,
-  };
-}
 
 export async function addGuessFavorite(userId: string, guessId: string): Promise<ToggleGuessFavoriteResult> {
   await ensureGuessExists(guessId);
