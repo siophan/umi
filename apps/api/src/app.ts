@@ -27,6 +27,7 @@ import { shopRouter } from './modules/shop/router';
 import { uploadRouter } from './modules/upload/router';
 import { walletRouter } from './modules/wallet/router';
 import { warehouseRouter } from './modules/warehouse/router';
+import { paymentRouter } from './modules/payment/router';
 
 export function createApp(): Express {
   const app = express();
@@ -57,6 +58,9 @@ export function createApp(): Express {
 
     next();
   });
+
+  // Payment notify endpoints 必须先于 express.json() 挂载, 因为 wechat 用 raw body 验签
+  app.use('/api/pay', paymentRouter);
 
   app.use(express.json({ limit: '16mb' }));
 
