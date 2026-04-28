@@ -145,7 +145,7 @@ export async function getGuessDetail(
     getGuessOptionRows([guessId]),
     getGuessVoteRows([guessId]),
     db.execute<mysql.RowDataPacket[]>(
-      'SELECT COUNT(*) AS cnt FROM guess_bet WHERE guess_id = ?',
+      'SELECT COUNT(*) AS cnt FROM guess_bet WHERE guess_id = ? AND pay_status = 20',
       [guessId],
     ),
     db.execute<mysql.RowDataPacket[]>(
@@ -167,7 +167,7 @@ export async function getGuessDetail(
     isFavorited = favRows.length > 0;
 
     const [betRows] = await db.execute<mysql.RowDataPacket[]>(
-      'SELECT id, choice_idx FROM guess_bet WHERE user_id = ? AND guess_id = ? ORDER BY id DESC LIMIT 1',
+      'SELECT id, choice_idx FROM guess_bet WHERE user_id = ? AND guess_id = ? AND pay_status = 20 ORDER BY id DESC LIMIT 1',
       [currentUserId, guessId],
     );
     if (betRows.length) {
