@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { FriendPkSummary } from '@umi/shared';
 
@@ -88,6 +88,14 @@ export function HomeGuessView({
 }: Props) {
   const heroTrackRef = useRef<HTMLDivElement | null>(null);
   const programmaticScrollUntilRef = useRef(0);
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    if (!friendPk) {
+      return undefined;
+    }
+    const timer = window.setInterval(() => setNowTick((v) => v + 1), 30_000);
+    return () => window.clearInterval(timer);
+  }, [friendPk?.id, friendPk?.endTime]);
   const pkLeftPct = friendPk?.options[0]?.pct ?? 50;
   const pkRightPct = friendPk?.options[1]?.pct ?? Math.max(0, 100 - pkLeftPct);
   const pkLeftLabel = friendPk?.options[0]?.text || '选项A';

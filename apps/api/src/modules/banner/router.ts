@@ -24,6 +24,7 @@ const GUESS_SETTLED = 40;
 const GUESS_REJECTED = 90;
 const GUESS_DRAFT = 10;
 const GUESS_PENDING_REVIEW = 20;
+const GUESS_SCOPE_PUBLIC = 10;
 const REVIEW_PENDING = 10;
 const REVIEW_APPROVED = 30;
 
@@ -221,9 +222,10 @@ async function getGuessSummaries(guessIds: string[]) {
       WHERE g.id IN (?)
         AND g.status = ?
         AND g.review_status = ?
+        AND g.scope = ?
         AND g.end_time > NOW()
     `,
-    [guessIds, GUESS_ACTIVE, REVIEW_APPROVED],
+    [guessIds, GUESS_ACTIVE, REVIEW_APPROVED, GUESS_SCOPE_PUBLIC],
   );
 
   const [optionRows] = await db.query<mysql.RowDataPacket[]>(

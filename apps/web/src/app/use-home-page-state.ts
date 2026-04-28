@@ -6,7 +6,7 @@ import type { FriendPkSummary } from '@umi/shared';
 
 import { fetchCommunityDiscovery } from '../lib/api/community';
 import { fetchFriendPkSummary, fetchGuessHistory, fetchGuessList } from '../lib/api/guesses';
-import { hasAuthToken } from '../lib/api/shared';
+import { AUTH_CHANGE_EVENT, hasAuthToken } from '../lib/api/shared';
 import {
   buildBreakingEvents,
   createBannerHeroCard,
@@ -89,8 +89,27 @@ export function useHomePageState(initialData: HomePageInitialData) {
     }
 
     void loadHomeData();
+
+    function handleAuthChange() {
+      if (!hasAuthToken()) {
+        // 登出：立刻清空登录态依赖的数据，避免点到无效卡片
+        setHistoryItems([]);
+        setFriendPk(null);
+        return;
+      }
+      // 登录：重新拉一次以获取登录态独有的数据
+      void loadHomeData();
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
+    }
+
     return () => {
       ignore = true;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
+      }
     };
   }, []);
 

@@ -90,7 +90,7 @@ export async function getFriendPkSummary(currentUserId: string): Promise<FriendP
     endTime: new Date(row.end_time).toISOString(),
     creator: {
       id: toEntityId(row.creator_id),
-      name: row.creator_name?.trim() || `用户${row.creator_id}`,
+      name: row.creator_name?.trim() || '好友',
       avatar: row.creator_avatar,
     },
     options: options.map((o) => {

@@ -3,6 +3,14 @@ import type { ApiEnvelope } from '@umi/shared';
 import { apiBaseUrl } from '../env';
 
 const AUTH_TOKEN_KEY = 'umi_token';
+export const AUTH_CHANGE_EVENT = 'umi-auth-change';
+
+function dispatchAuthChange() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT));
+}
 
 function getAuthToken() {
   if (typeof window === 'undefined') {
@@ -35,6 +43,7 @@ export function setAuthToken(token: string) {
   }
 
   window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+  dispatchAuthChange();
 }
 
 export function clearAuthToken() {
@@ -43,6 +52,7 @@ export function clearAuthToken() {
   }
 
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  dispatchAuthChange();
 }
 
 export async function getJson<T>(path: string): Promise<T> {
