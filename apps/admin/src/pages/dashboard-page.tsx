@@ -1,5 +1,5 @@
-import { Alert } from 'antd';
-import { useEffect, useState } from 'react';
+import { Alert, Button } from 'antd';
+import { useCallback, useEffect, useState } from 'react';
 
 import { fetchAdminDashboard, type AdminDashboardStats } from '../lib/api/dashboard';
 import { AdminDashboardContentPanels } from '../components/admin-dashboard-content-panels';
@@ -19,6 +19,11 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
   const [loading, setLoading] = useState(false);
   const [dashboardIssue, setDashboardIssue] = useState<string | null>(null);
   const [stats, setStats] = useState<AdminDashboardStats>(emptyDashboardStats);
+  const [retryToken, setRetryToken] = useState(0);
+
+  const triggerRetry = useCallback(() => {
+    setRetryToken((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -52,7 +57,7 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
     return () => {
       alive = false;
     };
-  }, [refreshToken]);
+  }, [refreshToken, retryToken]);
 
   const dashboardUnavailable = Boolean(dashboardIssue);
   const summaryStats: DashboardStatItem[] = [
@@ -117,6 +122,11 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
           type="error"
           message="仪表盘数据暂不可用"
           description={dashboardIssue}
+          action={
+            <Button size="small" onClick={triggerRetry} loading={loading}>
+              重试
+            </Button>
+          }
         />
       ) : null}
 
@@ -124,6 +134,7 @@ export function DashboardPage({ refreshToken = 0 }: DashboardPageProps) {
       <AdminDashboardStatGrid items={todayStats} loading={loading} />
       <AdminDashboardContentPanels
         dashboardUnavailable={dashboardUnavailable}
+        loading={loading}
         stats={stats}
       />
     </div>

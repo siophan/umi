@@ -7,40 +7,71 @@ const ORDER_PAID = 20;
 const ORDER_FULFILLED = 30;
 const ORDER_CLOSED = 40;
 const ORDER_REFUNDED = 90;
+const PRODUCT_STATUS_ACTIVE = 10;
+const PRODUCT_STATUS_OFF_SHELF = 20;
+const PRODUCT_STATUS_DISABLED = 90;
 const SHOP_APPLY_PENDING = 10;
 const REFUND_PENDING = 10;
 const REFUND_REVIEWING = 20;
 const REPORT_PENDING = 10;
 const REPORT_REVIEWING = 20;
-function formatDayLabel(date) {
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-}
+const TREND_DAYS = 7;
+const ORDER_STATUS_LABELS = {
+    [ORDER_PENDING]: '待支付',
+    [ORDER_PAID]: '已支付',
+    [ORDER_FULFILLED]: '已完成',
+    [ORDER_CLOSED]: '已关闭',
+    [ORDER_REFUNDED]: '已退款',
+};
 function startOfDay(date) {
     const value = new Date(date);
     value.setHours(0, 0, 0, 0);
-    return value;
-}
-function endOfDay(date) {
-    const value = startOfDay(date);
-    value.setDate(value.getDate() + 1);
     return value;
 }
 function toNumber(value) {
     return Number(value ?? 0);
 }
 function mapProductStatus(code) {
-    if (code === 20) {
+    if (code === PRODUCT_STATUS_ACTIVE) {
+        return 'active';
+    }
+    if (code === PRODUCT_STATUS_OFF_SHELF) {
         return 'off_shelf';
     }
-    if (code === 90) {
+    if (code === PRODUCT_STATUS_DISABLED) {
         return 'disabled';
     }
-    return 'active';
+    return 'unknown';
+}
+function buildTrendDates() {
+    const out = [];
+    const today = startOfDay(new Date());
+    for (let i = TREND_DAYS - 1; i >= 0; i -= 1) {
+        const day = new Date(today);
+        day.setDate(day.getDate() - i);
+        const yyyy = day.getFullYear();
+        const mm = String(day.getMonth() + 1).padStart(2, '0');
+        const dd = String(day.getDate()).padStart(2, '0');
+        out.push({
+            iso: `${yyyy}-${mm}-${dd}`,
+            label: `${day.getMonth() + 1}/${day.getDate()}`,
+        });
+    }
+    return out;
+}
+function bucketByDay(rows) {
+    const map = new Map();
+    for (const row of rows) {
+        map.set(String(row.day), toNumber(row.total));
+    }
+    return map;
 }
 export async function getAdminDashboardStats() {
     const db = getDbPool();
     const todayStart = startOfDay(new Date());
-    const [[userRows], [productRows], [activeGuessRows], [orderRows], [todayUserRows], [todayBetRows], [todayOrderRows], [todayGmvRows], [orderDistributionRows], [guessCategoryRows], [hotGuessRows], [hotProductRows], [pendingGuessRows], [pendingShopApplyRows], [pendingRefundRows], [pendingReportRows],] = await Promise.all([
+    const trendDates = buildTrendDates();
+    const trendStart = new Date(`${trendDates[0].iso}T00:00:00`);
+    const [[userRows], [productRows], [activeGuessRows], [orderRows], [todayUserRows], [todayBetRows], [todayOrderRows], [todayPaidGmvRows], [todayRefundGmvRows], [orderDistributionRows], [guessCategoryRows], [hotGuessRows], [hotProductRows], [pendingGuessRows], [pendingShopApplyRows], [pendingRefundRows], [pendingReportRows], [trendUserRows], [trendOrderRows], [trendBetRows], [trendPaidRows], [trendRefundRows],] = await Promise.all([
         db.execute('SELECT COUNT(*) AS total FROM user'),
         db.execute('SELECT COUNT(*) AS total FROM product'),
         db.execute(`
@@ -60,26 +91,12 @@ export async function getAdminDashboardStats() {
           AND status IN (?, ?)
       `, [todayStart, ORDER_PAID, ORDER_FULFILLED]),
         db.execute(`
-        SELECT '待支付' AS label, COUNT(*) AS value
+        SELECT COALESCE(SUM(amount), 0) AS total
         FROM \`order\`
-        WHERE status = ?
-        UNION ALL
-        SELECT '已支付' AS label, COUNT(*) AS value
-        FROM \`order\`
-        WHERE status = ?
-        UNION ALL
-        SELECT '已完成' AS label, COUNT(*) AS value
-        FROM \`order\`
-        WHERE status = ?
-        UNION ALL
-        SELECT '已关闭' AS label, COUNT(*) AS value
-        FROM \`order\`
-        WHERE status = ?
-        UNION ALL
-        SELECT '已退款' AS label, COUNT(*) AS value
-        FROM \`order\`
-        WHERE status = ?
-      `, [ORDER_PENDING, ORDER_PAID, ORDER_FULFILLED, ORDER_CLOSED, ORDER_REFUNDED]),
+        WHERE created_at >= ?
+          AND status = ?
+      `, [todayStart, ORDER_REFUNDED]),
+        db.execute('SELECT status, COUNT(*) AS total FROM `order` GROUP BY status'),
         db.execute(`
         SELECT COALESCE(c.name, '未分类') AS label, COUNT(*) AS value
         FROM guess g
@@ -101,7 +118,7 @@ export async function getAdminDashboardStats() {
         LEFT JOIN guess_bet gb ON gb.guess_id = g.id
         WHERE g.review_status = ?
           AND g.status = ?
-        GROUP BY g.id, g.title, g.end_time, c.name
+        GROUP BY g.id
         ORDER BY participant_count DESC, total_pool DESC, g.created_at DESC
         LIMIT 5
       `, [GUESS_APPROVED, GUESS_ACTIVE]),
@@ -113,14 +130,15 @@ export async function getAdminDashboardStats() {
           p.price,
           p.status,
           p.stock,
+          MAX(p.sales) AS p_sales,
           COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS sales_count
         FROM product p
         LEFT JOIN order_item oi ON oi.product_id = p.id
         LEFT JOIN \`order\` o
           ON o.id = oi.order_id
          AND o.status IN (?, ?)
-        GROUP BY p.id, p.name, p.image_url, p.price, p.status, p.stock, p.sales
-        ORDER BY sales_count DESC, p.sales DESC, p.updated_at DESC
+        GROUP BY p.id
+        ORDER BY sales_count DESC, p_sales DESC, p.updated_at DESC
         LIMIT 5
       `, [ORDER_PAID, ORDER_FULFILLED]),
         db.execute(`
@@ -143,48 +161,61 @@ export async function getAdminDashboardStats() {
         FROM report_item
         WHERE status IN (?, ?)
       `, [REPORT_PENDING, REPORT_REVIEWING]),
+        db.execute(`
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COUNT(*) AS total
+        FROM user
+        WHERE created_at >= ?
+        GROUP BY day
+      `, [trendStart]),
+        db.execute(`
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COUNT(*) AS total
+        FROM \`order\`
+        WHERE created_at >= ?
+        GROUP BY day
+      `, [trendStart]),
+        db.execute(`
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COUNT(*) AS total
+        FROM guess_bet
+        WHERE created_at >= ?
+        GROUP BY day
+      `, [trendStart]),
+        db.execute(`
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COALESCE(SUM(amount), 0) AS total
+        FROM \`order\`
+        WHERE created_at >= ?
+          AND status IN (?, ?)
+        GROUP BY day
+      `, [trendStart, ORDER_PAID, ORDER_FULFILLED]),
+        db.execute(`
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COALESCE(SUM(amount), 0) AS total
+        FROM \`order\`
+        WHERE created_at >= ?
+          AND status = ?
+        GROUP BY day
+      `, [trendStart, ORDER_REFUNDED]),
     ]);
-    const trend = await Promise.all(Array.from({ length: 7 }, (_, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (6 - index));
-        const rangeStart = startOfDay(date);
-        const rangeEnd = endOfDay(date);
-        return db
-            .execute(`
-            SELECT
-              (SELECT COUNT(*) FROM user WHERE created_at >= ? AND created_at < ?) AS total_users,
-              (SELECT COUNT(*) FROM \`order\` WHERE created_at >= ? AND created_at < ?) AS total_orders,
-              (SELECT COUNT(*) FROM guess_bet WHERE created_at >= ? AND created_at < ?) AS total_bets,
-              (
-                SELECT COALESCE(SUM(amount), 0)
-                FROM \`order\`
-                WHERE created_at >= ?
-                  AND created_at < ?
-                  AND status IN (?, ?)
-              ) AS total_gmv
-          `, [
-            rangeStart,
-            rangeEnd,
-            rangeStart,
-            rangeEnd,
-            rangeStart,
-            rangeEnd,
-            rangeStart,
-            rangeEnd,
-            ORDER_PAID,
-            ORDER_FULFILLED,
-        ])
-            .then(([rows]) => {
-            const row = rows[0] ?? {};
-            return {
-                date: formatDayLabel(date),
-                users: toNumber(row.total_users),
-                orders: toNumber(row.total_orders),
-                bets: toNumber(row.total_bets),
-                gmv: toNumber(row.total_gmv),
-            };
-        });
+    const trendUserMap = bucketByDay(trendUserRows);
+    const trendOrderMap = bucketByDay(trendOrderRows);
+    const trendBetMap = bucketByDay(trendBetRows);
+    const trendPaidMap = bucketByDay(trendPaidRows);
+    const trendRefundMap = bucketByDay(trendRefundRows);
+    const trend = trendDates.map(({ iso, label }) => ({
+        date: label,
+        users: trendUserMap.get(iso) ?? 0,
+        orders: trendOrderMap.get(iso) ?? 0,
+        bets: trendBetMap.get(iso) ?? 0,
+        gmv: Math.max((trendPaidMap.get(iso) ?? 0) - (trendRefundMap.get(iso) ?? 0), 0),
     }));
+    const todayPaidGmv = toNumber(todayPaidGmvRows[0]?.total);
+    const todayRefundGmv = toNumber(todayRefundGmvRows[0]?.total);
+    const todayGmv = Math.max(todayPaidGmv - todayRefundGmv, 0);
+    const orderDistribution = orderDistributionRows
+        .map((row) => {
+        const status = toNumber(row.status);
+        const label = ORDER_STATUS_LABELS[status] ?? `状态(${status})`;
+        return { type: label, value: toNumber(row.total) };
+    })
+        .sort((a, b) => b.value - a.value);
     const pendingQueues = [
         {
             id: 'pending-guesses',
@@ -224,12 +255,9 @@ export async function getAdminDashboardStats() {
         todayUsers: toNumber(todayUserRows[0]?.total),
         todayBets: toNumber(todayBetRows[0]?.total),
         todayOrders: toNumber(todayOrderRows[0]?.total),
-        todayGmv: toNumber(todayGmvRows[0]?.total),
+        todayGmv,
         trend,
-        orderDistribution: orderDistributionRows.map((row) => ({
-            type: row.label,
-            value: toNumber(row.value),
-        })),
+        orderDistribution,
         guessCategories: guessCategoryRows.map((row) => ({
             type: row.label,
             value: toNumber(row.value),
