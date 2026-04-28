@@ -6,7 +6,6 @@ import {
   Input,
   Space,
   Tag,
-  message,
 } from 'antd';
 import { useEffect, useState } from 'react';
 
@@ -88,9 +87,8 @@ export function PaymentSettingsAlipayForm({ data, onSubmit }: Props) {
     setSubmitting(true);
     try {
       await onSubmit(payload);
-      message.success('已保存');
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '保存失败');
+    } catch {
+      // page handles message; nothing to do here
     } finally {
       setSubmitting(false);
     }

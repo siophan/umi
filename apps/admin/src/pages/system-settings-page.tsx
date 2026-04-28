@@ -5,6 +5,7 @@ import {
   Space,
   Tabs,
   Typography,
+  message,
 } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -32,6 +33,7 @@ function formatUpdatedAt(iso: string | null): string {
 }
 
 export function SystemSettingsPage({ refreshToken }: AdminPageProps) {
+  const [messageApi, contextHolder] = message.useMessage();
   const [data, setData] = useState<PaymentSettingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,38 +58,60 @@ export function SystemSettingsPage({ refreshToken }: AdminPageProps) {
 
   const handleWechatSubmit = useCallback(
     async (payload: UpdateWechatPaymentSettingsPayload) => {
-      const next = await updateWechatPaymentSettings(payload);
-      setData(next);
+      try {
+        const next = await updateWechatPaymentSettings(payload);
+        setData(next);
+        messageApi.success('已保存');
+      } catch (err) {
+        messageApi.error(err instanceof Error ? err.message : '保存失败');
+        throw err;
+      }
     },
-    [],
+    [messageApi],
   );
 
   const handleAlipaySubmit = useCallback(
     async (payload: UpdateAlipayPaymentSettingsPayload) => {
-      const next = await updateAlipayPaymentSettings(payload);
-      setData(next);
+      try {
+        const next = await updateAlipayPaymentSettings(payload);
+        setData(next);
+        messageApi.success('已保存');
+      } catch (err) {
+        messageApi.error(err instanceof Error ? err.message : '保存失败');
+        throw err;
+      }
     },
-    [],
+    [messageApi],
   );
 
   if (loading && !data) {
     return (
-      <Card>
-        <Skeleton active paragraph={{ rows: 10 }} />
-      </Card>
+      <>
+        {contextHolder}
+        <Card>
+          <Skeleton active paragraph={{ rows: 10 }} />
+        </Card>
+      </>
     );
   }
 
   if (error) {
-    return <Alert type="error" showIcon message="加载失败" description={error} />;
+    return (
+      <>
+        {contextHolder}
+        <Alert type="error" showIcon message="加载失败" description={error} />
+      </>
+    );
   }
 
-  if (!data) return null;
+  if (!data) return contextHolder;
 
   const currentChannel = activeTab === 'wechat' ? data.wechat : data.alipay;
 
   return (
-    <Card
+    <>
+      {contextHolder}
+      <Card
       title="参数设置"
       extra={
         <Typography.Text type="secondary">
@@ -136,6 +160,7 @@ export function SystemSettingsPage({ refreshToken }: AdminPageProps) {
           },
         ]}
       />
-    </Card>
+      </Card>
+    </>
   );
 }
