@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-import type { GuessSummary } from '@umi/shared';
+import type { FriendPkSummary } from '@umi/shared';
 
 import {
   fallbackAvatar,
@@ -15,7 +15,7 @@ import {
   type HomeResultCard,
   type HomeSectionErrors,
 } from './home-page-types';
-import { formatCompactNumber, getGuessParticipants, getGuessPercents } from './home-page-helpers';
+import { formatInlineCountdown } from './home-page-helpers';
 import styles from './page.module.css';
 
 type Props = {
@@ -28,8 +28,8 @@ type Props = {
   onHeroInteraction: () => void;
   onOpenHero: (card: HomeHeroCard) => void;
   rankings: Array<{ userId: string; rank: number; nickname: string; avatar: string | null; value: string }>;
-  focusGuess: GuessSummary | null;
-  onJoinFocusGuess: () => void;
+  friendPk: FriendPkSummary | null;
+  onJoinFriendPk: () => void;
   category: HomeCategory;
   onSelectCategory: (category: HomeCategory) => void;
   categoryFellBack: boolean;
@@ -68,8 +68,8 @@ export function HomeGuessView({
   onHeroInteraction,
   onOpenHero,
   rankings,
-  focusGuess,
-  onJoinFocusGuess,
+  friendPk,
+  onJoinFriendPk,
   category,
   onSelectCategory,
   categoryFellBack,
@@ -88,11 +88,10 @@ export function HomeGuessView({
 }: Props) {
   const heroTrackRef = useRef<HTMLDivElement | null>(null);
   const programmaticScrollUntilRef = useRef(0);
-  const focusPercents = focusGuess ? getGuessPercents(focusGuess) : [50, 50];
-  const focusLeftPct = focusPercents[0] ?? 50;
-  const focusRightPct = focusPercents[1] ?? Math.max(0, 100 - focusLeftPct);
-  const focusLeftLabel = focusGuess?.options[0]?.optionText || '选项A';
-  const focusRightLabel = focusGuess?.options[1]?.optionText || '选项B';
+  const pkLeftPct = friendPk?.options[0]?.pct ?? 50;
+  const pkRightPct = friendPk?.options[1]?.pct ?? Math.max(0, 100 - pkLeftPct);
+  const pkLeftLabel = friendPk?.options[0]?.text || '选项A';
+  const pkRightLabel = friendPk?.options[1]?.text || '选项B';
   const heroRankLabels = ['🏆 TOP 1', '🥈 TOP 2', '🥉 TOP 3', '#4', '#5'];
   const currentBreaking = breakingEvents[breakingIndex] ?? breakingEvents[0];
   const breakingTagClass = currentBreaking
@@ -236,35 +235,31 @@ export function HomeGuessView({
         </section>
       ) : null}
 
-      {focusGuess ? (
+      {friendPk ? (
         <div className={styles.pkBanner}>
-          <div className={styles.pkLive}>LIVE</div>
+          <div className={styles.pkLive}>⏰ {formatInlineCountdown(friendPk.endTime)}</div>
           <div className={styles.pkPlayers}>
-            <img alt="focus-left" src={rankings[0]?.avatar || fallbackAvatar} />
-            <div className={styles.pkVs}>VS</div>
-            <img alt="focus-right" src={rankings[1]?.avatar || fallbackAvatar} />
+            <img alt={friendPk.creator.name} src={friendPk.creator.avatar || fallbackAvatar} />
           </div>
           <div className={styles.pkInfo}>
-            <div className={styles.pkTitle}>{focusGuess.title}</div>
-            <div className={styles.pkSub}>
-              {`${focusLeftLabel} vs ${focusRightLabel} · 👥${formatCompactNumber(getGuessParticipants(focusGuess))}`}
-            </div>
+            <div className={styles.pkTitle}>{friendPk.title}</div>
+            <div className={styles.pkSub}>{`${friendPk.creator.name} 邀你参与PK`}</div>
           </div>
           <div className={styles.pkProgressWrap}>
             <div className={styles.pkProgressTrack}>
-              <div className={styles.pkProgressLeft} style={{ width: `${focusLeftPct}%` }}>
-                {focusLeftPct}%
+              <div className={styles.pkProgressLeft} style={{ width: `${pkLeftPct}%` }}>
+                {pkLeftPct}%
               </div>
-              <div className={styles.pkProgressRight} style={{ width: `${focusRightPct}%` }}>
-                {focusRightPct}%
+              <div className={styles.pkProgressRight} style={{ width: `${pkRightPct}%` }}>
+                {pkRightPct}%
               </div>
             </div>
             <div className={styles.pkProgressLabels}>
-              <span>{focusLeftLabel}</span>
-              <span>{focusRightLabel}</span>
+              <span>{pkLeftLabel}</span>
+              <span>{pkRightLabel}</span>
             </div>
           </div>
-          <button className={styles.pkBtn} type="button" onClick={onJoinFocusGuess}>
+          <button className={styles.pkBtn} type="button" onClick={onJoinFriendPk}>
             加入PK
           </button>
         </div>

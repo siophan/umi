@@ -47,7 +47,7 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
     breakingEvents,
     breakingIndex,
     rankings,
-    focusGuess,
+    friendPk,
     recentResults,
     sectionSubtitle,
     filteredLiveFeedItems,
@@ -116,10 +116,10 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
             onHeroInteraction={markHeroInteraction}
             onOpenHero={handleOpenHero}
             rankings={rankings}
-            focusGuess={focusGuess}
-            onJoinFocusGuess={() => {
-              if (focusGuess) {
-                router.push(`/guess/${focusGuess.id}`);
+            friendPk={friendPk}
+            onJoinFriendPk={() => {
+              if (friendPk) {
+                router.push(`/guess/${friendPk.id}`);
               }
             }}
             category={category}

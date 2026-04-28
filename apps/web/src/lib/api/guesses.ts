@@ -1,6 +1,7 @@
 import type {
   CreateGuessPayload,
   CreateGuessResult,
+  FriendPkResult,
   GuessCategoryListResult,
   GuessHistoryResult,
   GuessListResult,
@@ -43,4 +44,8 @@ export function createGuess(payload: CreateGuessPayload) {
 
 export function fetchGuessCategories() {
   return getJson<GuessCategoryListResult>('/api/guesses/categories');
+}
+
+export function fetchFriendPkSummary() {
+  return getJson<FriendPkResult>('/api/guesses/friend-pk');
 }

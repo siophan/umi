@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { FriendPkSummary } from '@umi/shared';
+
 import { fetchCommunityDiscovery } from '../lib/api/community';
-import { fetchGuessHistory, fetchGuessList } from '../lib/api/guesses';
+import { fetchFriendPkSummary, fetchGuessHistory, fetchGuessList } from '../lib/api/guesses';
 import { hasAuthToken } from '../lib/api/shared';
 import {
   buildBreakingEvents,
@@ -41,6 +43,7 @@ export function useHomePageState(initialData: HomePageInitialData) {
   const [rankingItems] = useState(initialData.rankingItems);
   const [historyItems, setHistoryItems] = useState(initialData.historyItems);
   const [hotTopics, setHotTopics] = useState(initialData.hotTopics);
+  const [friendPk, setFriendPk] = useState<FriendPkSummary | null>(null);
   const [sectionErrors] = useState(initialData.sectionErrors);
   const [documentVisible, setDocumentVisible] = useState(true);
   const lastHeroInteractionRef = useRef(0);
@@ -59,10 +62,11 @@ export function useHomePageState(initialData: HomePageInitialData) {
     let ignore = false;
 
     async function loadHomeData() {
-      const shouldLoadHistory = hasAuthToken();
-      const [historyResult, discoveryResult] = await Promise.allSettled([
-        shouldLoadHistory ? fetchGuessHistory() : Promise.resolve(null),
+      const loggedIn = hasAuthToken();
+      const [historyResult, discoveryResult, friendPkResult] = await Promise.allSettled([
+        loggedIn ? fetchGuessHistory() : Promise.resolve(null),
         fetchCommunityDiscovery(),
+        loggedIn ? fetchFriendPkSummary() : Promise.resolve(null),
       ]);
 
       if (ignore) {
@@ -76,6 +80,11 @@ export function useHomePageState(initialData: HomePageInitialData) {
       );
       setHotTopics(
         discoveryResult.status === 'fulfilled' ? discoveryResult.value?.hotTopics ?? [] : [],
+      );
+      setFriendPk(
+        friendPkResult.status === 'fulfilled' && friendPkResult.value
+          ? friendPkResult.value.item
+          : null,
       );
     }
 
@@ -104,15 +113,6 @@ export function useHomePageState(initialData: HomePageInitialData) {
     [liveFilter, visibleLives],
   );
 
-  const focusGuess = useMemo(() => {
-    if (guessItems.length === 0) {
-      return null;
-    }
-    return guessItems
-      .slice()
-      .sort((left, right) => getGuessParticipants(right) - getGuessParticipants(left))[0] ?? null;
-  }, [guessItems]);
-
   const guessHeroCards = useMemo(() => {
     const bannerCards = guessBanners.map(createBannerHeroCard);
     if (bannerCards.length > 0) {
@@ -137,14 +137,10 @@ export function useHomePageState(initialData: HomePageInitialData) {
 
   const visibleCards = useMemo(() => {
     if (mode === 'guess') {
-      const exclusionId = focusGuess?.id;
-      const list = exclusionId
-        ? visibleGuesses.filter((item) => item.id !== exclusionId)
-        : visibleGuesses;
-      return list.map(createGuessListCard);
+      return visibleGuesses.map(createGuessListCard);
     }
     return visibleLives.map(createLiveListCard);
-  }, [focusGuess?.id, mode, visibleGuesses, visibleLives]);
+  }, [mode, visibleGuesses, visibleLives]);
 
   const loadMoreGuesses = useCallback(async () => {
     if (!guessHasMore || !guessCursor || guessLoadingMore) {
@@ -257,7 +253,7 @@ export function useHomePageState(initialData: HomePageInitialData) {
     breakingEvents,
     breakingIndex,
     rankings,
-    focusGuess,
+    friendPk,
     recentResults,
     sectionSubtitle,
     filteredLiveFeedItems,
