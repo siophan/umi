@@ -492,7 +492,7 @@ export function useCreatePageState() {
 
   function updateTitle(value: string) {
     setTitle(value);
-    if (titleTipVisible && value.trim().length >= 5) {
+    if (titleTipVisible) {
       setTitleTipVisible(false);
     }
     if (selectedTopic && value !== selectedTopic) {
@@ -507,6 +507,7 @@ export function useCreatePageState() {
     }
     setTitle(topicText);
     setSelectedTopic(topicText);
+    setTitleTipVisible(false);
     titleInputRef.current?.focus();
   }
 
