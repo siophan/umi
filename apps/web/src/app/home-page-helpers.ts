@@ -50,6 +50,14 @@ export function formatCountdown(endTime?: string | null): [string, string, strin
   return [String(hours).padStart(2, '0'), '时', String(minutes).padStart(2, '0'), '分'];
 }
 
+export function isEnded(endTime?: string | null): boolean {
+  if (!endTime) {
+    return false;
+  }
+  const diff = new Date(endTime).getTime() - Date.now();
+  return !Number.isNaN(diff) && diff <= 0;
+}
+
 export function formatInlineCountdown(endTime?: string | null) {
   const [hours, hourLabel, minutes, minuteLabel] = formatCountdown(endTime);
   return `${hours}${hourLabel}${minutes}${minuteLabel}`;
@@ -136,14 +144,26 @@ export function matchesLiveCategory(category: HomeCategory, item: LiveListItem) 
   return matchesGuessCategory(category, source);
 }
 
-export function filterGuessList(items: GuessSummary[], category: HomeCategory) {
-  const filtered = items.filter((item) => matchesGuessCategory(category, item.category || ''));
-  return filtered.length > 0 || category === 'hot' ? filtered : items;
+export function filterGuessList(
+  items: GuessSummary[],
+  category: HomeCategory,
+): { items: GuessSummary[]; matchedCount: number; fellBack: boolean } {
+  const matched = items.filter((item) => matchesGuessCategory(category, item.category || ''));
+  if (matched.length > 0 || category === 'hot') {
+    return { items: matched, matchedCount: matched.length, fellBack: false };
+  }
+  return { items, matchedCount: 0, fellBack: true };
 }
 
-export function filterLiveList(items: LiveListItem[], category: HomeCategory) {
-  const filtered = items.filter((item) => matchesLiveCategory(category, item));
-  return filtered.length > 0 || category === 'hot' ? filtered : items;
+export function filterLiveList(
+  items: LiveListItem[],
+  category: HomeCategory,
+): { items: LiveListItem[]; matchedCount: number; fellBack: boolean } {
+  const matched = items.filter((item) => matchesLiveCategory(category, item));
+  if (matched.length > 0 || category === 'hot') {
+    return { items: matched, matchedCount: matched.length, fellBack: false };
+  }
+  return { items, matchedCount: 0, fellBack: true };
 }
 
 export function matchesHomeLiveFilter(item: LiveListItem, filter: HomeLiveFilter) {
@@ -227,13 +247,15 @@ export function createGuessListCard(item: GuessSummary): HomeListCard {
   const statusClass = getStatusClass(item.endTime, getGuessParticipants(item));
   const leftPct = percents[0] ?? 50;
   const rightPct = percents[1] ?? Math.max(0, 100 - leftPct);
+  const ended = isEnded(item.endTime);
   return {
     id: item.id,
     title: item.title,
     image: item.product.img || fallbackGuessImage,
-    status: getGuessStatusText(statusClass),
+    status: ended ? '已开奖' : getGuessStatusText(statusClass),
     statusClass,
     countdown: formatCountdown(item.endTime),
+    ended,
     odds: item.options.slice(0, 2).map((option, index, array) => ({
       label: `${option.optionText.slice(0, 8)} ×${option.odds.toFixed(1)}`,
       trend:
@@ -275,13 +297,15 @@ export function createLiveListCard(item: LiveListItem): HomeListCard {
   const statusClass = getStatusClass(currentGuess?.endTime, item.viewers);
   const leftPct = currentGuess?.pcts[0] ?? 50;
   const rightPct = currentGuess?.pcts[1] ?? Math.max(0, 100 - leftPct);
+  const ended = isEnded(currentGuess?.endTime);
   return {
     id: item.id,
     title: currentGuess?.title || item.title,
     image: item.imageUrl || fallbackLiveImage,
-    status: item.status === 'live' ? '🔴 直播中' : getGuessStatusText(statusClass),
+    status: item.status === 'live' ? '🔴 直播中' : ended ? '已结束' : getGuessStatusText(statusClass),
     statusClass: item.status === 'live' ? 'hot' : statusClass,
     countdown: formatCountdown(currentGuess?.endTime),
+    ended,
     odds: currentGuess
       ? currentGuess.options.slice(0, 2).map((option, index) => ({
           label: `${option.slice(0, 8)} ×${Number(currentGuess.odds[index] ?? 1).toFixed(1)}`,

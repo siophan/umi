@@ -16,10 +16,6 @@
   border: 1px solid rgba(255, 215, 0, 0.12);
   border-radius: 16px;
   background: rgba(255, 215, 0, 0.06);
-  cursor: pointer;
-  transition:
-    transform 0.15s,
-    border-color 0.3s;
 }
 
 .breakingBar::before {
@@ -30,10 +26,6 @@
   background-size: 200% 100%;
   animation: tickerShimmer 4s ease infinite;
   pointer-events: none;
-}
-
-.breakingBar:active {
-  transform: scale(0.99);
 }
 
 .breakingTag {
@@ -970,9 +962,20 @@
 }
 
 .modeViewport {
+  display: block;
+  width: 100%;
   height: 42px;
+  padding: 0;
   overflow: hidden;
+  border: 0;
   border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.modeViewport:active {
+  transform: scale(0.98);
 }
 
 .modeTrack {
@@ -1153,6 +1156,20 @@
 .cardCountdownUrgent .cdNum {
   background: rgba(255, 215, 0, 0.2);
   color: #ffd700;
+}
+
+.cardCountdownEnded {
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+}
+
+.cdEnded {
+  padding: 1px 8px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
 }
 
 .cdNum {

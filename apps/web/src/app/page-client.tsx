@@ -26,6 +26,8 @@ function openTargetPath(router: ReturnType<typeof useRouter>, targetPath?: strin
   router.push(targetPath);
 }
 
+const MODE_ROUTES = ['/guess?mode=champion', '/guess?mode=triple', '/guess?mode=blind'] as const;
+
 export default function HomePageClient({ initialData }: HomePageClientProps) {
   const router = useRouter();
   const {
@@ -33,6 +35,7 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
     setMode,
     category,
     setCategory,
+    categoryFellBack,
     liveFilter,
     setLiveFilter,
     heroIndex,
@@ -40,7 +43,6 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
     posterIndex,
     sectionErrors,
     heroCards,
-    heroCard,
     visibleCards,
     breakingEvents,
     breakingIndex,
@@ -49,6 +51,7 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
     recentResults,
     sectionSubtitle,
     filteredLiveFeedItems,
+    markHeroInteraction,
   } = useHomePageState(initialData);
 
   function handleOpenHero(card: HomeHeroCard) {
@@ -57,6 +60,11 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
 
   function openNotifications() {
     router.push(hasAuthToken() ? '/notifications' : '/login');
+  }
+
+  function handleOpenMode(index: number) {
+    const target = MODE_ROUTES[index] ?? '/guess';
+    router.push(target);
   }
 
   return (
@@ -98,10 +106,10 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
             breakingEvents={breakingEvents}
             breakingIndex={breakingIndex}
             sectionErrors={sectionErrors}
-            heroCard={heroCard}
             heroCards={heroCards}
             heroIndex={heroIndex}
             onSelectHero={setHeroIndex}
+            onHeroInteraction={markHeroInteraction}
             onOpenHero={handleOpenHero}
             rankings={rankings}
             focusGuess={focusGuess}
@@ -112,8 +120,10 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
             }}
             category={category}
             onSelectCategory={setCategory}
+            categoryFellBack={categoryFellBack}
             sectionSubtitle={sectionSubtitle}
             posterIndex={posterIndex}
+            onOpenMode={handleOpenMode}
             visibleCards={visibleCards}
             onOpenCard={(href) => router.push(href)}
             recentResults={recentResults}
@@ -122,11 +132,16 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
           />
         ) : (
           <HomeLiveView
+            breakingEvents={breakingEvents}
+            breakingIndex={breakingIndex}
             liveFilter={liveFilter}
             onSelectLiveFilter={setLiveFilter}
             filteredLiveFeedItems={filteredLiveFeedItems}
             sectionErrors={sectionErrors}
+            categoryFellBack={categoryFellBack}
+            rankings={rankings}
             onOpenLive={(id) => router.push(`/live/${id}`)}
+            onOpenRanking={() => router.push('/ranking')}
           />
         )}
       </main>

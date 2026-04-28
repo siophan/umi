@@ -51,6 +51,7 @@ export type HomeListCard = {
   status: string;
   statusClass: HomeStatusClass;
   countdown: [string, string, string, string];
+  ended: boolean;
   odds: Array<{ label: string; trend: TrendType }>;
   leftLabel: string;
   rightLabel: string;

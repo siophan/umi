@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchCommunityDiscovery } from '../lib/api/community';
 import { fetchGuessHistory } from '../lib/api/guesses';
@@ -20,20 +20,34 @@ import {
 } from './home-page-helpers';
 import type { HomeCategory, HomeLiveFilter, HomeMode, HomePageInitialData } from './home-page-types';
 
+const HERO_INTERACTION_GRACE_MS = 6000;
+
 export function useHomePageState(initialData: HomePageInitialData) {
-  const [mode, setMode] = useState<HomeMode>('guess');
+  const [mode, setModeState] = useState<HomeMode>('guess');
   const [category, setCategory] = useState<HomeCategory>('hot');
   const [liveFilter, setLiveFilter] = useState<HomeLiveFilter>('all');
   const [heroIndex, setHeroIndex] = useState(0);
   const [breakingIndex, setBreakingIndex] = useState(0);
   const [posterIndex, setPosterIndex] = useState(0);
-  const [guessBanners, setGuessBanners] = useState(initialData.guessBanners);
-  const [guessItems, setGuessItems] = useState(initialData.guessItems);
-  const [liveItems, setLiveItems] = useState(initialData.liveItems);
-  const [rankingItems, setRankingItems] = useState(initialData.rankingItems);
+  const [guessBanners] = useState(initialData.guessBanners);
+  const [guessItems] = useState(initialData.guessItems);
+  const [liveItems] = useState(initialData.liveItems);
+  const [rankingItems] = useState(initialData.rankingItems);
   const [historyItems, setHistoryItems] = useState(initialData.historyItems);
   const [hotTopics, setHotTopics] = useState(initialData.hotTopics);
   const [sectionErrors] = useState(initialData.sectionErrors);
+  const [documentVisible, setDocumentVisible] = useState(true);
+  const lastHeroInteractionRef = useRef(0);
+
+  const setMode = useCallback((next: HomeMode) => {
+    setModeState((prev) => {
+      if (prev !== next) {
+        setCategory('hot');
+        setLiveFilter('all');
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -54,7 +68,9 @@ export function useHomePageState(initialData: HomePageInitialData) {
           ? historyResult.value.history.slice(0, 5)
           : [],
       );
-      setHotTopics(discoveryResult.status === 'fulfilled' ? discoveryResult.value.hotTopics : []);
+      setHotTopics(
+        discoveryResult.status === 'fulfilled' ? discoveryResult.value?.hotTopics ?? [] : [],
+      );
     }
 
     void loadHomeData();
@@ -63,18 +79,34 @@ export function useHomePageState(initialData: HomePageInitialData) {
     };
   }, []);
 
-  const visibleGuesses = useMemo(
-    () => filterGuessList(guessItems, category),
-    [category, guessItems],
-  );
-  const visibleLives = useMemo(
-    () => filterLiveList(liveItems, category),
-    [category, liveItems],
-  );
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined;
+    }
+    const onChange = () => setDocumentVisible(!document.hidden);
+    document.addEventListener('visibilitychange', onChange);
+    return () => document.removeEventListener('visibilitychange', onChange);
+  }, []);
+
+  const guessFilter = useMemo(() => filterGuessList(guessItems, category), [category, guessItems]);
+  const liveFilterResult = useMemo(() => filterLiveList(liveItems, category), [category, liveItems]);
+  const visibleGuesses = guessFilter.items;
+  const visibleLives = liveFilterResult.items;
+
   const filteredLiveFeedItems = useMemo(
     () => visibleLives.filter((item) => matchesHomeLiveFilter(item, liveFilter)),
     [liveFilter, visibleLives],
   );
+
+  const focusGuess = useMemo(() => {
+    if (guessItems.length === 0) {
+      return null;
+    }
+    return guessItems
+      .slice()
+      .sort((left, right) => getGuessParticipants(right) - getGuessParticipants(left))[0] ?? null;
+  }, [guessItems]);
+
   const guessHeroCards = useMemo(() => {
     const bannerCards = guessBanners.map(createBannerHeroCard);
     if (bannerCards.length > 0) {
@@ -86,6 +118,7 @@ export function useHomePageState(initialData: HomePageInitialData) {
       .slice(0, 5)
       .map(createGuessHeroCard);
   }, [guessBanners, guessItems]);
+
   const liveHeroCards = useMemo(
     () =>
       liveItems
@@ -95,45 +128,62 @@ export function useHomePageState(initialData: HomePageInitialData) {
         .map(createLiveHeroCard),
     [liveItems],
   );
-  const visibleCards = useMemo(
-    () =>
-      (mode === 'guess' ? visibleGuesses.map(createGuessListCard) : visibleLives.map(createLiveListCard)).slice(
-        0,
-        12,
-      ),
-    [mode, visibleGuesses, visibleLives],
-  );
+
+  const visibleCards = useMemo(() => {
+    if (mode === 'guess') {
+      const exclusionId = focusGuess?.id;
+      const list = exclusionId
+        ? visibleGuesses.filter((item) => item.id !== exclusionId)
+        : visibleGuesses;
+      return list.map(createGuessListCard).slice(0, 12);
+    }
+    return visibleLives.map(createLiveListCard).slice(0, 12);
+  }, [focusGuess?.id, mode, visibleGuesses, visibleLives]);
+
   const heroCards = mode === 'guess' ? guessHeroCards : liveHeroCards;
   const heroCard = heroCards[heroIndex] ?? null;
+
   const breakingEvents = useMemo(
     () => buildBreakingEvents(guessItems, rankingItems, hotTopics, historyItems),
     [guessItems, rankingItems, hotTopics, historyItems],
   );
+
   const recentResults = historyItems.slice(0, 3).map(createResultCard);
-  const rankings = rankingItems.slice(0, 3);
+  const rankings = rankingItems.slice(0, 5);
+
+  const categoryRealCount =
+    mode === 'guess' ? guessFilter.matchedCount : liveFilterResult.matchedCount;
+  const categoryFellBack =
+    mode === 'guess' ? guessFilter.fellBack : liveFilterResult.fellBack;
   const sectionSubtitle =
     mode === 'guess'
-      ? `${visibleGuesses.length}场竞猜进行中`
+      ? `${categoryRealCount}场竞猜进行中`
       : `${filteredLiveFeedItems.length}场直播进行中`;
-  const focusGuess = visibleGuesses[0] ?? null;
+
+  const markHeroInteraction = useCallback(() => {
+    lastHeroInteractionRef.current = Date.now();
+  }, []);
 
   useEffect(() => {
     setHeroIndex(0);
   }, [mode, heroCards.length]);
 
   useEffect(() => {
-    if (heroCards.length <= 1) {
+    if (heroCards.length <= 1 || !documentVisible) {
       return undefined;
     }
 
     const timer = window.setInterval(() => {
+      if (Date.now() - lastHeroInteractionRef.current < HERO_INTERACTION_GRACE_MS) {
+        return;
+      }
       setHeroIndex((current) => (current + 1) % heroCards.length);
     }, 3200);
     return () => window.clearInterval(timer);
-  }, [heroCards.length]);
+  }, [heroCards.length, documentVisible]);
 
   useEffect(() => {
-    if (breakingEvents.length <= 1) {
+    if (breakingEvents.length <= 1 || !documentVisible) {
       return undefined;
     }
 
@@ -141,14 +191,17 @@ export function useHomePageState(initialData: HomePageInitialData) {
       setBreakingIndex((current) => (current + 1) % breakingEvents.length);
     }, 2600);
     return () => window.clearInterval(timer);
-  }, [breakingEvents.length]);
+  }, [breakingEvents.length, documentVisible]);
 
   useEffect(() => {
+    if (!documentVisible) {
+      return undefined;
+    }
     const timer = window.setInterval(() => {
       setPosterIndex((current) => (current + 1) % 3);
     }, 3000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [documentVisible]);
 
   useEffect(() => {
     if (heroIndex >= heroCards.length) {
@@ -167,6 +220,7 @@ export function useHomePageState(initialData: HomePageInitialData) {
     setMode,
     category,
     setCategory,
+    categoryFellBack,
     liveFilter,
     setLiveFilter,
     heroIndex,
@@ -183,5 +237,6 @@ export function useHomePageState(initialData: HomePageInitialData) {
     recentResults,
     sectionSubtitle,
     filteredLiveFeedItems,
+    markHeroInteraction,
   };
 }

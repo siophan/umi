@@ -22,18 +22,20 @@ type Props = {
   breakingEvents: BreakingEvent[];
   breakingIndex: number;
   sectionErrors: HomeSectionErrors;
-  heroCard: HomeHeroCard | null;
   heroCards: HomeHeroCard[];
   heroIndex: number;
   onSelectHero: (index: number) => void;
+  onHeroInteraction: () => void;
   onOpenHero: (card: HomeHeroCard) => void;
   rankings: Array<{ userId: string; rank: number; nickname: string; avatar: string | null; value: string }>;
   focusGuess: GuessSummary | null;
   onJoinFocusGuess: () => void;
   category: HomeCategory;
   onSelectCategory: (category: HomeCategory) => void;
+  categoryFellBack: boolean;
   sectionSubtitle: string;
   posterIndex: number;
+  onOpenMode: (index: number) => void;
   visibleCards: HomeListCard[];
   onOpenCard: (href: string) => void;
   recentResults: HomeResultCard[];
@@ -41,22 +43,35 @@ type Props = {
   onOpenRanking: () => void;
 };
 
+const MODE_ITEMS: Array<{
+  className: 'modeChampion' | 'modeTriple' | 'modeBlind';
+  emoji: string;
+  name: string;
+  sub: string;
+}> = [
+  { className: 'modeChampion', emoji: '🏆', name: '冠军之路', sub: '连胜封神' },
+  { className: 'modeTriple', emoji: '⛩️', name: '闯三关', sub: '奖金翻倍' },
+  { className: 'modeBlind', emoji: '🎁', name: '盲盒竞猜', sub: '惊喜开箱' },
+];
+
 export function HomeGuessView({
   breakingEvents,
   breakingIndex,
   sectionErrors,
-  heroCard,
   heroCards,
   heroIndex,
   onSelectHero,
+  onHeroInteraction,
   onOpenHero,
   rankings,
   focusGuess,
   onJoinFocusGuess,
   category,
   onSelectCategory,
+  categoryFellBack,
   sectionSubtitle,
   posterIndex,
+  onOpenMode,
   visibleCards,
   onOpenCard,
   recentResults,
@@ -64,12 +79,20 @@ export function HomeGuessView({
   onOpenRanking,
 }: Props) {
   const heroTrackRef = useRef<HTMLDivElement | null>(null);
+  const programmaticScrollUntilRef = useRef(0);
   const focusPercents = focusGuess ? getGuessPercents(focusGuess) : [50, 50];
   const focusLeftPct = focusPercents[0] ?? 50;
   const focusRightPct = focusPercents[1] ?? Math.max(0, 100 - focusLeftPct);
   const focusLeftLabel = focusGuess?.options[0]?.optionText || '选项A';
   const focusRightLabel = focusGuess?.options[1]?.optionText || '选项B';
-  const rankLabels = ['🏆 TOP 1', '🥈 TOP 2', '🥉 TOP 3', '#4', '#5'];
+  const heroRankLabels = ['🏆 TOP 1', '🥈 TOP 2', '🥉 TOP 3', '#4', '#5'];
+  const currentBreaking = breakingEvents[breakingIndex] ?? breakingEvents[0];
+  const breakingTagClass = currentBreaking
+    ? styles[
+        `breakingTag${currentBreaking.tagClass[0].toUpperCase()}${currentBreaking.tagClass.slice(1)}`
+      ]
+    : '';
+  const currentMode = MODE_ITEMS[posterIndex] ?? MODE_ITEMS[0];
 
   useEffect(() => {
     const track = heroTrackRef.current;
@@ -78,33 +101,77 @@ export function HomeGuessView({
       return;
     }
 
+    programmaticScrollUntilRef.current = Date.now() + 700;
     track.scrollTo({
       left: target.offsetLeft - 16,
       behavior: 'smooth',
     });
   }, [heroIndex]);
 
+  useEffect(() => {
+    const track = heroTrackRef.current;
+    if (!track || heroCards.length <= 1) {
+      return undefined;
+    }
+
+    let frame: number | null = null;
+    const onScroll = () => {
+      if (Date.now() < programmaticScrollUntilRef.current) {
+        return;
+      }
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
+      frame = requestAnimationFrame(() => {
+        const first = track.children.item(0) as HTMLElement | null;
+        if (!first) {
+          return;
+        }
+        const slideWidth = first.clientWidth + 10;
+        const next = Math.round(track.scrollLeft / slideWidth);
+        const clamped = Math.max(0, Math.min(heroCards.length - 1, next));
+        if (clamped !== heroIndex) {
+          onHeroInteraction();
+          onSelectHero(clamped);
+        }
+      });
+    };
+    const onTouch = () => {
+      onHeroInteraction();
+    };
+
+    track.addEventListener('scroll', onScroll, { passive: true });
+    track.addEventListener('touchstart', onTouch, { passive: true });
+    track.addEventListener('pointerdown', onTouch, { passive: true });
+    return () => {
+      track.removeEventListener('scroll', onScroll);
+      track.removeEventListener('touchstart', onTouch);
+      track.removeEventListener('pointerdown', onTouch);
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
+    };
+  }, [heroCards.length, heroIndex, onHeroInteraction, onSelectHero]);
+
   return (
     <>
-      <div className={styles.breakingBar}>
-        <span
-          className={`${styles.breakingTag} ${styles[`breakingTag${(breakingEvents[breakingIndex] ?? breakingEvents[0]).tagClass[0].toUpperCase()}${(breakingEvents[breakingIndex] ?? breakingEvents[0]).tagClass.slice(1)}`]}`}
-        >
-          {(breakingEvents[breakingIndex] ?? breakingEvents[0]).tag}
-        </span>
-        <span className={styles.breakingDot} />
-        <div className={styles.breakingScroll}>
-          <div className={styles.breakingInner}>
-            {[...breakingEvents, ...breakingEvents].map((item, index) => (
-              <span className={styles.breakingEvt} key={`${item.tag}-${item.text}-${index}`}>
-                {item.text}
-                <span className={styles.highlight}>{item.highlight}</span>
-                <span className={styles.sep}>•</span>
-              </span>
-            ))}
+      {currentBreaking ? (
+        <div className={styles.breakingBar}>
+          <span className={`${styles.breakingTag} ${breakingTagClass}`}>{currentBreaking.tag}</span>
+          <span className={styles.breakingDot} />
+          <div className={styles.breakingScroll}>
+            <div className={styles.breakingInner}>
+              {[...breakingEvents, ...breakingEvents].map((item, index) => (
+                <span className={styles.breakingEvt} key={`${item.tag}-${item.text}-${index}`}>
+                  {item.text}
+                  <span className={styles.highlight}>{item.highlight}</span>
+                  <span className={styles.sep}>•</span>
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       {sectionErrors.banners ? (
         <div className={styles.sectionNotice}>首页头图加载失败，当前已降级展示其他真实内容。</div>
@@ -116,7 +183,7 @@ export function HomeGuessView({
             {heroCards.map((item, index) => (
               <article className={styles.heroSlide} key={item.key} onClick={() => onOpenHero(item)}>
                 <img alt={item.title} src={item.image || fallbackGuessImage} />
-                <div className={styles.heroRank}>{rankLabels[index] || `#${index + 1}`}</div>
+                <div className={styles.heroRank}>{heroRankLabels[index] || `#${index + 1}`}</div>
                 <div className={styles.heroOverlay}>
                   <div className={styles.heroBadge}>{item.badge}</div>
                   <div className={styles.heroTitle}>{item.title}</div>
@@ -151,29 +218,30 @@ export function HomeGuessView({
                 className={`${styles.heroDot} ${index === heroIndex ? styles.heroDotActive : ''}`}
                 key={item.key}
                 type="button"
-                onClick={() => onSelectHero(index)}
+                onClick={() => {
+                  onHeroInteraction();
+                  onSelectHero(index);
+                }}
               />
             ))}
           </div>
         </section>
       ) : null}
 
-      <div className={styles.pkBanner}>
-        <div className={styles.pkLive}>LIVE</div>
-        <div className={styles.pkPlayers}>
-          <img alt="focus-left" src={rankings[0]?.avatar || fallbackAvatar} />
-          <div className={styles.pkVs}>VS</div>
-          <img alt="focus-right" src={rankings[1]?.avatar || fallbackAvatar} />
-        </div>
-        <div className={styles.pkInfo}>
-          <div className={styles.pkTitle}>{focusGuess ? focusGuess.title : '好友PK对战中'}</div>
-          <div className={styles.pkSub}>
-            {focusGuess
-              ? `${focusLeftLabel} vs ${focusRightLabel} · 👥${formatCompactNumber(getGuessParticipants(focusGuess))}`
-              : '暂无进行中的热门竞猜'}
+      {focusGuess ? (
+        <div className={styles.pkBanner}>
+          <div className={styles.pkLive}>LIVE</div>
+          <div className={styles.pkPlayers}>
+            <img alt="focus-left" src={rankings[0]?.avatar || fallbackAvatar} />
+            <div className={styles.pkVs}>VS</div>
+            <img alt="focus-right" src={rankings[1]?.avatar || fallbackAvatar} />
           </div>
-        </div>
-        {focusGuess ? (
+          <div className={styles.pkInfo}>
+            <div className={styles.pkTitle}>{focusGuess.title}</div>
+            <div className={styles.pkSub}>
+              {`${focusLeftLabel} vs ${focusRightLabel} · 👥${formatCompactNumber(getGuessParticipants(focusGuess))}`}
+            </div>
+          </div>
           <div className={styles.pkProgressWrap}>
             <div className={styles.pkProgressTrack}>
               <div className={styles.pkProgressLeft} style={{ width: `${focusLeftPct}%` }}>
@@ -188,11 +256,11 @@ export function HomeGuessView({
               <span>{focusRightLabel}</span>
             </div>
           </div>
-        ) : null}
-        <button className={styles.pkBtn} type="button" onClick={onJoinFocusGuess}>
-          加入PK
-        </button>
-      </div>
+          <button className={styles.pkBtn} type="button" onClick={onJoinFocusGuess}>
+            加入PK
+          </button>
+        </div>
+      ) : null}
 
       <div className={styles.catBar}>
         <div className={styles.catScroll}>
@@ -212,34 +280,33 @@ export function HomeGuessView({
         </div>
       </div>
 
+      {categoryFellBack ? (
+        <div className={styles.sectionNotice}>该分类暂无内容，先看看其他热门竞猜</div>
+      ) : null}
+
       <div className={styles.sectionHeader}>
         <div>
           <div className={styles.sectionTitle}>正在进行</div>
           <div className={styles.sectionSubtitle}>{sectionSubtitle}</div>
         </div>
         <div className={styles.modeRoller}>
-          <div className={styles.modeViewport}>
+          <button
+            className={styles.modeViewport}
+            type="button"
+            aria-label={`进入${currentMode.name}`}
+            onClick={() => onOpenMode(posterIndex)}
+          >
             <div className={styles.modeTrack} style={{ transform: `translateY(-${posterIndex * 42}px)` }}>
-              <div className={`${styles.modeItem} ${styles.modeChampion}`}>
-                <span className={styles.modeEmoji}>🏆</span>
-                <span className={styles.modeName}>冠军之路</span>
-                <span className={styles.modeSub}>连胜封神</span>
-                <i className={`fa-solid fa-chevron-right ${styles.modeArrow}`} />
-              </div>
-              <div className={`${styles.modeItem} ${styles.modeTriple}`}>
-                <span className={styles.modeEmoji}>⛩️</span>
-                <span className={styles.modeName}>闯三关</span>
-                <span className={styles.modeSub}>奖金翻倍</span>
-                <i className={`fa-solid fa-chevron-right ${styles.modeArrow}`} />
-              </div>
-              <div className={`${styles.modeItem} ${styles.modeBlind}`}>
-                <span className={styles.modeEmoji}>🎁</span>
-                <span className={styles.modeName}>盲盒竞猜</span>
-                <span className={styles.modeSub}>惊喜开箱</span>
-                <i className={`fa-solid fa-chevron-right ${styles.modeArrow}`} />
-              </div>
+              {MODE_ITEMS.map((item) => (
+                <div className={`${styles.modeItem} ${styles[item.className]}`} key={item.className}>
+                  <span className={styles.modeEmoji}>{item.emoji}</span>
+                  <span className={styles.modeName}>{item.name}</span>
+                  <span className={styles.modeSub}>{item.sub}</span>
+                  <i className={`fa-solid fa-chevron-right ${styles.modeArrow}`} />
+                </div>
+              ))}
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -250,14 +317,20 @@ export function HomeGuessView({
               <div className={styles.cardImageWrap}>
                 <img alt={card.title} src={card.image || fallbackGuessImage} />
                 <span className={`${styles.cardStatus} ${styles[card.statusClass]}`}>{card.status}</span>
-                <div
-                  className={`${styles.cardCountdown} ${card.statusClass === 'ending' ? styles.cardCountdownUrgent : ''}`}
-                >
-                  <span className={styles.cdNum}>{card.countdown[0]}</span>
-                  <span className={styles.cdSep}>{card.countdown[1]}</span>
-                  <span className={styles.cdNum}>{card.countdown[2]}</span>
-                  <span className={styles.cdSep}>{card.countdown[3]}</span>
-                </div>
+                {card.ended ? (
+                  <div className={`${styles.cardCountdown} ${styles.cardCountdownEnded}`}>
+                    <span className={styles.cdEnded}>已开奖</span>
+                  </div>
+                ) : (
+                  <div
+                    className={`${styles.cardCountdown} ${card.statusClass === 'ending' ? styles.cardCountdownUrgent : ''}`}
+                  >
+                    <span className={styles.cdNum}>{card.countdown[0]}</span>
+                    <span className={styles.cdSep}>{card.countdown[1]}</span>
+                    <span className={styles.cdNum}>{card.countdown[2]}</span>
+                    <span className={styles.cdSep}>{card.countdown[3]}</span>
+                  </div>
+                )}
               </div>
               <div className={styles.cardInfo}>
                 <div className={styles.cardTitle}>{card.title}</div>
@@ -284,7 +357,7 @@ export function HomeGuessView({
                       </div>
                     ) : null}
                   </div>
-                  {card.showPk ? (
+                  {card.showPk && !card.ended ? (
                     <button
                       className={styles.pkMiniBtn}
                       type="button"
@@ -296,16 +369,18 @@ export function HomeGuessView({
                       ⚡
                     </button>
                   ) : null}
-                  <button
-                    className={styles.joinBtn}
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onOpenCard(card.href);
-                    }}
-                  >
-                    参与
-                  </button>
+                  {card.ended ? null : (
+                    <button
+                      className={styles.joinBtn}
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenCard(card.href);
+                      }}
+                    >
+                      参与
+                    </button>
+                  )}
                 </div>
                 <div className={styles.cardBottom}>
                   <span className={styles.cardMeta}>{card.meta}</span>
@@ -331,8 +406,8 @@ export function HomeGuessView({
 
       <section className={styles.resultArea}>
         {recentResults.length ? (
-          recentResults.map((item) => (
-            <div className={styles.resultItem} key={`${item.title}-${item.amount}`}>
+          recentResults.map((item, index) => (
+            <div className={styles.resultItem} key={`result-${index}-${item.title}`}>
               <div className={`${styles.resultIcon} ${styles[item.type]}`}>{item.type === 'won' ? '🎉' : '🎫'}</div>
               <div className={styles.resultInfo}>
                 <div className={styles.resultTitle}>{item.title}</div>
@@ -358,7 +433,7 @@ export function HomeGuessView({
       <section className={styles.rankArea}>
         {rankings.length ? (
           rankings.map((item, index) => (
-            <div className={styles.rankRow} key={`${item.userId}-${item.rank}`}>
+            <div className={styles.rankRow} key={item.userId}>
               <div className={styles.rankNo}>{['🥇', '🥈', '🥉'][index] || `#${item.rank}`}</div>
               <img alt={item.nickname} className={styles.rankAvatar} src={item.avatar || fallbackAvatar} />
               <div className={styles.rankName}>{item.nickname}</div>

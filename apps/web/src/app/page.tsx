@@ -12,7 +12,7 @@ import HomePageClient from './page-client';
 
 async function fetchServerData<T>(path: string) {
   const response = await fetch(`${serverApiBaseUrl}${path}`, {
-    cache: 'no-store',
+    next: { revalidate: 30 },
   });
   const payload = (await response.json()) as ApiEnvelope<T>;
   if (!response.ok) {
