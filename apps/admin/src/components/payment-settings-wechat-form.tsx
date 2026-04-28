@@ -107,7 +107,7 @@ export function PaymentSettingsWechatForm({ data, onSubmit }: Props) {
     <ConfigProvider theme={SEARCH_THEME}>
       <Form form={form} layout="vertical" autoComplete="off">
       <Form.Item
-        label="AppID appid"
+        label="AppID"
         name="appid"
         rules={[{ required: true, message: '请填写公众号/服务号 AppID' }]}
         extra="H5 支付必传：公众号 AppID 或服务号 AppID"
