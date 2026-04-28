@@ -5,6 +5,7 @@ import styles from './page.module.css';
 
 type Props = {
   template: TemplateId;
+  allowsManyOptions: boolean;
   stepDone: boolean;
   selectedCount: number;
   options: string[];
@@ -15,6 +16,7 @@ type Props = {
 
 export function CreateOptionsSection({
   template,
+  allowsManyOptions,
   stepDone,
   selectedCount,
   options,
@@ -22,7 +24,6 @@ export function CreateOptionsSection({
   removeOption,
   addOption,
 }: Props) {
-  const allowsManyOptions = template === 'multi' || template === 'pk_multi';
   const isNumberTemplate = template === 'number';
   const canAddOption = allowsManyOptions;
   const canRemoveOption = allowsManyOptions && options.length > 2;

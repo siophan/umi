@@ -1,10 +1,9 @@
 'use client';
 
-import type { FriendItem, TemplateId } from './create-helpers';
+import type { FriendItem } from './create-helpers';
 import styles from './page.module.css';
 
 type Props = {
-  template: TemplateId;
   selectedFriends: string[];
   friendKeyword: string;
   setFriendKeyword: (value: string | ((current: string) => string)) => void;
@@ -15,7 +14,6 @@ type Props = {
 };
 
 export function CreatePkSection({
-  template,
   selectedFriends,
   friendKeyword,
   setFriendKeyword,
@@ -24,19 +22,14 @@ export function CreatePkSection({
   toggleFriend,
   showToast,
 }: Props) {
-  const isDuo = template === 'pk_duo';
-  const limitText = isDuo ? '邀请 1 位好友 1 对 1' : '至少邀请 2 位好友';
-  const okStateText = isDuo
-    ? selectedFriends.length === 1
-      ? '✓ 已选 1 人'
-      : selectedFriends.length === 0
-        ? '待选择'
-        : `已选 ${selectedFriends.length} 人（仅取 1 人）`
-    : selectedFriends.length >= 2
-      ? `✓ 已选 ${selectedFriends.length} 人`
-      : selectedFriends.length === 0
-        ? '待选择'
-        : `已选 ${selectedFriends.length} 人，至少 2 人`;
+  // 好友 PK 模式由邀请人数动态决定：1 人 = 双人 PK，2+ 人 = 多人 PK。
+  const friendCount = selectedFriends.length;
+  const modeLabel = friendCount === 1 ? '双人PK 模式' : friendCount >= 2 ? '多人PK 模式' : '';
+  const limitText = '至少邀请 1 位好友（1 人=双人PK，2+ 人=多人PK）';
+  const okStateText =
+    friendCount === 0
+      ? '待选择'
+      : `✓ 已选 ${friendCount} 人 · ${modeLabel}`;
   function renderFriendAvatar(friend: FriendItem, className?: string) {
     if (friend.avatar) {
       return <img className={className} src={friend.avatar} alt={friend.name} />;

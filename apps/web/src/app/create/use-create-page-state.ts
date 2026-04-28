@@ -41,7 +41,7 @@ export function useCreatePageState() {
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [isMerchantMode, setIsMerchantMode] = useState(false);
-  const [template, setTemplate] = useState<TemplateId>('pk_duo');
+  const [template, setTemplate] = useState<TemplateId>('pk_friend');
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [deadline, setDeadline] = useState('');
@@ -132,9 +132,9 @@ export function useCreatePageState() {
         setIsMerchantMode(merchant);
         setTemplate((current) => {
           if (merchant) {
-            return current === 'pk_duo' || current === 'pk_multi' ? 'duel' : current;
+            return current === 'pk_friend' ? 'duel' : current;
           }
-          return current === 'pk_duo' || current === 'pk_multi' ? current : 'pk_duo';
+          return current === 'pk_friend' ? current : 'pk_friend';
         });
       } else {
         failureLabels.push('店铺状态');
@@ -357,7 +357,17 @@ export function useCreatePageState() {
     setOptions((current) => current.map((item, idx) => (idx === index ? value : item)));
   }
 
-  const TEMPLATES_ALLOW_MANY_OPTIONS: TemplateId[] = ['multi', 'pk_multi'];
+  /**
+   * 是否允许 2+ 选项：
+   * - `multi` 始终允许；
+   * - `pk_friend` 仅在邀请好友数 ≥ 2（多人 PK 模式）时允许，1 人时退化为双人 PK 固定 2 项。
+   */
+  const allowsManyOptions =
+    template === 'multi' || (template === 'pk_friend' && selectedFriends.length >= 2);
+
+  function templateAllowsManyOptions(targetTemplate: TemplateId, friendCount: number) {
+    return targetTemplate === 'multi' || (targetTemplate === 'pk_friend' && friendCount >= 2);
+  }
 
   function selectTemplate(nextTemplate: TemplateId) {
     if (nextTemplate === template) {
@@ -369,7 +379,7 @@ export function useCreatePageState() {
       if (crossingNumberBoundary) {
         return ['', ''];
       }
-      if (TEMPLATES_ALLOW_MANY_OPTIONS.includes(nextTemplate)) {
+      if (templateAllowsManyOptions(nextTemplate, selectedFriends.length)) {
         return current.length >= 2 ? current : ['', ''];
       }
       return current.length > 2 ? current.slice(0, 2) : current;
@@ -377,30 +387,35 @@ export function useCreatePageState() {
   }
 
   function addOption() {
-    if (!TEMPLATES_ALLOW_MANY_OPTIONS.includes(template)) {
-      showToast('当前模板固定为2个选项');
+    if (!allowsManyOptions) {
+      showToast(
+        template === 'pk_friend'
+          ? '双人PK 固定 2 个选项，邀请第 2 位好友后可添加'
+          : '当前模板固定为2个选项',
+      );
       return;
     }
     setOptions((current) => [...current, '']);
   }
 
   function removeOption(index: number) {
-    if (!TEMPLATES_ALLOW_MANY_OPTIONS.includes(template)) {
+    if (!allowsManyOptions) {
       return;
     }
     setOptions((current) => current.filter((_, idx) => idx !== index));
   }
 
   function toggleFriend(friendId: string) {
-    setSelectedFriends((current) => {
-      if (current.includes(friendId)) {
-        return current.filter((item) => item !== friendId);
-      }
-      if (template === 'pk_duo') {
-        return [friendId];
-      }
-      return [...current, friendId];
-    });
+    const next = selectedFriends.includes(friendId)
+      ? selectedFriends.filter((item) => item !== friendId)
+      : [...selectedFriends, friendId];
+    setSelectedFriends(next);
+
+    // 好友数从多人 (≥2) 跌回 1 人时，把超过 2 个的选项截断为前 2 个，并提示用户。
+    if (template === 'pk_friend' && selectedFriends.length >= 2 && next.length < 2) {
+      setOptions((current) => (current.length > 2 ? current.slice(0, 2) : current));
+      showToast('已切回双人PK，仅保留前 2 个选项');
+    }
   }
 
   function showToast(message: string) {
@@ -669,13 +684,8 @@ export function useCreatePageState() {
       }
     }
 
-    if (!isMerchantMode && template === 'pk_duo' && selectedFriends.length !== 1) {
-      showToast('⚠️ 双人PK需要邀请1位好友');
-      return false;
-    }
-
-    if (!isMerchantMode && template === 'pk_multi' && selectedFriends.length < 2) {
-      showToast('⚠️ 多人PK至少邀请2位好友');
+    if (!isMerchantMode && template === 'pk_friend' && selectedFriends.length < 1) {
+      showToast('⚠️ 好友PK 至少邀请 1 位好友');
       return false;
     }
 
@@ -741,7 +751,7 @@ export function useCreatePageState() {
 
     const trimmedTitle = title.trim();
     const filledOptions = options.filter((item) => item.trim());
-    const isPkTemplate = template === 'pk_duo' || template === 'pk_multi';
+    const isPkTemplate = template === 'pk_friend';
     const scope: 'public' | 'friends' = !isMerchantMode && isPkTemplate ? 'friends' : 'public';
     const inviteeIds: NonNullable<CreateGuessPayload['invitedFriendIds']> =
       !isMerchantMode && isPkTemplate
@@ -859,6 +869,7 @@ export function useCreatePageState() {
     updateOption,
     addOption,
     removeOption,
+    allowsManyOptions,
     toggleFriend,
     showToast,
     confirmProductPick,

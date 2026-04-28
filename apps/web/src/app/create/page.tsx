@@ -86,6 +86,7 @@ export default function CreatePage() {
     updateOption,
     addOption,
     removeOption,
+    allowsManyOptions,
     toggleFriend,
     showToast,
     confirmProductPick,
@@ -207,6 +208,7 @@ export default function CreatePage() {
 
       <CreateOptionsSection
         template={template}
+        allowsManyOptions={allowsManyOptions}
         stepDone={steps[2]}
         selectedCount={selectedCount}
         options={options}
@@ -215,11 +217,10 @@ export default function CreatePage() {
         addOption={addOption}
       />
 
-      {!isMerchantMode && (template === 'pk_duo' || template === 'pk_multi') ? (
+      {!isMerchantMode && template === 'pk_friend' ? (
         <>
           <div className={styles.dividerThick} />
           <CreatePkSection
-            template={template}
             selectedFriends={selectedFriends}
             friendKeyword={friendKeyword}
             setFriendKeyword={setFriendKeyword}
