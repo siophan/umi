@@ -227,6 +227,9 @@ export function useCreatePageState() {
     return () => window.clearTimeout(timer);
   }, [productKeyword]);
 
+  // 商家 + 非好友PK 时把商品 picker 限定到自家店铺；其余场景（用户模式 / 任意角色 + 好友PK）走全平台。
+  const productPickerShopId = isMerchantMode && template !== 'pk_friend' ? merchantShopId : null;
+
   useEffect(() => {
     if (!authReady) {
       return;
@@ -238,7 +241,7 @@ export function useCreatePageState() {
       offset: 0,
       q: productKeywordDebounced || undefined,
       categoryId: productCategoryId ?? undefined,
-      shopId: merchantShopId ?? undefined,
+      shopId: productPickerShopId ?? undefined,
       sort: productSort,
     })
       .then((result) => {
@@ -257,7 +260,7 @@ export function useCreatePageState() {
           setProductLoading(false);
         }
       });
-  }, [authReady, productKeywordDebounced, productCategoryId, productSort, merchantShopId]);
+  }, [authReady, productKeywordDebounced, productCategoryId, productSort, productPickerShopId]);
 
   async function loadMoreProducts() {
     if (productLoading || productLoadingMore) return;
@@ -270,7 +273,7 @@ export function useCreatePageState() {
         offset: productOffset,
         q: productKeywordDebounced || undefined,
         categoryId: productCategoryId ?? undefined,
-        shopId: merchantShopId ?? undefined,
+        shopId: productPickerShopId ?? undefined,
         sort: productSort,
       });
       if (productListRequestId.current !== reqId) return;
@@ -688,7 +691,7 @@ export function useCreatePageState() {
       }
     }
 
-    if (!isMerchantMode && template === 'pk_friend' && selectedFriends.length < 1) {
+    if (template === 'pk_friend' && selectedFriends.length < 1) {
       showToast('⚠️ 好友PK 至少邀请 1 位好友');
       return false;
     }
@@ -756,11 +759,10 @@ export function useCreatePageState() {
     const trimmedTitle = title.trim();
     const filledOptions = options.filter((item) => item.trim());
     const isPkTemplate = template === 'pk_friend';
-    const scope: 'public' | 'friends' = !isMerchantMode && isPkTemplate ? 'friends' : 'public';
-    const inviteeIds: NonNullable<CreateGuessPayload['invitedFriendIds']> =
-      !isMerchantMode && isPkTemplate
-        ? (selectedFriends as NonNullable<CreateGuessPayload['invitedFriendIds']>)
-        : [];
+    const scope: 'public' | 'friends' = isPkTemplate ? 'friends' : 'public';
+    const inviteeIds: NonNullable<CreateGuessPayload['invitedFriendIds']> = isPkTemplate
+      ? (selectedFriends as NonNullable<CreateGuessPayload['invitedFriendIds']>)
+      : [];
     const productId: CreateGuessPayload['productId'] =
       (selectedProduct?.id as CreateGuessPayload['productId']) ?? null;
 

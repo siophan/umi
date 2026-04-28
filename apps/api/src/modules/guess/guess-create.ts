@@ -238,12 +238,13 @@ export async function createUserGuess(
   const scopeCode = scope === 'friends' ? GUESS_SCOPE_FRIENDS : GUESS_SCOPE_PUBLIC;
   const creatorShop = await getCreatorActiveShop(creatorId);
   const merchant = creatorShop != null;
-  const creatorShopId = merchant ? String(creatorShop.id) : null;
+  // 商家发起公开竞猜（非好友PK）时商品必须归自家店铺；好友PK 任何身份都可以选全平台商品。
+  const enforceShopId = merchant && scope === 'public' ? String(creatorShop.id) : null;
   const categoryId = await resolveGuessCategoryId(payload.categoryId ? String(payload.categoryId) : null, merchant);
   if (!payload.productId) {
     throw new Error('竞猜必须关联商品');
   }
-  const product = await requireProductForGuessCreate(String(payload.productId), creatorShopId);
+  const product = await requireProductForGuessCreate(String(payload.productId), enforceShopId);
   const inviteeIds = await resolveInviteeIds(payload.invitedFriendIds, creatorId);
   if (scope === 'friends' && inviteeIds.length === 0) {
     throw new Error('好友PK必须选择参战好友');

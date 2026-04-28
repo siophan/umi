@@ -217,7 +217,7 @@ export default function CreatePage() {
         addOption={addOption}
       />
 
-      {!isMerchantMode && template === 'pk_friend' ? (
+      {template === 'pk_friend' ? (
         <>
           <div className={styles.dividerThick} />
           <CreatePkSection
