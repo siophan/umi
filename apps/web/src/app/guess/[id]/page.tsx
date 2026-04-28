@@ -366,6 +366,7 @@ export default function GuessDetailPage() {
         commentCount={guess.commentCount ?? 0}
         commentsLoading={commentsLoading}
         commentSubmitting={submitting}
+        userBet={guess.userBet ?? null}
         onSelectOption={(index) => {
           setSelectedOption(index);
           setBetOpen(true);

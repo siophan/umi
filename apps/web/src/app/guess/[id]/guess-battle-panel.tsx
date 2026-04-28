@@ -27,6 +27,7 @@ type GuessBattlePanelProps = {
   commentCount: number;
   commentsLoading: boolean;
   commentSubmitting: boolean;
+  userBet?: { choiceIdx: number } | null;
   onSelectOption: (index: number) => void;
   onParticipateClick: () => void;
   onPostComment: (content: string) => Promise<void> | void;
@@ -61,6 +62,7 @@ export function GuessBattlePanel({
   commentCount,
   commentsLoading,
   commentSubmitting,
+  userBet,
   onSelectOption,
   onParticipateClick,
   onPostComment,
@@ -277,10 +279,25 @@ export function GuessBattlePanel({
       </section>
 
       <section className={styles.detailBottom}>
-        <button className={styles.detailPrimary} type="button" onClick={onParticipateClick}>
-          <i className="fa-solid fa-hand-pointer" />
-          <span>参与竞猜</span>
-          <small>· 猜中即发货</small>
+        <button
+          className={styles.detailPrimary}
+          type="button"
+          disabled={Boolean(userBet)}
+          onClick={onParticipateClick}
+        >
+          {userBet ? (
+            <>
+              <i className="fa-solid fa-circle-check" />
+              <span>已选 {options[userBet.choiceIdx]?.optionText || `选项${userBet.choiceIdx + 1}`}</span>
+              <small>· 等待开奖</small>
+            </>
+          ) : (
+            <>
+              <i className="fa-solid fa-hand-pointer" />
+              <span>参与竞猜</span>
+              <small>· 猜中即发货</small>
+            </>
+          )}
         </button>
       </section>
     </>
