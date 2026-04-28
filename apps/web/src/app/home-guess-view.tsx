@@ -296,10 +296,6 @@ export function HomeGuessView({
         </div>
       </div>
 
-      {categoryFellBack ? (
-        <div className={styles.sectionNotice}>该分类暂无内容</div>
-      ) : null}
-
       <div className={styles.sectionHeader}>
         <div>
           <div className={styles.sectionTitle}>正在进行</div>
@@ -409,7 +405,9 @@ export function HomeGuessView({
         ) : sectionErrors.guesses ? (
           <div className={styles.sectionNotice}>竞猜列表加载失败，请稍后刷新重试。</div>
         ) : (
-          <div className={styles.emptyState}>暂无可展示的竞猜内容</div>
+          <div className={styles.emptyState}>
+            {categoryFellBack ? '该分类暂无内容' : '暂无可展示的竞猜内容'}
+          </div>
         )}
         {hasMoreGuesses && visibleCards.length ? (
           <button
