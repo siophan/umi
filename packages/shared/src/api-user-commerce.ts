@@ -101,15 +101,40 @@ export interface PostGuessCommentPayload {
   parentId?: EntityId | null;
 }
 
+export type GuessPayChannel = 'wechat' | 'alipay';
+
 export interface ParticipateGuessPayload {
   choiceIdx: number;
   quantity?: number;
+  /** 必填; Task 11 后所有调用方都需要传。 */
+  payChannel?: GuessPayChannel;
 }
 
 export interface ParticipateGuessResult {
   betId: EntityId;
   guessId: GuessId;
   choiceIdx: number;
+  /** Task 11 后改为必填。 */
+  payNo?: string;
+  /** Task 11 后改为必填。 */
+  payChannel?: GuessPayChannel;
+  /** Task 11 后改为必填。 */
+  payUrl?: string;
+  /** Task 11 后改为必填。 */
+  expiresAt?: string;
+}
+
+export type GuessBetPayStatus = 'waiting' | 'paid' | 'failed' | 'closed';
+
+export interface FetchBetPayStatusResult {
+  betId: EntityId;
+  payStatus: GuessBetPayStatus;
+  paidAt: string | null;
+}
+
+export interface CancelBetResult {
+  success: true;
+  betId: EntityId;
 }
 
 export interface ToggleGuessFavoriteResult {
