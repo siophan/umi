@@ -152,13 +152,17 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
-## 15. 支付链路整体未完成（P0）
+## 15. 支付链路整体未完成（P0 → 部分完成 2026-04-28）
 
-**文件**：`apps/web/src/app/payment/page.tsx`
+**进度**：竞猜参与已对接真实支付（微信 H5 + 支付宝 WAP）。
+- 设计：`docs/superpowers/specs/2026-04-28-guess-payment-design.md`
+- 实现：`apps/api/src/modules/payment/`（wechatpay-node-v3 + alipay-sdk）+ `apps/api/src/modules/guess/guess-pay.ts` + 前端 bet 弹层渠道选择 + 回跳轮询。
+- 数据：`packages/db/sql/guess_bet_payment.sql` 已执行（去 unique key + 加 6 个支付字段）。
+- 兜底：notify_url 回调 + 主动 query API 双保险（dev 无公网域名也能跑通）。
 
-支付页依赖构造态数据，`progress.md` 明确标注支付为"进行中"，无真实支付接口对接。
-
-**修法**：先对接 `POST /api/orders`（创建订单），再补对接支付网关（微信支付 / 支付宝），完成支付回调和订单状态变更闭环。
+**仍待办**（P0）：
+- **商城下单支付**（`apps/web/src/app/payment/page.tsx`）：`createOrder` 仍直接写 `ORDER_PAID`，没接网关。下次复用 `apps/api/src/modules/payment/` 模块改造。
+- **弃赛退款 API**：`pay_status=50 (refunded)` 字段已留位，`markBetPaid` 双付分支也标记了 refunded，但还没调 wechat/alipay refund API。
 
 ---
 
