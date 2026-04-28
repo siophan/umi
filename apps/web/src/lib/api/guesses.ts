@@ -1,6 +1,8 @@
 import type {
+  CancelBetResult,
   CreateGuessPayload,
   CreateGuessResult,
+  FetchBetPayStatusResult,
   FriendPkResult,
   GuessCategoryListResult,
   GuessCommentListResult,
@@ -101,4 +103,17 @@ export function likeGuessComment(commentId: string) {
 
 export function unlikeGuessComment(commentId: string) {
   return deleteJson<{ success: true }>(`/api/guesses/comments/${encodeURIComponent(commentId)}/like`);
+}
+
+export function fetchBetPayStatus(betId: string) {
+  return getJson<FetchBetPayStatusResult>(
+    `/api/guesses/bets/${encodeURIComponent(betId)}/pay-status`,
+  );
+}
+
+export function cancelBetPayment(betId: string) {
+  return postJson<CancelBetResult, Record<string, never>>(
+    `/api/guesses/bets/${encodeURIComponent(betId)}/cancel`,
+    {},
+  );
 }
