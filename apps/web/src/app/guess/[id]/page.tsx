@@ -368,6 +368,10 @@ export default function GuessDetailPage() {
         commentSubmitting={submitting}
         userBet={guess.userBet ?? null}
         onSelectOption={(index) => {
+          if (guess.userBet) {
+            showToast('你已参与本次竞猜，等待开奖');
+            return;
+          }
           setSelectedOption(index);
           setBetOpen(true);
           setBreathing(false);

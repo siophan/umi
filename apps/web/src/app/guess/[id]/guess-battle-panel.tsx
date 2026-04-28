@@ -124,11 +124,13 @@ export function GuessBattlePanel({
             })}
           </div>
         </div>
-        <div className={styles.betGuideHint}>
-          <i className={`fa-solid fa-angle-down ${styles.ghArrow}`} />
-          点击下方选项即可参与竞猜
-          <i className={`fa-solid fa-angle-down ${styles.ghArrow}`} />
-        </div>
+        {userBet ? null : (
+          <div className={styles.betGuideHint}>
+            <i className={`fa-solid fa-angle-down ${styles.ghArrow}`} />
+            点击下方选项即可参与竞猜
+            <i className={`fa-solid fa-angle-down ${styles.ghArrow}`} />
+          </div>
+        )}
         <div className={styles.vsRow} ref={vsAreaRef}>
           {options.flatMap((option, index) => {
             const nodes = [
