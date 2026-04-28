@@ -26,6 +26,23 @@ export const PERMISSION_ACTION_OPTIONS = [
   { label: '管理', value: 'manage' },
 ] satisfies Array<{ label: string; value: AdminPermissionItem['action'] }>;
 
+const PERMISSION_MODULE_LABELS: Record<string, string> = {
+  dashboard: '仪表盘',
+  user: '用户管理',
+  shop: '店铺管理',
+  brand: '品牌管理',
+  product: '商品管理',
+  guess: '竞猜管理',
+  order: '订单与履约',
+  marketing: '营销中心',
+  community: '内容管理',
+  system: '权限与系统',
+};
+
+export function getPermissionModuleLabel(module: string) {
+  return PERMISSION_MODULE_LABELS[module] ?? module;
+}
+
 export function getPermissionActionLabel(action: AdminPermissionItem['action']) {
   if (action === 'view') return '查看';
   if (action === 'create') return '新建';
@@ -47,7 +64,7 @@ export function getPermissionStatusColor(status: AdminPermissionItem['status']) 
 
 export function buildPermissionModuleOptions(permissions: AdminPermissionItem[]) {
   return Array.from(new Set(permissions.map((item) => item.module))).map((value) => ({
-    label: value,
+    label: getPermissionModuleLabel(value),
     value,
   }));
 }
@@ -198,6 +215,7 @@ export function buildPermissionColumns(args: {
       title: '所属模块',
       dataIndex: 'module',
       width: 180,
+      render: (_, record) => getPermissionModuleLabel(record.module),
     },
     {
       title: '动作',

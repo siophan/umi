@@ -1,9 +1,6 @@
 import type mysql from 'mysql2/promise';
 
-import {
-  ADMIN_PERMISSION_DEFINITIONS,
-  getAdminPermissionChildren,
-} from '@umi/shared';
+import { ADMIN_PERMISSION_DEFINITIONS } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 
@@ -16,6 +13,18 @@ const ACTION_CODE_MAP = {
 
 const PERMISSION_STATUS_ACTIVE = 10;
 const OBSOLETE_PERMISSION_CODES = [
+  'user.manage',
+  'shop.manage',
+  'brand.manage',
+  'product.manage',
+  'guess.manage',
+  'guess.create.view',
+  'order.manage',
+  'order.logistics.view',
+  'marketing.manage',
+  'community.manage',
+  'community.live.danmaku.view',
+  'system.manage',
   'brand.apply.view',
   'product.list.view',
   'product.auth.list.view',
@@ -81,35 +90,6 @@ async function deletePermissionsByCodes(
     `,
     [...codes],
   );
-}
-
-async function fetchRoleIdsByPermissionCodes(
-  connection: mysql.PoolConnection,
-  codes: string[],
-) {
-  if (codes.length === 0) {
-    return new Map<string, string[]>();
-  }
-
-  const placeholders = codes.map(() => '?').join(', ');
-  const [rows] = await connection.execute<mysql.RowDataPacket[]>(
-    `
-      SELECT arp.role_id, ap.code
-      FROM admin_role_permission arp
-      INNER JOIN admin_permission ap ON ap.id = arp.permission_id
-      WHERE ap.code IN (${placeholders})
-    `,
-    codes,
-  );
-
-  const rolesByCode = new Map<string, string[]>();
-  for (const row of rows as Array<{ role_id: number | string; code: string }>) {
-    const roleIds = rolesByCode.get(row.code) ?? [];
-    roleIds.push(String(row.role_id));
-    rolesByCode.set(row.code, roleIds);
-  }
-
-  return rolesByCode;
 }
 
 async function syncAdminPermissionCatalog() {
@@ -186,36 +166,6 @@ async function syncAdminPermissionCatalog() {
         ],
       );
       codeToId.set(definition.code, String(result.insertId));
-    }
-
-    const rootCodes = ADMIN_PERMISSION_DEFINITIONS.filter(
-      (item) => !item.parentCode,
-    ).map((item) => item.code);
-    const roleIdsByRootCode = await fetchRoleIdsByPermissionCodes(
-      connection,
-      rootCodes,
-    );
-
-    for (const rootCode of rootCodes) {
-      const childDefinitions = getAdminPermissionChildren(rootCode);
-      const roleIds = roleIdsByRootCode.get(rootCode) ?? [];
-
-      for (const child of childDefinitions) {
-        const permissionId = codeToId.get(child.code);
-        if (!permissionId) {
-          continue;
-        }
-
-        for (const roleId of roleIds) {
-          await connection.execute(
-            `
-              INSERT IGNORE INTO admin_role_permission (role_id, permission_id, created_at)
-              VALUES (?, ?, NOW())
-            `,
-            [roleId, permissionId],
-          );
-        }
-      }
     }
 
     await connection.commit();

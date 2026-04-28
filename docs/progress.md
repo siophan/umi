@@ -1,8 +1,10 @@
 # 项目进度
 
-最后更新：2026-04-22
+最后更新：2026-04-28
 
 本文档只记录当前仓库代码能直接确认的事实，不写无法从代码、脚本或构建结果直接证明的判断。
+
+本次更新时间主要同步当前代码结构与模块计数；若未在本轮重新执行 `build / typecheck`，对应工程健康项继续沿用最近一次已验证结果。
 
 ## 状态说明
 
@@ -19,8 +21,8 @@
 | --- | --- | --- |
 | Monorepo 工程底座 | `已完成` | 根目录已形成 `pnpm workspace + turbo`，包含 `apps/web`、`apps/admin`、`apps/api`、`packages/shared`、`packages/db`、`packages/config` |
 | 用户端 `apps/web` | `进行中` | `apps/web/src/app` 下当前有 `46` 个 `page.tsx` 页面文件，且已存在 `20` 个 API client 文件；主阻塞已从“有没有接口”转到“重页面是否继续收口” |
-| 管理台 `apps/admin` | `进行中` | `apps/admin/src/pages` 下当前有 `39` 个页面文件；`apps/admin/src/lib/api` 下当前有 `26` 个源码文件，已收成按业务域文件 + 薄入口 barrel，不再保留大杂烩请求文件 |
-| 后端 `apps/api` | `进行中` | `apps/api/src/modules` 下当前有 `20` 个 `router.ts` 路由入口和 `96` 个 TypeScript 模块文件；`apps/api/src/modules/admin` 已从超大 router/service 拆到按业务域模块组织，但非 `admin` 域仍存在多处 `500+ / 800+ / 1000+` 行 router/store 热点 |
+| 管理台 `apps/admin` | `进行中` | `apps/admin/src/pages` 下当前有 `40` 个页面文件；`apps/admin/src/lib/api` 下当前有 `28` 个源码文件，已收成按业务域文件 + 薄入口 barrel，不再保留大杂烩请求文件 |
+| 后端 `apps/api` | `进行中` | `apps/api/src/modules` 下当前有 `21` 个 `router.ts` 路由入口和 `130` 个 TypeScript 模块文件；`apps/api/src/modules/admin` 已从超大 router/service 拆到按业务域模块组织，但非 `admin` 域仍存在多处 `500+ / 800+ / 1000+` 行 router/store 热点 |
 | 共享契约 `packages/shared` | `已完成` | 当前共享契约已拆成 `api-core / api-auth / api-admin-* / api-user-*` 等多个源码文件，`api.ts` 只保留薄导出层 |
 | 数据库资产 `packages/db` | `进行中` | 当前已清理失真旧 SQL，保留 docs-first 说明，但尚未重建覆盖当前 `joy-test` 的完整 migration / schema 资产 |
 
@@ -33,7 +35,7 @@
 | 整体完成度 | `65%` | 页面覆盖已较完整，但“后台可运营闭环 + 测试覆盖 + 未收口链路”仍明显拖分 |
 | 用户端 | `70%` | 高频主链路大多已存在真实 API 接入，但仍有 `8` 个静态/本地态页面，且 `invite`、`checkin` 链路未闭环 |
 | 管理后台 | `65%` | 核心列表和权限体系已成型，内容治理与直播列表已接入真实后台接口；寄售市场已补强制下架，排行榜已补后台刷新动作；当前主要问题转为少量半闭环页和大量页面专项测试未补 |
-| 后端 API | `75%` | `apps/api/src/app.ts` 已注册 `20` 个业务模块，主资源域较完整，但仍有缺失路由和部分后台业务闭环不足 |
+| 后端 API | `75%` | `apps/api/src/app.ts` 已注册 `21` 个业务模块，主资源域较完整，但用户端 `invite/checkin` 仍未见独立后端承接，且部分后台业务闭环不足 |
 | 测试覆盖 | `50%` | 已有一批 API integration/smoke，但绝大多数页面级测试缺失，营销和治理后台专项测试不足 |
 | 部署准备 | `70%` | 工程底座、部署文档和构建链路已具备基础交付条件，但功能闭环不足仍会影响“上线后可运营程度” |
 
@@ -248,7 +250,7 @@
 
 代码事实：
 
-- 页面入口共 `35` 个
+- 页面入口共 `40` 个
 - 主壳层位于 [apps/admin/src/App.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/App.tsx:1)
 - 菜单定义位于 [apps/admin/src/lib/admin-navigation.tsx](/Users/ezreal/Downloads/joy/umi/apps/admin/src/lib/admin-navigation.tsx:1)
 - 当前使用 hash 路由路径分发
@@ -281,7 +283,7 @@
 
 ### 数据接入现状
 
-当前 `apps/admin/src/lib/api` 下共有 `26` 个源码文件；对外仍保持按业务域薄入口，对内已继续拆成子模块。
+当前 `apps/admin/src/lib/api` 下共有 `28` 个源码文件；对外仍保持按业务域薄入口，对内已继续拆成子模块。
 
 其中主入口域包括：
 
@@ -388,11 +390,12 @@
 - `product`
 - `search`
 - `shop`
+- `upload`
 - `wallet`
 - `warehouse`
 - `admin`
 
-这意味着当前 API 不是少数几个演示路由，而是已经拆成 `20` 个路由入口模块。
+这意味着当前 API 不是少数几个演示路由，而是已经拆成 `21` 个路由入口模块。
 
 ### Admin 模块结构
 
@@ -471,7 +474,7 @@
 
 | 子项 | 当前状态 | 代码事实 |
 | --- | --- | --- |
-| 路由拆分 | `已完成` | 业务模块已拆成 `20` 个 router |
+| 路由拆分 | `已完成` | 业务模块已拆成 `21` 个 router |
 | 用户侧资源域 | `进行中` | 主资源域都已有 router 与 OpenAPI 路径定义，但不能据此直接判定所有链路已完整闭环 |
 | 后台资源域 | `进行中` | 已覆盖大量后台资源域，但还不能说明所有业务闭环已完成 |
 | 事务与状态机 | `进行中` | 代码中已见大量写接口，但还未看到统一事务框架或系统化状态机层 |

@@ -6,7 +6,7 @@ import type {
   AdminPermissionMatrixData,
   AdminRoleListItem,
 } from './api/system';
-import { formatNumber } from './format';
+import { formatDate, formatNumber } from './format';
 
 export type RoleFilters = {
   name?: string;
@@ -116,6 +116,12 @@ export function buildRoleColumns(args: {
           {record.status === 'active' ? '启用' : '停用'}
         </Tag>
       ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      width: 120,
+      render: (_, record) => formatDate(record.createdAt),
     },
     {
       title: '操作',

@@ -26,7 +26,6 @@ import {
   uniq,
 } from './system-shared';
 import {
-  expandRolePermissionIds,
   fetchActivePermissionsByIds,
   fetchAdminRolesWithStats,
   findAdminRoleById,
@@ -135,11 +134,6 @@ export async function updateAdminRolePermissions(
       throw new Error('存在无效权限或停用权限');
     }
 
-    const activePermissionIds = await expandRolePermissionIds(
-      connection,
-      activeSelectedPermissionIds,
-    );
-
     await connection.execute(
       `
         DELETE FROM admin_role_permission
@@ -148,7 +142,7 @@ export async function updateAdminRolePermissions(
       [roleId],
     );
 
-    for (const permissionId of activePermissionIds) {
+    for (const permissionId of activeSelectedPermissionIds) {
       await connection.execute(
         `
           INSERT INTO admin_role_permission (role_id, permission_id, created_at)
@@ -162,7 +156,7 @@ export async function updateAdminRolePermissions(
 
     return {
       id: toEntityId(role.id),
-      permissionIds: activePermissionIds.map((item) => toEntityId(item)),
+      permissionIds: activeSelectedPermissionIds.map((item) => toEntityId(item)),
     };
   } catch (error) {
     await connection.rollback();

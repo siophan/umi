@@ -4,6 +4,7 @@ import { Descriptions, Drawer, Tag } from 'antd';
 import {
   getPermissionActionColor,
   getPermissionActionLabel,
+  getPermissionModuleLabel,
   getPermissionStatusColor,
 } from '../lib/admin-permissions';
 
@@ -24,7 +25,7 @@ export function AdminPermissionDetailDrawer({
         <Descriptions column={1} size="small">
           <Descriptions.Item label="权限名称">{selected.name}</Descriptions.Item>
           <Descriptions.Item label="权限编码">{selected.code}</Descriptions.Item>
-          <Descriptions.Item label="所属模块">{selected.module}</Descriptions.Item>
+          <Descriptions.Item label="所属模块">{getPermissionModuleLabel(selected.module)}</Descriptions.Item>
           <Descriptions.Item label="动作">
             <Tag color={getPermissionActionColor(selected.action)}>
               {getPermissionActionLabel(selected.action)}

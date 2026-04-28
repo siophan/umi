@@ -739,6 +739,14 @@
   line-height: 1.75;
 }
 
+.dividerThick {
+  height: 10px;
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.16);
+}
+
 .commentsSection {
   padding-bottom: 6px;
 }
@@ -763,6 +771,13 @@
 
 .commentsList {
   padding-bottom: 6px;
+}
+
+.commentsEmpty {
+  padding: 16px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 11px;
+  text-align: center;
 }
 
 .commentItem {
@@ -1007,7 +1022,7 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-.shareItem span {
+.shareIcon {
   width: 48px;
   height: 48px;
   display: grid;
@@ -1072,11 +1087,26 @@
 }
 
 .betOptionCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px;
   border-radius: 14px;
   margin-bottom: 12px;
   background: rgba(255, 215, 0, 0.06);
   border: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.betOptionColor {
+  width: 8px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.betOptionMain {
+  flex: 1;
+  min-width: 0;
 }
 
 .betOptionLine {
@@ -1086,13 +1116,14 @@
   gap: 8px;
 }
 
-.betOptionLine strong {
+.betOdds {
   color: #ffd700;
   font-size: 18px;
   font-weight: 900;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
 }
 
-.betOptionCard p {
+.betOptionMain p {
   margin: 6px 0 0;
   color: rgba(255, 255, 255, 0.45);
   font-size: 11px;

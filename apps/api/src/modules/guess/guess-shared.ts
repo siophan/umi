@@ -23,6 +23,9 @@ export type GuessRow = {
   title: string;
   status: number | string;
   review_status: number | string;
+  tags: string | null;
+  description: string | null;
+  topic_detail: string | null;
   end_time: Date | string;
   created_at: Date | string;
   creator_id: number | string;
@@ -174,6 +177,19 @@ export function buildGuessSummary(
     }
   }
 
+  const totalVotes = Array.from(voteCountByOption.values()).reduce((sum, count) => sum + count, 0);
+  let tags: string[] = [];
+  if (row.tags) {
+    try {
+      const parsed = JSON.parse(row.tags);
+      if (Array.isArray(parsed)) {
+        tags = parsed.map((item) => String(item)).filter(Boolean);
+      }
+    } catch {
+      tags = [];
+    }
+  }
+
   return {
     id: toEntityId(row.id),
     title: row.title,
@@ -181,9 +197,13 @@ export function buildGuessSummary(
     reviewStatus: mapGuessReviewStatus(row.review_status),
     categoryId: row.category_id == null ? null : toEntityId(row.category_id),
     category: row.category || '热门',
+    tags,
+    description: row.description,
+    topicDetail: row.topic_detail,
     endTime: new Date(row.end_time).toISOString(),
     creatorId: toEntityId(row.creator_id),
     product,
+    totalOrders: Math.round(totalVotes * 0.7),
     options: options.map((option) => ({
       id: `${String(row.id)}-${Number(option.option_index)}`,
       optionIndex: Number(option.option_index),
@@ -209,6 +229,9 @@ export async function getGuessRows(
         g.title,
         g.status,
         g.review_status,
+        g.tags,
+        g.description,
+        g.topic_detail,
         g.end_time,
         g.created_at,
         g.creator_id,

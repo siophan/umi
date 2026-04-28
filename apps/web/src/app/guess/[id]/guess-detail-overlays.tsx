@@ -38,6 +38,12 @@ export function GuessDetailOverlays({
   onSetBetAmount,
   onConfirmBet,
 }: GuessDetailOverlaysProps) {
+  const activeOption = guess.options[selectedOption];
+  const activeStat = optionStats[selectedOption];
+  const optionColor = selectedOption === 0 ? '#ff6b9d' : selectedOption === 1 ? '#536dfe' : '#ce93d8';
+  const productName = guess.product.name;
+  const unitPrice = guess.product.price;
+
   return (
     <>
       {shareOpen ? (
@@ -49,7 +55,7 @@ export function GuessDetailOverlays({
             <div className={styles.shareGrid}>
               {shareChannels.map((item) => (
                 <button className={styles.shareItem} type="button" key={item.label} onClick={() => onOpenShareChannel(item.label)}>
-                  <span style={{ background: item.color }}><i className={item.icon} /></span>
+                  <span className={styles.shareIcon} style={{ background: item.color }}><i className={item.icon} /></span>
                   <em>{item.label}</em>
                 </button>
               ))}
@@ -65,7 +71,6 @@ export function GuessDetailOverlays({
         <div className={styles.sheet}>
           <button className={styles.sheetMask} type="button" onClick={onCloseBet} />
           <section className={`${styles.sheetPanel} ${styles.betPanel}`}>
-            <div className={styles.sheetGrab} />
             <div className={styles.betHeader}>
               <h3>🎰 竞猜下单</h3>
               <button type="button" onClick={onCloseBet}>
@@ -73,17 +78,20 @@ export function GuessDetailOverlays({
               </button>
             </div>
             <div className={styles.betOptionCard}>
-              <div className={styles.betOptionLine}>
-                <span className={styles.betMuted}>预测: {guess.options[selectedOption]?.optionText || ''}</span>
-                <strong>×{(guess.options[selectedOption]?.odds || 1).toFixed(2)}</strong>
+              <div className={styles.betOptionColor} style={{ background: optionColor }} />
+              <div className={styles.betOptionMain}>
+                <div className={styles.betOptionLine}>
+                  <span className={styles.betMuted}>预测: {activeOption?.optionText || ''}</span>
+                </div>
+                <p>{activeStat?.percent || 0}% 选择 · {activeOption?.voteCount || 0}人投票</p>
               </div>
-              <p>{optionStats[selectedOption]?.percent || 0}% 选择 · {guess.options[selectedOption]?.voteCount || 0}人投票</p>
+              <strong className={styles.betOdds}>×{(activeOption?.odds || 1).toFixed(2)}</strong>
             </div>
             <div className={styles.betProductRow}>
               <div className={styles.betProductImgWrap}>
                 <img src={guess.product.img} alt={guess.product.name} />
                 <div className={styles.betImgTag}>
-                  {guess.product.name.length > 8 ? `${guess.product.name.slice(0, 8)}…` : guess.product.name}
+                  {productName.length > 8 ? `${productName.slice(0, 8)}…` : productName}
                 </div>
               </div>
               <div className={styles.betProductRight}>
@@ -91,7 +99,28 @@ export function GuessDetailOverlays({
                   <i className="fa-solid fa-box" />
                   竞猜产品数量
                 </div>
-                <div className={styles.betQtyHint}>按件数参与竞猜</div>
+                <div className={styles.betAmounts}>
+                  {[1, 3, 5].map((value: number) => (
+                    <button
+                      className={betAmount === value ? styles.betAmountActive : styles.betAmount}
+                      key={value}
+                      type="button"
+                      onClick={() => onSetBetAmount(value)}
+                    >
+                      {value}件
+                    </button>
+                  ))}
+                  <div className={styles.betStepper}>
+                    <button className={betAmount <= 1 ? styles.betStepperDisabled : ''} type="button" onClick={() => onSetBetAmount(Math.max(1, betAmount - 1))}>
+                      −
+                    </button>
+                    <span className={styles.betStepperValue}>{betAmount}</span>
+                    <span className={styles.betStepperUnit}>件</span>
+                    <button className={betAmount >= 999 ? styles.betStepperDisabled : ''} type="button" onClick={() => onSetBetAmount(Math.min(999, betAmount + 1))}>
+                      +
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             <div className={styles.betPills}>
@@ -106,52 +135,29 @@ export function GuessDetailOverlays({
                 </button>
               ))}
             </div>
-            <div className={styles.betAmounts}>
-              {[1, 3, 5].map((value: number) => (
-                <button
-                  className={betAmount === value ? styles.betAmountActive : styles.betAmount}
-                  key={value}
-                  type="button"
-                  onClick={() => onSetBetAmount(value)}
-                >
-                  {value}件
-                </button>
-              ))}
-            </div>
-            <div className={styles.betStepper}>
-              <button className={betAmount <= 1 ? styles.betStepperDisabled : ''} type="button" onClick={() => onSetBetAmount(Math.max(1, betAmount - 1))}>
-                -
-              </button>
-              <span className={styles.betStepperValue}>{betAmount}</span>
-              <span className={styles.betStepperUnit}>件</span>
-              <button className={betAmount >= 999 ? styles.betStepperDisabled : ''} type="button" onClick={() => onSetBetAmount(Math.min(999, betAmount + 1))}>
-                +
-              </button>
-            </div>
             <div className={styles.betSummary}>
               <div className={styles.betRow}>
                 <span className={styles.betLabel}>竞猜数量</span>
-                <span className={styles.betVal}>{betAmount}件 {guess.product.name}</span>
+                <span className={styles.betVal}>{betAmount}件 {productName}</span>
               </div>
               <div className={styles.betRow}>
                 <span className={styles.betLabel}>合计金额</span>
-                <span className={styles.betVal}>¥{(guess.product.price * betAmount).toFixed(2)}</span>
+                <span className={styles.betVal}>¥{(unitPrice * betAmount).toFixed(2)}</span>
               </div>
               <div className={`${styles.betRow} ${styles.betRowHighlight}`}>
                 <span className={styles.betLabel}>🎁 猜中可获得</span>
                 <span className={styles.betWin}>
-                  {Math.round(betAmount * (guess.options[selectedOption]?.odds || 1))}件{guess.product.name} · 价值¥{(guess.product.price * betAmount * (guess.options[selectedOption]?.odds || 1)).toFixed(2)}
+                  {Math.round(betAmount * (activeOption?.odds || 1))}件{productName} · 价值¥{(unitPrice * betAmount * (activeOption?.odds || 1)).toFixed(2)}
                 </span>
               </div>
             </div>
-            <div className={styles.betFooterText}>🎁赢方瓜分输方商品 · 🎫没猜中退补偿券 · 🤝支持好友PK</div>
             <button className={styles.betConfirm} type="button" onClick={onConfirmBet}>
               🎰 立即竞猜
             </button>
+            <div className={styles.betFooterText}>🎁赢方瓜分输方商品 · 🎫没猜中退补偿券 · 🤝支持好友PK</div>
           </section>
         </div>
       ) : null}
     </>
   );
 }
-

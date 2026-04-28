@@ -4,7 +4,7 @@ import type { NextFunction, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import type mysql from 'mysql2/promise';
 
-import { toEntityId } from '@umi/shared';
+import { findAdminPermissionDefinitionByCode, toEntityId } from '@umi/shared';
 import type {
   AdminLoginPayload,
   AdminLoginResult,
@@ -333,6 +333,25 @@ function matchesRoutePrefix(path: string, prefix: string) {
   return path === prefix || path.startsWith(`${prefix}/`);
 }
 
+function resolveActionPermissionCode(viewCode: string, method: string) {
+  const normalizedMethod = method.toUpperCase();
+  if (normalizedMethod === 'GET') {
+    return [viewCode];
+  }
+
+  const action =
+    normalizedMethod === 'POST'
+      ? 'create'
+      : normalizedMethod === 'PUT' || normalizedMethod === 'PATCH'
+        ? 'edit'
+        : 'manage';
+  const actionCode = viewCode.endsWith('.view')
+    ? `${viewCode.slice(0, -'.view'.length)}.${action}`
+    : `${viewCode}.${action}`;
+
+  return findAdminPermissionDefinitionByCode(actionCode) ? [actionCode] : [viewCode];
+}
+
 function resolveAdminRoutePermissionCodes(method: string, path: string) {
   const normalizedMethod = method.toUpperCase();
 
@@ -341,181 +360,135 @@ function resolveAdminRoutePermissionCodes(method: string, path: string) {
   }
 
   if (matchesRoutePrefix(path, '/community/posts')) {
-    return normalizedMethod === 'GET'
-      ? ['community.posts.view', 'community.manage']
-      : ['community.manage'];
+    return resolveActionPermissionCode('community.posts.view', method);
   }
 
   if (matchesRoutePrefix(path, '/community/comments')) {
-    return normalizedMethod === 'GET'
-      ? ['community.comments.view', 'community.manage']
-      : ['community.manage'];
+    return resolveActionPermissionCode('community.comments.view', method);
   }
 
   if (matchesRoutePrefix(path, '/community/reports')) {
-    return normalizedMethod === 'GET'
-      ? ['community.reports.view', 'community.manage']
-      : ['community.manage'];
+    return resolveActionPermissionCode('community.reports.view', method);
   }
 
   if (matchesRoutePrefix(path, '/lives')) {
-    return ['community.live.list.view', 'community.manage'];
+    return resolveActionPermissionCode('community.live.list.view', method);
   }
 
   if (matchesRoutePrefix(path, '/chats')) {
-    return ['community.chats.view', 'community.manage'];
+    return resolveActionPermissionCode('community.chats.view', method);
   }
 
   if (matchesRoutePrefix(path, '/users')) {
-    return normalizedMethod === 'GET'
-      ? ['user.list.view', 'user.manage']
-      : ['user.manage'];
+    return resolveActionPermissionCode('user.list.view', method);
   }
 
   if (matchesRoutePrefix(path, '/system-users')) {
-    return normalizedMethod === 'GET'
-      ? ['system.users.view', 'system.manage']
-      : ['system.manage'];
+    return resolveActionPermissionCode('system.users.view', method);
   }
 
   if (matchesRoutePrefix(path, '/roles')) {
-    return normalizedMethod === 'GET'
-      ? ['system.roles.view', 'system.manage']
-      : ['system.manage'];
+    return resolveActionPermissionCode('system.roles.view', method);
   }
 
   if (matchesRoutePrefix(path, '/permissions')) {
-    return normalizedMethod === 'GET'
-      ? ['system.permissions.view', 'system.manage']
-      : ['system.manage'];
+    return resolveActionPermissionCode('system.permissions.view', method);
   }
 
   if (matchesRoutePrefix(path, '/categories')) {
-    return normalizedMethod === 'GET'
-      ? ['system.categories.view', 'system.manage']
-      : ['system.manage'];
+    return resolveActionPermissionCode('system.categories.view', method);
   }
 
   if (matchesRoutePrefix(path, '/notifications')) {
-    return normalizedMethod === 'GET'
-      ? ['system.notifications.view', 'system.manage']
-      : ['system.manage'];
+    return resolveActionPermissionCode('system.notifications.view', method);
   }
 
   if (matchesRoutePrefix(path, '/payment-settings')) {
-    return normalizedMethod === 'GET'
-      ? ['system.settings.view', 'system.manage']
-      : ['system.manage'];
+    return resolveActionPermissionCode('system.settings.view', method);
   }
 
   if (matchesRoutePrefix(path, '/guesses/friends')) {
-    return ['guess.friends.view', 'guess.manage'];
+    return resolveActionPermissionCode('guess.friends.view', method);
   }
 
   if (matchesRoutePrefix(path, '/pk')) {
-    return ['guess.pk.view', 'guess.manage'];
+    return resolveActionPermissionCode('guess.pk.view', method);
   }
 
   if (matchesRoutePrefix(path, '/guesses')) {
-    return normalizedMethod === 'GET'
-      ? ['guess.list.view', 'guess.manage']
-      : ['guess.manage'];
+    return resolveActionPermissionCode('guess.list.view', method);
   }
 
   if (matchesRoutePrefix(path, '/orders/transactions')) {
-    return ['order.transactions.view', 'order.manage'];
+    return resolveActionPermissionCode('order.transactions.view', method);
   }
 
   if (matchesRoutePrefix(path, '/orders/logistics')) {
-    return ['order.logistics.view', 'order.manage'];
+    return resolveActionPermissionCode('order.list.view', method);
   }
 
   if (matchesRoutePrefix(path, '/orders/consign')) {
-    return ['order.warehouse.consign.view', 'order.manage'];
+    return resolveActionPermissionCode('order.warehouse.consign.view', method);
   }
 
   if (matchesRoutePrefix(path, '/orders')) {
-    return ['order.list.view', 'order.manage'];
+    return resolveActionPermissionCode('order.list.view', method);
   }
 
   if (matchesRoutePrefix(path, '/equity')) {
-    return normalizedMethod === 'GET'
-      ? ['marketing.equity.view', 'marketing.manage']
-      : ['marketing.manage'];
+    return resolveActionPermissionCode('marketing.equity.view', method);
   }
 
   if (matchesRoutePrefix(path, '/banners')) {
-    return normalizedMethod === 'GET'
-      ? ['marketing.banners.view', 'marketing.manage']
-      : ['marketing.manage'];
+    return resolveActionPermissionCode('marketing.banners.view', method);
   }
 
   if (matchesRoutePrefix(path, '/checkin/rewards')) {
-    return normalizedMethod === 'GET'
-      ? ['marketing.checkin.view', 'marketing.manage']
-      : ['marketing.manage'];
+    return resolveActionPermissionCode('marketing.checkin.view', method);
   }
 
   if (matchesRoutePrefix(path, '/invites')) {
-    return normalizedMethod === 'GET'
-      ? ['marketing.invite.view', 'marketing.manage']
-      : ['marketing.manage'];
+    return resolveActionPermissionCode('marketing.invite.view', method);
   }
 
   if (matchesRoutePrefix(path, '/coupons')) {
-    return normalizedMethod === 'GET'
-      ? ['marketing.coupons.view', 'marketing.manage']
-      : ['marketing.manage'];
+    return resolveActionPermissionCode('marketing.coupons.view', method);
   }
 
   if (matchesRoutePrefix(path, '/rankings')) {
-    return ['marketing.rankings.view', 'marketing.manage'];
+    return resolveActionPermissionCode('marketing.rankings.view', method);
   }
 
   if (matchesRoutePrefix(path, '/products/brand-library')) {
-    return normalizedMethod === 'GET'
-      ? ['product.brands.view', 'product.manage']
-      : ['product.manage'];
+    return resolveActionPermissionCode('product.brands.view', method);
   }
 
   if (matchesRoutePrefix(path, '/products')) {
-    return normalizedMethod === 'GET'
-      ? ['guess.create.view', 'product.manage']
-      : ['product.manage'];
+    return resolveActionPermissionCode('product.brands.view', method);
   }
 
   if (matchesRoutePrefix(path, '/shops/applies')) {
-    return normalizedMethod === 'GET'
-      ? ['shop.apply.view', 'shop.manage']
-      : ['shop.manage'];
+    return resolveActionPermissionCode('shop.apply.view', method);
   }
 
   if (matchesRoutePrefix(path, '/shops/products')) {
-    return ['shop.products.view', 'shop.manage'];
+    return resolveActionPermissionCode('shop.products.view', method);
   }
 
   if (matchesRoutePrefix(path, '/shops')) {
-    return normalizedMethod === 'GET'
-      ? ['shop.list.view', 'shop.manage']
-      : ['shop.manage'];
+    return resolveActionPermissionCode('shop.list.view', method);
   }
 
   if (matchesRoutePrefix(path, '/brands/auth-applies')) {
-    return normalizedMethod === 'GET'
-      ? ['brand.list.view', 'brand.manage']
-      : ['brand.manage'];
+    return resolveActionPermissionCode('brand.auth.view', method);
   }
 
   if (matchesRoutePrefix(path, '/brands/auth-records')) {
-    return normalizedMethod === 'GET'
-      ? ['brand.list.view', 'brand.manage']
-      : ['brand.manage'];
+    return resolveActionPermissionCode('brand.auth.view', method);
   }
 
   if (matchesRoutePrefix(path, '/brands')) {
-    return normalizedMethod === 'GET'
-      ? ['brand.list.view', 'brand.manage']
-      : ['brand.manage'];
+    return resolveActionPermissionCode('brand.list.view', method);
   }
 
   return null;

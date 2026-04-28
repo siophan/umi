@@ -20,6 +20,7 @@ export default function GuessDetailPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [betOpen, setBetOpen] = useState(false);
   const [breathing, setBreathing] = useState(false);
+  const [favorited, setFavorited] = useState(false);
   const [nowTs, setNowTs] = useState(() => Date.now());
   const [toast, setToast] = useState('');
   const [selectedOption, setSelectedOption] = useState(0);
@@ -107,13 +108,19 @@ export default function GuessDetailPage() {
   );
 
   const statusText = guess ? getGuessStatusText(guess) : '';
-  const countdownLabel = guess?.status === 'active' ? '距截止' : '当前状态';
+  const totalOrders =
+    guess && typeof (guess as GuessSummary & { totalOrders?: number }).totalOrders === 'number'
+      ? (guess as GuessSummary & { totalOrders?: number }).totalOrders!
+      : Math.round(totalVotes * 0.7);
+  const countdownLabel = '距开奖';
   const countdownText =
     guess && guess.status === 'active'
       ? Math.max(new Date(guess.endTime).getTime() - nowTs, 0) > 0
         ? formatCountdown(new Date(guess.endTime).getTime() - nowTs)
         : '00:00:00'
       : statusText;
+  const heroBadgeText = guess?.product.brand ? `👑 ${guess.product.brand}` : `🏷 ${guess?.category || '竞猜'}`;
+  const heroTags = [guess?.category, `${totalVotes}人参与`].filter(Boolean) as string[];
   const topicBadge = guess?.category || '竞猜';
   const heroImage = guess?.product.img || '/legacy/images/guess/g001.jpg';
 
@@ -167,11 +174,17 @@ export default function GuessDetailPage() {
             <i className="fa-solid fa-share-nodes" />
           </button>
           <button
-            className={styles.navBtn}
+            className={`${styles.navBtn} ${favorited ? styles.navBtnFav : ''}`}
             type="button"
-            onClick={() => showToast('收藏功能待接入')}
+            onClick={() => {
+              setFavorited((value) => {
+                const next = !value;
+                showToast(next ? '已加入收藏' : '已取消收藏');
+                return next;
+              });
+            }}
           >
-            <i className="fa-regular fa-heart" />
+            <i className={favorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
           </button>
         </div>
       </header>
@@ -179,11 +192,11 @@ export default function GuessDetailPage() {
         title={guess.title}
         totalVotes={totalVotes}
         optionCount={guess.options.length}
-        statusText={statusText}
+        totalOrders={totalOrders}
         countdownLabel={countdownLabel}
         countdownText={countdownText}
-        category={guess.category}
-        brand={guess.product.brand}
+        badgeText={heroBadgeText}
+        tags={heroTags}
         heroImage={heroImage}
       />
 
@@ -195,6 +208,9 @@ export default function GuessDetailPage() {
         totalVotes={totalVotes}
         topicBadge={topicBadge}
         endTime={guess.endTime}
+        topicDetail={guess.topicDetail}
+        description={guess.description}
+        tags={guess.tags}
         onSelectOption={(index) => {
           setSelectedOption(index);
           setBetOpen(true);

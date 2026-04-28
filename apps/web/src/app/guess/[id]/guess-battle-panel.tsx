@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import type { RefObject } from 'react';
 import { type GuessOption } from '@umi/shared';
 
@@ -19,6 +20,9 @@ type GuessBattlePanelProps = {
   totalVotes: number;
   topicBadge: string;
   endTime: string;
+  topicDetail?: string | null;
+  description?: string | null;
+  tags?: string[];
   onSelectOption: (index: number) => void;
   onParticipateClick: () => void;
   vsAreaRef: RefObject<HTMLDivElement | null>;
@@ -32,10 +36,20 @@ export function GuessBattlePanel({
   totalVotes,
   topicBadge,
   endTime,
+  topicDetail,
+  description,
+  tags,
   onSelectOption,
   onParticipateClick,
   vsAreaRef,
 }: GuessBattlePanelProps) {
+  const [topicExpanded, setTopicExpanded] = useState(false);
+  const displayTopicText = topicDetail?.trim() || description?.trim() || `${title} 正在进行中，围绕「${topicBadge || '热门竞猜'}」展开投票。`;
+  const topicMetaLabel = useMemo(() => {
+    const firstTag = tags?.find(Boolean);
+    return firstTag || topicBadge || '热门';
+  }, [tags, topicBadge]);
+
   return (
     <>
       <section className={styles.pkPanel}>
@@ -112,31 +126,35 @@ export function GuessBattlePanel({
           <div className={styles.topicLabel}><i className="fa-solid fa-scroll" /> 话题详情</div>
           <span className={styles.topicBadge}>{topicBadge}</span>
         </div>
-        <p className={styles.topicText}>
-          竞猜背景说明待补充，当前页仅展示真实竞猜标题、商品、选项、赔率、票数和结束时间。
-        </p>
+        <p className={`${styles.topicText} ${topicExpanded ? styles.topicTextExpanded : ''}`}>{displayTopicText}</p>
+        <button className={styles.topicToggle} type="button" onClick={() => setTopicExpanded((value) => !value)}>
+          {topicExpanded ? '收起' : '展开全文'}{' '}
+          <i className={`fa-solid fa-chevron-down ${topicExpanded ? styles.topicToggleExpanded : ''}`} />
+        </button>
         <div className={styles.topicMeta}>
           <span className={styles.topicMetaItem}><i className="fa-solid fa-users" /> {totalVotes}人参与</span>
           <span className={styles.topicMetaItem}><i className="fa-solid fa-clock" /> {formatEndTime(endTime)}</span>
-          <span className={styles.topicMetaItem}><i className="fa-solid fa-fire" /> {topicBadge || '热门'}</span>
+          <span className={styles.topicMetaItem}><i className="fa-solid fa-fire" /> {topicMetaLabel}</span>
         </div>
       </section>
 
       <section className={styles.descBlock}>
-        <p>
-          当前详情页已对齐真实竞猜数据；收藏和评论功能仍待接入，因此这里不再展示本地演示态统计或互动结果。
-        </p>
+        <p>{description?.trim() || '参与竞猜，猜中即可获得商品发货！'}</p>
       </section>
 
+      <div className={styles.dividerThick} />
+      <div className={styles.dividerThick} />
       <section className={styles.commentsSection}>
         <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitle}>评论</div>
-          <span className={styles.sectionMore}>待接入</span>
+          <div className={styles.sectionTitle}>热门评论</div>
+          <span className={styles.sectionMore}>0条评论</span>
         </div>
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>💬</div>
-          <div className={styles.emptyTitle}>评论功能待接入</div>
-          <div className={styles.emptyDesc}>当前页不再展示演示评论，也不会再用本地状态伪装评论互动。</div>
+        <div className={styles.commentsList}>
+          <div className={styles.commentsEmpty}>暂无评论，快来抢沙发</div>
+        </div>
+        <div className={styles.commentInputBar}>
+          <input type="text" placeholder="说说你的看法..." readOnly />
+          <button type="button">发送</button>
         </div>
       </section>
 

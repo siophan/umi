@@ -115,10 +115,14 @@ export interface GuessSummary {
   reviewStatus: GuessReviewStatus;
   categoryId?: CategoryId | null;
   category: string;
+  tags?: string[];
+  description?: string | null;
+  topicDetail?: string | null;
   endTime: string;
   creatorId: UserId;
   product: ProductSummary;
   options: GuessOption[];
+  totalOrders?: number;
 }
 
 export interface OrderItem {

@@ -147,9 +147,7 @@ export function buildSystemUserColumns(args: {
           <Button size="small" type="link" onClick={() => args.onResetPassword(record)}>
             重置密码
           </Button>
-          {record.id === args.currentAdminId && record.status === 'active' ? (
-            <Typography.Text type="secondary">当前账号</Typography.Text>
-          ) : (
+          {record.id === args.currentAdminId && record.status === 'active' ? null : (
             <Popconfirm
               title={record.status === 'active' ? '停用账号' : '启用账号'}
               description={

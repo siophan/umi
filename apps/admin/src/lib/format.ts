@@ -41,7 +41,9 @@ export const guessStatusMeta: Record<GuessStatus, StatusMeta> = {
   draft: { color: 'default', label: '草稿' },
   pending_review: { color: 'warning', label: '待审核' },
   active: { color: 'processing', label: '进行中' },
+  pending_settle: { color: 'gold', label: '待结算' },
   settled: { color: 'success', label: '已结算' },
+  abandoned: { color: 'default', label: '已废弃' },
   cancelled: { color: 'error', label: '已取消' },
 };
 
@@ -132,4 +134,24 @@ export function formatDate(value?: string | null) {
   const day = String(date.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
+}
+
+export function formatFullDateTime(value?: string | null) {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  const second = String(date.getSeconds()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }

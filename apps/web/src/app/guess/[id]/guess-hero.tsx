@@ -6,11 +6,11 @@ type GuessHeroProps = {
   title: string;
   totalVotes: number;
   optionCount: number;
-  statusText: string;
+  totalOrders: number;
   countdownLabel: string;
   countdownText: string;
-  category: string;
-  brand?: string;
+  badgeText: string;
+  tags: string[];
   heroImage: string;
 };
 
@@ -18,11 +18,11 @@ export function GuessHero({
   title,
   totalVotes,
   optionCount,
-  statusText,
+  totalOrders,
   countdownLabel,
   countdownText,
-  category,
-  brand,
+  badgeText,
+  tags,
   heroImage,
 }: GuessHeroProps) {
   return (
@@ -45,9 +45,9 @@ export function GuessHero({
         <div className={styles.topItem}>
           <div className={styles.topValue}>
             <span className={styles.topIcon}>📊</span>
-            <span className={styles.topValueText}>{statusText}</span>
+            <span className={styles.topValueText}>{totalOrders}</span>
           </div>
-          <div className={styles.topLabel}>当前状态</div>
+          <div className={styles.topLabel}>总订单</div>
         </div>
       </section>
 
@@ -61,10 +61,10 @@ export function GuessHero({
           </div>
           <h1 className={styles.heroTitle}>{title}</h1>
           <div className={styles.heroMeta}>
-            <span className={styles.badge}>{statusText}</span>
-            <span>{brand}</span>
-            <span>{category}</span>
-            <span>{totalVotes} 人参与</span>
+            <span className={styles.badge}>{badgeText}</span>
+            {tags.map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
           </div>
         </div>
         <div className={styles.heroSource}>
@@ -75,4 +75,3 @@ export function GuessHero({
     </>
   );
 }
-

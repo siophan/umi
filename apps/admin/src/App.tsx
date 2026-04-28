@@ -23,7 +23,7 @@ import { useAdminSession } from './hooks/use-admin-session';
 const ADMIN_THEME = {
   token: {
     colorPrimary: '#1677ff',
-    borderRadius: 16,
+    borderRadius: 6,
     colorBgLayout: '#f3f5f8',
     colorBgContainer: '#ffffff',
     colorBgElevated: '#ffffff',
@@ -31,6 +31,10 @@ const ADMIN_THEME = {
     colorTextSecondary: '#64748b',
   },
   components: {
+    Button: {
+      borderRadius: 6,
+      controlHeight: 32,
+    },
     Menu: {
       darkItemBg: '#141422',
       darkItemColor: 'rgba(255,255,255,0.65)',

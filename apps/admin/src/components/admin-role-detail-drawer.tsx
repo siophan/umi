@@ -1,7 +1,7 @@
 import { Descriptions, Drawer, Tag } from 'antd';
 
 import type { AdminRoleListItem } from '../lib/api/system';
-import { formatDateTime } from '../lib/format';
+import { formatFullDateTime } from '../lib/format';
 import { getRoleStatusColor } from '../lib/admin-roles';
 
 interface AdminRoleDetailDrawerProps {
@@ -22,10 +22,6 @@ export function AdminRoleDetailDrawer({
           <Descriptions.Item label="角色名称">{selected.name}</Descriptions.Item>
           <Descriptions.Item label="角色编码">{selected.code}</Descriptions.Item>
           <Descriptions.Item label="角色说明">{selected.description || '-'}</Descriptions.Item>
-          <Descriptions.Item label="权限范围">{selected.permissionRange}</Descriptions.Item>
-          <Descriptions.Item label="权限模块">
-            {selected.permissionModules.length > 0 ? selected.permissionModules.join(' / ') : '未配置权限'}
-          </Descriptions.Item>
           <Descriptions.Item label="成员数">{selected.memberCount}</Descriptions.Item>
           <Descriptions.Item label="权限数">{selected.permissionCount}</Descriptions.Item>
           <Descriptions.Item label="排序">{selected.sort}</Descriptions.Item>
@@ -35,8 +31,8 @@ export function AdminRoleDetailDrawer({
               {selected.status === 'active' ? '启用' : '停用'}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="创建时间">{formatDateTime(selected.createdAt)}</Descriptions.Item>
-          <Descriptions.Item label="更新时间">{formatDateTime(selected.updatedAt)}</Descriptions.Item>
+          <Descriptions.Item label="创建时间">{formatFullDateTime(selected.createdAt)}</Descriptions.Item>
+          <Descriptions.Item label="更新时间">{formatFullDateTime(selected.updatedAt)}</Descriptions.Item>
         </Descriptions>
       ) : null}
     </Drawer>

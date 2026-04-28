@@ -34,7 +34,7 @@ interface AdminSearchBarProps {
 }
 
 export const SEARCH_THEME = {
-  inherit: false,
+  inherit: true,
   token: {
     colorPrimary: '#1677ff',
     borderRadius: 6,

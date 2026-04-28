@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import type { MenuProps } from 'antd';
 import {
-  ADMIN_PERMISSION_DEFINITION_BY_CODE,
   findAdminMenuPermissionByPath,
+  getAdminPermissionChildren,
   type AdminProfile,
 } from '@umi/shared';
 
@@ -125,8 +125,7 @@ function hasNodeAccess(node: AdminMenuNode, currentUser: AdminProfile) {
         return true;
       }
 
-      const definition = ADMIN_PERMISSION_DEFINITION_BY_CODE[code];
-      return Boolean(definition?.parentCode && permissions.includes(definition.parentCode));
+      return getAdminPermissionChildren(code).some((child) => permissions.includes(child.code));
     }) ?? false
   );
 }
@@ -176,7 +175,7 @@ export function isAdminPathAccessible(
   if (definition) {
     return (
       permissions.includes(definition.code) ||
-      Boolean(definition.parentCode && permissions.includes(definition.parentCode))
+      getAdminPermissionChildren(definition.code).some((child) => permissions.includes(child.code))
     );
   }
 
