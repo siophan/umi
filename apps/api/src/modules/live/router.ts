@@ -139,6 +139,7 @@ async function buildLiveItems(liveRows: LiveRow[]) {
   let guessRows: GuessRow[] = [];
   let optionRows: GuessOptionRow[] = [];
   let voteRows: GuessVoteRow[] = [];
+  let participantRows: Array<{ guess_id: string | number; participant_count: number | string }> = [];
 
   if (hostIds.length > 0) {
     const [guesses] = await db.query<mysql.RowDataPacket[]>(
@@ -193,8 +194,21 @@ async function buildLiveItems(liveRows: LiveRow[]) {
         [guessIds],
       );
 
+      const [participants] = await db.query<mysql.RowDataPacket[]>(
+        `
+          SELECT
+            guess_id,
+            COUNT(DISTINCT user_id) AS participant_count
+          FROM guess_bet
+          WHERE guess_id IN (?)
+          GROUP BY guess_id
+        `,
+        [guessIds],
+      );
+
       optionRows = options as GuessOptionRow[];
       voteRows = votes as GuessVoteRow[];
+      participantRows = participants as typeof participantRows;
     }
   }
 
@@ -222,6 +236,11 @@ async function buildLiveItems(liveRows: LiveRow[]) {
     votesByGuess.set(key, current);
   }
 
+  const participantsByGuess = new Map<string, number>();
+  for (const row of participantRows) {
+    participantsByGuess.set(String(row.guess_id), Number(row.participant_count ?? 0));
+  }
+
   return liveRows.map((row) => {
     const hostId = row.host_id == null ? null : String(row.host_id);
     const hostGuesses = hostId ? guessesByHost.get(hostId) || [] : [];
@@ -233,10 +252,9 @@ async function buildLiveItems(liveRows: LiveRow[]) {
           votesByGuess.get(String(currentGuessRow.id)) || [],
         )
       : null;
-    const participants = hostGuesses.reduce((sum, guess) => {
-      const voteList = votesByGuess.get(String(guess.id)) || [];
-      return sum + voteList.reduce((voteSum, item) => voteSum + Number(item.vote_count ?? 0), 0);
-    }, 0);
+    const participants = currentGuessRow
+      ? participantsByGuess.get(String(currentGuessRow.id)) ?? 0
+      : 0;
 
     return {
       id: toEntityId(row.id),
