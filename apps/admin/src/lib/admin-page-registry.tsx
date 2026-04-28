@@ -33,6 +33,7 @@ import { SystemChatsPage } from '../pages/system-chats-page';
 import { SystemChatDetailPage } from '../pages/system-chat-detail-page';
 import { SystemNotificationsPage } from '../pages/system-notifications-page';
 import { SystemRankingsPage } from '../pages/system-rankings-page';
+import { SystemSettingsPage } from '../pages/system-settings-page';
 import { SystemUsersPage } from '../pages/system-users-page';
 import { UsersPage } from '../pages/users-page';
 import { WarehouseConsignDetailPage } from '../pages/warehouse-consign-detail-page';
@@ -71,6 +72,7 @@ const PAGE_COMPONENTS: Record<string, ComponentType<AdminPageProps>> = {
   '/system/notifications': SystemNotificationsPage,
   '/system/roles': RolesPage,
   '/system/rankings': SystemRankingsPage,
+  '/system/settings': SystemSettingsPage,
   '/system/users': SystemUsersPage,
   '/users/permissions': PermissionsPage,
   '/users/list': UsersPage,

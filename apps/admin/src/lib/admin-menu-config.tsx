@@ -325,6 +325,13 @@ export const adminMenuTree: AdminMenuNode[] = [
         name: '通知管理',
         access: menuAccess('/system/notifications'),
       },
+      {
+        key: '/system/settings',
+        path: '/system/settings',
+        icon: <SettingOutlined />,
+        name: '参数设置',
+        access: menuAccess('/system/settings'),
+      },
     ],
   },
 ];
