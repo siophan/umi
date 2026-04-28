@@ -16,6 +16,7 @@ skills
 tests-results
 tests
 *.tsbuildinfo
+apps/api/src/**/*.js
 release
 .pnpm-store/
 scripts/
