@@ -41,10 +41,12 @@ export function useCreatePageState() {
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [isMerchantMode, setIsMerchantMode] = useState(false);
-  const [template, setTemplate] = useState<TemplateId>('pk');
+  const [template, setTemplate] = useState<TemplateId>('pk_duo');
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [deadline, setDeadline] = useState('');
+  const [revealAt, setRevealAt] = useState('');
+  const [minParticipants, setMinParticipants] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [friendKeyword, setFriendKeyword] = useState('');
@@ -130,9 +132,9 @@ export function useCreatePageState() {
         setIsMerchantMode(merchant);
         setTemplate((current) => {
           if (merchant) {
-            return current === 'pk' ? 'duel' : current;
+            return current === 'pk_duo' || current === 'pk_multi' ? 'duel' : current;
           }
-          return 'pk';
+          return current === 'pk_duo' || current === 'pk_multi' ? current : 'pk_duo';
         });
       } else {
         failureLabels.push('店铺状态');
@@ -295,9 +297,12 @@ export function useCreatePageState() {
     const step0 = Boolean(template);
     const step1 = title.trim().length >= 5 && Boolean(coverUploadedUrl);
     const step2 = options.filter((item) => item.trim()).length >= 2;
-    const step3 = Boolean(deadline);
+    const merchantStep3 = isMerchantMode
+      ? Boolean(revealAt) && Number(minParticipants) > 0
+      : true;
+    const step3 = Boolean(deadline) && Boolean(selectedProduct) && merchantStep3;
     return [step0, step1, step2, step3];
-  }, [coverUploadedUrl, deadline, options, template, title]);
+  }, [coverUploadedUrl, deadline, isMerchantMode, minParticipants, options, revealAt, selectedProduct, template, title]);
 
   const progress = useMemo(() => Math.round((steps.filter(Boolean).length / 4) * 100), [steps]);
   const selectedCount = options.filter((item) => item.trim()).length;
@@ -352,6 +357,8 @@ export function useCreatePageState() {
     setOptions((current) => current.map((item, idx) => (idx === index ? value : item)));
   }
 
+  const TEMPLATES_ALLOW_MANY_OPTIONS: TemplateId[] = ['multi', 'pk_multi'];
+
   function selectTemplate(nextTemplate: TemplateId) {
     if (nextTemplate === template) {
       return;
@@ -362,7 +369,7 @@ export function useCreatePageState() {
       if (crossingNumberBoundary) {
         return ['', ''];
       }
-      if (nextTemplate === 'multi') {
+      if (TEMPLATES_ALLOW_MANY_OPTIONS.includes(nextTemplate)) {
         return current.length >= 2 ? current : ['', ''];
       }
       return current.length > 2 ? current.slice(0, 2) : current;
@@ -370,7 +377,7 @@ export function useCreatePageState() {
   }
 
   function addOption() {
-    if (template !== 'multi') {
+    if (!TEMPLATES_ALLOW_MANY_OPTIONS.includes(template)) {
       showToast('当前模板固定为2个选项');
       return;
     }
@@ -378,16 +385,22 @@ export function useCreatePageState() {
   }
 
   function removeOption(index: number) {
-    if (template !== 'multi') {
+    if (!TEMPLATES_ALLOW_MANY_OPTIONS.includes(template)) {
       return;
     }
     setOptions((current) => current.filter((_, idx) => idx !== index));
   }
 
   function toggleFriend(friendId: string) {
-    setSelectedFriends((current) =>
-      current.includes(friendId) ? current.filter((item) => item !== friendId) : [...current, friendId],
-    );
+    setSelectedFriends((current) => {
+      if (current.includes(friendId)) {
+        return current.filter((item) => item !== friendId);
+      }
+      if (template === 'pk_duo') {
+        return [friendId];
+      }
+      return [...current, friendId];
+    });
   }
 
   function showToast(message: string) {
@@ -544,6 +557,8 @@ export function useCreatePageState() {
     setDesc('');
     setOptions(['', '']);
     setDeadline('');
+    setRevealAt('');
+    setMinParticipants('');
     setSelectedFriends([]);
     setFriendKeyword('');
     setSelectedProduct(null);
@@ -654,13 +669,18 @@ export function useCreatePageState() {
       }
     }
 
-    if (!isMerchantMode && template === 'pk' && selectedFriends.length === 0) {
-      showToast('⚠️ 好友PK必须选择参战好友');
+    if (!isMerchantMode && template === 'pk_duo' && selectedFriends.length !== 1) {
+      showToast('⚠️ 双人PK需要邀请1位好友');
       return false;
     }
 
-    if (isMerchantMode && !selectedProduct) {
-      showToast('⚠️ 店铺竞猜必须选择关联商品');
+    if (!isMerchantMode && template === 'pk_multi' && selectedFriends.length < 2) {
+      showToast('⚠️ 多人PK至少邀请2位好友');
+      return false;
+    }
+
+    if (!selectedProduct) {
+      showToast('⚠️ 请选择竞猜关联商品');
       return false;
     }
 
@@ -670,13 +690,29 @@ export function useCreatePageState() {
     }
 
     if (!deadline) {
-      showToast('⚠️ 请设置开奖时间');
+      showToast('⚠️ 请设置投注截止时间');
       return false;
     }
 
     if (new Date(deadline).getTime() <= Date.now()) {
-      showToast('⚠️ 开奖时间必须晚于当前时间');
+      showToast('⚠️ 投注截止时间必须晚于当前时间');
       return false;
+    }
+
+    if (isMerchantMode) {
+      if (!revealAt) {
+        showToast('⚠️ 请设置揭晓时间');
+        return false;
+      }
+      if (new Date(revealAt).getTime() < new Date(deadline).getTime()) {
+        showToast('⚠️ 揭晓时间必须晚于投注截止时间');
+        return false;
+      }
+      const minNum = Number(minParticipants);
+      if (!minParticipants || !Number.isInteger(minNum) || minNum <= 0) {
+        showToast('⚠️ 请设置最低参与人数（正整数）');
+        return false;
+      }
     }
 
     return true;
@@ -705,9 +741,10 @@ export function useCreatePageState() {
 
     const trimmedTitle = title.trim();
     const filledOptions = options.filter((item) => item.trim());
-    const scope: 'public' | 'friends' = !isMerchantMode && template === 'pk' ? 'friends' : 'public';
+    const isPkTemplate = template === 'pk_duo' || template === 'pk_multi';
+    const scope: 'public' | 'friends' = !isMerchantMode && isPkTemplate ? 'friends' : 'public';
     const inviteeIds: NonNullable<CreateGuessPayload['invitedFriendIds']> =
-      !isMerchantMode && template === 'pk'
+      !isMerchantMode && isPkTemplate
         ? (selectedFriends as NonNullable<CreateGuessPayload['invitedFriendIds']>)
         : [];
     const productId: CreateGuessPayload['productId'] =
@@ -735,6 +772,8 @@ export function useCreatePageState() {
           productId,
           invitedFriendIds: inviteeIds,
           categoryId: selectedGuessCategoryId,
+          revealAt: isMerchantMode && revealAt ? new Date(revealAt).toISOString() : null,
+          minParticipants: isMerchantMode && minParticipants ? Number(minParticipants) : null,
         });
 
         setCreatedGuessId(result.id);
@@ -764,6 +803,10 @@ export function useCreatePageState() {
     setDesc,
     deadline,
     setDeadline,
+    revealAt,
+    setRevealAt,
+    minParticipants,
+    setMinParticipants,
     options,
     selectedFriends,
     friendKeyword,

@@ -30,6 +30,10 @@ export default function CreatePage() {
     setDesc,
     deadline,
     setDeadline,
+    revealAt,
+    setRevealAt,
+    minParticipants,
+    setMinParticipants,
     options,
     selectedFriends,
     friendKeyword,
@@ -133,22 +137,29 @@ export default function CreatePage() {
       <div className={styles.templateGrid}>
         {templates.map((item) => {
           const locked = item.merchantOnly && !isMerchantMode;
+          const comingSoon = Boolean(item.comingSoon);
+          const disabled = locked || comingSoon;
+          const maskText = locked ? '🔒 开店解锁' : comingSoon ? '🚧 暂未上线' : '';
           return (
             <button
               key={item.id}
               type="button"
-              className={`${styles.templateCard} ${template === item.id ? styles.templateSelected : ''} ${locked ? styles.templateLocked : ''}`}
+              className={`${styles.templateCard} ${template === item.id ? styles.templateSelected : ''} ${disabled ? styles.templateLocked : ''}`}
               onClick={() => {
+                if (comingSoon) {
+                  showToast(`${item.name} 暂未上线`);
+                  return;
+                }
                 if (!locked) {
-            selectTemplate(item.id);
-            showToast(`${item.name} 模板`);
+                  selectTemplate(item.id);
+                  showToast(`${item.name} 模板`);
                 }
               }}
             >
               <div className={styles.templateIcon}>{item.icon}</div>
               <div className={styles.templateName}>{item.name}</div>
               <div className={styles.templateDesc}>{item.desc}</div>
-              {locked ? <div className={styles.templateMask}>🔒 开店解锁</div> : null}
+              {disabled ? <div className={styles.templateMask}>{maskText}</div> : null}
             </button>
           );
         })}
@@ -204,10 +215,11 @@ export default function CreatePage() {
         addOption={addOption}
       />
 
-      {!isMerchantMode && template === 'pk' ? (
+      {!isMerchantMode && (template === 'pk_duo' || template === 'pk_multi') ? (
         <>
           <div className={styles.dividerThick} />
           <CreatePkSection
+            template={template}
             selectedFriends={selectedFriends}
             friendKeyword={friendKeyword}
             setFriendKeyword={setFriendKeyword}
@@ -225,6 +237,10 @@ export default function CreatePage() {
         stepDone={steps[3]}
         deadline={deadline}
         setDeadline={setDeadline}
+        revealAt={revealAt}
+        setRevealAt={setRevealAt}
+        minParticipants={minParticipants}
+        setMinParticipants={setMinParticipants}
         isMerchantMode={isMerchantMode}
         openProductPicker={openProductPicker}
         selectedProduct={selectedProduct}

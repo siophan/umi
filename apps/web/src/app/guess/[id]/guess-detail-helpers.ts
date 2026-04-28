@@ -36,6 +36,12 @@ export function getGuessStatusText(guess: GuessSummary) {
   if (guess.status === 'cancelled') {
     return '已取消';
   }
+  if (guess.status === 'abandoned') {
+    return '已流标';
+  }
+  if (guess.status === 'pending_settle') {
+    return '待揭晓';
+  }
   if (guess.status === 'draft') {
     return '草稿';
   }

@@ -1,9 +1,10 @@
 'use client';
 
-import type { FriendItem } from './create-helpers';
+import type { FriendItem, TemplateId } from './create-helpers';
 import styles from './page.module.css';
 
 type Props = {
+  template: TemplateId;
   selectedFriends: string[];
   friendKeyword: string;
   setFriendKeyword: (value: string | ((current: string) => string)) => void;
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function CreatePkSection({
+  template,
   selectedFriends,
   friendKeyword,
   setFriendKeyword,
@@ -22,6 +24,19 @@ export function CreatePkSection({
   toggleFriend,
   showToast,
 }: Props) {
+  const isDuo = template === 'pk_duo';
+  const limitText = isDuo ? '邀请 1 位好友 1 对 1' : '至少邀请 2 位好友';
+  const okStateText = isDuo
+    ? selectedFriends.length === 1
+      ? '✓ 已选 1 人'
+      : selectedFriends.length === 0
+        ? '待选择'
+        : `已选 ${selectedFriends.length} 人（仅取 1 人）`
+    : selectedFriends.length >= 2
+      ? `✓ 已选 ${selectedFriends.length} 人`
+      : selectedFriends.length === 0
+        ? '待选择'
+        : `已选 ${selectedFriends.length} 人，至少 2 人`;
   function renderFriendAvatar(friend: FriendItem, className?: string) {
     if (friend.avatar) {
       return <img className={className} src={friend.avatar} alt={friend.name} />;
@@ -33,10 +48,10 @@ export function CreatePkSection({
     <section className={styles.formSection}>
       <h3>
         <span className={styles.stepNum}>⚔</span> 邀请好友参战<span className={styles.requiredMark}>*</span>
-        <span className={`${styles.stepStatus} ${selectedFriends.length ? styles.done : styles.pending}`}>{selectedFriends.length ? `已选 ${selectedFriends.length} 人` : '待选择'}</span>
+        <span className={`${styles.stepStatus} ${selectedFriends.length ? styles.done : styles.pending}`}>{okStateText}</span>
       </h3>
       <div className={styles.pkFriendsHeader}>
-        <span className={styles.pkFriendsCount}>已选 {selectedFriends.length} 人</span>
+        <span className={styles.pkFriendsCount}>{limitText}（已选 {selectedFriends.length} 人）</span>
       </div>
       <div className={styles.pkSearch}>
         <i className="fa-solid fa-magnifying-glass" />

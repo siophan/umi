@@ -9,6 +9,7 @@ import { ok } from '../../lib/http';
 import { toRouteHttpError } from '../admin/route-helpers';
 import { getGuessCategories } from './guess-categories';
 import { createUserGuess } from './guess-create';
+import { getFriendPkSummary } from './friend-pk';
 import { getUserHistoryResult } from './guess-history';
 import { getGuessDetail, getGuessList, getGuessStats } from './guess-read';
 
@@ -18,6 +19,15 @@ guessRouter.get(
   '/categories',
   asyncHandler(async (_request, response) => {
     ok(response, await getGuessCategories());
+  }),
+);
+
+guessRouter.get(
+  '/friend-pk',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await getFriendPkSummary(user.id));
   }),
 );
 
@@ -69,12 +79,17 @@ guessRouter.post(
           { message: '至少填写两个有效选项', status: 400, code: 'GUESS_OPTIONS_REQUIRED' },
           { message: '竞猜选项不能重复', status: 400, code: 'GUESS_OPTIONS_DUPLICATED' },
           { message: '好友PK必须选择参战好友', status: 400, code: 'GUESS_FRIENDS_REQUIRED' },
+          { message: '竞猜必须关联商品', status: 400, code: 'GUESS_PRODUCT_REQUIRED' },
           { message: '关联商品不存在', status: 404, code: 'GUESS_PRODUCT_NOT_FOUND' },
           { message: '关联商品不可用于创建竞猜', status: 400, code: 'GUESS_PRODUCT_INVALID' },
           { message: '关联商品所属店铺不可用于创建竞猜', status: 400, code: 'GUESS_PRODUCT_SHOP_INVALID' },
           { message: '关联商品所属品牌不可用于创建竞猜', status: 400, code: 'GUESS_PRODUCT_BRAND_INVALID' },
           { message: '关联商品所属品牌商品不可用于创建竞猜', status: 400, code: 'GUESS_PRODUCT_BRAND_PRODUCT_INVALID' },
           { message: '关联商品可用库存不足', status: 400, code: 'GUESS_PRODUCT_OUT_OF_STOCK' },
+          { message: '揭晓时间不合法', status: 400, code: 'GUESS_REVEAL_AT_INVALID' },
+          { message: '揭晓时间必须晚于投注截止时间', status: 400, code: 'GUESS_REVEAL_AT_BEFORE_END' },
+          { message: '最低参与人数必须是正整数', status: 400, code: 'GUESS_MIN_PARTICIPANTS_INVALID' },
+          { message: '最低参与人数过大', status: 400, code: 'GUESS_MIN_PARTICIPANTS_TOO_LARGE' },
         ],
       );
     }

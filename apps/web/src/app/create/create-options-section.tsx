@@ -22,10 +22,10 @@ export function CreateOptionsSection({
   removeOption,
   addOption,
 }: Props) {
-  const isMultiTemplate = template === 'multi';
+  const allowsManyOptions = template === 'multi' || template === 'pk_multi';
   const isNumberTemplate = template === 'number';
-  const canAddOption = isMultiTemplate;
-  const canRemoveOption = isMultiTemplate && options.length > 2;
+  const canAddOption = allowsManyOptions;
+  const canRemoveOption = allowsManyOptions && options.length > 2;
 
   function getPlaceholder(index: number) {
     if (isNumberTemplate) {

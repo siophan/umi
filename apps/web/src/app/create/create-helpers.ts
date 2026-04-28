@@ -1,6 +1,6 @@
 import type { ProductFeedItem, SearchHotKeywordItem, SocialUserItem } from '@umi/shared';
 
-export type TemplateId = 'pk' | 'duel' | 'multi' | 'number';
+export type TemplateId = 'pk_duo' | 'pk_multi' | 'duel' | 'multi' | 'number';
 
 export type TopicItem = {
   text: string;
@@ -37,11 +37,13 @@ export const templates: Array<{
   name: string;
   desc: string;
   merchantOnly?: boolean;
+  comingSoon?: boolean;
 }> = [
   { id: 'duel', icon: '⚖️', name: '二选一', desc: 'A vs B 经典对决', merchantOnly: true },
   { id: 'multi', icon: '🎯', name: '多选竞猜', desc: '多个选项自由选', merchantOnly: true },
-  { id: 'number', icon: '🔢', name: '数值预测', desc: '猜数字范围', merchantOnly: true },
-  { id: 'pk', icon: '🤝', name: '好友PK', desc: '邀请好友对战' },
+  { id: 'number', icon: '🔢', name: '数值预测', desc: '猜数字范围', merchantOnly: true, comingSoon: true },
+  { id: 'pk_duo', icon: '🤝', name: '双人PK', desc: '1对1邀请好友PK' },
+  { id: 'pk_multi', icon: '👥', name: '多人PK', desc: '邀请多位好友混战瓜分' },
 ];
 
 export function mapProductFeedToCreateProduct(item: ProductFeedItem): ProductItem {

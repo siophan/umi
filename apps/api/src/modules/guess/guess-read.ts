@@ -11,6 +11,8 @@ import {
   REVIEW_APPROVED,
 } from './guess-shared';
 
+const GUESS_SCOPE_PUBLIC = 10;
+
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
@@ -52,8 +54,13 @@ export async function getGuessList(query: {
     ? Math.min(Math.max(requestedLimit, 1), MAX_LIMIT)
     : DEFAULT_LIMIT;
 
-  const whereClauses = ['g.review_status = ?', 'g.status = ?', 'g.end_time > NOW()'];
-  const params: Array<string | number | Date> = [REVIEW_APPROVED, GUESS_ACTIVE];
+  const whereClauses = [
+    'g.review_status = ?',
+    'g.status = ?',
+    'g.scope = ?',
+    'g.end_time > NOW()',
+  ];
+  const params: Array<string | number | Date> = [REVIEW_APPROVED, GUESS_ACTIVE, GUESS_SCOPE_PUBLIC];
 
   if (keyword) {
     const like = `%${keyword}%`;

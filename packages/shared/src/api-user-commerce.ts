@@ -55,6 +55,30 @@ export interface GuessCategoryListResult {
   items: GuessCategoryItem[];
 }
 
+export interface FriendPkOption {
+  text: string;
+  voteCount: number;
+  pct: number;
+}
+
+export interface FriendPkCreator {
+  id: UserId;
+  name: string;
+  avatar: string | null;
+}
+
+export interface FriendPkSummary {
+  id: GuessId;
+  title: string;
+  endTime: string;
+  creator: FriendPkCreator;
+  options: FriendPkOption[];
+}
+
+export interface FriendPkResult {
+  item: FriendPkSummary | null;
+}
+
 export interface ProductFeedItem {
   id: ProductId;
   name: string;

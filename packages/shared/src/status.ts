@@ -2,7 +2,9 @@ export const guessStatuses = [
   'draft',
   'pending_review',
   'active',
+  'pending_settle',
   'settled',
+  'abandoned',
   'cancelled',
 ] as const;
 

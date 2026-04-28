@@ -162,7 +162,9 @@
 | `draft` | `10` | 草稿 |
 | `pending_review` | `20` | 待审核 |
 | `active` | `30` | 进行中 |
+| `pending_settle` | `35` | 投注截止后、揭晓前（仅店铺竞猜，已达最低参与人数） |
 | `settled` | `40` | 已结算 |
+| `abandoned` | `80` | 流标（仅店铺竞猜，未达最低参与人数已退款） |
 | `rejected` | `90` | 已拒绝 |
 
 ### `guess_bet.status`

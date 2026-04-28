@@ -68,6 +68,35 @@ function normalizeEndTime(endTime: string) {
   return parsed;
 }
 
+function normalizeRevealAt(revealAt: string | null | undefined, endTime: Date) {
+  const value = (revealAt ?? '').trim();
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('揭晓时间不合法');
+  }
+  if (parsed.getTime() < endTime.getTime()) {
+    throw new Error('揭晓时间必须晚于投注截止时间');
+  }
+  return parsed;
+}
+
+function normalizeMinParticipants(minParticipants: number | null | undefined) {
+  if (minParticipants == null) {
+    return null;
+  }
+  const value = Number(minParticipants);
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
+    throw new Error('最低参与人数必须是正整数');
+  }
+  if (value > 100000) {
+    throw new Error('最低参与人数过大');
+  }
+  return value;
+}
+
 async function isCreatorMerchant(creatorId: string) {
   const shop = await getCurrentShop(creatorId);
   return Boolean(shop && Number(shop.status) === SHOP_STATUS_ACTIVE);
@@ -77,7 +106,7 @@ async function isCreatorMerchant(creatorId: string) {
  * 商家创建竞猜必须传有效 categoryId；非商家可不传，此时存 0 表示无分类。
  * 任意模式下传了 categoryId 都要校验存在、biz_type=40、已启用，否则报错。
  */
-async function resolveGuessCategoryId(categoryId: string | null | undefined, creatorId: string) {
+async function resolveGuessCategoryId(categoryId: string | null | undefined, isMerchant: boolean) {
   if (categoryId?.trim()) {
     const db = getDbPool();
     const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -99,8 +128,7 @@ async function resolveGuessCategoryId(categoryId: string | null | undefined, cre
     return String(category.id);
   }
 
-  const merchant = await isCreatorMerchant(creatorId);
-  if (merchant) {
+  if (isMerchant) {
     throw new Error('商家创建竞猜必须选择分类');
   }
 
@@ -198,12 +226,19 @@ export async function createUserGuess(
   const optionTexts = normalizeOptionTexts(payload.optionTexts);
   const scope = payload.scope === 'friends' ? 'friends' : 'public';
   const scopeCode = scope === 'friends' ? GUESS_SCOPE_FRIENDS : GUESS_SCOPE_PUBLIC;
-  const categoryId = await resolveGuessCategoryId(payload.categoryId ? String(payload.categoryId) : null, creatorId);
-  const product = payload.productId ? await requireProductForGuessCreate(String(payload.productId)) : null;
+  const merchant = await isCreatorMerchant(creatorId);
+  const categoryId = await resolveGuessCategoryId(payload.categoryId ? String(payload.categoryId) : null, merchant);
+  if (!payload.productId) {
+    throw new Error('竞猜必须关联商品');
+  }
+  const product = await requireProductForGuessCreate(String(payload.productId));
   const inviteeIds = await resolveInviteeIds(payload.invitedFriendIds, creatorId);
   if (scope === 'friends' && inviteeIds.length === 0) {
     throw new Error('好友PK必须选择参战好友');
   }
+
+  const revealAt = merchant ? normalizeRevealAt(payload.revealAt, endTime) : null;
+  const minParticipants = merchant ? normalizeMinParticipants(payload.minParticipants) : null;
 
   const description = payload.description?.trim() || null;
   const imageUrl = (payload.imageUrl ?? '').trim();
@@ -211,7 +246,7 @@ export async function createUserGuess(
     throw new Error('封面图片不能为空');
   }
   const guessProductSourceType =
-    product?.shop_id == null ? GUESS_PRODUCT_SOURCE_PLATFORM : GUESS_PRODUCT_SOURCE_SHOP;
+    product.shop_id == null ? GUESS_PRODUCT_SOURCE_PLATFORM : GUESS_PRODUCT_SOURCE_SHOP;
 
   const db = getDbPool();
   const connection = await db.getConnection();
@@ -228,13 +263,15 @@ export async function createUserGuess(
           image_url,
           status,
           end_time,
+          reveal_at,
+          min_participants,
           creator_id,
           category_id,
           description,
           review_status,
           scope,
           settlement_mode
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         title,
@@ -243,6 +280,8 @@ export async function createUserGuess(
         imageUrl,
         GUESS_STATUS_ACTIVE,
         endTime,
+        revealAt,
+        minParticipants,
         creatorId,
         categoryId,
         description,
@@ -254,7 +293,7 @@ export async function createUserGuess(
 
     const guessId = String(guessResult.insertId);
 
-    if (product && payload.productId) {
+    {
       await connection.execute(
         `
           INSERT INTO guess_product (

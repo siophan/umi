@@ -62,6 +62,51 @@ export const commercePaths = {
       },
     },
   },
+  '/api/guesses/friend-pk': {
+    get: {
+      tags: ['Guess'],
+      summary: '获取当前用户最近被邀请的好友 PK',
+      description:
+        '只返回当前用户作为 invitee 的 active 好友竞猜（scope=20），按最近邀请排序取一条。无登录或无可参与 PK 时 item=null。',
+      security: bearerSecurity,
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            item: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string', example: '40123' },
+                title: { type: 'string', example: '王者新赛季 T0 是谁？' },
+                endTime: { type: 'string', format: 'date-time' },
+                creator: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', example: '888' },
+                    name: { type: 'string', example: '老张' },
+                    avatar: { type: 'string', nullable: true },
+                  },
+                },
+                options: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      text: { type: 'string', example: '安琪拉' },
+                      voteCount: { type: 'integer', example: 12 },
+                      pct: { type: 'integer', example: 60 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }),
+        401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
   '/api/guesses/categories': {
     get: {
       tags: ['Guess'],
@@ -157,7 +202,7 @@ export const commercePaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['title', 'endTime', 'optionTexts', 'imageUrl'],
+              required: ['title', 'endTime', 'optionTexts', 'imageUrl', 'productId'],
               properties: {
                 title: { type: 'string', example: '乐事新口味谁更能打？' },
                 endTime: { type: 'string', format: 'date-time' },
@@ -175,7 +220,7 @@ export const commercePaths = {
                 categoryId: { type: 'string', nullable: true, example: '1308' },
                 description: { type: 'string', nullable: true },
                 imageUrl: { type: 'string', example: 'https://bucket.oss-cn-beijing.aliyuncs.com/uploads/guess_cover/cover.png' },
-                productId: { type: 'string', nullable: true, example: '502' },
+                productId: { type: 'string', example: '502', description: '关联商品 ID（必填，竞猜的赌注/转化商品）' },
                 invitedFriendIds: {
                   type: 'array',
                   items: { type: 'string' },

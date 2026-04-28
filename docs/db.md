@@ -530,7 +530,9 @@
 | `settlement_mode` | 结算模式编码 |
 | `stake_type` | 下注类型编码 |
 | `creator_id` | 创建人 |
-| `end_time` | 截止时间 |
+| `end_time` | 投注截止时间 |
+| `reveal_at` | 揭晓时间，仅店铺竞猜使用，NULL = 投注截止即揭晓 |
+| `min_participants` | 最低参与人数，仅店铺竞猜使用，未达标自动流标退款 |
 | `tags` | 标签 JSON |
 
 说明：
