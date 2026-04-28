@@ -21,6 +21,31 @@ import { GuessDetailOverlays } from './guess-detail-overlays';
 import { GuessHero } from './guess-hero';
 import styles from './page.module.css';
 
+async function copyShareLink(url: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(url);
+      return;
+    } catch {
+      // fall through to legacy fallback
+    }
+  }
+  if (typeof document === 'undefined') return;
+  const ta = document.createElement('textarea');
+  ta.value = url;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+  } catch {
+    // ignore
+  } finally {
+    document.body.removeChild(ta);
+  }
+}
+
 export default function GuessDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -361,6 +386,9 @@ export default function GuessDetailPage() {
         betAmount={betAmount}
         onCloseShare={() => setShareOpen(false)}
         onOpenShareChannel={(label) => {
+          if (typeof window !== 'undefined') {
+            void copyShareLink(window.location.href);
+          }
           showToast(
             label === '微信'
               ? '已复制，去微信分享吧！'
