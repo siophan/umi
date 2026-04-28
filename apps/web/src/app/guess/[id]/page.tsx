@@ -1,11 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import type { GuessCommentSummary, GuessOption, GuessSummary } from '@umi/shared';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import type {
+  GuessCommentSummary,
+  GuessOption,
+  GuessPayChannel,
+  GuessSummary,
+} from '@umi/shared';
 
 import {
   favoriteGuess,
+  fetchBetPayStatus,
   fetchGuess,
   fetchGuessComments,
   likeGuessComment,
@@ -49,6 +55,7 @@ async function copyShareLink(url: string): Promise<void> {
 export default function GuessDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const vsAreaRef = useRef<HTMLDivElement | null>(null);
   const [guess, setGuess] = useState<GuessSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +70,9 @@ export default function GuessDetailPage() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [betSubmitting, setBetSubmitting] = useState(false);
+  const [payChannel, setPayChannel] = useState<GuessPayChannel>('wechat');
+  const [confirmingPay, setConfirmingPay] = useState(false);
+  const [payConfirmError, setPayConfirmError] = useState<string | null>(null);
   const guessId = typeof params?.id === 'string' ? params.id : '';
 
   useEffect(() => {
@@ -133,6 +143,77 @@ export default function GuessDetailPage() {
     const interval = window.setInterval(() => setNowTs(Date.now()), 1000);
     return () => window.clearInterval(interval);
   }, [guess]);
+
+  // 用户从微信/支付宝支付页 redirect 回来, 带 ?betId, 启动轮询确认
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const betIdParam = searchParams.get('betId');
+    if (!betIdParam || !guessId) return undefined;
+    const betId: string = betIdParam;
+
+    setConfirmingPay(true);
+    setPayConfirmError(null);
+
+    let cancelled = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 30;
+    const POLL_MS = 2000;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function poll() {
+      if (cancelled) return;
+      attempts += 1;
+      try {
+        const result = await fetchBetPayStatus(betId);
+        if (cancelled) return;
+
+        if (result.payStatus === 'paid') {
+          setConfirmingPay(false);
+          showToast('参与成功');
+          router.replace(`/guess/${guessId}`);
+          try {
+            const refreshed = await fetchGuess(guessId);
+            if (!cancelled) setGuess(refreshed);
+          } catch {
+            // ignore refresh failure
+          }
+          return;
+        }
+
+        if (result.payStatus === 'failed' || result.payStatus === 'closed') {
+          setConfirmingPay(false);
+          setPayConfirmError(
+            result.payStatus === 'failed' ? '支付失败，请重试' : '支付已取消',
+          );
+          router.replace(`/guess/${guessId}`);
+          return;
+        }
+
+        if (attempts >= MAX_ATTEMPTS) {
+          setConfirmingPay(false);
+          setPayConfirmError('支付确认超时，请稍后查看订单');
+          router.replace(`/guess/${guessId}`);
+          return;
+        }
+        timer = setTimeout(poll, POLL_MS);
+      } catch {
+        if (cancelled) return;
+        if (attempts >= MAX_ATTEMPTS) {
+          setConfirmingPay(false);
+          setPayConfirmError('支付状态查询失败');
+          router.replace(`/guess/${guessId}`);
+          return;
+        }
+        timer = setTimeout(poll, POLL_MS);
+      }
+    }
+
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [searchParams, guessId, router]);
 
   const totalVotes = useMemo(
     () =>
@@ -270,13 +351,24 @@ export default function GuessDetailPage() {
     }
     setBetSubmitting(true);
     try {
-      await participateInGuess(guess.id, { choiceIdx: selectedOption, quantity: betAmount });
+      const result = await participateInGuess(guess.id, {
+        choiceIdx: selectedOption,
+        quantity: betAmount,
+        payChannel,
+      });
       setBetOpen(false);
-      showToast('参与成功，开奖后通知你');
-      const refreshed = await fetchGuess(guess.id);
-      setGuess(refreshed);
+      // 跳到第三方支付页, return_url 会带 ?betId 回到 /guess/[id]
+      window.location.href = result.payUrl;
     } catch (error) {
-      showToast(error instanceof Error ? error.message : '参与失败');
+      const err = error as { code?: string; message?: string };
+      if (err?.code === 'GUESS_ALREADY_PARTICIPATED') {
+        showToast('你已参与本次竞猜');
+        const refreshed = await fetchGuess(guess.id);
+        setGuess(refreshed);
+        setBetOpen(false);
+      } else {
+        showToast(err?.message || '支付下单失败');
+      }
     } finally {
       setBetSubmitting(false);
     }
@@ -408,10 +500,31 @@ export default function GuessDetailPage() {
         onCloseBet={() => setBetOpen(false)}
         onSetBetAmount={setBetAmount}
         betSubmitting={betSubmitting}
+        payChannel={payChannel}
+        onSetPayChannel={setPayChannel}
         onConfirmBet={() => {
           void handleConfirmParticipate();
         }}
       />
+
+      {confirmingPay ? (
+        <div className={styles.payConfirmMask}>
+          <div className={styles.payConfirmBox}>
+            <div className={styles.payConfirmSpinner} />
+            <div className={styles.payConfirmText}>支付确认中…</div>
+            <small className={styles.payConfirmSub}>已完成支付请稍候</small>
+          </div>
+        </div>
+      ) : null}
+
+      {payConfirmError ? (
+        <div className={styles.payErrorBar}>
+          <span>{payConfirmError}</span>
+          <button type="button" onClick={() => setPayConfirmError(null)}>
+            知道了
+          </button>
+        </div>
+      ) : null}
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>
