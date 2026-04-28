@@ -1,6 +1,7 @@
 import {
   Button,
   Checkbox,
+  ConfigProvider,
   Form,
   Input,
   Space,
@@ -14,6 +15,8 @@ import type {
   AlipayPaymentSettingsData,
   UpdateAlipayPaymentSettingsPayload,
 } from '@umi/shared';
+
+import { SEARCH_THEME } from './admin-list-controls';
 
 const SCENE_OPTIONS: { label: string; value: AlipayPaymentScene }[] = [
   { label: '手机网站 (WAP)', value: 'wap' },
@@ -99,7 +102,8 @@ export function PaymentSettingsAlipayForm({ data, onSubmit }: Props) {
   }
 
   return (
-    <Form form={form} layout="vertical" autoComplete="off">
+    <ConfigProvider theme={SEARCH_THEME}>
+      <Form form={form} layout="vertical" autoComplete="off">
       <Form.Item
         label="AppID"
         name="app_id"
@@ -210,6 +214,7 @@ export function PaymentSettingsAlipayForm({ data, onSubmit }: Props) {
           <Button onClick={handleReset}>重置</Button>
         </Space>
       </Form.Item>
-    </Form>
+      </Form>
+    </ConfigProvider>
   );
 }

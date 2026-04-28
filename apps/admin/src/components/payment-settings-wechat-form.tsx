@@ -1,6 +1,7 @@
 import {
   Button,
   Checkbox,
+  ConfigProvider,
   Form,
   Input,
   Space,
@@ -14,6 +15,8 @@ import type {
   WechatPaymentSettingsData,
   UpdateWechatPaymentSettingsPayload,
 } from '@umi/shared';
+
+import { SEARCH_THEME } from './admin-list-controls';
 
 const SCENE_OPTIONS: { label: string; value: WechatPaymentScene }[] = [
   { label: 'H5', value: 'h5' },
@@ -100,7 +103,8 @@ export function PaymentSettingsWechatForm({ data, onSubmit }: Props) {
   }
 
   return (
-    <Form form={form} layout="vertical" autoComplete="off">
+    <ConfigProvider theme={SEARCH_THEME}>
+      <Form form={form} layout="vertical" autoComplete="off">
       <Form.Item
         label="商户号 mchid"
         name="mchid"
@@ -205,6 +209,7 @@ export function PaymentSettingsWechatForm({ data, onSubmit }: Props) {
           <Button onClick={handleReset}>重置</Button>
         </Space>
       </Form.Item>
-    </Form>
+      </Form>
+    </ConfigProvider>
   );
 }
