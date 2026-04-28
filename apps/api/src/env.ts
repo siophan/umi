@@ -45,4 +45,5 @@ export const env = {
   ossBucket: process.env.OSS_BUCKET ?? '',
   ossRegion: process.env.OSS_REGION ?? '',
   ossBaseUrl: process.env.OSS_BASE_URL ?? '',
+  paymentSecretKek: process.env.PAYMENT_SECRET_KEK ?? '',
 };
