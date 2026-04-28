@@ -370,6 +370,15 @@ export const ADMIN_PERMISSION_DEFINITIONS: AdminPermissionDefinition[] = [
     sort: 1050,
     path: '/system/notifications',
   },
+  {
+    code: 'system.settings.view',
+    name: '参数设置',
+    module: 'system',
+    action: 'view',
+    parentCode: 'system.manage',
+    sort: 1060,
+    path: '/system/settings',
+  },
 ];
 
 export const ADMIN_MENU_PERMISSION_DEFINITIONS = ADMIN_PERMISSION_DEFINITIONS.filter(
