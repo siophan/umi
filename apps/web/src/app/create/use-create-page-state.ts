@@ -624,7 +624,6 @@ export function useCreatePageState() {
       });
       setCoverPreviewUrl(result.url);
       setCoverUploadedUrl(result.url);
-      showToast('封面已上传到OSS');
     } catch (error) {
       resetCoverInput();
       showToast(error instanceof Error ? error.message : '封面上传失败');
