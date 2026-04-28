@@ -34,7 +34,10 @@ function getResultError(result: PromiseSettledResult<unknown>, fallback: string)
   if (result.status === 'fulfilled') {
     return null;
   }
-  return result.reason instanceof Error ? result.reason.message : fallback;
+  if (result.reason instanceof Error && result.reason.name === 'AbortError') {
+    return `${fallback}（接口超时）`;
+  }
+  return fallback;
 }
 
 export default async function HomePage() {

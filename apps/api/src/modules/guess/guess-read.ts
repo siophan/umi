@@ -16,20 +16,21 @@ const MAX_LIMIT = 100;
 
 type CursorPayload = { createdAt: Date; id: string };
 
+const MAX_TIMESTAMP_MS = 8_640_000_000_000_000;
+
 function decodeCursor(raw: string): CursorPayload {
-  let decoded: string;
-  try {
-    decoded = Buffer.from(raw, 'base64url').toString('utf-8');
-  } catch {
-    throw new HttpError(400, 'INVALID_CURSOR', '游标格式不合法');
-  }
+  const decoded = Buffer.from(raw, 'base64url').toString('utf-8');
   const sep = decoded.indexOf('|');
   if (sep <= 0) {
     throw new HttpError(400, 'INVALID_CURSOR', '游标格式不合法');
   }
   const createdAtMs = Number(decoded.slice(0, sep));
   const id = decoded.slice(sep + 1);
-  if (!Number.isFinite(createdAtMs) || !id) {
+  if (
+    !Number.isFinite(createdAtMs) ||
+    Math.abs(createdAtMs) > MAX_TIMESTAMP_MS ||
+    !id
+  ) {
     throw new HttpError(400, 'INVALID_CURSOR', '游标格式不合法');
   }
   return { createdAt: new Date(createdAtMs), id };
