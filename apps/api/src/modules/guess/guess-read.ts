@@ -145,7 +145,7 @@ export async function getGuessDetail(
     getGuessOptionRows([guessId]),
     getGuessVoteRows([guessId]),
     db.execute<mysql.RowDataPacket[]>(
-      'SELECT COUNT(*) AS cnt FROM `order` WHERE guess_id = ?',
+      'SELECT COUNT(*) AS cnt FROM guess_bet WHERE guess_id = ?',
       [guessId],
     ),
     db.execute<mysql.RowDataPacket[]>(
