@@ -45,11 +45,11 @@ export async function listGuessComments(
       WHERE ci.target_type = ?
         AND ci.target_id = ?
       ORDER BY ci.created_at DESC, ci.id DESC
-      LIMIT ?
+      LIMIT ${limit}
     `,
     currentUserId
-      ? [COMMENT_INTERACTION_LIKE, currentUserId, COMMENT_INTERACTION_LIKE, COMMENT_TARGET_GUESS, guessId, limit]
-      : [COMMENT_INTERACTION_LIKE, COMMENT_TARGET_GUESS, guessId, limit],
+      ? [COMMENT_INTERACTION_LIKE, currentUserId, COMMENT_INTERACTION_LIKE, COMMENT_TARGET_GUESS, guessId]
+      : [COMMENT_INTERACTION_LIKE, COMMENT_TARGET_GUESS, guessId],
   );
 
   const [countRows] = await db.execute<mysql.RowDataPacket[]>(
