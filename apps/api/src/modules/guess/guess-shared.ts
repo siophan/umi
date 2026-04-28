@@ -5,13 +5,16 @@ import { toEntityId, type GuessSummary, type ProductSummary } from '@umi/shared'
 import { getDbPool } from '../../lib/db';
 
 export const GUESS_ACTIVE = 30;
+export const GUESS_PENDING_SETTLE = 35;
 export const GUESS_SETTLED = 40;
+export const GUESS_ABANDONED = 80;
 export const GUESS_REJECTED = 90;
 export const GUESS_DRAFT = 10;
 export const GUESS_PENDING_REVIEW = 20;
 export const BET_PENDING = 10;
 export const BET_WON = 30;
 export const BET_LOST = 40;
+export const BET_CANCELED = 90;
 export const REVIEW_PENDING = 10;
 export const REVIEW_APPROVED = 30;
 
@@ -23,6 +26,7 @@ export type GuessRow = {
   end_time: Date | string;
   created_at: Date | string;
   creator_id: number | string;
+  category_id: number | string | null;
   category: string | null;
   product_id: number | string | null;
   product_name: string | null;
@@ -77,8 +81,14 @@ export function mapGuessStatus(code: number | string): GuessSummary['status'] {
   if (value === GUESS_PENDING_REVIEW) {
     return 'pending_review';
   }
+  if (value === GUESS_PENDING_SETTLE) {
+    return 'pending_settle';
+  }
   if (value === GUESS_SETTLED) {
     return 'settled';
+  }
+  if (value === GUESS_ABANDONED) {
+    return 'abandoned';
   }
   if (value === GUESS_REJECTED) {
     return 'cancelled';
@@ -169,6 +179,7 @@ export function buildGuessSummary(
     title: row.title,
     status: mapGuessStatus(row.status),
     reviewStatus: mapGuessReviewStatus(row.review_status),
+    categoryId: row.category_id == null ? null : toEntityId(row.category_id),
     category: row.category || '热门',
     endTime: new Date(row.end_time).toISOString(),
     creatorId: toEntityId(row.creator_id),
@@ -201,6 +212,7 @@ export async function getGuessRows(
         g.end_time,
         g.created_at,
         g.creator_id,
+        g.category_id,
         c.name AS category,
         p.id AS product_id,
         p.name AS product_name,

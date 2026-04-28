@@ -9,11 +9,11 @@ import {
   fallbackGuessImage,
   type BreakingEvent,
   type HomeCategory,
+  type HomeCategoryTab,
   type HomeHeroCard,
   type HomeListCard,
   type HomeResultCard,
   type HomeSectionErrors,
-  categoryTabs,
 } from './home-page-types';
 import { formatCompactNumber, getGuessParticipants, getGuessPercents } from './home-page-helpers';
 import styles from './page.module.css';
@@ -44,6 +44,7 @@ type Props = {
   hasMoreGuesses: boolean;
   loadingMoreGuesses: boolean;
   onLoadMoreGuesses: () => void;
+  categoryTabs: HomeCategoryTab[];
 };
 
 const MODE_ITEMS: Array<{
@@ -83,6 +84,7 @@ export function HomeGuessView({
   hasMoreGuesses,
   loadingMoreGuesses,
   onLoadMoreGuesses,
+  categoryTabs,
 }: Props) {
   const heroTrackRef = useRef<HTMLDivElement | null>(null);
   const programmaticScrollUntilRef = useRef(0);
@@ -270,19 +272,22 @@ export function HomeGuessView({
 
       <div className={styles.catBar}>
         <div className={styles.catScroll}>
-          {categoryTabs.map((item) => (
-            <button
-              className={`${styles.catChip} ${styles[`cat${item.cls[0].toUpperCase()}${item.cls.slice(1)}`]} ${category === item.key ? styles.catActive : ''}`}
-              key={item.key}
-              type="button"
-              onClick={() => onSelectCategory(item.key)}
-            >
-              <span className={styles.catIcon}>
-                <i className={item.icon} />
-              </span>
-              <span className={styles.catText}>{item.label}</span>
-            </button>
-          ))}
+          {categoryTabs.map((item) => {
+            const themeKey = `cat${item.themeClass[0].toUpperCase()}${item.themeClass.slice(1)}`;
+            return (
+              <button
+                className={`${styles.catChip} ${styles[themeKey] ?? ''} ${category === item.key ? styles.catActive : ''}`}
+                key={item.key}
+                type="button"
+                onClick={() => onSelectCategory(item.key)}
+              >
+                <span className={styles.catIcon}>
+                  <i className={item.iconClass} />
+                </span>
+                <span className={styles.catText}>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

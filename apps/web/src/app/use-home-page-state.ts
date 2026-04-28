@@ -19,6 +19,7 @@ import {
   matchesHomeLiveFilter,
 } from './home-page-helpers';
 import type { HomeCategory, HomeLiveFilter, HomeMode, HomePageInitialData } from './home-page-types';
+import { buildCategoryTabs } from './home-page-types';
 
 const HERO_INTERACTION_GRACE_MS = 6000;
 
@@ -30,6 +31,8 @@ export function useHomePageState(initialData: HomePageInitialData) {
   const [breakingIndex, setBreakingIndex] = useState(0);
   const [posterIndex, setPosterIndex] = useState(0);
   const [guessBanners] = useState(initialData.guessBanners);
+  const [guessCategories] = useState(initialData.guessCategories);
+  const categoryTabs = useMemo(() => buildCategoryTabs(guessCategories), [guessCategories]);
   const [guessItems, setGuessItems] = useState(initialData.guessItems);
   const [guessCursor, setGuessCursor] = useState<string | null>(initialData.guessNextCursor);
   const [guessHasMore, setGuessHasMore] = useState(initialData.guessHasMore);
@@ -262,5 +265,6 @@ export function useHomePageState(initialData: HomePageInitialData) {
     guessHasMore,
     guessLoadingMore,
     loadMoreGuesses,
+    categoryTabs,
   };
 }

@@ -46,6 +46,7 @@ type GuessRow = {
   review_status: number | string;
   end_time: Date | string | null;
   creator_id: number | string;
+  category_id: number | string | null;
   category: string | null;
   product_id: number | string | null;
   product_name: string | null;
@@ -168,6 +169,7 @@ function buildGuessSummary(
     title: row.title,
     status: mapGuessStatus(row.status),
     reviewStatus: mapGuessReviewStatus(row.review_status),
+    categoryId: row.category_id == null ? null : toEntityId(row.category_id),
     category: row.category || '热门',
     endTime: row.end_time ? new Date(row.end_time).toISOString() : new Date().toISOString(),
     creatorId: toEntityId(row.creator_id),
@@ -198,6 +200,7 @@ async function getGuessSummaries(guessIds: string[]) {
         g.review_status,
         g.end_time,
         g.creator_id,
+        g.category_id,
         c.name AS category,
         p.id AS product_id,
         p.name AS product_name,

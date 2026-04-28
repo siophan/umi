@@ -35,6 +35,7 @@ type GuessRow = {
   id: number | string;
   creator_id: number | string;
   title: string;
+  category_id: number | string | null;
   category: string | null;
   end_time: Date | string | null;
 };
@@ -79,6 +80,7 @@ function buildCurrentGuess(
   return {
     id: toEntityId(row.id),
     title: row.title,
+    categoryId: row.category_id == null ? null : toEntityId(row.category_id),
     category: row.category,
     options,
     odds,
@@ -145,6 +147,7 @@ async function buildLiveItems(liveRows: LiveRow[]) {
           g.id,
           g.creator_id,
           g.title,
+          g.category_id,
           c.name AS category,
           g.end_time
         FROM guess g

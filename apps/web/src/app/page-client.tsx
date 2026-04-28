@@ -55,6 +55,7 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
     guessHasMore,
     guessLoadingMore,
     loadMoreGuesses,
+    categoryTabs,
   } = useHomePageState(initialData);
 
   function handleOpenHero(card: HomeHeroCard) {
@@ -135,6 +136,7 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
             hasMoreGuesses={guessHasMore}
             loadingMoreGuesses={guessLoadingMore}
             onLoadMoreGuesses={() => void loadMoreGuesses()}
+            categoryTabs={categoryTabs}
           />
         ) : (
           <HomeLiveView

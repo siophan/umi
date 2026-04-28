@@ -657,6 +657,16 @@
   color: #64b5f6;
 }
 
+.catFood .catIcon {
+  background: rgba(255, 138, 101, 0.14);
+  color: #ff8a65;
+}
+
+.catLife .catIcon {
+  background: rgba(141, 110, 99, 0.14);
+  color: #a1887f;
+}
+
 .catChip.catActive.catHot {
   background: linear-gradient(135deg, rgba(255, 61, 0, 0.18), rgba(255, 107, 53, 0.08));
 }
@@ -691,6 +701,14 @@
 
 .catChip.catActive.catWeather {
   background: linear-gradient(135deg, rgba(30, 136, 229, 0.18), rgba(100, 181, 246, 0.06));
+}
+
+.catChip.catActive.catFood {
+  background: linear-gradient(135deg, rgba(244, 81, 30, 0.18), rgba(255, 138, 101, 0.06));
+}
+
+.catChip.catActive.catLife {
+  background: linear-gradient(135deg, rgba(109, 76, 65, 0.18), rgba(161, 136, 127, 0.06));
 }
 
 .catChip.catActive .catText {
@@ -733,6 +751,14 @@
 
 .catChip.catActive.catSociety .catIcon {
   background: linear-gradient(135deg, #ba68c8, #8e24aa);
+}
+
+.catChip.catActive.catFood .catIcon {
+  background: linear-gradient(135deg, #ff8a65, #d84315);
+}
+
+.catChip.catActive.catLife .catIcon {
+  background: linear-gradient(135deg, #a1887f, #5d4037);
 }
 
 .catChip.catActive.catWeather .catIcon {

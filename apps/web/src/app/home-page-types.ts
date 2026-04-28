@@ -1,5 +1,6 @@
 import type {
   BannerItem,
+  GuessCategoryItem,
   GuessHistoryRecordItem,
   GuessSummary,
   LiveListItem,
@@ -7,16 +8,21 @@ import type {
 } from '@umi/shared';
 
 export type HomeMode = 'guess' | 'live';
-export type HomeCategory =
-  | 'hot'
-  | 'entertainment'
-  | 'media'
-  | 'sports'
-  | 'finance'
-  | 'tech'
-  | 'game'
-  | 'society'
-  | 'weather';
+
+/**
+ * 分类 tab 的 key：
+ * - 'hot' 表示固定首位 meta tab（匹配全部，不在 DB 里）
+ * - 其他值是 category.id（来自 /api/guesses/categories）
+ */
+export type HomeCategory = string;
+
+export type HomeCategoryTab = {
+  key: HomeCategory;
+  label: string;
+  iconClass: string;
+  themeClass: string;
+};
+
 export type HomeLiveFilter = 'all' | 'live' | 'upcoming' | 'snack' | 'pk';
 export type TrendType = 'up' | 'down';
 export type HomeStatusClass = 'hot' | 'ending' | 'new';
@@ -81,6 +87,7 @@ export type HomePageInitialData = {
   guessItems: GuessSummary[];
   guessNextCursor: string | null;
   guessHasMore: boolean;
+  guessCategories: GuessCategoryItem[];
   liveItems: LiveListItem[];
   rankingItems: RankingItem[];
   historyItems: GuessHistoryRecordItem[];
@@ -92,22 +99,24 @@ export type HomePageClientProps = {
   initialData: HomePageInitialData;
 };
 
-export const categoryTabs: Array<{
-  key: HomeCategory;
-  label: string;
-  icon: string;
-  cls: string;
-}> = [
-  { key: 'hot', label: '今日热点', icon: 'fa-solid fa-fire', cls: 'hot' },
-  { key: 'entertainment', label: '娱乐明星', icon: 'fa-solid fa-star', cls: 'star' },
-  { key: 'media', label: '影视综艺', icon: 'fa-solid fa-clapperboard', cls: 'movie' },
-  { key: 'sports', label: '体育赛事', icon: 'fa-solid fa-futbol', cls: 'sport' },
-  { key: 'finance', label: '财经股市', icon: 'fa-solid fa-chart-line', cls: 'finance' },
-  { key: 'tech', label: '科技数码', icon: 'fa-solid fa-microchip', cls: 'tech' },
-  { key: 'game', label: '游戏电竞', icon: 'fa-solid fa-gamepad', cls: 'game' },
-  { key: 'society', label: '社会事件', icon: 'fa-solid fa-newspaper', cls: 'society' },
-  { key: 'weather', label: '天气出行', icon: 'fa-solid fa-cloud-sun', cls: 'weather' },
-];
+export const HOT_CATEGORY: HomeCategoryTab = {
+  key: 'hot',
+  label: '今日热点',
+  iconClass: 'fa-solid fa-fire',
+  themeClass: 'hot',
+};
+
+export function buildCategoryTabs(items: GuessCategoryItem[]): HomeCategoryTab[] {
+  return [
+    HOT_CATEGORY,
+    ...items.map((item) => ({
+      key: item.id,
+      label: item.name,
+      iconClass: item.iconClass || 'fa-solid fa-tag',
+      themeClass: item.themeClass || 'hot',
+    })),
+  ];
+}
 
 export const liveFilters: Array<{ key: HomeLiveFilter; label: string }> = [
   { key: 'all', label: '🔥 推荐' },

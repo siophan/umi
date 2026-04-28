@@ -11,13 +11,15 @@ type GuessCategoryRow = {
   id: number | string;
   name: string;
   sort: number | string | null;
+  icon_class: string | null;
+  theme_class: string | null;
 };
 
 export async function getGuessCategories(): Promise<GuessCategoryListResult> {
   const db = getDbPool();
   const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
-      SELECT id, name, sort
+      SELECT id, name, sort, icon_class, theme_class
       FROM category
       WHERE biz_type = ? AND status = ?
       ORDER BY sort ASC, id ASC
@@ -29,6 +31,8 @@ export async function getGuessCategories(): Promise<GuessCategoryListResult> {
     id: toEntityId(row.id),
     name: row.name,
     sort: Number(row.sort ?? 0),
+    iconClass: row.icon_class,
+    themeClass: row.theme_class,
   }));
 
   return { items };

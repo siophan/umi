@@ -103,45 +103,26 @@ export function getGuessPercents(item: GuessSummary) {
   );
 }
 
-export function matchesGuessCategory(category: HomeCategory, label: string) {
-  const text = label.toLowerCase();
+export function matchesGuessCategory(category: HomeCategory, guess: GuessSummary) {
   if (category === 'hot') {
     return true;
   }
-  if (category === 'entertainment') {
-    return text.includes('娱乐') || text.includes('明星') || text.includes('idol');
-  }
-  if (category === 'media') {
-    return text.includes('影视') || text.includes('综艺') || text.includes('剧');
-  }
-  if (category === 'sports') {
-    return text.includes('体育') || text.includes('足球') || text.includes('篮球') || text.includes('赛事');
-  }
-  if (category === 'finance') {
-    return text.includes('财经') || text.includes('股') || text.includes('基金') || text.includes('期货');
-  }
-  if (category === 'tech') {
-    return text.includes('科技') || text.includes('数码') || text.includes('芯片') || text.includes('手机');
-  }
-  if (category === 'game') {
-    return text.includes('游戏') || text.includes('电竞') || text.includes('赛事') || text.includes('战队');
-  }
-  if (category === 'society') {
-    return text.includes('社会') || text.includes('热点') || text.includes('事件') || text.includes('民生');
-  }
-  return text.includes('天气') || text.includes('出行') || text.includes('气温') || text.includes('台风');
+  return guess.categoryId != null && String(guess.categoryId) === category;
 }
 
 export function matchesLiveCategory(category: HomeCategory, item: LiveListItem) {
-  const source = `${item.currentGuess?.category || ''} ${item.title}`.trim();
-  return matchesGuessCategory(category, source);
+  if (category === 'hot') {
+    return true;
+  }
+  const cid = item.currentGuess?.categoryId;
+  return cid != null && String(cid) === category;
 }
 
 export function filterGuessList(
   items: GuessSummary[],
   category: HomeCategory,
 ): { items: GuessSummary[]; matchedCount: number; fellBack: boolean } {
-  const matched = items.filter((item) => matchesGuessCategory(category, item.category || ''));
+  const matched = items.filter((item) => matchesGuessCategory(category, item));
   if (matched.length > 0 || category === 'hot') {
     return { items: matched, matchedCount: matched.length, fellBack: false };
   }

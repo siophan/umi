@@ -1,6 +1,7 @@
 import type {
   ApiEnvelope,
   BannerListResult,
+  GuessCategoryListResult,
   GuessListResult,
   LiveListResult,
   RankingListResult,
@@ -41,12 +42,14 @@ function getResultError(result: PromiseSettledResult<unknown>, fallback: string)
 }
 
 export default async function HomePage() {
-  const [bannersResult, guessResult, liveResult, rankingResult] = await Promise.allSettled([
-    fetchServerData<BannerListResult>('/api/banners?position=home_hero&limit=5'),
-    fetchServerData<GuessListResult>('/api/guesses'),
-    fetchServerData<LiveListResult>('/api/lives?limit=12'),
-    fetchServerData<RankingListResult>('/api/rankings?type=winRate&periodType=allTime&limit=10'),
-  ]);
+  const [bannersResult, guessResult, liveResult, rankingResult, categoriesResult] =
+    await Promise.allSettled([
+      fetchServerData<BannerListResult>('/api/banners?position=home_hero&limit=5'),
+      fetchServerData<GuessListResult>('/api/guesses'),
+      fetchServerData<LiveListResult>('/api/lives?limit=12'),
+      fetchServerData<RankingListResult>('/api/rankings?type=winRate&periodType=allTime&limit=10'),
+      fetchServerData<GuessCategoryListResult>('/api/guesses/categories'),
+    ]);
 
   const sectionErrors: HomeSectionErrors = {
     banners: getResultError(bannersResult, '首页头图加载失败'),
@@ -64,6 +67,8 @@ export default async function HomePage() {
           guessResult.status === 'fulfilled' ? guessResult.value.nextCursor : null,
         guessHasMore:
           guessResult.status === 'fulfilled' ? guessResult.value.hasMore : false,
+        guessCategories:
+          categoriesResult.status === 'fulfilled' ? categoriesResult.value.items : [],
         liveItems: liveResult.status === 'fulfilled' ? liveResult.value.items : [],
         rankingItems: rankingResult.status === 'fulfilled' ? rankingResult.value.items : [],
         historyItems: [],

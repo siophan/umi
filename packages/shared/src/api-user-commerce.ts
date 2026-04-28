@@ -30,6 +30,10 @@ export interface CreateGuessPayload {
   imageUrl: string;
   productId?: ProductId | null;
   invitedFriendIds?: UserId[];
+  /** 揭晓时间，仅店铺竞猜传；不传时与 endTime 同义。 */
+  revealAt?: string | null;
+  /** 最低参与人数，仅店铺竞猜传；未达标时投注截止后自动流标退款。 */
+  minParticipants?: number | null;
 }
 
 export interface CreateGuessResult {
@@ -43,6 +47,8 @@ export interface GuessCategoryItem {
   id: CategoryId;
   name: string;
   sort: number;
+  iconClass: string | null;
+  themeClass: string | null;
 }
 
 export interface GuessCategoryListResult {
@@ -268,6 +274,7 @@ export interface GuessHistoryResult {
 export interface LiveGuessSummary {
   id: GuessId;
   title: string;
+  categoryId: CategoryId | null;
   category: string | null;
   options: string[];
   odds: number[];
