@@ -15,7 +15,6 @@ import {
   createLiveHeroCard,
   createLiveListCard,
   createResultCard,
-  filterGuessList,
   filterLiveList,
   getGuessParticipants,
   matchesHomeLiveFilter,
@@ -35,9 +34,15 @@ export function useHomePageState(initialData: HomePageInitialData) {
   const [guessBanners] = useState(initialData.guessBanners);
   const [guessCategories] = useState(initialData.guessCategories);
   const categoryTabs = useMemo(() => buildCategoryTabs(guessCategories), [guessCategories]);
+  // SSR 拉的「今日热点」(无分类) 列表快照——切回 hot 时直接复用，不重发请求
+  const [hotGuessItems, setHotGuessItems] = useState(initialData.guessItems);
+  const [hotGuessCursor, setHotGuessCursor] = useState<string | null>(initialData.guessNextCursor);
+  const [hotGuessHasMore, setHotGuessHasMore] = useState(initialData.guessHasMore);
+  // 当前 feed (随 category 切换变化)
   const [guessItems, setGuessItems] = useState(initialData.guessItems);
   const [guessCursor, setGuessCursor] = useState<string | null>(initialData.guessNextCursor);
   const [guessHasMore, setGuessHasMore] = useState(initialData.guessHasMore);
+  const [guessLoading, setGuessLoading] = useState(false);
   const [guessLoadingMore, setGuessLoadingMore] = useState(false);
   const [liveItems] = useState(initialData.liveItems);
   const [rankingItems] = useState(initialData.rankingItems);
@@ -122,9 +127,8 @@ export function useHomePageState(initialData: HomePageInitialData) {
     return () => document.removeEventListener('visibilitychange', onChange);
   }, []);
 
-  const guessFilter = useMemo(() => filterGuessList(guessItems, category), [category, guessItems]);
   const liveFilterResult = useMemo(() => filterLiveList(liveItems, category), [category, liveItems]);
-  const visibleGuesses = guessFilter.items;
+  const visibleGuesses = guessItems;
   const visibleLives = liveFilterResult.items;
 
   const filteredLiveFeedItems = useMemo(
@@ -132,17 +136,18 @@ export function useHomePageState(initialData: HomePageInitialData) {
     [liveFilter, visibleLives],
   );
 
+  // hero / breaking 始终基于 SSR 拉的「热点」快照，不随分类切换变化
   const guessHeroCards = useMemo(() => {
     const bannerCards = guessBanners.map(createBannerHeroCard);
     if (bannerCards.length > 0) {
       return bannerCards;
     }
-    return guessItems
+    return hotGuessItems
       .slice()
       .sort((left, right) => getGuessParticipants(right) - getGuessParticipants(left))
       .slice(0, 5)
       .map(createGuessHeroCard);
-  }, [guessBanners, guessItems]);
+  }, [guessBanners, hotGuessItems]);
 
   const liveHeroCards = useMemo(
     () =>
@@ -162,41 +167,94 @@ export function useHomePageState(initialData: HomePageInitialData) {
   }, [mode, visibleGuesses, visibleLives]);
 
   const loadMoreGuesses = useCallback(async () => {
-    if (!guessHasMore || !guessCursor || guessLoadingMore) {
+    if (!guessHasMore || !guessCursor || guessLoadingMore || guessLoading) {
       return;
     }
     setGuessLoadingMore(true);
     try {
-      const next = await fetchGuessList({ cursor: guessCursor });
-      setGuessItems((current) => {
+      const next = await fetchGuessList({
+        cursor: guessCursor,
+        categoryId: category === 'hot' ? undefined : category,
+      });
+      const merge = (current: typeof guessItems) => {
         const seen = new Set(current.map((item) => item.id));
         return [...current, ...next.items.filter((item) => !seen.has(item.id))];
-      });
+      };
+      setGuessItems(merge);
       setGuessCursor(next.nextCursor);
       setGuessHasMore(next.hasMore);
+      // 「今日热点」翻页要同步更新 hot 快照，保证切走再切回时不丢已加载的页
+      if (category === 'hot') {
+        setHotGuessItems(merge);
+        setHotGuessCursor(next.nextCursor);
+        setHotGuessHasMore(next.hasMore);
+      }
     } finally {
       setGuessLoadingMore(false);
     }
-  }, [guessCursor, guessHasMore, guessLoadingMore]);
+  }, [category, guessCursor, guessHasMore, guessItems, guessLoading, guessLoadingMore]);
+
+  // 切换 category：'hot' 复用 SSR 快照；其它分类发请求重拉
+  useEffect(() => {
+    if (category === 'hot') {
+      setGuessItems(hotGuessItems);
+      setGuessCursor(hotGuessCursor);
+      setGuessHasMore(hotGuessHasMore);
+      setGuessLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setGuessLoading(true);
+    setGuessItems([]);
+    setGuessCursor(null);
+    setGuessHasMore(false);
+    fetchGuessList({ categoryId: category })
+      .then((res) => {
+        if (cancelled) return;
+        setGuessItems(res.items);
+        setGuessCursor(res.nextCursor);
+        setGuessHasMore(res.hasMore);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setGuessItems([]);
+        setGuessCursor(null);
+        setGuessHasMore(false);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setGuessLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // hot 快照变化时不需要重新触发；只在 category 切换时拉
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category]);
 
   const heroCards = mode === 'guess' ? guessHeroCards : liveHeroCards;
   const heroCard = heroCards[heroIndex] ?? null;
 
   const breakingEvents = useMemo(
-    () => buildBreakingEvents(guessItems, rankingItems, hotTopics, historyItems),
-    [guessItems, rankingItems, hotTopics, historyItems],
+    () => buildBreakingEvents(hotGuessItems, rankingItems, hotTopics, historyItems),
+    [hotGuessItems, rankingItems, hotTopics, historyItems],
   );
 
   const recentResults = historyItems.slice(0, 3).map(createResultCard);
   const rankings = rankingItems.slice(0, 5);
 
-  const categoryRealCount =
-    mode === 'guess' ? guessFilter.matchedCount : liveFilterResult.matchedCount;
+  // 服务端已按分类过滤；空态等价于「该分类暂无内容」
   const categoryFellBack =
-    mode === 'guess' ? guessFilter.fellBack : liveFilterResult.fellBack;
+    mode === 'guess'
+      ? category !== 'hot' && !guessLoading && guessItems.length === 0
+      : liveFilterResult.fellBack;
   const sectionSubtitle =
     mode === 'guess'
-      ? `${categoryRealCount}场竞猜进行中`
+      ? guessLoading
+        ? '加载中…'
+        : `${guessItems.length}场竞猜进行中`
       : `${filteredLiveFeedItems.length}场直播进行中`;
 
   const markHeroInteraction = useCallback(() => {
@@ -278,6 +336,7 @@ export function useHomePageState(initialData: HomePageInitialData) {
     filteredLiveFeedItems,
     markHeroInteraction,
     guessHasMore,
+    guessLoading,
     guessLoadingMore,
     loadMoreGuesses,
     categoryTabs,

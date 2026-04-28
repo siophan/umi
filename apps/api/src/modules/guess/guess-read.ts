@@ -51,6 +51,7 @@ export async function getGuessList(query: {
   q?: string;
   limit?: string | number | undefined;
   cursor?: string;
+  categoryId?: string | number | null;
 }): Promise<GuessListResult> {
   const keyword = typeof query.q === 'string' ? query.q.trim() : '';
   const requestedLimit = typeof query.limit === 'string' ? Number.parseInt(query.limit, 10) : Number(query.limit);
@@ -70,6 +71,21 @@ export async function getGuessList(query: {
     const like = `%${keyword}%`;
     whereClauses.push('(g.title LIKE ? OR p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)');
     params.push(like, like, like, like);
+  }
+
+  const categoryIdRaw =
+    typeof query.categoryId === 'string'
+      ? query.categoryId.trim()
+      : typeof query.categoryId === 'number'
+        ? String(query.categoryId)
+        : '';
+  if (categoryIdRaw) {
+    const categoryIdNum = Number.parseInt(categoryIdRaw, 10);
+    if (!Number.isFinite(categoryIdNum) || categoryIdNum <= 0) {
+      throw new HttpError(400, 'INVALID_CATEGORY', '分类参数不合法');
+    }
+    whereClauses.push('g.category_id = ?');
+    params.push(categoryIdNum);
   }
 
   const cursorRaw = typeof query.cursor === 'string' ? query.cursor.trim() : '';

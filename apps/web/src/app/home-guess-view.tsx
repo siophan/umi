@@ -43,6 +43,7 @@ type Props = {
   onOpenRanking: () => void;
   hasMoreGuesses: boolean;
   loadingMoreGuesses: boolean;
+  loadingGuesses: boolean;
   onLoadMoreGuesses: () => void;
   categoryTabs: HomeCategoryTab[];
 };
@@ -83,6 +84,7 @@ export function HomeGuessView({
   onOpenRanking,
   hasMoreGuesses,
   loadingMoreGuesses,
+  loadingGuesses,
   onLoadMoreGuesses,
   categoryTabs,
 }: Props) {
@@ -295,7 +297,7 @@ export function HomeGuessView({
       </div>
 
       {categoryFellBack ? (
-        <div className={styles.sectionNotice}>该分类暂无内容，先看看其他热门竞猜</div>
+        <div className={styles.sectionNotice}>该分类暂无内容</div>
       ) : null}
 
       <div className={styles.sectionHeader}>
@@ -325,7 +327,9 @@ export function HomeGuessView({
       </div>
 
       <section className={styles.listArea}>
-        {visibleCards.length ? (
+        {loadingGuesses ? (
+          <div className={styles.emptyState}>加载中…</div>
+        ) : visibleCards.length ? (
           visibleCards.map((card) => (
             <article className={styles.guessCard} key={card.id} onClick={() => onOpenCard(card.href)}>
               <div className={styles.cardImageWrap}>

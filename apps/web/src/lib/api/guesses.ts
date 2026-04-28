@@ -16,7 +16,9 @@ import type {
 
 import { deleteJson, getJson, postJson } from './shared';
 
-export function fetchGuessList(options?: number | { limit?: number; q?: string; cursor?: string }) {
+export function fetchGuessList(
+  options?: number | { limit?: number; q?: string; cursor?: string; categoryId?: string },
+) {
   const searchParams = new URLSearchParams();
   if (typeof options === 'number') {
     searchParams.set('limit', String(options));
@@ -29,6 +31,9 @@ export function fetchGuessList(options?: number | { limit?: number; q?: string; 
     }
     if (options.cursor?.trim()) {
       searchParams.set('cursor', options.cursor.trim());
+    }
+    if (options.categoryId?.trim()) {
+      searchParams.set('categoryId', options.categoryId.trim());
     }
   }
 

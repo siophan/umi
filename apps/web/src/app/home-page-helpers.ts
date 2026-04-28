@@ -103,30 +103,12 @@ export function getGuessPercents(item: GuessSummary) {
   );
 }
 
-export function matchesGuessCategory(category: HomeCategory, guess: GuessSummary) {
-  if (category === 'hot') {
-    return true;
-  }
-  return guess.categoryId != null && String(guess.categoryId) === category;
-}
-
 export function matchesLiveCategory(category: HomeCategory, item: LiveListItem) {
   if (category === 'hot') {
     return true;
   }
   const cid = item.currentGuess?.categoryId;
   return cid != null && String(cid) === category;
-}
-
-export function filterGuessList(
-  items: GuessSummary[],
-  category: HomeCategory,
-): { items: GuessSummary[]; matchedCount: number; fellBack: boolean } {
-  const matched = items.filter((item) => matchesGuessCategory(category, item));
-  if (matched.length > 0 || category === 'hot') {
-    return { items: matched, matchedCount: matched.length, fellBack: false };
-  }
-  return { items, matchedCount: 0, fellBack: true };
 }
 
 export function filterLiveList(

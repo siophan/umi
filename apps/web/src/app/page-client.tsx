@@ -53,6 +53,7 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
     filteredLiveFeedItems,
     markHeroInteraction,
     guessHasMore,
+    guessLoading,
     guessLoadingMore,
     loadMoreGuesses,
     categoryTabs,
@@ -135,6 +136,7 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
             onOpenRanking={() => router.push('/ranking')}
             hasMoreGuesses={guessHasMore}
             loadingMoreGuesses={guessLoadingMore}
+            loadingGuesses={guessLoading}
             onLoadMoreGuesses={() => void loadMoreGuesses()}
             categoryTabs={categoryTabs}
           />

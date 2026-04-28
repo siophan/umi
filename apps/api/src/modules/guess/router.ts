@@ -118,6 +118,7 @@ guessRouter.get(
         q: request.query.q as string | undefined,
         limit: request.query.limit as string | undefined,
         cursor: request.query.cursor as string | undefined,
+        categoryId: request.query.categoryId as string | undefined,
       }),
     );
   }),
