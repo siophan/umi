@@ -1,15 +1,22 @@
 import type mysql from 'mysql2/promise';
 
 import { toEntityId } from '@umi/shared';
-import type { GuessPayChannel, ParticipateGuessResult } from '@umi/shared';
+import type {
+  FetchBetPayStatusResult,
+  GuessBetPayStatus,
+  GuessPayChannel,
+  ParticipateGuessResult,
+} from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
 import { appLogger } from '../../lib/logger';
-import { createPayOrder } from '../payment/payment-service';
+import { closePayOrder, createPayOrder, queryPayOrder } from '../payment/payment-service';
 import {
   generatePayNo,
+  payChannelCodeToKey,
   payChannelKeyToCode,
+  PAY_STATUS_CLOSED,
   PAY_STATUS_FAILED,
   PAY_STATUS_PAID,
   PAY_STATUS_REFUNDED,
@@ -257,4 +264,136 @@ export async function markBetPaid(
   } finally {
     connection.release();
   }
+}
+
+type BetRowForQuery = {
+  id: number | string;
+  user_id: number | string;
+  pay_no: string | null;
+  pay_status: number | string;
+  pay_channel: number | string | null;
+  pay_expires_at: Date | string | null;
+  paid_at: Date | string | null;
+};
+
+function mapPayStatusCodeToKey(code: number | string): GuessBetPayStatus {
+  const value = Number(code);
+  if (value === PAY_STATUS_PAID) return 'paid';
+  if (value === PAY_STATUS_FAILED) return 'failed';
+  if (value === PAY_STATUS_CLOSED) return 'closed';
+  return 'waiting';
+}
+
+export async function queryGuessBetPayStatus(
+  userId: string,
+  betId: string,
+): Promise<FetchBetPayStatusResult> {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    'SELECT id, user_id, pay_no, pay_status, pay_channel, pay_expires_at, paid_at FROM guess_bet WHERE id = ? LIMIT 1',
+    [betId],
+  );
+  const bet = rows[0] as BetRowForQuery | undefined;
+  if (!bet) {
+    throw new HttpError(404, 'BET_NOT_FOUND', '竞猜记录不存在');
+  }
+  if (String(bet.user_id) !== String(userId)) {
+    throw new HttpError(403, 'BET_FORBIDDEN', '无权访问该竞猜记录');
+  }
+
+  const currentStatus = Number(bet.pay_status);
+
+  // 已是终态 → 直接返回
+  if (currentStatus !== PAY_STATUS_WAITING) {
+    return {
+      betId: toEntityId(bet.id),
+      payStatus: mapPayStatusCodeToKey(currentStatus),
+      paidAt: bet.paid_at ? new Date(bet.paid_at).toISOString() : null,
+    };
+  }
+
+  // 过期 → mark closed
+  if (bet.pay_expires_at && new Date(bet.pay_expires_at).getTime() < Date.now()) {
+    await db.execute(
+      'UPDATE guess_bet SET pay_status = ?, status = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND pay_status = ?',
+      [PAY_STATUS_CLOSED, BET_CANCELED, bet.id, PAY_STATUS_WAITING],
+    );
+    return { betId: toEntityId(bet.id), payStatus: 'closed', paidAt: null };
+  }
+
+  // 主动查询网关兜底
+  const channelKey = payChannelCodeToKey(bet.pay_channel);
+  if (!channelKey || !bet.pay_no) {
+    return { betId: toEntityId(bet.id), payStatus: 'waiting', paidAt: null };
+  }
+
+  try {
+    const queryResult = await queryPayOrder(channelKey, bet.pay_no);
+    if (queryResult.status === 'paid' && queryResult.tradeNo) {
+      await markBetPaid(bet.pay_no, queryResult.tradeNo, queryResult.paidAt ?? new Date());
+      return {
+        betId: toEntityId(bet.id),
+        payStatus: 'paid',
+        paidAt: (queryResult.paidAt ?? new Date()).toISOString(),
+      };
+    }
+    if (queryResult.status === 'closed') {
+      await db.execute(
+        'UPDATE guess_bet SET pay_status = ?, status = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND pay_status = ?',
+        [PAY_STATUS_CLOSED, BET_CANCELED, bet.id, PAY_STATUS_WAITING],
+      );
+      return { betId: toEntityId(bet.id), payStatus: 'closed', paidAt: null };
+    }
+    if (queryResult.status === 'failed') {
+      await db.execute(
+        'UPDATE guess_bet SET pay_status = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND pay_status = ?',
+        [PAY_STATUS_FAILED, bet.id, PAY_STATUS_WAITING],
+      );
+      return { betId: toEntityId(bet.id), payStatus: 'failed', paidAt: null };
+    }
+    return { betId: toEntityId(bet.id), payStatus: 'waiting', paidAt: null };
+  } catch (error) {
+    appLogger.warn({ err: error, betId: bet.id }, '[queryGuessBetPayStatus] gateway query failed');
+    return { betId: toEntityId(bet.id), payStatus: 'waiting', paidAt: null };
+  }
+}
+
+export async function cancelGuessBet(
+  userId: string,
+  betId: string,
+): Promise<{ success: true; betId: string }> {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    'SELECT id, user_id, pay_no, pay_status, pay_channel FROM guess_bet WHERE id = ? LIMIT 1',
+    [betId],
+  );
+  const bet = rows[0] as
+    | {
+        id: number | string;
+        user_id: number | string;
+        pay_no: string | null;
+        pay_status: number | string;
+        pay_channel: number | string | null;
+      }
+    | undefined;
+  if (!bet) {
+    throw new HttpError(404, 'BET_NOT_FOUND', '竞猜记录不存在');
+  }
+  if (String(bet.user_id) !== String(userId)) {
+    throw new HttpError(403, 'BET_FORBIDDEN', '无权操作该竞猜记录');
+  }
+  if (Number(bet.pay_status) !== PAY_STATUS_WAITING) {
+    throw new HttpError(409, 'BET_NOT_CANCELLABLE', '当前状态不能取消');
+  }
+
+  const channelKey = payChannelCodeToKey(bet.pay_channel);
+  if (channelKey && bet.pay_no) {
+    await closePayOrder(channelKey, bet.pay_no);
+  }
+
+  await db.execute(
+    'UPDATE guess_bet SET pay_status = ?, status = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND pay_status = ?',
+    [PAY_STATUS_CLOSED, BET_CANCELED, bet.id, PAY_STATUS_WAITING],
+  );
+  return { success: true, betId: String(bet.id) };
 }
