@@ -62,6 +62,30 @@ export const commercePaths = {
       },
     },
   },
+  '/api/guesses/categories': {
+    get: {
+      tags: ['Guess'],
+      summary: '获取竞猜分类列表',
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', example: '1308' },
+                  name: { type: 'string', example: '美食' },
+                  sort: { type: 'integer', example: 10 },
+                },
+              },
+            },
+          },
+        }),
+      },
+    },
+  },
   '/api/guesses': {
     get: {
       tags: ['Guess'],
@@ -454,6 +478,13 @@ export const commercePaths = {
           description: '返回商品数量，默认 20，最大 50',
         },
         {
+          name: 'offset',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', example: 0, minimum: 0 },
+          description: '偏移量，默认 0；配合 limit 实现分页',
+        },
+        {
           name: 'q',
           in: 'query',
           required: false,
@@ -466,6 +497,17 @@ export const commercePaths = {
           required: false,
           schema: { type: 'string', example: '301' },
           description: '按商品分类 ID 过滤，分类来源为 category.biz_type=30',
+        },
+        {
+          name: 'sort',
+          in: 'query',
+          required: false,
+          schema: {
+            type: 'string',
+            enum: ['default', 'sales', 'price_asc', 'rating'],
+            example: 'default',
+          },
+          description: '排序方式：default 综合 / sales 销量降序 / price_asc 价格升序 / rating 评分降序',
         },
       ],
       responses: {
@@ -522,7 +564,22 @@ export const commercePaths = {
                 },
               },
             },
-            categories: {
+            total: { type: 'integer', example: 230 },
+          },
+        }),
+        500: errorResponse(500, '读取商品列表失败'),
+      },
+    },
+  },
+  '/api/products/categories': {
+    get: {
+      tags: ['Product'],
+      summary: '获取商品分类列表',
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            items: {
               type: 'array',
               items: {
                 type: 'object',
@@ -543,7 +600,6 @@ export const commercePaths = {
             },
           },
         }),
-        500: errorResponse(500, '读取商品列表失败'),
       },
     },
   },

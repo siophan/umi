@@ -5,10 +5,37 @@ import { getRequestUser, optionalUser, requireUser } from '../../lib/auth';
 import { HttpError, asyncHandler, withErrorBoundary } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import { getProductDetail } from './product-detail';
-import { getProductFeed } from './product-feed';
+import { getProductFeed, type ProductFeedSort } from './product-feed';
 import { favoriteProduct, unfavoriteProduct } from './product-favorite';
+import { getProductCategories } from './product-shared';
 
 export const productRouter: ExpressRouter = Router();
+
+productRouter.get(
+  '/categories',
+  asyncHandler(async (_request, response) => {
+    const items = await getProductCategories();
+    ok(response, { items });
+  }),
+);
+
+productRouter.get(
+  '/',
+  optionalUser,
+  asyncHandler(async (request, response) => {
+    ok(
+      response,
+      await getProductFeed({
+        limit: Number(request.query.limit ?? 20),
+        offset: Number(request.query.offset ?? 0),
+        keyword: String(request.query.q ?? ''),
+        categoryId: String(request.query.categoryId ?? ''),
+        sort: request.query.sort as ProductFeedSort | undefined,
+        userId: request.user?.id,
+      }),
+    );
+  }),
+);
 
 productRouter.get(
   '/:id',
@@ -26,22 +53,6 @@ productRouter.get(
       }
       throw error;
     }
-  }),
-);
-
-productRouter.get(
-  '/',
-  optionalUser,
-  asyncHandler(async (request, response) => {
-    ok(
-      response,
-      await getProductFeed({
-        limit: Number(request.query.limit ?? 20),
-        keyword: String(request.query.q ?? ''),
-        categoryId: String(request.query.categoryId ?? ''),
-        userId: request.user?.id,
-      }),
-    );
   }),
 );
 

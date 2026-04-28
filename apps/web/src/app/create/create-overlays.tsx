@@ -1,12 +1,13 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction, UIEvent } from 'react';
+
+import type { CategoryId, ProductCategoryItem } from '@umi/shared';
 
 import {
   formatSalesLabel,
   getDiscountPercent,
   templates,
-  type FriendItem,
   type ProductItem,
   type TemplateId,
 } from './create-helpers';
@@ -26,28 +27,26 @@ type Props = {
   closeProductPicker: () => void;
   productKeyword: string;
   setProductKeyword: Dispatch<SetStateAction<string>>;
-  productCategories: string[];
-  productCategory: string;
-  setProductCategory: Dispatch<SetStateAction<string>>;
+  productCategoryItems: ProductCategoryItem[];
+  productCategoryId: CategoryId | null;
+  setProductCategoryId: (value: CategoryId | null) => void;
   sortDropdownOpen: boolean;
   setSortDropdownOpen: Dispatch<SetStateAction<boolean>>;
   sortLabel: string;
   productSort: 'default' | 'sales' | 'price_asc' | 'rating';
   setProductSort: Dispatch<SetStateAction<'default' | 'sales' | 'price_asc' | 'rating'>>;
-  filteredProducts: ProductItem[];
+  productItems: ProductItem[];
   productTotalCount: number;
+  productLoading: boolean;
+  productLoadingMore: boolean;
+  productHasMore: boolean;
+  loadMoreProducts: () => void;
   tempProduct: ProductItem | null;
   tempProductId: string | null;
   setTempProductId: Dispatch<SetStateAction<string | null>>;
   confirmProductPick: () => void;
-  shareOpen: boolean;
-  setShareOpen: Dispatch<SetStateAction<boolean>>;
-  selectedFriendList: FriendItem[];
-  currentUser: { name: string; avatar?: string | null } | null;
-  inviteLink: string;
-  linkCopied: boolean;
   copyInviteLink: () => void;
-  shareVia: (channel: 'wechat' | 'qq' | 'moments' | 'poster') => void | Promise<void>;
+  shareVia: () => void | Promise<void>;
   publishing: boolean;
   publishStep: number;
   successOpen: boolean;
@@ -69,26 +68,24 @@ export function CreateOverlays({
   closeProductPicker,
   productKeyword,
   setProductKeyword,
-  productCategories,
-  productCategory,
-  setProductCategory,
+  productCategoryItems,
+  productCategoryId,
+  setProductCategoryId,
   sortDropdownOpen,
   setSortDropdownOpen,
   sortLabel,
   productSort,
   setProductSort,
-  filteredProducts,
+  productItems,
   productTotalCount,
+  productLoading,
+  productLoadingMore,
+  productHasMore,
+  loadMoreProducts,
   tempProduct,
   tempProductId,
   setTempProductId,
   confirmProductPick,
-  shareOpen,
-  setShareOpen,
-  selectedFriendList,
-  currentUser,
-  inviteLink,
-  linkCopied,
   copyInviteLink,
   shareVia,
   publishing,
@@ -97,22 +94,7 @@ export function CreateOverlays({
   setSuccessOpen,
   routerPushHome,
 }: Props) {
-  const inviteDeadlineText = deadline
-    ? new Date(deadline).toLocaleString('zh-CN', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '未设定';
   const publishFinished = publishStep >= 3;
-
-  function renderFriendAvatar(friend: FriendItem, className: string) {
-    if (friend.avatar) {
-      return <img className={className} src={friend.avatar} alt={friend.name} />;
-    }
-    return <span className={className}>{friend.name.slice(0, 1) || '友'}</span>;
-  }
 
   return (
     <>
@@ -218,14 +200,21 @@ export function CreateOverlays({
             </div>
             <div className={styles.ppToolbar}>
               <div className={styles.ppCats}>
-                {productCategories.map((item) => (
+                <button
+                  type="button"
+                  className={`${styles.ppCat} ${productCategoryId === null ? styles.ppCatOn : ''}`}
+                  onClick={() => setProductCategoryId(null)}
+                >
+                  全部
+                </button>
+                {productCategoryItems.map((item) => (
                   <button
-                    key={item}
+                    key={item.id}
                     type="button"
-                    className={`${styles.ppCat} ${productCategory === item ? styles.ppCatOn : ''}`}
-                    onClick={() => setProductCategory(item)}
+                    className={`${styles.ppCat} ${productCategoryId === item.id ? styles.ppCatOn : ''}`}
+                    onClick={() => setProductCategoryId(item.id)}
                   >
-                    {item === 'all' ? '全部' : item}
+                    {item.name}
                   </button>
                 ))}
               </div>
@@ -250,7 +239,7 @@ export function CreateOverlays({
                     </button>
                   </div>
                 ) : null}
-                <span className={styles.ppResultCount}>{filteredProducts.length}件商品</span>
+                <span className={styles.ppResultCount}>{productTotalCount}件商品</span>
               </div>
             </div>
             {tempProduct ? (
@@ -276,7 +265,7 @@ export function CreateOverlays({
                         <i className="fa-solid fa-fire" /> {formatSalesLabel(tempProduct.sales)}已售
                       </span>
                       <span className={styles.ppSelMetaItem}>
-                        <i className="fa-solid fa-star" /> {tempProduct.rating}分
+                        <i className="fa-solid fa-star" /> {tempProduct.rating.toFixed(1)}分
                       </span>
                       {tempProduct.stock ? (
                         <span className={styles.ppSelMetaItem}>
@@ -291,9 +280,22 @@ export function CreateOverlays({
                 </div>
               </div>
             ) : null}
-            {filteredProducts.length ? (
-              <div className={styles.ppGrid}>
-                {filteredProducts.map((item) => (
+            {productLoading && productItems.length === 0 ? (
+              <div className={styles.ppLoading}>
+                <i className="fa-solid fa-spinner fa-spin" /> 加载中...
+              </div>
+            ) : productItems.length ? (
+              <div
+                className={styles.ppGrid}
+                onScroll={(event: UIEvent<HTMLDivElement>) => {
+                  if (!productHasMore || productLoadingMore) return;
+                  const target = event.currentTarget;
+                  if (target.scrollTop + target.clientHeight >= target.scrollHeight - 80) {
+                    loadMoreProducts();
+                  }
+                }}
+              >
+                {productItems.map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -318,12 +320,20 @@ export function CreateOverlays({
                         {item.originalPrice > item.price ? <span className={styles.ppOrigPrice}>¥{item.originalPrice}</span> : null}
                       </div>
                       <div className={styles.ppMetaRow}>
-                        <span className={`${styles.ppSales} ${Number.parseFloat(item.sales) >= 5000 ? styles.ppSalesHot : ''}`}>{formatSalesLabel(item.sales)}已售</span>
-                        <span className={styles.ppRatingNum}>{item.rating}分</span>
+                        <span className={`${styles.ppSales} ${item.sales >= 5000 ? styles.ppSalesHot : ''}`}>{formatSalesLabel(item.sales)}已售</span>
+                        <span className={styles.ppRatingNum}>{item.rating.toFixed(1)}分</span>
                       </div>
                     </div>
                   </button>
                 ))}
+                {productLoadingMore ? (
+                  <div className={styles.ppLoadingMore}>
+                    <i className="fa-solid fa-spinner fa-spin" /> 加载中...
+                  </div>
+                ) : null}
+                {!productHasMore && productItems.length > 0 ? (
+                  <div className={styles.ppListEnd}>没有更多了</div>
+                ) : null}
               </div>
             ) : (
               <div className={styles.ppEmpty}>
@@ -348,121 +358,6 @@ export function CreateOverlays({
               <button className={styles.ppFooterBtnPrimary} type="button" onClick={confirmProductPick}>
                 确认选择
               </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {shareOpen ? (
-        <div className={styles.shareOverlay} onClick={() => setShareOpen(false)}>
-          <div className={styles.shareModal} onClick={(event) => event.stopPropagation()}>
-            <div className={styles.shareDrag} />
-            <div className={styles.shareHeader}>
-              <div className={styles.shareTitle}>📤 邀请好友参战</div>
-              <button className={styles.shareClose} type="button" onClick={() => setShareOpen(false)}>
-                <i className="fa-solid fa-xmark" />
-              </button>
-            </div>
-            <div className={styles.linkCard}>
-              <div className={styles.linkLabel}>
-                <i className="fa-solid fa-link" /> 邀请链接
-              </div>
-              <div className={styles.linkRow}>
-                <input className={styles.linkInput} readOnly value={inviteLink} />
-                <button className={`${styles.linkCopy} ${linkCopied ? styles.linkCopyDone : ''}`} type="button" onClick={copyInviteLink}>
-                  {linkCopied ? '✓ 已复制' : '复制链接'}
-                </button>
-              </div>
-              <div className={styles.linkStats}>
-                <div>
-                  <i className="fa-solid fa-user-plus" /> 已邀 <b>{selectedFriendList.length}</b> 人
-                </div>
-              </div>
-            </div>
-            {selectedFriendList.length ? (
-              <div className={styles.shareFriends}>
-                <div className={styles.shareFriendsTitle}>
-                  <i className="fa-solid fa-check-circle" /> 已选好友将收到邀请
-                  <span>{selectedFriendList.length}人</span>
-                </div>
-                <div className={styles.shareFriendsList}>
-                  {selectedFriendList.map((friend) => (
-                    <div key={friend.id} className={styles.shareFriendChip}>
-                      {renderFriendAvatar(friend, styles.shareFriendAvatar)}
-                      <span>{friend.name}</span>
-                      <span className={`${styles.shareStatusDot} ${friend.online ? styles.shareStatusOn : styles.shareStatusOff}`} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            <div className={styles.shareMethods}>
-              <button type="button" className={styles.shareMethod} onClick={() => shareVia('wechat')}>
-                <div className={`${styles.shareMethodIcon} ${styles.shareMethodWechat}`}>
-                  <i className="fa-brands fa-weixin" />
-                </div>
-                <div className={styles.shareMethodLabel}>微信好友</div>
-              </button>
-              <button type="button" className={styles.shareMethod} onClick={() => shareVia('qq')}>
-                <div className={`${styles.shareMethodIcon} ${styles.shareMethodQq}`}>
-                  <i className="fa-brands fa-qq" />
-                </div>
-                <div className={styles.shareMethodLabel}>QQ好友</div>
-              </button>
-              <button type="button" className={styles.shareMethod} onClick={() => shareVia('moments')}>
-                <div className={`${styles.shareMethodIcon} ${styles.shareMethodMoments}`}>
-                  <i className="fa-solid fa-users" />
-                </div>
-                <div className={styles.shareMethodLabel}>猜友圈</div>
-              </button>
-              <button type="button" className={styles.shareMethod} onClick={() => shareVia('poster')}>
-                <div className={styles.shareMethodIcon}>
-                  <i className="fa-solid fa-image" />
-                </div>
-                <div className={styles.shareMethodLabel}>生成海报</div>
-              </button>
-            </div>
-            <div className={styles.invitePreview}>
-              <div className={styles.invitePreviewTitle}>
-                <i className="fa-solid fa-eye" /> 好友收到的邀请卡片
-              </div>
-              <div className={styles.invitePreviewCard}>
-                <div className={styles.invitePreviewHead}>
-                  <div className={styles.invitePreviewUser}>
-                    {currentUser?.avatar ? (
-                      <img className={styles.invitePreviewAvatar} src={currentUser.avatar} alt={currentUser.name} />
-                    ) : (
-                      <span className={styles.invitePreviewAvatarFallback}>{currentUser?.name.slice(0, 1) || '我'}</span>
-                    )}
-                    <div>
-                      <div className={styles.invitePreviewName}>{currentUser?.name || '发起人'}</div>
-                      <div className={styles.invitePreviewSub}>邀请你参加好友PK</div>
-                    </div>
-                  </div>
-                  <div className={styles.invitePreviewMainTitle}>
-                    <i className="fa-solid fa-bolt" /> {title.trim() || '好友PK竞猜'}
-                  </div>
-                </div>
-                <div className={styles.invitePreviewVs}>
-                  <div className={`${styles.invitePreviewOption} ${styles.invitePreviewOptionA}`}>{options.find((item) => item.trim()) || '选项A'}</div>
-                  <div className={styles.invitePreviewVsBadge}>VS</div>
-                  <div className={`${styles.invitePreviewOption} ${styles.invitePreviewOptionB}`}>
-                    {options.filter((item) => item.trim())[1] || '选项B'}
-                  </div>
-                </div>
-                <div className={styles.invitePreviewFooter}>
-                  <div className={styles.invitePreviewMeta}>
-                    <span>
-                      <i className="fa-regular fa-clock" /> {inviteDeadlineText}
-                    </span>
-                    <span>
-                      <i className="fa-solid fa-user-group" />{' '}
-                      {selectedFriendList.length ? `${selectedFriendList.length}人参战` : '等你加入'}
-                    </span>
-                  </div>
-                  <div className={styles.invitePreviewJoin}>⚔️ 点击参战</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -507,23 +402,29 @@ export function CreateOverlays({
                 </div>
                 <div>复制链接</div>
               </button>
-              <button type="button" className={styles.successAction} onClick={() => shareVia('wechat')}>
+              <button type="button" className={styles.successAction} onClick={() => shareVia()}>
                 <div className={`${styles.successActionIcon} ${styles.successActionWechat}`}>
                   <i className="fa-brands fa-weixin" />
                 </div>
                 <div>微信</div>
               </button>
-              <button type="button" className={styles.successAction} onClick={() => shareVia('moments')}>
+              <button type="button" className={styles.successAction} onClick={() => shareVia()}>
                 <div className={`${styles.successActionIcon} ${styles.successActionMoments}`}>
                   <i className="fa-solid fa-users" />
                 </div>
                 <div>猜友圈</div>
               </button>
-              <button type="button" className={styles.successAction} onClick={() => shareVia('poster')}>
+              <button
+                type="button"
+                className={`${styles.successAction} ${styles.successActionDisabled}`}
+                disabled
+                aria-disabled="true"
+              >
                 <div className={styles.successActionIcon}>
                   <i className="fa-solid fa-image" />
                 </div>
                 <div>海报</div>
+                <span className={styles.successActionBadge}>未开放</span>
               </button>
             </div>
             <button className={styles.successPrimary} type="button" onClick={routerPushHome}>

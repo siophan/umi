@@ -3,6 +3,7 @@ import type mysql from 'mysql2/promise';
 import { toEntityId, type CreateGuessPayload, type CreateGuessResult } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { getCurrentShop, STATUS_ACTIVE as SHOP_STATUS_ACTIVE } from '../shop/shop-shared';
 
 const GUESS_TYPE_STANDARD = 10;
 const GUESS_SOURCE_USER = 10;
@@ -67,14 +68,18 @@ function normalizeEndTime(endTime: string) {
   return parsed;
 }
 
-/**
- * 创建页当前没有单独的竞猜分类选择器。
- * 用户端创建时优先吃显式分类；没有时回落到已启用的默认竞猜分类，优先选“美食”。
- */
-async function resolveGuessCategoryId(categoryId?: string | null) {
-  const db = getDbPool();
+async function isCreatorMerchant(creatorId: string) {
+  const shop = await getCurrentShop(creatorId);
+  return Boolean(shop && Number(shop.status) === SHOP_STATUS_ACTIVE);
+}
 
+/**
+ * 商家创建竞猜必须传有效 categoryId；非商家可不传，此时存 0 表示无分类。
+ * 任意模式下传了 categoryId 都要校验存在、biz_type=40、已启用，否则报错。
+ */
+async function resolveGuessCategoryId(categoryId: string | null | undefined, creatorId: string) {
   if (categoryId?.trim()) {
+    const db = getDbPool();
     const [rows] = await db.execute<mysql.RowDataPacket[]>(
       `
         SELECT id, name, status, biz_type
@@ -94,22 +99,12 @@ async function resolveGuessCategoryId(categoryId?: string | null) {
     return String(category.id);
   }
 
-  const [rows] = await db.query<mysql.RowDataPacket[]>(
-    `
-      SELECT id, name, status, biz_type
-      FROM category
-      WHERE biz_type = 40 AND status = 10
-      ORDER BY CASE WHEN name = '美食' THEN 0 ELSE 1 END, sort ASC, id ASC
-      LIMIT 1
-    `,
-  );
-
-  const category = (rows[0] as GuessCategoryRow | undefined) ?? null;
-  if (!category) {
-    throw new Error('竞猜分类未配置');
+  const merchant = await isCreatorMerchant(creatorId);
+  if (merchant) {
+    throw new Error('商家创建竞猜必须选择分类');
   }
 
-  return String(category.id);
+  return '0';
 }
 
 async function requireProductForGuessCreate(productId: string) {
@@ -203,7 +198,7 @@ export async function createUserGuess(
   const optionTexts = normalizeOptionTexts(payload.optionTexts);
   const scope = payload.scope === 'friends' ? 'friends' : 'public';
   const scopeCode = scope === 'friends' ? GUESS_SCOPE_FRIENDS : GUESS_SCOPE_PUBLIC;
-  const categoryId = await resolveGuessCategoryId(payload.categoryId ? String(payload.categoryId) : null);
+  const categoryId = await resolveGuessCategoryId(payload.categoryId ? String(payload.categoryId) : null, creatorId);
   const product = payload.productId ? await requireProductForGuessCreate(String(payload.productId)) : null;
   const inviteeIds = await resolveInviteeIds(payload.invitedFriendIds, creatorId);
   if (scope === 'friends' && inviteeIds.length === 0) {

@@ -36,6 +36,16 @@ export interface CreateGuessResult {
   scope: 'public' | 'friends';
 }
 
+export interface GuessCategoryItem {
+  id: CategoryId;
+  name: string;
+  sort: number;
+}
+
+export interface GuessCategoryListResult {
+  items: GuessCategoryItem[];
+}
+
 export interface ProductFeedItem {
   id: ProductId;
   name: string;
@@ -73,7 +83,11 @@ export interface ProductCategoryItem {
 
 export interface ProductListResult {
   items: ProductFeedItem[];
-  categories: ProductCategoryItem[];
+  total: number;
+}
+
+export interface ProductCategoryListResult {
+  items: ProductCategoryItem[];
 }
 
 export type SearchTab = 'all' | 'product' | 'guess';

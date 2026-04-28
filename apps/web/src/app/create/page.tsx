@@ -7,6 +7,7 @@ import { CreateOverlays } from './create-overlays';
 import { CreateOptionsSection } from './create-options-section';
 import { CreatePkSection } from './create-pk-section';
 import { CreateSettingsSection } from './create-settings-section';
+import { CreateSkeleton } from './create-skeleton';
 import { templates } from './create-helpers';
 import { useCreatePageState } from './use-create-page-state';
 import styles from './page.module.css';
@@ -31,7 +32,6 @@ export default function CreatePage() {
     setDeadline,
     options,
     selectedFriends,
-    setShareOpen,
     friendKeyword,
     setFriendKeyword,
     selectedProduct,
@@ -41,14 +41,11 @@ export default function CreatePage() {
     setProductKeyword,
     tempProductId,
     setTempProductId,
-    productCategory,
-    setProductCategory,
     productSort,
     setProductSort,
     sortDropdownOpen,
     setSortDropdownOpen,
     previewOpen,
-    shareOpen,
     publishing,
     publishStep,
     successOpen,
@@ -60,19 +57,26 @@ export default function CreatePage() {
     coverPreviewUrl,
     coverUploading,
     coverUploaded,
-    inviteLink,
-    linkCopied,
-    currentUser,
     authReady,
+    guessCategoryItems,
+    guessCategoriesLoadFailed,
+    selectedGuessCategoryId,
+    setSelectedGuessCategoryId,
+    publishDisabled,
     steps,
     progress,
     selectedCount,
     filteredFriends,
     selectedFriendList,
-    filteredProducts,
     productItems,
+    productTotal,
+    productLoading,
+    productLoadingMore,
+    productHasMore,
+    productCategoryItems,
+    productCategoryId,
+    setProductCategoryId,
     tempProduct,
-    productCategories,
     sortLabel,
     visibleTopics,
     updateOption,
@@ -89,10 +93,11 @@ export default function CreatePage() {
     closeProductPicker,
     handleCoverPick,
     handlePublish,
+    loadMoreProducts,
   } = useCreatePageState();
 
   if (!authReady) {
-    return <main className={styles.page} />;
+    return <CreateSkeleton />;
   }
 
   return (
@@ -180,6 +185,11 @@ export default function CreatePage() {
         coverUploading={coverUploading}
         coverUploaded={coverUploaded}
         handleCoverPick={handleCoverPick}
+        isMerchantMode={isMerchantMode}
+        guessCategoryItems={guessCategoryItems}
+        guessCategoriesLoadFailed={guessCategoriesLoadFailed}
+        selectedGuessCategoryId={selectedGuessCategoryId}
+        setSelectedGuessCategoryId={setSelectedGuessCategoryId}
       />
 
       <div className={styles.dividerThick} />
@@ -224,8 +234,13 @@ export default function CreatePage() {
         <button className={styles.previewBtn} type="button" onClick={() => setPreviewOpen(true)}>
           预览
         </button>
-        <button className={styles.publishBtn} type="button" onClick={handlePublish}>
-          发布竞猜
+        <button
+          className={styles.publishBtn}
+          type="button"
+          onClick={handlePublish}
+          disabled={publishDisabled}
+        >
+          {publishDisabled ? '分类加载失败，无法发布' : '发布竞猜'}
         </button>
       </div>
 
@@ -243,26 +258,24 @@ export default function CreatePage() {
         closeProductPicker={closeProductPicker}
         productKeyword={productKeyword}
         setProductKeyword={setProductKeyword}
-        productCategories={productCategories}
-        productCategory={productCategory}
-        setProductCategory={setProductCategory}
+        productCategoryItems={productCategoryItems}
+        productCategoryId={productCategoryId}
+        setProductCategoryId={setProductCategoryId}
         sortDropdownOpen={sortDropdownOpen}
         setSortDropdownOpen={setSortDropdownOpen}
         sortLabel={sortLabel}
         productSort={productSort}
         setProductSort={setProductSort}
-        filteredProducts={filteredProducts}
-        productTotalCount={productItems.length}
+        productItems={productItems}
+        productTotalCount={productTotal}
+        productLoading={productLoading}
+        productLoadingMore={productLoadingMore}
+        productHasMore={productHasMore}
+        loadMoreProducts={loadMoreProducts}
         tempProduct={tempProduct}
         tempProductId={tempProductId}
         setTempProductId={setTempProductId}
         confirmProductPick={confirmProductPick}
-        shareOpen={shareOpen}
-        setShareOpen={setShareOpen}
-        selectedFriendList={selectedFriendList}
-        currentUser={currentUser}
-        inviteLink={inviteLink}
-        linkCopied={linkCopied}
         copyInviteLink={copyInviteLink}
         shareVia={shareVia}
         publishing={publishing}

@@ -3,12 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { CreateGuessPayload, UserSummary } from '@umi/shared';
+import type {
+  CategoryId,
+  CreateGuessPayload,
+  GuessCategoryItem,
+  ProductCategoryItem,
+} from '@umi/shared';
 
 import { fetchMe } from '../../lib/api/auth';
 import { fetchSocialFriends } from '../../lib/api/friends';
-import { createGuess } from '../../lib/api/guesses';
-import { fetchProductList } from '../../lib/api/products';
+import { createGuess, fetchGuessCategories } from '../../lib/api/guesses';
+import { fetchProductCategories, fetchProductList, type ProductListSort } from '../../lib/api/products';
 import { fetchSearchHotKeywords } from '../../lib/api/search';
 import { clearAuthToken, hasAuthToken } from '../../lib/api/shared';
 import { fetchShopStatus } from '../../lib/api/shops';
@@ -17,7 +22,6 @@ import {
   mapProductFeedToCreateProduct,
   mapSearchHotKeywordToCreateTopic,
   mapSocialUserToCreateFriend,
-  parseSalesCount,
   type FriendItem,
   type ProductItem,
   type TemplateId,
@@ -34,7 +38,6 @@ function mergeFriendItems(current: FriendItem[], incoming: FriendItem[]) {
 
 export function useCreatePageState() {
   const router = useRouter();
-  const LAST_CREATED_GUESS_KEY = 'umi_last_created_guess';
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [isMerchantMode, setIsMerchantMode] = useState(false);
@@ -49,14 +52,18 @@ export function useCreatePageState() {
   const [visibleFriendItems, setVisibleFriendItems] = useState<FriendItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
   const [productItems, setProductItems] = useState<ProductItem[]>([]);
+  const [productTotal, setProductTotal] = useState(0);
+  const [productOffset, setProductOffset] = useState(0);
+  const [productLoading, setProductLoading] = useState(false);
+  const [productLoadingMore, setProductLoadingMore] = useState(false);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [productKeyword, setProductKeyword] = useState('');
   const [tempProductId, setTempProductId] = useState<string | null>(null);
-  const [productCategory, setProductCategory] = useState('all');
-  const [productSort, setProductSort] = useState<'default' | 'sales' | 'price_asc' | 'rating'>('default');
+  const [productCategoryId, setProductCategoryId] = useState<CategoryId | null>(null);
+  const [productCategoryItems, setProductCategoryItems] = useState<ProductCategoryItem[]>([]);
+  const [productSort, setProductSort] = useState<ProductListSort>('default');
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState(0);
   const [successOpen, setSuccessOpen] = useState(false);
@@ -67,12 +74,12 @@ export function useCreatePageState() {
   const [selectedTopic, setSelectedTopic] = useState('');
   const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
   const [coverUploading, setCoverUploading] = useState(false);
-  const [coverUploaded, setCoverUploaded] = useState(false);
   const [coverUploadedUrl, setCoverUploadedUrl] = useState('');
   const [createdGuessId, setCreatedGuessId] = useState('');
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Pick<UserSummary, 'name' | 'avatar'> | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [guessCategoryItems, setGuessCategoryItems] = useState<GuessCategoryItem[]>([]);
+  const [guessCategoriesLoadFailed, setGuessCategoriesLoadFailed] = useState(false);
+  const [selectedGuessCategoryId, setSelectedGuessCategoryId] = useState<CategoryId | null>(null);
   const friendSearchRequestId = useRef(0);
 
   useEffect(() => {
@@ -85,36 +92,37 @@ export function useCreatePageState() {
         return;
       }
 
-      let user: Awaited<ReturnType<typeof fetchMe>> | null = null;
       try {
-        user = await fetchMe();
+        await fetchMe();
       } catch {
         clearAuthToken();
         router.replace(`/login?redirect=${encodeURIComponent('/create')}&action=${encodeURIComponent('发布竞猜')}`);
         return;
       }
 
-      setAuthReady(true);
-      const [productResult, topicResult, shopStatusResult] = await Promise.allSettled([
-        fetchProductList({ limit: 50 }),
+      const [productCategoriesResult, topicResult, shopStatusResult, guessCategoriesResult] = await Promise.allSettled([
+        fetchProductCategories(),
         fetchSearchHotKeywords(6),
         fetchShopStatus(),
+        fetchGuessCategories(),
       ] as const);
 
       if (ignore) {
         return;
       }
 
-      if (productResult.status === 'fulfilled') {
-        setProductItems(productResult.value.items.map(mapProductFeedToCreateProduct));
+      const failureLabels: string[] = [];
+
+      if (productCategoriesResult.status === 'fulfilled') {
+        setProductCategoryItems(productCategoriesResult.value.items);
       } else {
-        showToast('商品数据加载失败');
+        failureLabels.push('商品分类');
       }
 
       if (topicResult.status === 'fulfilled') {
         setHotTopicItems(topicResult.value.items.map(mapSearchHotKeywordToCreateTopic));
       } else {
-        showToast('热门数据加载失败');
+        failureLabels.push('话题');
       }
 
       if (shopStatusResult.status === 'fulfilled') {
@@ -127,13 +135,22 @@ export function useCreatePageState() {
           return 'pk';
         });
       } else {
-        showToast('店铺状态加载失败');
+        failureLabels.push('店铺状态');
       }
 
-      setCurrentUser({
-        name: user.name,
-        avatar: user.avatar ?? null,
-      });
+      if (guessCategoriesResult.status === 'fulfilled') {
+        setGuessCategoryItems(guessCategoriesResult.value.items);
+        setGuessCategoriesLoadFailed(false);
+      } else {
+        setGuessCategoriesLoadFailed(true);
+        failureLabels.push('竞猜分类');
+      }
+
+      if (failureLabels.length) {
+        showToast(`${failureLabels.join('、')}加载失败`);
+      }
+
+      setAuthReady(true);
     }
 
     void loadCreateDependencies();
@@ -165,12 +182,6 @@ export function useCreatePageState() {
   }, [sortDropdownOpen]);
 
   useEffect(() => {
-    if (!shareOpen) {
-      setLinkCopied(false);
-    }
-  }, [shareOpen]);
-
-  useEffect(() => {
     if (!authReady) {
       return;
     }
@@ -200,12 +211,85 @@ export function useCreatePageState() {
     };
   }, [authReady, friendKeyword]);
 
+  const PRODUCT_PICKER_LIMIT = 20;
+  const productListRequestId = useRef(0);
+  const [productKeywordDebounced, setProductKeywordDebounced] = useState('');
+
   useEffect(() => {
-    if (template === 'multi') {
+    const timer = window.setTimeout(() => {
+      setProductKeywordDebounced(productKeyword.trim());
+    }, productKeyword.trim() ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [productKeyword]);
+
+  useEffect(() => {
+    if (!authReady) {
       return;
     }
-    setOptions((current) => (current.length > 2 ? current.slice(0, 2) : current));
-  }, [template]);
+    const reqId = ++productListRequestId.current;
+    setProductLoading(true);
+    fetchProductList({
+      limit: PRODUCT_PICKER_LIMIT,
+      offset: 0,
+      q: productKeywordDebounced || undefined,
+      categoryId: productCategoryId ?? undefined,
+      sort: productSort,
+    })
+      .then((result) => {
+        if (productListRequestId.current !== reqId) return;
+        setProductItems(result.items.map(mapProductFeedToCreateProduct));
+        setProductTotal(result.total);
+        setProductOffset(result.items.length);
+      })
+      .catch(() => {
+        if (productListRequestId.current === reqId) {
+          showToast('商品加载失败');
+        }
+      })
+      .finally(() => {
+        if (productListRequestId.current === reqId) {
+          setProductLoading(false);
+        }
+      });
+  }, [authReady, productKeywordDebounced, productCategoryId, productSort]);
+
+  async function loadMoreProducts() {
+    if (productLoading || productLoadingMore) return;
+    if (productItems.length >= productTotal) return;
+    const reqId = ++productListRequestId.current;
+    setProductLoadingMore(true);
+    try {
+      const result = await fetchProductList({
+        limit: PRODUCT_PICKER_LIMIT,
+        offset: productOffset,
+        q: productKeywordDebounced || undefined,
+        categoryId: productCategoryId ?? undefined,
+        sort: productSort,
+      });
+      if (productListRequestId.current !== reqId) return;
+      const mapped = result.items.map(mapProductFeedToCreateProduct);
+      setProductItems((current) => [...current, ...mapped]);
+      setProductTotal(result.total);
+      setProductOffset((current) => current + mapped.length);
+    } catch {
+      if (productListRequestId.current === reqId) {
+        showToast('加载更多商品失败');
+      }
+    } finally {
+      if (productListRequestId.current === reqId) {
+        setProductLoadingMore(false);
+      }
+    }
+  }
+
+  const prevSuccessOpenRef = useRef(false);
+  useEffect(() => {
+    if (prevSuccessOpenRef.current && !successOpen) {
+      resetForm();
+    }
+    prevSuccessOpenRef.current = successOpen;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [successOpen]);
 
   const steps = useMemo(() => {
     const step0 = Boolean(template);
@@ -218,6 +302,8 @@ export function useCreatePageState() {
   const progress = useMemo(() => Math.round((steps.filter(Boolean).length / 4) * 100), [steps]);
   const selectedCount = options.filter((item) => item.trim()).length;
 
+  const publishDisabled = isMerchantMode && guessCategoriesLoadFailed;
+
   const filteredFriends = visibleFriendItems;
 
   const selectedFriendList = useMemo(
@@ -225,34 +311,13 @@ export function useCreatePageState() {
     [friendItems, selectedFriends],
   );
 
-  const filteredProducts = useMemo(() => {
-    const keyword = productKeyword.trim().toLowerCase();
-    let next = productItems.slice();
-    if (productCategory !== 'all') {
-      next = next.filter((item) => item.category === productCategory);
-    }
-    if (keyword) {
-      next = next.filter((item) => `${item.name} ${item.brand}`.toLowerCase().includes(keyword));
-    }
-    if (productSort === 'sales') {
-      next.sort((a, b) => parseSalesCount(b.sales) - parseSalesCount(a.sales));
-    } else if (productSort === 'price_asc') {
-      next.sort((a, b) => a.price - b.price);
-    } else if (productSort === 'rating') {
-      next.sort((a, b) => Number(b.rating) - Number(a.rating));
-    }
-    return next;
-  }, [productCategory, productItems, productKeyword, productSort]);
+  const tempProduct = useMemo(() => {
+    if (!tempProductId) return null;
+    if (selectedProduct?.id === tempProductId) return selectedProduct;
+    return productItems.find((item) => item.id === tempProductId) ?? null;
+  }, [productItems, tempProductId, selectedProduct]);
 
-  const tempProduct = useMemo(
-    () => (tempProductId ? productItems.find((item) => item.id === tempProductId) ?? null : null),
-    [productItems, tempProductId],
-  );
-
-  const productCategories = useMemo(
-    () => ['all', ...Array.from(new Set(productItems.map((item) => item.category)))],
-    [productItems],
-  );
+  const productHasMore = productItems.length < productTotal;
 
   const sortLabel = useMemo(() => {
     if (productSort === 'sales') {
@@ -288,16 +353,19 @@ export function useCreatePageState() {
   }
 
   function selectTemplate(nextTemplate: TemplateId) {
+    if (nextTemplate === template) {
+      return;
+    }
+    const crossingNumberBoundary = nextTemplate === 'number' || template === 'number';
     setTemplate(nextTemplate);
     setOptions((current) => {
-      if (nextTemplate === 'number') {
+      if (crossingNumberBoundary) {
         return ['', ''];
       }
       if (nextTemplate === 'multi') {
         return current.length >= 2 ? current : ['', ''];
       }
-
-      return current.slice(0, 2);
+      return current.length > 2 ? current.slice(0, 2) : current;
     });
   }
 
@@ -347,15 +415,6 @@ export function useCreatePageState() {
     }
   }
 
-  function openShareInvite() {
-    if (!createdGuessId) {
-      showToast('请先创建竞猜，创建成功后才能分享邀请');
-      return;
-    }
-    setShareOpen(true);
-    setLinkCopied(false);
-  }
-
   /**
    * 复制邀请文案时优先走 Clipboard API。
    * 老设备或浏览器能力不足时，退回到 textarea + execCommand 的兼容路径。
@@ -382,9 +441,7 @@ export function useCreatePageState() {
 
     try {
       await navigator.clipboard.writeText(content);
-      setLinkCopied(true);
       showToast('✅ 邀请文案+链接已复制，快去粘贴分享吧！');
-      window.setTimeout(() => setLinkCopied(false), 2500);
     } catch {
       try {
         const textarea = document.createElement('textarea');
@@ -397,23 +454,16 @@ export function useCreatePageState() {
         textarea.setSelectionRange(0, content.length);
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        setLinkCopied(true);
         showToast('✅ 邀请文案+链接已复制');
-        window.setTimeout(() => setLinkCopied(false), 2500);
       } catch {
         showToast('⚠️ 复制失败，请手动长按复制');
       }
     }
   }
 
-  async function shareVia(channel: 'wechat' | 'qq' | 'moments' | 'poster') {
+  async function shareVia() {
     if (!inviteLink) {
       showToast('创建成功后才能分享');
-      return;
-    }
-
-    if (channel === 'poster') {
-      showToast('海报生成暂未接入');
       return;
     }
 
@@ -440,7 +490,21 @@ export function useCreatePageState() {
     showToast('当前浏览器不支持系统分享，请复制链接分享');
   }
 
+  function updateTitle(value: string) {
+    setTitle(value);
+    if (titleTipVisible && value.trim().length >= 5) {
+      setTitleTipVisible(false);
+    }
+    if (selectedTopic && value !== selectedTopic) {
+      setSelectedTopic('');
+    }
+  }
+
   function pickTopic(topicText: string) {
+    if (title.trim().length > 0) {
+      showToast('已有标题，请先清空再选话题');
+      return;
+    }
     setTitle(topicText);
     setSelectedTopic(topicText);
     titleInputRef.current?.focus();
@@ -466,6 +530,34 @@ export function useCreatePageState() {
     });
   }
 
+  function resetCoverInput() {
+    setCoverPreviewUrl('');
+    setCoverUploadedUrl('');
+    if (coverInputRef.current) {
+      coverInputRef.current.value = '';
+    }
+  }
+
+  function resetForm() {
+    setTitle('');
+    setDesc('');
+    setOptions(['', '']);
+    setDeadline('');
+    setSelectedFriends([]);
+    setFriendKeyword('');
+    setSelectedProduct(null);
+    setTempProductId(null);
+    setProductKeyword('');
+    setProductCategoryId(null);
+    setProductSort('default');
+    setSelectedTopic('');
+    setTitleTipVisible(false);
+    setTitleInputError(false);
+    setSelectedGuessCategoryId(null);
+    setCreatedGuessId('');
+    resetCoverInput();
+  }
+
   async function handleCoverPick(file: File | null) {
     if (!file) {
       return;
@@ -487,7 +579,6 @@ export function useCreatePageState() {
     }
 
     setCoverUploading(true);
-    setCoverUploaded(false);
     setCoverUploadedUrl('');
     setCoverPreviewUrl('');
 
@@ -502,15 +593,9 @@ export function useCreatePageState() {
       });
       setCoverPreviewUrl(result.url);
       setCoverUploadedUrl(result.url);
-      setCoverUploaded(true);
       showToast('封面已上传到OSS');
     } catch (error) {
-      setCoverUploaded(false);
-      setCoverUploadedUrl('');
-      setCoverPreviewUrl('');
-      if (coverInputRef.current) {
-        coverInputRef.current.value = '';
-      }
+      resetCoverInput();
       showToast(error instanceof Error ? error.message : '封面上传失败');
     } finally {
       setCoverUploading(false);
@@ -519,31 +604,6 @@ export function useCreatePageState() {
 
   function sleep(ms: number) {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
-  }
-
-  /**
-   * 创建接口需要的页面提交对象。
-   * 封面只使用 OSS 返回的真实地址；发布前已校验必传。
-   */
-  function buildGuessDraftPayload() {
-    const currentTitle = title.trim();
-    const filledOptions = options.filter((item) => item.trim());
-    const currentScope: 'public' | 'friends' = !isMerchantMode && template === 'pk' ? 'friends' : 'public';
-
-    return {
-      title: currentTitle,
-      description: desc.trim(),
-      options: filledOptions,
-      endTime: new Date(deadline).toISOString(),
-      type: template === 'pk' ? 'pk' : 'user',
-      category: selectedProduct?.category ?? '',
-      img: coverUploadedUrl,
-      productId: selectedProduct?.id,
-      productName: selectedProduct?.name,
-      scope: currentScope,
-      friendIds: !isMerchantMode && template === 'pk' ? selectedFriends : [],
-      createdAt: new Date().toISOString(),
-    };
   }
 
   function validateBeforePublish() {
@@ -603,8 +663,18 @@ export function useCreatePageState() {
       return false;
     }
 
+    if (isMerchantMode && !selectedGuessCategoryId) {
+      showToast('⚠️ 商家创建竞猜必须选择分类');
+      return false;
+    }
+
     if (!deadline) {
       showToast('⚠️ 请设置开奖时间');
+      return false;
+    }
+
+    if (new Date(deadline).getTime() <= Date.now()) {
+      showToast('⚠️ 开奖时间必须晚于当前时间');
       return false;
     }
 
@@ -632,15 +702,15 @@ export function useCreatePageState() {
       return;
     }
 
-    const guessDraftPayload = buildGuessDraftPayload();
-    const realInviteeIds: NonNullable<CreateGuessPayload['invitedFriendIds']> =
+    const trimmedTitle = title.trim();
+    const filledOptions = options.filter((item) => item.trim());
+    const scope: 'public' | 'friends' = !isMerchantMode && template === 'pk' ? 'friends' : 'public';
+    const inviteeIds: NonNullable<CreateGuessPayload['invitedFriendIds']> =
       !isMerchantMode && template === 'pk'
-        ? (selectedFriends.filter((item) => /^\d+$/.test(String(item))) as NonNullable<CreateGuessPayload['invitedFriendIds']>)
+        ? (selectedFriends as NonNullable<CreateGuessPayload['invitedFriendIds']>)
         : [];
-    const realProductId: CreateGuessPayload['productId'] =
-      guessDraftPayload.productId && /^\d+$/.test(String(guessDraftPayload.productId))
-        ? (guessDraftPayload.productId as `${bigint}`)
-        : null;
+    const productId: CreateGuessPayload['productId'] =
+      (selectedProduct?.id as CreateGuessPayload['productId']) ?? null;
 
     void (async () => {
       try {
@@ -655,28 +725,17 @@ export function useCreatePageState() {
         await sleep(650);
 
         const result = await createGuess({
-          title: guessDraftPayload.title,
-          endTime: guessDraftPayload.endTime,
-          optionTexts: guessDraftPayload.options,
-          scope: guessDraftPayload.scope,
-          description: guessDraftPayload.description,
-          imageUrl: guessDraftPayload.img,
-          productId: realProductId,
-          invitedFriendIds: realInviteeIds,
+          title: trimmedTitle,
+          endTime: new Date(deadline).toISOString(),
+          optionTexts: filledOptions,
+          scope,
+          description: desc.trim() || null,
+          imageUrl: coverUploadedUrl,
+          productId,
+          invitedFriendIds: inviteeIds,
+          categoryId: selectedGuessCategoryId,
         });
 
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.setItem(
-            LAST_CREATED_GUESS_KEY,
-            JSON.stringify({
-              ...guessDraftPayload,
-              id: result.id,
-              status: result.status,
-              reviewStatus: result.reviewStatus,
-              scope: result.scope,
-            }),
-          );
-        }
         setCreatedGuessId(result.id);
 
         setPublishStep(3);
@@ -699,14 +758,13 @@ export function useCreatePageState() {
     template,
     selectTemplate,
     title,
-    setTitle,
+    setTitle: updateTitle,
     desc,
     setDesc,
     deadline,
     setDeadline,
     options,
     selectedFriends,
-    setShareOpen,
     friendKeyword,
     setFriendKeyword,
     selectedProduct,
@@ -716,14 +774,11 @@ export function useCreatePageState() {
     setProductKeyword,
     tempProductId,
     setTempProductId,
-    productCategory,
-    setProductCategory,
     productSort,
     setProductSort,
     sortDropdownOpen,
     setSortDropdownOpen,
     previewOpen,
-    shareOpen,
     publishing,
     publishStep,
     successOpen,
@@ -734,20 +789,27 @@ export function useCreatePageState() {
     selectedTopic,
     coverPreviewUrl,
     coverUploading,
-    coverUploaded,
-    inviteLink,
-    linkCopied,
-    currentUser,
+    coverUploaded: Boolean(coverUploadedUrl),
     authReady,
+    guessCategoryItems,
+    guessCategoriesLoadFailed,
+    selectedGuessCategoryId,
+    setSelectedGuessCategoryId,
+    publishDisabled,
     steps,
     progress,
     selectedCount,
     filteredFriends,
     selectedFriendList,
-    filteredProducts,
     productItems,
+    productTotal,
+    productLoading,
+    productLoadingMore,
+    productHasMore,
+    productCategoryItems,
+    productCategoryId,
+    setProductCategoryId,
     tempProduct,
-    productCategories,
     sortLabel,
     visibleTopics,
     updateOption,
@@ -758,12 +820,12 @@ export function useCreatePageState() {
     confirmProductPick,
     refreshTopics,
     pickTopic,
-    openShareInvite,
     copyInviteLink,
     shareVia,
     openProductPicker,
     closeProductPicker,
     handleCoverPick,
     handlePublish,
+    loadMoreProducts,
   };
 }

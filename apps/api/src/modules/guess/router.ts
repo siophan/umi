@@ -7,11 +7,19 @@ import { getRequestUser, requireUser } from '../../lib/auth';
 import { asyncHandler } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import { toRouteHttpError } from '../admin/route-helpers';
+import { getGuessCategories } from './guess-categories';
 import { createUserGuess } from './guess-create';
 import { getUserHistoryResult } from './guess-history';
 import { getGuessDetail, getGuessList, getGuessStats } from './guess-read';
 
 export const guessRouter: ExpressRouter = Router();
+
+guessRouter.get(
+  '/categories',
+  asyncHandler(async (_request, response) => {
+    ok(response, await getGuessCategories());
+  }),
+);
 
 guessRouter.get(
   '/user/history',
@@ -54,6 +62,7 @@ guessRouter.post(
           { message: '竞猜分类不存在', status: 404, code: 'GUESS_CATEGORY_NOT_FOUND' },
           { message: '竞猜分类未启用', status: 400, code: 'GUESS_CATEGORY_DISABLED' },
           { message: '竞猜分类未配置', status: 500, code: 'GUESS_CATEGORY_MISSING' },
+          { message: '商家创建竞猜必须选择分类', status: 400, code: 'GUESS_CATEGORY_REQUIRED' },
           { message: '请设置截止时间', status: 400, code: 'GUESS_END_TIME_REQUIRED' },
           { message: '截止时间不合法', status: 400, code: 'GUESS_END_TIME_INVALID' },
           { message: '截止时间必须晚于当前时间', status: 400, code: 'GUESS_END_TIME_PAST' },

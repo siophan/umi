@@ -1,11 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
 import {
   formatSalesLabel,
   getDiscountPercent,
-  parseSalesCount,
   type ProductItem,
 } from './create-helpers';
 import styles from './page.module.css';
@@ -19,6 +19,15 @@ type Props = {
   selectedProduct: ProductItem | null;
 };
 
+function formatDatetimeLocal(date: Date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
 export function CreateSettingsSection({
   stepDone,
   deadline,
@@ -27,6 +36,7 @@ export function CreateSettingsSection({
   openProductPicker,
   selectedProduct,
 }: Props) {
+  const minDeadline = useMemo(() => formatDatetimeLocal(new Date()), []);
   return (
     <section className={styles.formSection}>
       <h3>
@@ -41,7 +51,7 @@ export function CreateSettingsSection({
           </div>
           <div className={styles.settingDesc}>竞猜截止并自动开奖</div>
         </div>
-        <input className={styles.datetime} type="datetime-local" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
+        <input className={styles.datetime} type="datetime-local" min={minDeadline} value={deadline} onChange={(event) => setDeadline(event.target.value)} />
       </div>
 
       <div className={`${styles.settingRow} ${!isMerchantMode ? styles.lockedFeature : ''}`}>
@@ -78,10 +88,10 @@ export function CreateSettingsSection({
               </div>
               <div className={styles.spdMetaRow}>
                 <div className={styles.spdMetaItem}>
-                  <i className={`fa-solid fa-fire ${parseSalesCount(selectedProduct.sales) >= 5000 ? styles.spdMetaHot : ''}`} /> {formatSalesLabel(selectedProduct.sales)}已售
+                  <i className={`fa-solid fa-fire ${selectedProduct.sales >= 5000 ? styles.spdMetaHot : ''}`} /> {formatSalesLabel(selectedProduct.sales)}已售
                 </div>
                 <div className={styles.spdMetaItem}>
-                  <i className="fa-solid fa-star" /> {selectedProduct.rating}
+                  <i className="fa-solid fa-star" /> {selectedProduct.rating.toFixed(1)}
                 </div>
                 {selectedProduct.stock ? (
                   <div className={styles.spdMetaItem}>

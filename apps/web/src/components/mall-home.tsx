@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { ProductCategoryItem, ProductFeedItem } from '@umi/shared';
 
 import { fetchCart } from '../lib/api/cart';
-import { favoriteProduct, fetchProductList, unfavoriteProduct } from '../lib/api/products';
+import { favoriteProduct, fetchProductCategories, fetchProductList, unfavoriteProduct } from '../lib/api/products';
 import { hasAuthToken } from '../lib/api/shared';
 
 type MallTab = 'recommend' | 'seckill' | 'new' | 'category' | 'sale';
@@ -228,16 +228,19 @@ export function MallHome() {
       }
 
       try {
-        const [result, cartResult] = await Promise.allSettled([
+        const [result, categoriesResult, cartResult] = await Promise.allSettled([
           fetchProductList(50),
+          fetchProductCategories(),
           hasAuthToken() ? fetchCart() : Promise.resolve({ items: [] }),
         ]);
         if (!ignore) {
           if (result.status === 'fulfilled') {
             setMallItems(applyLegacyGridMeta(result.value.items));
-            setProductCategories(result.value.categories);
           } else {
             setProductError(getErrorMessage(result.reason, '商品流读取失败'));
+          }
+          if (categoriesResult.status === 'fulfilled') {
+            setProductCategories(categoriesResult.value.items);
           }
           if (cartResult.status === 'fulfilled') {
             setCartCount(cartResult.value.items.length);
@@ -332,7 +335,6 @@ export function MallHome() {
         const result = await fetchProductList({ limit: 50, categoryId: activeCategory });
         if (!ignore) {
           setCategoryItems((current) => ({ ...current, [activeCategory]: applyLegacyGridMeta(result.items) }));
-          setProductCategories(result.categories);
         }
       } catch (error) {
         if (!ignore) {

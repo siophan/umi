@@ -16,8 +16,8 @@ export type ProductItem = {
   category: string;
   price: number;
   originalPrice: number;
-  sales: string;
-  rating: string;
+  sales: number;
+  rating: number;
   stock: number;
   img: string;
 };
@@ -53,8 +53,8 @@ export function mapProductFeedToCreateProduct(item: ProductFeedItem): ProductIte
     category: item.category,
     price: item.price,
     originalPrice: item.originalPrice,
-    sales: item.sales >= 10000 ? `${(item.sales / 10000).toFixed(1)}万` : item.sales >= 1000 ? `${(item.sales / 1000).toFixed(1)}k` : String(item.sales),
-    rating: item.rating.toFixed(1),
+    sales: item.sales,
+    rating: item.rating,
     stock: item.stock,
     img: item.img,
   };
@@ -81,25 +81,14 @@ export function mapSearchHotKeywordToCreateTopic(item: SearchHotKeywordItem): To
   };
 }
 
-export function parseSalesCount(value: string) {
-  if (value.endsWith('万')) {
-    return Number.parseFloat(value) * 10000;
+export function formatSalesLabel(value: number) {
+  if (value >= 10000) {
+    return `${(value / 10000).toFixed(1)}万`;
   }
-  if (value.endsWith('k')) {
-    return Number.parseFloat(value) * 1000;
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}k`;
   }
-  return Number.parseFloat(value) || 0;
-}
-
-export function formatSalesLabel(value: string) {
-  const count = parseSalesCount(value);
-  if (count >= 10000) {
-    return `${(count / 10000).toFixed(1)}万`;
-  }
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}k`;
-  }
-  return String(Math.round(count));
+  return String(Math.round(value));
 }
 
 export function getDiscountPercent(item: ProductItem) {

@@ -2,6 +2,8 @@
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 
+import type { CategoryId, GuessCategoryItem } from '@umi/shared';
+
 import styles from './page.module.css';
 
 type TopicItem = {
@@ -14,7 +16,7 @@ type Props = {
   stepDone: boolean;
   titleInputRef: RefObject<HTMLInputElement | null>;
   title: string;
-  setTitle: Dispatch<SetStateAction<string>>;
+  setTitle: (value: string) => void;
   visibleTopics: TopicItem[];
   selectedTopic: string;
   pickTopic: (topicText: string) => void;
@@ -28,6 +30,11 @@ type Props = {
   coverUploading: boolean;
   coverUploaded: boolean;
   handleCoverPick: (file: File | null) => void;
+  isMerchantMode: boolean;
+  guessCategoryItems: GuessCategoryItem[];
+  guessCategoriesLoadFailed: boolean;
+  selectedGuessCategoryId: CategoryId | null;
+  setSelectedGuessCategoryId: (value: CategoryId | null) => void;
 };
 
 export function CreateBasicInfoSection({
@@ -48,6 +55,11 @@ export function CreateBasicInfoSection({
   coverUploading,
   coverUploaded,
   handleCoverPick,
+  isMerchantMode,
+  guessCategoryItems,
+  guessCategoriesLoadFailed,
+  selectedGuessCategoryId,
+  setSelectedGuessCategoryId,
 }: Props) {
   return (
     <section className={styles.formSection}>
@@ -96,6 +108,39 @@ export function CreateBasicInfoSection({
             <i className="fa-solid fa-circle-exclamation" /> 请输入竞猜标题（至少5个字）
           </div>
         ) : null}
+      </div>
+
+      <div className={styles.field}>
+        <label className={styles.label}>
+          竞猜分类
+          {isMerchantMode ? (
+            <span className={styles.requiredMark}>*</span>
+          ) : (
+            <span className={styles.optionalHint}>（可选）</span>
+          )}
+        </label>
+        <select
+          className={styles.input}
+          value={selectedGuessCategoryId ?? ''}
+          disabled={guessCategoriesLoadFailed}
+          onChange={(event) => {
+            const value = event.target.value;
+            setSelectedGuessCategoryId(value ? (value as CategoryId) : null);
+          }}
+        >
+          {guessCategoriesLoadFailed ? (
+            <option value="">分类加载失败，请刷新重试</option>
+          ) : (
+            <>
+              <option value="">请选择竞猜分类</option>
+              {guessCategoryItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </>
+          )}
+        </select>
       </div>
 
       <div className={styles.field}>

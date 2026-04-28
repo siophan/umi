@@ -1,15 +1,26 @@
 import type {
+  ProductCategoryListResult,
   ProductDetailResult,
   ProductListResult,
 } from '@umi/shared';
 
 import { deleteJson, getJson, postJson } from './shared';
 
+export type ProductListSort = 'default' | 'sales' | 'price_asc' | 'rating';
+
+export type ProductListOptions = {
+  limit?: number;
+  offset?: number;
+  q?: string;
+  categoryId?: string;
+  sort?: ProductListSort;
+};
+
 export function fetchProductDetail(id: string) {
   return getJson<ProductDetailResult>(`/api/products/${id}`);
 }
 
-export function fetchProductList(options?: number | { limit?: number; q?: string; categoryId?: string }) {
+export function fetchProductList(options?: number | ProductListOptions) {
   const searchParams = new URLSearchParams();
   if (typeof options === 'number') {
     searchParams.set('limit', String(options));
@@ -17,16 +28,26 @@ export function fetchProductList(options?: number | { limit?: number; q?: string
     if (typeof options.limit === 'number') {
       searchParams.set('limit', String(options.limit));
     }
+    if (typeof options.offset === 'number') {
+      searchParams.set('offset', String(options.offset));
+    }
     if (options.q?.trim()) {
       searchParams.set('q', options.q.trim());
     }
     if (options.categoryId?.trim()) {
       searchParams.set('categoryId', options.categoryId.trim());
     }
+    if (options.sort) {
+      searchParams.set('sort', options.sort);
+    }
   }
 
   const query = searchParams.toString();
   return getJson<ProductListResult>(`/api/products${query ? `?${query}` : ''}`);
+}
+
+export function fetchProductCategories() {
+  return getJson<ProductCategoryListResult>('/api/products/categories');
 }
 
 export function favoriteProduct(productId: string) {
