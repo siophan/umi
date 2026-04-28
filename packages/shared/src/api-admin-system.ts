@@ -148,3 +148,88 @@ export interface UpdateAdminPermissionPayload {
 export interface AdminPermissionMutationResult {
   id: EntityId;
 }
+
+// === 支付参数设置（platform-wide）===
+
+export type PaymentChannel = 'wechat' | 'alipay';
+
+export type WechatPaymentScene = 'h5' | 'native';
+export type AlipayPaymentScene = 'wap';
+
+export interface WechatPaymentConfig {
+  mchid: string;
+  cert_serial_no: string;
+  platform_cert: string;
+  notify_url: string;
+  scenes: WechatPaymentScene[];
+}
+
+export interface AlipayPaymentConfig {
+  app_id: string;
+  app_public_cert: string;
+  alipay_public_cert: string;
+  alipay_root_cert: string;
+  notify_url: string;
+  return_url: string;
+  scenes: AlipayPaymentScene[];
+}
+
+export interface PaymentSecretMaskedField {
+  hasValue: boolean;
+  preview: string | null;
+}
+
+export type WechatPaymentSecretsMasked = {
+  api_v3_key: PaymentSecretMaskedField;
+  api_client_private_key: PaymentSecretMaskedField;
+};
+
+export type AlipayPaymentSecretsMasked = {
+  app_private_key: PaymentSecretMaskedField;
+};
+
+export interface PaymentSettingsUpdaterRef {
+  id: number;
+  username: string;
+}
+
+export interface WechatPaymentSettingsData {
+  config: Partial<WechatPaymentConfig>;
+  secrets_masked: WechatPaymentSecretsMasked;
+  updated_at: string | null;
+  updated_by: PaymentSettingsUpdaterRef | null;
+}
+
+export interface AlipayPaymentSettingsData {
+  config: Partial<AlipayPaymentConfig>;
+  secrets_masked: AlipayPaymentSecretsMasked;
+  updated_at: string | null;
+  updated_by: PaymentSettingsUpdaterRef | null;
+}
+
+export interface PaymentSettingsResponse {
+  wechat: WechatPaymentSettingsData;
+  alipay: AlipayPaymentSettingsData;
+}
+
+export interface UpdateWechatPaymentSettingsPayload {
+  config: WechatPaymentConfig;
+  secrets: {
+    api_v3_key: string | null;
+    api_client_private_key: string | null;
+  };
+}
+
+export interface UpdateAlipayPaymentSettingsPayload {
+  config: AlipayPaymentConfig;
+  secrets: {
+    app_private_key: string | null;
+  };
+}
+
+export type UpdatePaymentSettingsPayload<C extends PaymentChannel> =
+  C extends 'wechat'
+    ? UpdateWechatPaymentSettingsPayload
+    : C extends 'alipay'
+      ? UpdateAlipayPaymentSettingsPayload
+      : never;
