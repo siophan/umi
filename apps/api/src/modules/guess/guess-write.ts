@@ -88,11 +88,24 @@ export async function participateInGuess(
   const amountCents = unitPriceCents * quantity;
 
   const db = getDbPool();
+  // 表上有 unique key (user_id, guess_id) — 同一用户每条竞猜只允许一条 bet。
+  // 重复点击「立即竞猜」时按"改主意"语义 UPSERT，覆盖 choice/qty。
+  // ON DUPLICATE KEY UPDATE 中用 LAST_INSERT_ID(id) 让 result.insertId 在
+  // update 路径下也返回原有行 id。
   const [result] = await db.execute<mysql.ResultSetHeader>(
     `
       INSERT INTO guess_bet (
         user_id, guess_id, choice_idx, amount, product_id, coupon_id, status, reward_type, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, NULL, ?, 0, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      ) VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      ON DUPLICATE KEY UPDATE
+        id = LAST_INSERT_ID(id),
+        choice_idx = VALUES(choice_idx),
+        amount = VALUES(amount),
+        product_id = VALUES(product_id),
+        coupon_id = NULL,
+        status = VALUES(status),
+        reward_type = NULL,
+        updated_at = CURRENT_TIMESTAMP(3)
     `,
     [userId, guessId, choiceIdx, amountCents, guess.product_id ?? null, BET_PENDING],
   );
