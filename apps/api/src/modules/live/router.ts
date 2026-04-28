@@ -18,6 +18,7 @@ export const liveRouter: ExpressRouter = Router();
 
 const GUESS_ACTIVE = 30;
 const REVIEW_APPROVED = 30;
+const GUESS_SCOPE_PUBLIC = 10;
 
 type LiveRow = {
   id: number | string;
@@ -151,10 +152,11 @@ async function buildLiveItems(liveRows: LiveRow[]) {
         WHERE g.creator_id IN (?)
           AND g.status = ?
           AND g.review_status = ?
+          AND g.scope = ?
           AND g.end_time > NOW()
         ORDER BY g.end_time ASC, g.id ASC
       `,
-      [hostIds, GUESS_ACTIVE, REVIEW_APPROVED],
+      [hostIds, GUESS_ACTIVE, REVIEW_APPROVED, GUESS_SCOPE_PUBLIC],
     );
 
     guessRows = guesses as GuessRow[];
