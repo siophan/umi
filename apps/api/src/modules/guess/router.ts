@@ -162,14 +162,26 @@ guessRouter.post(
   requireUser,
   asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
-    ok(
-      response,
-      await participateInGuess(
-        user.id,
-        String(request.params.id),
-        request.body as ParticipateGuessPayload,
-      ),
-    );
+    try {
+      ok(
+        response,
+        await participateInGuess(
+          user.id,
+          String(request.params.id),
+          request.body as ParticipateGuessPayload,
+        ),
+      );
+    } catch (error) {
+      // TEMP DEBUG: surface mysql error code/message into HTTP body to diagnose 500
+      const err = error as { code?: string; message?: string; sqlMessage?: string; errno?: number };
+      console.error('[participate-debug]', err);
+      response.status(500).json({
+        success: false,
+        code: err.code || 'INTERNAL_SERVER_ERROR',
+        message: `${err.code || 'ERR'}: ${err.sqlMessage || err.message || 'unknown'}${err.errno ? ` (errno=${err.errno})` : ''}`,
+        status: 500,
+      });
+    }
   }),
 );
 
