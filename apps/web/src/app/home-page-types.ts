@@ -17,7 +17,7 @@ export type HomeCategory =
   | 'game'
   | 'society'
   | 'weather';
-export type HomeLiveFilter = 'all' | 'live' | 'upcoming' | 'replay' | 'snack' | 'pk';
+export type HomeLiveFilter = 'all' | 'live' | 'upcoming' | 'snack' | 'pk';
 export type TrendType = 'up' | 'down';
 export type HomeStatusClass = 'hot' | 'ending' | 'new';
 export type BreakingTagClass = 'breaking' | 'bet' | 'result' | 'hot';
@@ -79,6 +79,8 @@ export type HomeSectionErrors = {
 export type HomePageInitialData = {
   guessBanners: BannerItem[];
   guessItems: GuessSummary[];
+  guessNextCursor: string | null;
+  guessHasMore: boolean;
   liveItems: LiveListItem[];
   rankingItems: RankingItem[];
   historyItems: GuessHistoryRecordItem[];
@@ -113,7 +115,6 @@ export const liveFilters: Array<{ key: HomeLiveFilter; label: string }> = [
   { key: 'upcoming', label: '⏰ 即将开始' },
   { key: 'snack', label: '🍿 零食开箱' },
   { key: 'pk', label: '⚔️ 品牌PK' },
-  { key: 'replay', label: '🎬 精彩回放' },
 ];
 
 export const fallbackGuessImage = '/legacy/images/guess/g001.jpg';

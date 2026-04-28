@@ -52,6 +52,9 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
     sectionSubtitle,
     filteredLiveFeedItems,
     markHeroInteraction,
+    guessHasMore,
+    guessLoadingMore,
+    loadMoreGuesses,
   } = useHomePageState(initialData);
 
   function handleOpenHero(card: HomeHeroCard) {
@@ -129,6 +132,9 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
             recentResults={recentResults}
             onOpenHistory={() => router.push('/guess-history')}
             onOpenRanking={() => router.push('/ranking')}
+            hasMoreGuesses={guessHasMore}
+            loadingMoreGuesses={guessLoadingMore}
+            onLoadMoreGuesses={() => void loadMoreGuesses()}
           />
         ) : (
           <HomeLiveView

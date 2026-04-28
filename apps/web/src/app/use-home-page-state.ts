@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchCommunityDiscovery } from '../lib/api/community';
-import { fetchGuessHistory } from '../lib/api/guesses';
+import { fetchGuessHistory, fetchGuessList } from '../lib/api/guesses';
 import { hasAuthToken } from '../lib/api/shared';
 import {
   buildBreakingEvents,
@@ -30,7 +30,10 @@ export function useHomePageState(initialData: HomePageInitialData) {
   const [breakingIndex, setBreakingIndex] = useState(0);
   const [posterIndex, setPosterIndex] = useState(0);
   const [guessBanners] = useState(initialData.guessBanners);
-  const [guessItems] = useState(initialData.guessItems);
+  const [guessItems, setGuessItems] = useState(initialData.guessItems);
+  const [guessCursor, setGuessCursor] = useState<string | null>(initialData.guessNextCursor);
+  const [guessHasMore, setGuessHasMore] = useState(initialData.guessHasMore);
+  const [guessLoadingMore, setGuessLoadingMore] = useState(false);
   const [liveItems] = useState(initialData.liveItems);
   const [rankingItems] = useState(initialData.rankingItems);
   const [historyItems, setHistoryItems] = useState(initialData.historyItems);
@@ -123,7 +126,7 @@ export function useHomePageState(initialData: HomePageInitialData) {
     () =>
       liveItems
         .slice()
-        .sort((left, right) => right.viewers - left.viewers)
+        .sort((left, right) => right.participants - left.participants)
         .slice(0, 5)
         .map(createLiveHeroCard),
     [liveItems],
@@ -135,10 +138,28 @@ export function useHomePageState(initialData: HomePageInitialData) {
       const list = exclusionId
         ? visibleGuesses.filter((item) => item.id !== exclusionId)
         : visibleGuesses;
-      return list.map(createGuessListCard).slice(0, 12);
+      return list.map(createGuessListCard);
     }
-    return visibleLives.map(createLiveListCard).slice(0, 12);
+    return visibleLives.map(createLiveListCard);
   }, [focusGuess?.id, mode, visibleGuesses, visibleLives]);
+
+  const loadMoreGuesses = useCallback(async () => {
+    if (!guessHasMore || !guessCursor || guessLoadingMore) {
+      return;
+    }
+    setGuessLoadingMore(true);
+    try {
+      const next = await fetchGuessList({ cursor: guessCursor });
+      setGuessItems((current) => {
+        const seen = new Set(current.map((item) => item.id));
+        return [...current, ...next.items.filter((item) => !seen.has(item.id))];
+      });
+      setGuessCursor(next.nextCursor);
+      setGuessHasMore(next.hasMore);
+    } finally {
+      setGuessLoadingMore(false);
+    }
+  }, [guessCursor, guessHasMore, guessLoadingMore]);
 
   const heroCards = mode === 'guess' ? guessHeroCards : liveHeroCards;
   const heroCard = heroCards[heroIndex] ?? null;
@@ -238,5 +259,8 @@ export function useHomePageState(initialData: HomePageInitialData) {
     sectionSubtitle,
     filteredLiveFeedItems,
     markHeroInteraction,
+    guessHasMore,
+    guessLoadingMore,
+    loadMoreGuesses,
   };
 }

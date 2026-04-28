@@ -27,7 +27,6 @@ type LiveDetail = {
   hostName?: string | null;
   avatar?: string | null;
   hostAvatar?: string | null;
-  viewers?: number | null;
   guessCount?: number | null;
   participants?: number | string | null;
   currentGuess?: LiveGuess | null;
@@ -153,7 +152,7 @@ export default function LiveDetailPage() {
             <span>{getHostName(live)}</span>
           </div>
           <div className={styles.viewers}>
-            👁 {formatNum(Number(live?.viewers || 0))}
+            🔥 {formatNum(Number(live?.participants || 0))}
           </div>
         </div>
       </section>
@@ -210,12 +209,8 @@ export default function LiveDetailPage() {
                 <div className={styles.statLabel}>进行中的竞猜</div>
               </div>
               <div className={styles.statItem}>
-                <div className={styles.statValue}>{formatNum(Number(live?.viewers || 0))}</div>
+                <div className={styles.statValue}>{formatNum(Number(live?.participants || 0))}</div>
                 <div className={styles.statLabel}>总参与</div>
-              </div>
-              <div className={styles.statItem}>
-                <div className={styles.statValue}>{live?.participants || '--'}</div>
-                <div className={styles.statLabel}>参与人次</div>
               </div>
             </div>
 

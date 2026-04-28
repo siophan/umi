@@ -6,13 +6,12 @@ import type { LiveListItem } from '@umi/shared';
 
 import styles from './page.module.css';
 
-type LiveFilter = 'all' | 'live' | 'upcoming' | 'replay' | 'snack' | 'pk';
+type LiveFilter = 'all' | 'live' | 'upcoming' | 'snack' | 'pk';
 
 const filters: Array<{ key: LiveFilter; label: string }> = [
   { key: 'all', label: '全部' },
   { key: 'live', label: '🔴 正在直播' },
   { key: 'upcoming', label: '⏰ 即将开始' },
-  { key: 'replay', label: '🎬 精彩回放' },
   { key: 'snack', label: '零食开箱' },
   { key: 'pk', label: '品牌PK' },
 ];
@@ -31,37 +30,19 @@ function formatNum(value: number) {
 }
 
 /**
- * 直播状态优先尊重后端状态，再用开播时间兜底，避免旧数据只给时间不显式给状态时展示错误。
- */
-function getStatus(item: LiveListItem) {
-  const raw = String(item.status || '').toLowerCase();
-  if (raw.includes('replay') || raw.includes('done') || raw.includes('completed')) {
-    return 'replay';
-  }
-  if (item.startTime && new Date(item.startTime).getTime() > Date.now()) {
-    return 'upcoming';
-  }
-  return 'live';
-}
-
-/**
  * 直播页的部分筛选仍是前端轻规则，例如“零食开箱/品牌PK”，后续如果有运营分类再替换掉这里。
  */
 function matchesFilter(item: LiveListItem, filter: LiveFilter) {
   const title = `${item.title} ${item.currentGuess?.title || ''}`.toLowerCase();
-  const status = getStatus(item);
 
   if (filter === 'all') {
     return true;
   }
   if (filter === 'live') {
-    return status === 'live';
+    return item.status === 'live';
   }
   if (filter === 'upcoming') {
-    return status === 'upcoming';
-  }
-  if (filter === 'replay') {
-    return status === 'replay';
+    return item.status === 'upcoming';
   }
   if (filter === 'snack') {
     return title.includes('零食') || title.includes('开箱') || title.includes('试吃');
@@ -69,12 +50,9 @@ function matchesFilter(item: LiveListItem, filter: LiveFilter) {
   return title.includes('pk') || title.includes('品牌') || title.includes('对决');
 }
 
-function getFeaturedLabel(status: string) {
+function getFeaturedLabel(status: LiveListItem['status']) {
   if (status === 'upcoming') {
     return ['即将开始', 'upcoming'] as const;
-  }
-  if (status === 'replay') {
-    return ['回放', 'replay'] as const;
   }
   return ['直播中', 'live'] as const;
 }
@@ -144,10 +122,10 @@ export default function LivesPageClient({ initialItems, initialError }: LivesPag
             <div className={styles.liveOverlay}>
               <div className={styles.liveTop}>
                 {(() => {
-                  const [label, cls] = getFeaturedLabel(getStatus(featured));
+                  const [label, cls] = getFeaturedLabel(featured.status);
                   return <span className={`${styles.liveTag} ${styles[`liveTag${cls[0].toUpperCase()}${cls.slice(1)}`]}`}>{cls === 'live' ? '● ' : ''}{label}</span>;
                 })()}
-                <span className={styles.liveViewers}>👁 {formatNum(featured.viewers)}</span>
+                <span className={styles.liveViewers}>🔥 {formatNum(featured.participants)}</span>
               </div>
               <div className={styles.liveBottom}>
                 <div className={styles.liveTitle}>{featured.currentGuess?.title || featured.title}</div>
@@ -180,7 +158,7 @@ export default function LivesPageClient({ initialItems, initialError }: LivesPag
               <div className={styles.liveMiniInfo}>
                 <div className={styles.liveMiniTitle}>{item.currentGuess?.title || item.title}</div>
                 <div className={styles.liveMiniViewers}>
-                  {getStatus(item) === 'live' ? '🔴' : getStatus(item) === 'upcoming' ? '⏰' : '🎬'} {formatNum(item.viewers)}人 · {item.guessCount}场竞猜
+                  {item.status === 'live' ? '🔴' : '⏰'} {formatNum(item.participants)}人参与 · {item.guessCount}场竞猜
                 </div>
               </div>
             </button>

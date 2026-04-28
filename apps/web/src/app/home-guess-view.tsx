@@ -41,6 +41,9 @@ type Props = {
   recentResults: HomeResultCard[];
   onOpenHistory: () => void;
   onOpenRanking: () => void;
+  hasMoreGuesses: boolean;
+  loadingMoreGuesses: boolean;
+  onLoadMoreGuesses: () => void;
 };
 
 const MODE_ITEMS: Array<{
@@ -77,6 +80,9 @@ export function HomeGuessView({
   recentResults,
   onOpenHistory,
   onOpenRanking,
+  hasMoreGuesses,
+  loadingMoreGuesses,
+  onLoadMoreGuesses,
 }: Props) {
   const heroTrackRef = useRef<HTMLDivElement | null>(null);
   const programmaticScrollUntilRef = useRef(0);
@@ -393,6 +399,16 @@ export function HomeGuessView({
         ) : (
           <div className={styles.emptyState}>暂无可展示的竞猜内容</div>
         )}
+        {hasMoreGuesses && visibleCards.length ? (
+          <button
+            className={styles.loadMoreBtn}
+            type="button"
+            disabled={loadingMoreGuesses}
+            onClick={onLoadMoreGuesses}
+          >
+            {loadingMoreGuesses ? '加载中…' : '加载更多'}
+          </button>
+        ) : null}
       </section>
 
       <div className={styles.divider} />

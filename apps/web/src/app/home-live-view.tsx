@@ -90,7 +90,6 @@ export function HomeLiveView({
             const rightPct = currentGuess?.pcts[1] ?? Math.max(0, 100 - leftPct);
             const statusText = getLiveStatusText(item);
             const guessCount = item.guessCount ?? 0;
-            const viewers = item.viewers ?? 0;
             const participants = item.participants ?? 0;
             return (
               <article className={styles.liveFeedCard} key={item.id}>
@@ -99,18 +98,18 @@ export function HomeLiveView({
                   <div>
                     <div className={styles.liveFeedHostName}>{item.hostName}</div>
                     <div className={styles.liveFeedHostStat}>
-                      {guessCount}场竞猜 · {formatCompactNumber(viewers)}观看
+                      {guessCount}场竞猜 · {formatCompactNumber(participants)}人参与
                     </div>
                   </div>
                   <span
-                    className={`${styles.liveFeedStatus} ${statusText === '🔴 直播中' ? styles.liveFeedStatusLive : statusText === '⏰ 即将开始' ? styles.liveFeedStatusUpcoming : styles.liveFeedStatusReplay}`}
+                    className={`${styles.liveFeedStatus} ${statusText === '🔴 直播中' ? styles.liveFeedStatusLive : styles.liveFeedStatusUpcoming}`}
                   >
                     {statusText}
                   </span>
                 </div>
                 <button className={styles.liveFeedCover} type="button" onClick={() => onOpenLive(item.id)}>
                   <img src={item.imageUrl || fallbackLiveImage} alt={item.title} />
-                  <div className={styles.liveFeedViewers}>👁 {formatCompactNumber(viewers)}</div>
+                  <div className={styles.liveFeedViewers}>🔥 {formatCompactNumber(participants)}</div>
                   <div className={styles.liveFeedTitleBar}>
                     <div className={styles.liveFeedTitle}>{currentGuess?.title || item.title}</div>
                   </div>

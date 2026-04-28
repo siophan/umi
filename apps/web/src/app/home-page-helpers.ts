@@ -89,14 +89,7 @@ export function getGuessStatusText(statusClass: HomeStatusClass) {
 }
 
 export function getLiveStatusText(item: LiveListItem) {
-  const raw = String(item.status || '').toLowerCase();
-  if (raw.includes('replay') || raw.includes('completed') || raw.includes('done')) {
-    return '🎬 回放';
-  }
-  if (item.startTime && new Date(item.startTime).getTime() > Date.now()) {
-    return '⏰ 即将开始';
-  }
-  return '🔴 直播中';
+  return item.status === 'upcoming' ? '⏰ 即将开始' : '🔴 直播中';
 }
 
 export function getGuessParticipants(item: GuessSummary) {
@@ -178,9 +171,6 @@ export function matchesHomeLiveFilter(item: LiveListItem, filter: HomeLiveFilter
   }
   if (filter === 'upcoming') {
     return status === '⏰ 即将开始';
-  }
-  if (filter === 'replay') {
-    return status === '🎬 回放';
   }
   if (filter === 'snack') {
     return title.includes('零食') || title.includes('开箱') || title.includes('试吃');
@@ -282,7 +272,7 @@ export function createLiveHeroCard(item: LiveListItem): HomeHeroCard {
     image: item.imageUrl || fallbackLiveImage,
     badge: `📺 ${item.hostName}`,
     title: currentGuess?.title || item.title,
-    meta: [`👁 ${formatCompactNumber(item.viewers)}`, `${item.guessCount}场竞猜`],
+    meta: [`🔥 ${formatCompactNumber(item.participants)}`, `${item.guessCount}场竞猜`],
     left: currentGuess?.options[0] || '直播进行中',
     right: currentGuess?.options[1] || '进入直播间',
     leftPct: formatPercent(leftPct),
@@ -294,7 +284,7 @@ export function createLiveHeroCard(item: LiveListItem): HomeHeroCard {
 
 export function createLiveListCard(item: LiveListItem): HomeListCard {
   const currentGuess = item.currentGuess;
-  const statusClass = getStatusClass(currentGuess?.endTime, item.viewers);
+  const statusClass = getStatusClass(currentGuess?.endTime, item.participants);
   const leftPct = currentGuess?.pcts[0] ?? 50;
   const rightPct = currentGuess?.pcts[1] ?? Math.max(0, 100 - leftPct);
   const ended = isEnded(currentGuess?.endTime);
@@ -323,7 +313,7 @@ export function createLiveListCard(item: LiveListItem): HomeListCard {
       : `${item.guessCount}场竞猜`,
     leftWidth: formatPercent(leftPct),
     rightWidth: formatPercent(rightPct),
-    meta: `${item.hostName} · ${formatCompactNumber(item.viewers)}人围观`,
+    meta: `${item.hostName} · ${formatCompactNumber(item.participants)}人参与`,
     href: `/live/${item.id}`,
     showPk: Boolean(currentGuess && currentGuess.options.length >= 2),
   };

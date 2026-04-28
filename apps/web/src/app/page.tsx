@@ -10,15 +10,24 @@ import { serverApiBaseUrl } from '../lib/env';
 import type { HomeSectionErrors } from './home-page-types';
 import HomePageClient from './page-client';
 
+const SSR_FETCH_TIMEOUT_MS = 3000;
+
 async function fetchServerData<T>(path: string) {
-  const response = await fetch(`${serverApiBaseUrl}${path}`, {
-    next: { revalidate: 30 },
-  });
-  const payload = (await response.json()) as ApiEnvelope<T>;
-  if (!response.ok) {
-    throw new Error(payload.message || `failed to fetch ${path}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SSR_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${serverApiBaseUrl}${path}`, {
+      next: { revalidate: 30 },
+      signal: controller.signal,
+    });
+    const payload = (await response.json()) as ApiEnvelope<T>;
+    if (!response.ok) {
+      throw new Error(payload.message || `failed to fetch ${path}`);
+    }
+    return payload.data;
+  } finally {
+    clearTimeout(timer);
   }
-  return payload.data;
 }
 
 function getResultError(result: PromiseSettledResult<unknown>, fallback: string) {
@@ -47,10 +56,11 @@ export default async function HomePage() {
     <HomePageClient
       initialData={{
         guessBanners: bannersResult.status === 'fulfilled' ? bannersResult.value.items : [],
-        guessItems:
-          guessResult.status === 'fulfilled'
-            ? guessResult.value.items.filter((item) => item.status === 'active')
-            : [],
+        guessItems: guessResult.status === 'fulfilled' ? guessResult.value.items : [],
+        guessNextCursor:
+          guessResult.status === 'fulfilled' ? guessResult.value.nextCursor : null,
+        guessHasMore:
+          guessResult.status === 'fulfilled' ? guessResult.value.hasMore : false,
         liveItems: liveResult.status === 'fulfilled' ? liveResult.value.items : [],
         rankingItems: rankingResult.status === 'fulfilled' ? rankingResult.value.items : [],
         historyItems: [],
