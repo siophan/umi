@@ -2,7 +2,6 @@ import {
   Alert,
   Card,
   Skeleton,
-  Space,
   Tabs,
   Typography,
   message,
@@ -128,34 +127,20 @@ export function SystemSettingsPage({ refreshToken }: AdminPageProps) {
             key: 'wechat',
             label: '微信支付',
             children: (
-              <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                <Alert
-                  type="info"
-                  showIcon
-                  message="参数仅供平台支付链路使用，密钥/私钥落库前会经 AES-256-GCM 加密。"
-                />
-                <PaymentSettingsWechatForm
-                  data={data.wechat}
-                  onSubmit={handleWechatSubmit}
-                />
-              </Space>
+              <PaymentSettingsWechatForm
+                data={data.wechat}
+                onSubmit={handleWechatSubmit}
+              />
             ),
           },
           {
             key: 'alipay',
             label: '支付宝支付',
             children: (
-              <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                <Alert
-                  type="info"
-                  showIcon
-                  message="参数仅供平台支付链路使用，密钥/私钥落库前会经 AES-256-GCM 加密。"
-                />
-                <PaymentSettingsAlipayForm
-                  data={data.alipay}
-                  onSubmit={handleAlipaySubmit}
-                />
-              </Space>
+              <PaymentSettingsAlipayForm
+                data={data.alipay}
+                onSubmit={handleAlipaySubmit}
+              />
             ),
           },
         ]}
