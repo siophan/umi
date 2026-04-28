@@ -11,6 +11,7 @@ export const GUESS_ABANDONED = 80;
 export const GUESS_REJECTED = 90;
 export const GUESS_DRAFT = 10;
 export const GUESS_PENDING_REVIEW = 20;
+export const BET_WAITING_PAY = 5;
 export const BET_PENDING = 10;
 export const BET_WON = 30;
 export const BET_LOST = 40;
@@ -151,7 +152,7 @@ export async function getGuessVoteRows(guessIds: string[]) {
         choice_idx AS option_index,
         COUNT(*) AS vote_count
       FROM guess_bet
-      WHERE guess_id IN (?)
+      WHERE guess_id IN (?) AND pay_status = 20
       GROUP BY guess_id, choice_idx
     `,
     [guessIds],
