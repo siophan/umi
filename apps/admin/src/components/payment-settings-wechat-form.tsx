@@ -23,6 +23,7 @@ const SCENE_OPTIONS: { label: string; value: WechatPaymentScene }[] = [
 ];
 
 type Values = {
+  appid: string;
   mchid: string;
   cert_serial_no: string;
   api_client_private_key: string;
@@ -35,6 +36,7 @@ type Values = {
 function buildInitial(data: WechatPaymentSettingsData): Values {
   const c = data.config;
   return {
+    appid: c.appid ?? '',
     mchid: c.mchid ?? '',
     cert_serial_no: c.cert_serial_no ?? '',
     api_client_private_key: '',
@@ -71,6 +73,7 @@ export function PaymentSettingsWechatForm({ data, onSubmit }: Props) {
     const values = await form.validateFields();
     const payload: UpdateWechatPaymentSettingsPayload = {
       config: {
+        appid: values.appid.trim(),
         mchid: values.mchid.trim(),
         cert_serial_no: values.cert_serial_no.trim(),
         platform_cert: values.platform_cert.trim(),
@@ -103,6 +106,15 @@ export function PaymentSettingsWechatForm({ data, onSubmit }: Props) {
   return (
     <ConfigProvider theme={SEARCH_THEME}>
       <Form form={form} layout="vertical" autoComplete="off">
+      <Form.Item
+        label="AppID appid"
+        name="appid"
+        rules={[{ required: true, message: '请填写公众号/服务号 AppID' }]}
+        extra="H5 支付必传：公众号 AppID 或服务号 AppID"
+      >
+        <Input placeholder="如 wx1234567890abcdef" />
+      </Form.Item>
+
       <Form.Item
         label="商户号 mchid"
         name="mchid"

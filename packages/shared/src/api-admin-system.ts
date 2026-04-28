@@ -157,6 +157,7 @@ export type WechatPaymentScene = 'h5' | 'native';
 export type AlipayPaymentScene = 'wap';
 
 export interface WechatPaymentConfig {
+  appid: string;
   mchid: string;
   cert_serial_no: string;
   platform_cert: string;

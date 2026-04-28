@@ -30,6 +30,7 @@ productRouter.get(
         offset: Number(request.query.offset ?? 0),
         keyword: String(request.query.q ?? ''),
         categoryId: String(request.query.categoryId ?? ''),
+        shopId: String(request.query.shopId ?? ''),
         sort: request.query.sort as ProductFeedSort | undefined,
         userId: request.user?.id,
       }),

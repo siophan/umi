@@ -209,6 +209,10 @@ function validateWechatConfig(config: unknown): WechatPaymentConfig {
   assert(config && typeof config === 'object', '微信支付配置缺失');
   const c = config as Record<string, unknown>;
 
+  assert(
+    typeof c.appid === 'string' && c.appid.length > 0,
+    'appid 不能为空（公众号/服务号 AppID）',
+  );
   assert(typeof c.mchid === 'string' && /^\d+$/.test(c.mchid), 'mchid 必须是数字串');
   assert(
     typeof c.cert_serial_no === 'string' && c.cert_serial_no.length > 0,
@@ -222,6 +226,7 @@ function validateWechatConfig(config: unknown): WechatPaymentConfig {
   }
 
   return {
+    appid: c.appid,
     mchid: c.mchid,
     cert_serial_no: c.cert_serial_no,
     platform_cert: c.platform_cert as string,
@@ -342,6 +347,7 @@ export async function updatePaymentSettings(
 }
 
 export type LoadedWechatPaySettings = {
+  appid: string;
   mchid: string;
   certSerialNo: string;
   platformCert: string;
@@ -369,6 +375,7 @@ export async function loadWechatPaySettings(): Promise<LoadedWechatPaySettings |
   const secrets = decryptSecretJson<Partial<WechatSecrets>>(row.secrets_enc);
 
   if (
+    !config.appid ||
     !config.mchid ||
     !config.cert_serial_no ||
     !config.platform_cert ||
@@ -381,6 +388,7 @@ export async function loadWechatPaySettings(): Promise<LoadedWechatPaySettings |
   }
 
   return {
+    appid: config.appid,
     mchid: config.mchid,
     certSerialNo: config.cert_serial_no,
     platformCert: config.platform_cert,

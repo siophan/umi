@@ -97,9 +97,12 @@ function normalizeMinParticipants(minParticipants: number | null | undefined) {
   return value;
 }
 
-async function isCreatorMerchant(creatorId: string) {
+async function getCreatorActiveShop(creatorId: string) {
   const shop = await getCurrentShop(creatorId);
-  return Boolean(shop && Number(shop.status) === SHOP_STATUS_ACTIVE);
+  if (shop && Number(shop.status) === SHOP_STATUS_ACTIVE) {
+    return shop;
+  }
+  return null;
 }
 
 /**
@@ -135,7 +138,7 @@ async function resolveGuessCategoryId(categoryId: string | null | undefined, isM
   return '0';
 }
 
-async function requireProductForGuessCreate(productId: string) {
+async function requireProductForGuessCreate(productId: string, creatorShopId: string | null) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
@@ -184,6 +187,13 @@ async function requireProductForGuessCreate(productId: string) {
     throw new Error('关联商品可用库存不足');
   }
 
+  // 商家创建竞猜：商品必须属于自家店铺，避免拿别家商品做营销。
+  if (creatorShopId != null) {
+    if (product.shop_id == null || String(product.shop_id) !== String(creatorShopId)) {
+      throw new Error('店铺模式只能选自家店铺商品');
+    }
+  }
+
   return product;
 }
 
@@ -226,12 +236,14 @@ export async function createUserGuess(
   const optionTexts = normalizeOptionTexts(payload.optionTexts);
   const scope = payload.scope === 'friends' ? 'friends' : 'public';
   const scopeCode = scope === 'friends' ? GUESS_SCOPE_FRIENDS : GUESS_SCOPE_PUBLIC;
-  const merchant = await isCreatorMerchant(creatorId);
+  const creatorShop = await getCreatorActiveShop(creatorId);
+  const merchant = creatorShop != null;
+  const creatorShopId = merchant ? String(creatorShop.id) : null;
   const categoryId = await resolveGuessCategoryId(payload.categoryId ? String(payload.categoryId) : null, merchant);
   if (!payload.productId) {
     throw new Error('竞猜必须关联商品');
   }
-  const product = await requireProductForGuessCreate(String(payload.productId));
+  const product = await requireProductForGuessCreate(String(payload.productId), creatorShopId);
   const inviteeIds = await resolveInviteeIds(payload.invitedFriendIds, creatorId);
   if (scope === 'friends' && inviteeIds.length === 0) {
     throw new Error('好友PK必须选择参战好友');

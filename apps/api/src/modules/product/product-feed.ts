@@ -31,6 +31,7 @@ export async function getProductFeed(options: {
   offset?: number;
   keyword?: string;
   categoryId?: string;
+  shopId?: string;
   sort?: ProductFeedSort;
   userId?: string | null;
 }) {
@@ -38,6 +39,7 @@ export async function getProductFeed(options: {
   const offset = Math.max(0, Number(options.offset ?? 0) || 0);
   const keyword = String(options.keyword ?? '').trim();
   const categoryId = String(options.categoryId ?? '').trim();
+  const shopId = String(options.shopId ?? '').trim();
   const sort = normalizeSort(options.sort);
   const db = getDbPool();
   const whereClauses = ['p.status = 10'];
@@ -52,6 +54,11 @@ export async function getProductFeed(options: {
   if (categoryId) {
     whereClauses.push('bp.category_id = ?');
     params.push(categoryId);
+  }
+
+  if (shopId) {
+    whereClauses.push('p.shop_id = ?');
+    params.push(shopId);
   }
 
   const whereSql = whereClauses.join(' AND ');

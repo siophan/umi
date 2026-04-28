@@ -13,6 +13,7 @@ export type ProductListOptions = {
   offset?: number;
   q?: string;
   categoryId?: string;
+  shopId?: string;
   sort?: ProductListSort;
 };
 
@@ -36,6 +37,9 @@ export function fetchProductList(options?: number | ProductListOptions) {
     }
     if (options.categoryId?.trim()) {
       searchParams.set('categoryId', options.categoryId.trim());
+    }
+    if (options.shopId?.trim()) {
+      searchParams.set('shopId', options.shopId.trim());
     }
     if (options.sort) {
       searchParams.set('sort', options.sort);

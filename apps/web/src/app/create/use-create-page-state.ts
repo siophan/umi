@@ -41,6 +41,7 @@ export function useCreatePageState() {
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [isMerchantMode, setIsMerchantMode] = useState(false);
+  const [merchantShopId, setMerchantShopId] = useState<string | null>(null);
   const [template, setTemplate] = useState<TemplateId>('pk_friend');
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
@@ -129,7 +130,9 @@ export function useCreatePageState() {
 
       if (shopStatusResult.status === 'fulfilled') {
         const merchant = shopStatusResult.value?.status === 'active';
+        const shopId = merchant ? shopStatusResult.value?.shop?.id ?? null : null;
         setIsMerchantMode(merchant);
+        setMerchantShopId(shopId ? String(shopId) : null);
         setTemplate((current) => {
           if (merchant) {
             return current === 'pk_friend' ? 'duel' : current;
@@ -235,6 +238,7 @@ export function useCreatePageState() {
       offset: 0,
       q: productKeywordDebounced || undefined,
       categoryId: productCategoryId ?? undefined,
+      shopId: merchantShopId ?? undefined,
       sort: productSort,
     })
       .then((result) => {
@@ -253,7 +257,7 @@ export function useCreatePageState() {
           setProductLoading(false);
         }
       });
-  }, [authReady, productKeywordDebounced, productCategoryId, productSort]);
+  }, [authReady, productKeywordDebounced, productCategoryId, productSort, merchantShopId]);
 
   async function loadMoreProducts() {
     if (productLoading || productLoadingMore) return;
@@ -266,6 +270,7 @@ export function useCreatePageState() {
         offset: productOffset,
         q: productKeywordDebounced || undefined,
         categoryId: productCategoryId ?? undefined,
+        shopId: merchantShopId ?? undefined,
         sort: productSort,
       });
       if (productListRequestId.current !== reqId) return;
