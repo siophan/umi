@@ -34,7 +34,7 @@ type PaymentSettingsRow = RowDataPacket & {
   channel: string;
   config_public: string | object | null;
   secrets_enc: Buffer | null;
-  updated_by: number | null;
+  updated_by: number | string | null;
   updated_at: Date | string;
   updated_by_username: string | null;
 };
@@ -66,7 +66,7 @@ function emptyMaskedField(): PaymentSecretMaskedField {
 
 function rowToUpdatedBy(row: PaymentSettingsRow) {
   if (row.updated_by == null || !row.updated_by_username) return null;
-  return { id: row.updated_by, username: row.updated_by_username };
+  return { id: Number(row.updated_by), username: row.updated_by_username };
 }
 
 function rowToUpdatedAtISO(row: PaymentSettingsRow): string {
@@ -295,7 +295,7 @@ function mergeAlipaySecrets(
 export async function updatePaymentSettings(
   channel: PaymentChannel,
   payload: UpdatePaymentSettingsPayload<typeof channel>,
-  adminUserId: number,
+  adminUserId: string,
 ): Promise<PaymentSettingsResponse> {
   const db = getDbPool();
   const existingRow = await selectRow(channel);

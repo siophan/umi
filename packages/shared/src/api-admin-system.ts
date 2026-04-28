@@ -189,7 +189,7 @@ export type AlipayPaymentSecretsMasked = {
 };
 
 export interface PaymentSettingsUpdaterRef {
-  id: number;
+  id: number | string;
   username: string;
 }
 

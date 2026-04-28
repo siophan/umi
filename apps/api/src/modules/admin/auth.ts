@@ -402,6 +402,12 @@ function resolveAdminRoutePermissionCodes(method: string, path: string) {
       : ['system.manage'];
   }
 
+  if (matchesRoutePrefix(path, '/payment-settings')) {
+    return normalizedMethod === 'GET'
+      ? ['system.settings.view', 'system.manage']
+      : ['system.manage'];
+  }
+
   if (matchesRoutePrefix(path, '/guesses/friends')) {
     return ['guess.friends.view', 'guess.manage'];
   }
