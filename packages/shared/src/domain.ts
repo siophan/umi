@@ -123,6 +123,9 @@ export interface GuessSummary {
   product: ProductSummary;
   options: GuessOption[];
   totalOrders?: number;
+  commentCount?: number;
+  isFavorited?: boolean;
+  userBet?: { choiceIdx: number; betId: EntityId } | null;
 }
 
 export interface OrderItem {

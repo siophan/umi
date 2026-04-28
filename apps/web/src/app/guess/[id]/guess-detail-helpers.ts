@@ -7,20 +7,36 @@ export const shareChannels = [
   { label: '复制链接', icon: 'fa-solid fa-link', color: 'rgba(255,255,255,0.08)' },
 ] as const;
 
+const TOPIC_BADGE_MAP: Record<string, string> = {
+  体育: '🏆 赛事解读',
+  财经: '📈 行情分析',
+  娱乐: '🌟 热点聚焦',
+  影视: '🎬 影视速递',
+  科技: '🔬 科技前沿',
+  游戏: '🎮 游戏情报',
+  电竞: '⚡ 电竞资讯',
+  社会: '📊 社会洞察',
+  天气: '🌤 气象预报',
+  出行: '🚗 出行指南',
+};
+
+export function getTopicBadge(category: string | null | undefined): string {
+  if (!category) return '深度解读';
+  return TOPIC_BADGE_MAP[category] || '深度解读';
+}
+
+export function getDaysToEnd(iso: string, now: number = Date.now()): number {
+  const t = new Date(iso).getTime() - now;
+  if (Number.isNaN(t)) return 1;
+  return Math.max(1, Math.ceil(t / (3600000 * 24)));
+}
+
 export function formatCountdown(ms: number) {
   const totalSeconds = Math.max(Math.floor(ms / 1000), 0);
   const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
   const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
   const seconds = String(totalSeconds % 60).padStart(2, '0');
   return `${hours}:${minutes}:${seconds}`;
-}
-
-export function formatEndTime(iso: string) {
-  const value = new Date(iso);
-  if (Number.isNaN(value.getTime())) {
-    return '结束时间待确认';
-  }
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')} ${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
 }
 
 export function getGuessStatusText(guess: GuessSummary) {

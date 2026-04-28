@@ -1,13 +1,17 @@
+import type mysql from 'mysql2/promise';
 import type { GuessListResult } from '@umi/shared';
 
+import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
 import {
   buildGuessSummary,
+  COMMENT_TARGET_GUESS,
   getGuessOptionRows,
   getGuessRows,
   getGuessVoteRows,
   getRouteParam,
   GUESS_ACTIVE,
+  GUESS_INTERACTION_FAVORITE,
   REVIEW_APPROVED,
 } from './guess-shared';
 
@@ -108,7 +112,10 @@ export async function getGuessList(query: {
   };
 }
 
-export async function getGuessDetail(routeParam: string | string[] | undefined) {
+export async function getGuessDetail(
+  routeParam: string | string[] | undefined,
+  currentUserId?: string | null,
+) {
   const rows = await getGuessRows('WHERE g.id = ?', [getRouteParam(routeParam)]);
   const row = rows[0];
 
@@ -116,8 +123,51 @@ export async function getGuessDetail(routeParam: string | string[] | undefined) 
     throw new HttpError(404, 'GUESS_NOT_FOUND', 'Guess not found');
   }
 
-  const [options, votes] = await Promise.all([getGuessOptionRows([String(row.id)]), getGuessVoteRows([String(row.id)])]);
-  return buildGuessSummary(row, options, votes);
+  const guessId = String(row.id);
+  const db = getDbPool();
+  const [options, votes, orderRows, commentRows] = await Promise.all([
+    getGuessOptionRows([guessId]),
+    getGuessVoteRows([guessId]),
+    db.execute<mysql.RowDataPacket[]>(
+      'SELECT COUNT(*) AS cnt FROM `order` WHERE guess_id = ?',
+      [guessId],
+    ),
+    db.execute<mysql.RowDataPacket[]>(
+      'SELECT COUNT(*) AS cnt FROM comment_item WHERE target_type = ? AND target_id = ?',
+      [COMMENT_TARGET_GUESS, guessId],
+    ),
+  ]);
+
+  const totalOrders = Number((orderRows[0][0] as { cnt?: number } | undefined)?.cnt ?? 0);
+  const commentCount = Number((commentRows[0][0] as { cnt?: number } | undefined)?.cnt ?? 0);
+
+  let isFavorited: boolean | undefined;
+  let userBet: { choiceIdx: number; betId: string } | null | undefined;
+  if (currentUserId) {
+    const [favRows] = await db.execute<mysql.RowDataPacket[]>(
+      'SELECT 1 FROM guess_interaction WHERE user_id = ? AND guess_id = ? AND interaction_type = ? LIMIT 1',
+      [currentUserId, guessId, GUESS_INTERACTION_FAVORITE],
+    );
+    isFavorited = favRows.length > 0;
+
+    const [betRows] = await db.execute<mysql.RowDataPacket[]>(
+      'SELECT id, choice_idx FROM guess_bet WHERE user_id = ? AND guess_id = ? ORDER BY id DESC LIMIT 1',
+      [currentUserId, guessId],
+    );
+    if (betRows.length) {
+      const r = betRows[0] as { id: number | string; choice_idx: number | string };
+      userBet = { betId: String(r.id), choiceIdx: Number(r.choice_idx) };
+    } else {
+      userBet = null;
+    }
+  }
+
+  return buildGuessSummary(row, options, votes, {
+    totalOrders,
+    commentCount,
+    isFavorited,
+    userBet,
+  });
 }
 
 export async function getGuessStats(routeParam: string | string[] | undefined) {

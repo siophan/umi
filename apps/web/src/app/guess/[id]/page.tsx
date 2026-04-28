@@ -2,10 +2,20 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { GuessOption, GuessSummary } from '@umi/shared';
+import type { GuessCommentSummary, GuessOption, GuessSummary } from '@umi/shared';
 
-import { fetchGuess } from '../../../lib/api/guesses';
-import { formatCountdown, getGuessStatusText } from './guess-detail-helpers';
+import {
+  favoriteGuess,
+  fetchGuess,
+  fetchGuessComments,
+  likeGuessComment,
+  participateInGuess,
+  postGuessComment,
+  unfavoriteGuess,
+  unlikeGuessComment,
+} from '../../../lib/api/guesses';
+import { hasAuthToken } from '../../../lib/api/shared';
+import { formatCountdown, getGuessStatusText, getTopicBadge } from './guess-detail-helpers';
 import { GuessBattlePanel } from './guess-battle-panel';
 import { GuessDetailOverlays } from './guess-detail-overlays';
 import { GuessHero } from './guess-hero';
@@ -20,11 +30,14 @@ export default function GuessDetailPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [betOpen, setBetOpen] = useState(false);
   const [breathing, setBreathing] = useState(false);
-  const [favorited, setFavorited] = useState(false);
   const [nowTs, setNowTs] = useState(() => Date.now());
   const [toast, setToast] = useState('');
   const [selectedOption, setSelectedOption] = useState(0);
   const [betAmount, setBetAmount] = useState(1);
+  const [comments, setComments] = useState<GuessCommentSummary[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [betSubmitting, setBetSubmitting] = useState(false);
   const guessId = typeof params?.id === 'string' ? params.id : '';
 
   useEffect(() => {
@@ -52,6 +65,25 @@ export default function GuessDetailPage() {
     }
 
     void load();
+    return () => {
+      ignore = true;
+    };
+  }, [guessId]);
+
+  useEffect(() => {
+    if (!guessId) return undefined;
+    let ignore = false;
+    setCommentsLoading(true);
+    fetchGuessComments(guessId)
+      .then((result) => {
+        if (!ignore) setComments(result.items);
+      })
+      .catch(() => {
+        if (!ignore) setComments([]);
+      })
+      .finally(() => {
+        if (!ignore) setCommentsLoading(false);
+      });
     return () => {
       ignore = true;
     };
@@ -86,18 +118,24 @@ export default function GuessDetailPage() {
     [guess],
   );
 
-  const optionStats = useMemo(
-    () =>
-      (guess?.options || []).map((option: GuessOption, index: number) => {
-        const percent = totalVotes > 0 ? Math.round((option.voteCount / totalVotes) * 100) : 0;
-        return {
-          ...option,
-          percent,
-          tone: index === 0 ? styles.optionTonePink : styles.optionToneBlue,
-        };
-      }),
-    [guess, totalVotes],
-  );
+  const optionStats = useMemo(() => {
+    const list = guess?.options || [];
+    const toneClasses = [
+      styles.optionTone0,
+      styles.optionTone1,
+      styles.optionTone2,
+      styles.optionTone3,
+      styles.optionTone4,
+    ];
+    return list.map((option: GuessOption, index: number) => {
+      const percent = totalVotes > 0 ? Math.round((option.voteCount / totalVotes) * 100) : 0;
+      return {
+        ...option,
+        percent,
+        tone: toneClasses[index % 5],
+      };
+    });
+  }, [guess, totalVotes]);
 
   const displayVotes = useMemo(
     () =>
@@ -108,10 +146,7 @@ export default function GuessDetailPage() {
   );
 
   const statusText = guess ? getGuessStatusText(guess) : '';
-  const totalOrders =
-    guess && typeof (guess as GuessSummary & { totalOrders?: number }).totalOrders === 'number'
-      ? (guess as GuessSummary & { totalOrders?: number }).totalOrders!
-      : Math.round(totalVotes * 0.7);
+  const totalOrders = guess?.totalOrders ?? 0;
   const countdownLabel = '距开奖';
   const countdownText =
     guess && guess.status === 'active'
@@ -119,13 +154,107 @@ export default function GuessDetailPage() {
         ? formatCountdown(new Date(guess.endTime).getTime() - nowTs)
         : '00:00:00'
       : statusText;
-  const heroBadgeText = guess?.product.brand ? `👑 ${guess.product.brand}` : `🏷 ${guess?.category || '竞猜'}`;
+  const isBrandGuess = Boolean(guess?.product.brand);
+  const heroBadgeText = isBrandGuess ? `👑 ${guess?.product.brand}` : `🏷 ${guess?.category || '竞猜'}`;
+  const heroSourceText = isBrandGuess ? '品牌官方销售数据' : '平台官方数据';
   const heroTags = [guess?.category, `${totalVotes}人参与`].filter(Boolean) as string[];
-  const topicBadge = guess?.category || '竞猜';
+  const topicBadge = getTopicBadge(guess?.category);
   const heroImage = guess?.product.img || '/legacy/images/guess/g001.jpg';
 
   function showToast(message: string) {
     setToast(message);
+  }
+
+  const favorited = Boolean(guess?.isFavorited);
+
+  async function toggleFavorite() {
+    if (!guess) return;
+    if (!hasAuthToken()) {
+      router.push('/login');
+      return;
+    }
+    const next = !favorited;
+    setGuess({ ...guess, isFavorited: next });
+    try {
+      if (next) {
+        await favoriteGuess(guess.id);
+      } else {
+        await unfavoriteGuess(guess.id);
+      }
+      showToast(next ? '已加入收藏' : '已取消收藏');
+    } catch (error) {
+      setGuess({ ...guess, isFavorited: !next });
+      showToast(error instanceof Error ? error.message : '操作失败');
+    }
+  }
+
+  async function handlePostComment(content: string) {
+    if (!guess) return;
+    if (!hasAuthToken()) {
+      router.push('/login');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created = await postGuessComment(guess.id, { content });
+      setComments((prev) => [created, ...prev]);
+      setGuess((prev) => (prev ? { ...prev, commentCount: (prev.commentCount ?? 0) + 1 } : prev));
+      showToast('评论成功');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '评论失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleToggleCommentLike(commentId: string, liked: boolean) {
+    if (!hasAuthToken()) {
+      router.push('/login');
+      return;
+    }
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === commentId
+          ? { ...c, liked, likes: Math.max(0, c.likes + (liked ? 1 : -1)) }
+          : c,
+      ),
+    );
+    try {
+      if (liked) {
+        await likeGuessComment(commentId);
+      } else {
+        await unlikeGuessComment(commentId);
+      }
+    } catch (error) {
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId
+            ? { ...c, liked: !liked, likes: Math.max(0, c.likes + (liked ? -1 : 1)) }
+            : c,
+        ),
+      );
+      showToast(error instanceof Error ? error.message : '操作失败');
+    }
+  }
+
+  async function handleConfirmParticipate() {
+    if (!guess || betSubmitting) return;
+    if (!hasAuthToken()) {
+      router.push('/login');
+      return;
+    }
+    setBetSubmitting(true);
+    try {
+      await participateInGuess(guess.id, { choiceIdx: selectedOption, quantity: betAmount });
+      setBetOpen(false);
+      showToast('参与成功，开奖后通知你');
+      const refreshed = await fetchGuess(guess.id);
+      setGuess(refreshed);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '参与失败');
+    } finally {
+      setBetSubmitting(false);
+    }
   }
 
   function scrollToOptions() {
@@ -177,11 +306,7 @@ export default function GuessDetailPage() {
             className={`${styles.navBtn} ${favorited ? styles.navBtnFav : ''}`}
             type="button"
             onClick={() => {
-              setFavorited((value) => {
-                const next = !value;
-                showToast(next ? '已加入收藏' : '已取消收藏');
-                return next;
-              });
+              void toggleFavorite();
             }}
           >
             <i className={favorited ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
@@ -198,6 +323,7 @@ export default function GuessDetailPage() {
         badgeText={heroBadgeText}
         tags={heroTags}
         heroImage={heroImage}
+        heroSourceText={heroSourceText}
       />
 
       <GuessBattlePanel
@@ -211,12 +337,18 @@ export default function GuessDetailPage() {
         topicDetail={guess.topicDetail}
         description={guess.description}
         tags={guess.tags}
+        comments={comments}
+        commentCount={guess.commentCount ?? 0}
+        commentsLoading={commentsLoading}
+        commentSubmitting={submitting}
         onSelectOption={(index) => {
           setSelectedOption(index);
           setBetOpen(true);
           setBreathing(false);
         }}
         onParticipateClick={scrollToOptions}
+        onPostComment={handlePostComment}
+        onToggleCommentLike={handleToggleCommentLike}
         vsAreaRef={vsAreaRef}
       />
 
@@ -241,11 +373,10 @@ export default function GuessDetailPage() {
           setShareOpen(false);
         }}
         onCloseBet={() => setBetOpen(false)}
-        onSelectOption={setSelectedOption}
         onSetBetAmount={setBetAmount}
+        betSubmitting={betSubmitting}
         onConfirmBet={() => {
-          setBetOpen(false);
-          router.push(`/guess-order?id=${encodeURIComponent(guess.id)}&choice=${selectedOption}&qty=${betAmount}`);
+          void handleConfirmParticipate();
         }}
       />
 

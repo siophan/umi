@@ -3,12 +3,18 @@ import type {
   CreateGuessResult,
   FriendPkResult,
   GuessCategoryListResult,
+  GuessCommentListResult,
+  GuessCommentSummary,
   GuessHistoryResult,
   GuessListResult,
   GuessSummary,
+  ParticipateGuessPayload,
+  ParticipateGuessResult,
+  PostGuessCommentPayload,
+  ToggleGuessFavoriteResult,
 } from '@umi/shared';
 
-import { getJson, postJson } from './shared';
+import { deleteJson, getJson, postJson } from './shared';
 
 export function fetchGuessList(options?: number | { limit?: number; q?: string; cursor?: string }) {
   const searchParams = new URLSearchParams();
@@ -48,4 +54,46 @@ export function fetchGuessCategories() {
 
 export function fetchFriendPkSummary() {
   return getJson<FriendPkResult>('/api/guesses/friend-pk');
+}
+
+export function participateInGuess(id: string, payload: ParticipateGuessPayload) {
+  return postJson<ParticipateGuessResult, ParticipateGuessPayload>(
+    `/api/guesses/${encodeURIComponent(id)}/participate`,
+    payload,
+  );
+}
+
+export function favoriteGuess(id: string) {
+  return postJson<ToggleGuessFavoriteResult, Record<string, never>>(
+    `/api/guesses/${encodeURIComponent(id)}/favorite`,
+    {},
+  );
+}
+
+export function unfavoriteGuess(id: string) {
+  return deleteJson<ToggleGuessFavoriteResult>(`/api/guesses/${encodeURIComponent(id)}/favorite`);
+}
+
+export function fetchGuessComments(id: string, limit = 50) {
+  return getJson<GuessCommentListResult>(
+    `/api/guesses/${encodeURIComponent(id)}/comments?limit=${limit}`,
+  );
+}
+
+export function postGuessComment(id: string, payload: PostGuessCommentPayload) {
+  return postJson<GuessCommentSummary, PostGuessCommentPayload>(
+    `/api/guesses/${encodeURIComponent(id)}/comments`,
+    payload,
+  );
+}
+
+export function likeGuessComment(commentId: string) {
+  return postJson<{ success: true }, Record<string, never>>(
+    `/api/guesses/comments/${encodeURIComponent(commentId)}/like`,
+    {},
+  );
+}
+
+export function unlikeGuessComment(commentId: string) {
+  return deleteJson<{ success: true }>(`/api/guesses/comments/${encodeURIComponent(commentId)}/like`);
 }

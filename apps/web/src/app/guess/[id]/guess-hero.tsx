@@ -12,6 +12,7 @@ type GuessHeroProps = {
   badgeText: string;
   tags: string[];
   heroImage: string;
+  heroSourceText: string;
 };
 
 export function GuessHero({
@@ -24,6 +25,7 @@ export function GuessHero({
   badgeText,
   tags,
   heroImage,
+  heroSourceText,
 }: GuessHeroProps) {
   return (
     <>
@@ -69,7 +71,7 @@ export function GuessHero({
         </div>
         <div className={styles.heroSource}>
           <i className="fa-solid fa-database" />
-          开奖数据来源：<span>平台官方数据</span>
+          开奖数据来源：<span>{heroSourceText}</span>
         </div>
       </section>
     </>

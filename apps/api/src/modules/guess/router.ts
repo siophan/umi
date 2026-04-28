@@ -1,17 +1,30 @@
-import type { CreateGuessPayload } from '@umi/shared';
+import type {
+  CreateGuessPayload,
+  ParticipateGuessPayload,
+  PostGuessCommentPayload,
+} from '@umi/shared';
 
 import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 
-import { getRequestUser, requireUser } from '../../lib/auth';
+import { getRequestUser, optionalUser, requireUser } from '../../lib/auth';
 import { asyncHandler } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import { toRouteHttpError } from '../admin/route-helpers';
 import { getGuessCategories } from './guess-categories';
+import { listGuessComments } from './guess-comments';
 import { createUserGuess } from './guess-create';
 import { getFriendPkSummary } from './friend-pk';
 import { getUserHistoryResult } from './guess-history';
 import { getGuessDetail, getGuessList, getGuessStats } from './guess-read';
+import {
+  addGuessFavorite,
+  likeGuessComment,
+  participateInGuess,
+  postGuessComment,
+  removeGuessFavorite,
+  unlikeGuessComment,
+} from './guess-write';
 
 export const guessRouter: ExpressRouter = Router();
 
@@ -110,10 +123,29 @@ guessRouter.get(
   }),
 );
 
+guessRouter.post(
+  '/comments/:commentId/like',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await likeGuessComment(user.id, String(request.params.commentId)));
+  }),
+);
+
+guessRouter.delete(
+  '/comments/:commentId/like',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await unlikeGuessComment(user.id, String(request.params.commentId)));
+  }),
+);
+
 guessRouter.get(
   '/:id',
+  optionalUser,
   asyncHandler(async (request, response) => {
-    ok(response, await getGuessDetail(request.params.id));
+    ok(response, await getGuessDetail(request.params.id, request.user?.id ?? null));
   }),
 );
 
@@ -121,5 +153,71 @@ guessRouter.get(
   '/:id/stats',
   asyncHandler(async (request, response) => {
     ok(response, await getGuessStats(request.params.id));
+  }),
+);
+
+guessRouter.post(
+  '/:id/participate',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(
+      response,
+      await participateInGuess(
+        user.id,
+        String(request.params.id),
+        request.body as ParticipateGuessPayload,
+      ),
+    );
+  }),
+);
+
+guessRouter.post(
+  '/:id/favorite',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await addGuessFavorite(user.id, String(request.params.id)));
+  }),
+);
+
+guessRouter.delete(
+  '/:id/favorite',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await removeGuessFavorite(user.id, String(request.params.id)));
+  }),
+);
+
+guessRouter.get(
+  '/:id/comments',
+  optionalUser,
+  asyncHandler(async (request, response) => {
+    const limitRaw = request.query.limit;
+    const limit = typeof limitRaw === 'string' ? Number.parseInt(limitRaw, 10) : undefined;
+    ok(
+      response,
+      await listGuessComments(String(request.params.id), {
+        limit: Number.isFinite(limit) ? limit : undefined,
+        currentUserId: request.user?.id ?? null,
+      }),
+    );
+  }),
+);
+
+guessRouter.post(
+  '/:id/comments',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(
+      response,
+      await postGuessComment(
+        user.id,
+        String(request.params.id),
+        request.body as PostGuessCommentPayload,
+      ),
+    );
   }),
 );

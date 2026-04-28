@@ -16,10 +16,10 @@ type GuessDetailOverlaysProps = {
   optionStats: GuessBattleOption[];
   selectedOption: number;
   betAmount: number;
+  betSubmitting: boolean;
   onCloseShare: () => void;
   onOpenShareChannel: (label: string) => void;
   onCloseBet: () => void;
-  onSelectOption: (index: number) => void;
   onSetBetAmount: (value: number) => void;
   onConfirmBet: () => void;
 };
@@ -31,10 +31,10 @@ export function GuessDetailOverlays({
   optionStats,
   selectedOption,
   betAmount,
+  betSubmitting,
   onCloseShare,
   onOpenShareChannel,
   onCloseBet,
-  onSelectOption,
   onSetBetAmount,
   onConfirmBet,
 }: GuessDetailOverlaysProps) {
@@ -114,7 +114,18 @@ export function GuessDetailOverlays({
                     <button className={betAmount <= 1 ? styles.betStepperDisabled : ''} type="button" onClick={() => onSetBetAmount(Math.max(1, betAmount - 1))}>
                       −
                     </button>
-                    <span className={styles.betStepperValue}>{betAmount}</span>
+                    <input
+                      className={styles.betStepperValue}
+                      type="number"
+                      min={1}
+                      max={999}
+                      value={betAmount}
+                      onChange={(event) => {
+                        const next = Number(event.target.value);
+                        if (Number.isNaN(next)) return;
+                        onSetBetAmount(Math.min(999, Math.max(1, Math.floor(next))));
+                      }}
+                    />
                     <span className={styles.betStepperUnit}>件</span>
                     <button className={betAmount >= 999 ? styles.betStepperDisabled : ''} type="button" onClick={() => onSetBetAmount(Math.min(999, betAmount + 1))}>
                       +
@@ -122,18 +133,6 @@ export function GuessDetailOverlays({
                   </div>
                 </div>
               </div>
-            </div>
-            <div className={styles.betPills}>
-              {guess.options.map((option: GuessOption, index: number) => (
-                <button
-                  className={selectedOption === index ? styles.betPillActive : styles.betPill}
-                  key={option.id}
-                  type="button"
-                  onClick={() => onSelectOption(index)}
-                >
-                  {option.optionText}
-                </button>
-              ))}
             </div>
             <div className={styles.betSummary}>
               <div className={styles.betRow}>
@@ -151,8 +150,13 @@ export function GuessDetailOverlays({
                 </span>
               </div>
             </div>
-            <button className={styles.betConfirm} type="button" onClick={onConfirmBet}>
-              🎰 立即竞猜
+            <button
+              className={styles.betConfirm}
+              type="button"
+              disabled={betSubmitting}
+              onClick={onConfirmBet}
+            >
+              {betSubmitting ? '提交中…' : '🎰 立即竞猜'}
             </button>
             <div className={styles.betFooterText}>🎁赢方瓜分输方商品 · 🎫没猜中退补偿券 · 🤝支持好友PK</div>
           </section>

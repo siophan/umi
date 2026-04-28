@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import type { RefObject } from 'react';
-import { type GuessOption } from '@umi/shared';
+import { type GuessCommentSummary, type GuessOption } from '@umi/shared';
 
-import { formatEndTime } from './guess-detail-helpers';
+import { getDaysToEnd } from './guess-detail-helpers';
 import styles from './page.module.css';
 
 type GuessBattleOption = GuessOption & {
@@ -23,10 +23,28 @@ type GuessBattlePanelProps = {
   topicDetail?: string | null;
   description?: string | null;
   tags?: string[];
+  comments: GuessCommentSummary[];
+  commentCount: number;
+  commentsLoading: boolean;
+  commentSubmitting: boolean;
   onSelectOption: (index: number) => void;
   onParticipateClick: () => void;
+  onPostComment: (content: string) => Promise<void> | void;
+  onToggleCommentLike: (commentId: string, liked: boolean) => Promise<void> | void;
   vsAreaRef: RefObject<HTMLDivElement | null>;
 };
+
+function formatCommentTime(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '';
+  const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (diffSec < 60) return '刚刚';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}分钟前`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}小时前`;
+  if (diffSec < 86400 * 7) return `${Math.floor(diffSec / 86400)}天前`;
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export function GuessBattlePanel({
   title,
@@ -39,10 +57,25 @@ export function GuessBattlePanel({
   topicDetail,
   description,
   tags,
+  comments,
+  commentCount,
+  commentsLoading,
+  commentSubmitting,
   onSelectOption,
   onParticipateClick,
+  onPostComment,
+  onToggleCommentLike,
   vsAreaRef,
 }: GuessBattlePanelProps) {
+  const [draft, setDraft] = useState('');
+
+  async function submitDraft() {
+    const content = draft.trim();
+    if (!content || commentSubmitting) return;
+    await onPostComment(content);
+    setDraft('');
+  }
+
   const [topicExpanded, setTopicExpanded] = useState(false);
   const displayTopicText = topicDetail?.trim() || description?.trim() || `${title} 正在进行中，围绕「${topicBadge || '热门竞猜'}」展开投票。`;
   const topicMetaLabel = useMemo(() => {
@@ -95,29 +128,39 @@ export function GuessBattlePanel({
           <i className={`fa-solid fa-angle-down ${styles.ghArrow}`} />
         </div>
         <div className={styles.vsRow} ref={vsAreaRef}>
-          {options.map((option, index) => (
-            <article
-              className={`${styles.optionPill} ${option.tone} ${breathing ? styles.breathing : ''}`}
-              key={option.id}
-              onClick={() => onSelectOption(index)}
-            >
-              <div className={styles.optionFill} style={{ width: `${option.percent}%` }} />
-              <div className={styles.optionContent}>
-                <div className={styles.optionName}>{option.optionText}</div>
-                <div className={styles.optionPercent}>{option.percent}%</div>
-                <div className={styles.optionMeta}>
-                  <span>{option.odds.toFixed(2)} 倍</span>
-                  <span>{option.voteCount} 票</span>
+          {options.flatMap((option, index) => {
+            const nodes = [
+              <article
+                className={`${styles.optionPill} ${option.tone} ${breathing ? styles.breathing : ''}`}
+                key={option.id}
+                onClick={() => onSelectOption(index)}
+              >
+                <div className={styles.optionFill} style={{ width: `${option.percent}%` }} />
+                <div className={styles.optionContent}>
+                  <div className={styles.optionName}>{option.optionText}</div>
+                  <div className={styles.optionPercent}>{option.percent}%</div>
+                  <div className={styles.optionMeta}>
+                    <span>
+                      <i className="fa-solid fa-users" /> {option.voteCount}人
+                    </span>
+                    <span className={styles.fpOdds}>×{option.odds.toFixed(2)}</span>
+                  </div>
                 </div>
-              </div>
-              {index === 0 ? <div className={styles.vsBadge}>VS</div> : null}
-            </article>
-          ))}
+              </article>,
+            ];
+            if (index < options.length - 1) {
+              nodes.push(
+                <div className={styles.vsBadge} key={`vs-${option.id}`}>
+                  VS
+                </div>,
+              );
+            }
+            return nodes;
+          })}
         </div>
 
         <div className={styles.participantsRow}>
-          <span className={styles.participantBadge}>{totalVotes}人参与</span>
-          <span className={styles.participantText}>共 {options.length} 个竞猜选项</span>
+          <span className={styles.participantText}>{totalVotes}人参与中</span>
         </div>
       </section>
 
@@ -133,7 +176,7 @@ export function GuessBattlePanel({
         </button>
         <div className={styles.topicMeta}>
           <span className={styles.topicMetaItem}><i className="fa-solid fa-users" /> {totalVotes}人参与</span>
-          <span className={styles.topicMetaItem}><i className="fa-solid fa-clock" /> {formatEndTime(endTime)}</span>
+          <span className={styles.topicMetaItem}><i className="fa-solid fa-clock" /> 距结束{getDaysToEnd(endTime)}天</span>
           <span className={styles.topicMetaItem}><i className="fa-solid fa-fire" /> {topicMetaLabel}</span>
         </div>
       </section>
@@ -147,14 +190,63 @@ export function GuessBattlePanel({
       <section className={styles.commentsSection}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitle}>热门评论</div>
-          <span className={styles.sectionMore}>0条评论</span>
+          <span className={styles.sectionMore}>{commentCount}条评论</span>
         </div>
         <div className={styles.commentsList}>
-          <div className={styles.commentsEmpty}>暂无评论，快来抢沙发</div>
+          {commentsLoading ? (
+            <div className={styles.commentsEmpty}>加载中…</div>
+          ) : comments.length === 0 ? (
+            <div className={styles.commentsEmpty}>暂无评论，快来抢沙发</div>
+          ) : (
+            comments.map((c) => (
+              <div className={styles.commentItem} key={c.id}>
+                <img
+                  src={c.authorAvatar || '/legacy/images/mascot/mouse-main.png'}
+                  alt={c.authorName}
+                />
+                <div className={styles.commentBody}>
+                  <div className={styles.commentAuthor}>{c.authorName}</div>
+                  <div className={styles.commentText}>{c.content}</div>
+                  <div className={styles.commentActions}>
+                    <span>{formatCommentTime(c.createdAt)}</span>
+                    <button
+                      className={`${styles.likeBtn} ${c.liked ? styles.likeBtnLiked : ''}`}
+                      type="button"
+                      onClick={() => {
+                        void onToggleCommentLike(c.id, !c.liked);
+                      }}
+                    >
+                      <i className={c.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} /> {c.likes}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
         <div className={styles.commentInputBar}>
-          <input type="text" placeholder="说说你的看法..." readOnly />
-          <button type="button">发送</button>
+          <input
+            type="text"
+            placeholder="说说你的看法..."
+            maxLength={500}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                void submitDraft();
+              }
+            }}
+          />
+          <button
+            type="button"
+            disabled={commentSubmitting || !draft.trim()}
+            onClick={() => {
+              void submitDraft();
+            }}
+          >
+            {commentSubmitting ? '发送中...' : '发送'}
+          </button>
         </div>
       </section>
 

@@ -18,6 +18,11 @@ export const BET_CANCELED = 90;
 export const REVIEW_PENDING = 10;
 export const REVIEW_APPROVED = 30;
 
+export const GUESS_INTERACTION_FAVORITE = 10;
+export const GUESS_INTERACTION_LIKE = 20;
+export const COMMENT_TARGET_GUESS = 10;
+export const COMMENT_INTERACTION_LIKE = 10;
+
 export type GuessRow = {
   id: number | string;
   title: string;
@@ -158,6 +163,12 @@ export function buildGuessSummary(
   row: GuessRow,
   options: GuessOptionRow[],
   voteRows: GuessVoteRow[],
+  extras: {
+    totalOrders?: number;
+    commentCount?: number;
+    isFavorited?: boolean;
+    userBet?: { choiceIdx: number; betId: string } | null;
+  } = {},
 ): GuessSummary {
   const product: ProductSummary = {
     id: toEntityId(row.product_id ?? 0),
@@ -190,7 +201,7 @@ export function buildGuessSummary(
     }
   }
 
-  return {
+  const summary: GuessSummary = {
     id: toEntityId(row.id),
     title: row.title,
     status: mapGuessStatus(row.status),
@@ -203,7 +214,7 @@ export function buildGuessSummary(
     endTime: new Date(row.end_time).toISOString(),
     creatorId: toEntityId(row.creator_id),
     product,
-    totalOrders: Math.round(totalVotes * 0.7),
+    totalOrders: extras.totalOrders ?? 0,
     options: options.map((option) => ({
       id: `${String(row.id)}-${Number(option.option_index)}`,
       optionIndex: Number(option.option_index),
@@ -213,6 +224,18 @@ export function buildGuessSummary(
       isResult: Boolean(option.is_result),
     })),
   };
+  if (typeof extras.commentCount === 'number') {
+    summary.commentCount = extras.commentCount;
+  }
+  if (typeof extras.isFavorited === 'boolean') {
+    summary.isFavorited = extras.isFavorited;
+  }
+  if (extras.userBet !== undefined) {
+    summary.userBet = extras.userBet
+      ? { choiceIdx: extras.userBet.choiceIdx, betId: toEntityId(extras.userBet.betId) }
+      : null;
+  }
+  return summary;
 }
 
 export async function getGuessRows(

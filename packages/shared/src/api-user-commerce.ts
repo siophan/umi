@@ -79,6 +79,44 @@ export interface FriendPkResult {
   item: FriendPkSummary | null;
 }
 
+export interface GuessCommentSummary {
+  id: EntityId;
+  authorId: UserId;
+  authorName: string;
+  authorAvatar: string | null;
+  content: string;
+  parentId: EntityId | null;
+  likes: number;
+  liked: boolean;
+  createdAt: string;
+}
+
+export interface GuessCommentListResult {
+  items: GuessCommentSummary[];
+  total: number;
+}
+
+export interface PostGuessCommentPayload {
+  content: string;
+  parentId?: EntityId | null;
+}
+
+export interface ParticipateGuessPayload {
+  choiceIdx: number;
+  quantity?: number;
+}
+
+export interface ParticipateGuessResult {
+  betId: EntityId;
+  guessId: GuessId;
+  choiceIdx: number;
+}
+
+export interface ToggleGuessFavoriteResult {
+  guessId: GuessId;
+  favorited: boolean;
+}
+
 export interface ProductFeedItem {
   id: ProductId;
   name: string;
