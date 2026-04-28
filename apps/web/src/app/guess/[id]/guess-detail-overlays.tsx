@@ -1,6 +1,6 @@
 'use client';
 
-import type { GuessOption, GuessSummary } from '@umi/shared';
+import type { GuessOption, GuessPayChannel, GuessSummary } from '@umi/shared';
 
 import { shareChannels } from './guess-detail-helpers';
 import styles from './page.module.css';
@@ -17,10 +17,12 @@ type GuessDetailOverlaysProps = {
   selectedOption: number;
   betAmount: number;
   betSubmitting: boolean;
+  payChannel: GuessPayChannel;
   onCloseShare: () => void;
   onOpenShareChannel: (label: string) => void;
   onCloseBet: () => void;
   onSetBetAmount: (value: number) => void;
+  onSetPayChannel: (channel: GuessPayChannel) => void;
   onConfirmBet: () => void;
 };
 
@@ -32,10 +34,12 @@ export function GuessDetailOverlays({
   selectedOption,
   betAmount,
   betSubmitting,
+  payChannel,
   onCloseShare,
   onOpenShareChannel,
   onCloseBet,
   onSetBetAmount,
+  onSetPayChannel,
   onConfirmBet,
 }: GuessDetailOverlaysProps) {
   const activeOption = guess.options[selectedOption];
@@ -150,13 +154,33 @@ export function GuessDetailOverlays({
                 </span>
               </div>
             </div>
+            <div className={styles.payChannelRow}>
+              <button
+                type="button"
+                className={`${styles.payChannelOption} ${payChannel === 'wechat' ? styles.payChannelActive : ''}`}
+                onClick={() => onSetPayChannel('wechat')}
+              >
+                <i className="fa-brands fa-weixin" style={{ color: '#1aad19' }} />
+                <span>微信支付</span>
+                {payChannel === 'wechat' ? <i className="fa-solid fa-check" /> : null}
+              </button>
+              <button
+                type="button"
+                className={`${styles.payChannelOption} ${payChannel === 'alipay' ? styles.payChannelActive : ''}`}
+                onClick={() => onSetPayChannel('alipay')}
+              >
+                <i className="fa-brands fa-alipay" style={{ color: '#1677ff' }} />
+                <span>支付宝</span>
+                {payChannel === 'alipay' ? <i className="fa-solid fa-check" /> : null}
+              </button>
+            </div>
             <button
               className={styles.betConfirm}
               type="button"
               disabled={betSubmitting}
               onClick={onConfirmBet}
             >
-              {betSubmitting ? '提交中…' : '🎰 立即竞猜'}
+              {betSubmitting ? '提交中…' : `立即支付 ¥${(unitPrice * betAmount).toFixed(2)}`}
             </button>
             <div className={styles.betFooterText}>🎁赢方瓜分输方商品 · 🎫没猜中退补偿券 · 🤝支持好友PK</div>
           </section>
