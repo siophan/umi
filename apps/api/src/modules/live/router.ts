@@ -7,6 +7,12 @@ import { toEntityId } from '@umi/shared';
 import { getDbPool } from '../../lib/db';
 import { HttpError, asyncHandler } from '../../lib/errors';
 import { ok } from '../../lib/http';
+import {
+  LIVE_STATUS_LIVE,
+  LIVE_STATUS_UPCOMING,
+  deriveLiveStatusKey,
+  toPublicLiveStatus,
+} from './live-status';
 
 export const liveRouter: ExpressRouter = Router();
 
@@ -54,19 +60,20 @@ function buildCurrentGuess(
   voteRows: GuessVoteRow[],
 ): LiveGuessSummary {
   const totalVotes = voteRows.reduce((sum, item) => sum + Number(item.vote_count ?? 0), 0);
-  const options = optionRows
-    .sort((left, right) => Number(left.option_index) - Number(right.option_index))
-    .map((item) => item.option_text);
-  const odds = optionRows
-    .sort((left, right) => Number(left.option_index) - Number(right.option_index))
-    .map((item) => Number(item.odds ?? 1));
-  const pcts = optionRows
-    .sort((left, right) => Number(left.option_index) - Number(right.option_index))
-    .map((item) => {
-      const voteCount =
-        voteRows.find((vote) => Number(vote.option_index) === Number(item.option_index))?.vote_count ?? 0;
-      return totalVotes > 0 ? Math.round((Number(voteCount) / totalVotes) * 100) : 0;
-    });
+  const sortedOptions = optionRows
+    .slice()
+    .sort((left, right) => Number(left.option_index) - Number(right.option_index));
+  const voteCountByOption = new Map<number, number>();
+  for (const vote of voteRows) {
+    voteCountByOption.set(Number(vote.option_index), Number(vote.vote_count ?? 0));
+  }
+
+  const options = sortedOptions.map((item) => item.option_text);
+  const odds = sortedOptions.map((item) => Number(item.odds ?? 1));
+  const pcts = sortedOptions.map((item) => {
+    const voteCount = voteCountByOption.get(Number(item.option_index)) ?? 0;
+    return totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+  });
 
   return {
     id: toEntityId(row.id),
@@ -80,13 +87,12 @@ function buildCurrentGuess(
 }
 
 /**
- * 直播主表查询保持薄层，只负责拿直播与主播基础信息。
+ * 直播主表查询保持薄层，只负责拿直播与主播基础信息，过滤掉已结束/被封禁的直播。
  */
 async function fetchLiveRows(liveId?: string) {
   const db = getDbPool();
-  const params: Array<string | number> = [];
-  const whereSql = liveId ? 'WHERE l.id = ?' : '';
-
+  const params: Array<string | number> = [LIVE_STATUS_UPCOMING, LIVE_STATUS_LIVE];
+  const idClause = liveId ? 'AND l.id = ?' : '';
   if (liveId) {
     params.push(liveId);
   }
@@ -104,7 +110,8 @@ async function fetchLiveRows(liveId?: string) {
         up.avatar_url AS host_avatar
       FROM live l
       LEFT JOIN user_profile up ON up.user_id = l.host_id
-      ${whereSql}
+      WHERE l.status IN (?, ?)
+        ${idClause}
       ORDER BY COALESCE(l.start_time, l.created_at) DESC, l.id DESC
     `,
     params,
@@ -144,7 +151,8 @@ async function buildLiveItems(liveRows: LiveRow[]) {
         WHERE g.creator_id IN (?)
           AND g.status = ?
           AND g.review_status = ?
-        ORDER BY g.created_at DESC, g.id DESC
+          AND g.end_time > NOW()
+        ORDER BY g.end_time ASC, g.id ASC
       `,
       [hostIds, GUESS_ACTIVE, REVIEW_APPROVED],
     );
@@ -229,12 +237,11 @@ async function buildLiveItems(liveRows: LiveRow[]) {
       id: toEntityId(row.id),
       title: row.title,
       imageUrl: row.image_url,
-      status: row.status == null ? null : String(row.status),
+      status: toPublicLiveStatus(deriveLiveStatusKey(row.status, row.start_time)),
       startTime: row.start_time ? new Date(row.start_time).toISOString() : null,
       hostId: hostId ? toEntityId(hostId) : null,
       hostName: row.host_name || '主播',
       hostAvatar: row.host_avatar,
-      viewers: participants,
       guessCount: hostGuesses.length,
       participants,
       currentGuess,

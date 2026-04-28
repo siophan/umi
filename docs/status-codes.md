@@ -419,6 +419,21 @@
 | `active` | `10` | 轮播启用 |
 | `disabled` | `90` | 轮播停用 |
 
+### `live.status`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `upcoming` | `10` | 预告 / 待开播 |
+| `live` | `20` | 直播中 |
+| `ended` | `30` | 正常结束 |
+| `banned` | `90` | 强制下播 / 违规 |
+
+说明：
+
+- 公共 `/api/lives` 列表只返回 `upcoming` + `live`，前端 `status` 字段统一暴露字符串枚举
+- `ended` 与 `banned` 仅在后台管理列表中可见
+- `live.start_time` 和 `live.status` 同时参与判断：`status = 20` 但 `start_time > NOW()` 时仍按 `upcoming` 展示
+
 ### `notification.target_type`
 
 | 原语义 | 编码 | 说明 |

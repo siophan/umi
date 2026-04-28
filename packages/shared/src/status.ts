@@ -12,6 +12,8 @@ export const guessReviewStatuses = [
   'rejected',
 ] as const;
 
+export const liveStatuses = ['upcoming', 'live'] as const;
+
 export const orderStatuses = [
   'pending',
   'paid',
@@ -44,6 +46,7 @@ export const ledgerTypes = [
 
 export type GuessStatus = (typeof guessStatuses)[number];
 export type GuessReviewStatus = (typeof guessReviewStatuses)[number];
+export type LiveStatus = (typeof liveStatuses)[number];
 export type OrderStatus = (typeof orderStatuses)[number];
 export type WarehouseStatus = (typeof warehouseStatuses)[number];
 export type LedgerType = (typeof ledgerTypes)[number];

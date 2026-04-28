@@ -6,6 +6,7 @@ import {
   type AdminLiveRoomItem,
 } from '@umi/shared';
 
+import { deriveLiveStatusKey } from '../live/live-status';
 import {
   POST_SCOPE_PUBLIC,
   REPORT_STATUS_PENDING,
@@ -292,13 +293,11 @@ export function sanitizeReport(row: AdminCommunityReportRow): AdminCommunityRepo
 }
 
 function deriveLiveStatus(rawStatus: number | string | null | undefined, startTime: Date | string | null | undefined) {
-  const code = rawStatus == null ? null : Number(rawStatus);
-  const startValue = startTime ? new Date(startTime).getTime() : null;
-
-  if (code != null && code >= 90) {
+  const key = deriveLiveStatusKey(rawStatus, startTime);
+  if (key === 'ended' || key === 'banned') {
     return { key: 'ended' as const, label: '已结束' };
   }
-  if (startValue != null && startValue > Date.now()) {
+  if (key === 'upcoming') {
     return { key: 'upcoming' as const, label: '预告中' };
   }
   return { key: 'live' as const, label: '直播中' };

@@ -5,10 +5,13 @@ import type { BannerListResult, GuessSummary, ProductSummary } from '@umi/shared
 import { toEntityId } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
-import { asyncHandler } from '../../lib/errors';
+import { HttpError, asyncHandler } from '../../lib/errors';
 import { ok } from '../../lib/http';
 
 export const bannerRouter: ExpressRouter = Router();
+
+const ALLOWED_POSITIONS = ['home_hero', 'mall_hero', 'mall_banner'] as const;
+const BANNER_ACTIVE = 10;
 
 const TARGET_GUESS = 10;
 const TARGET_POST = 20;
@@ -153,6 +156,13 @@ function buildGuessSummary(
     status: 'active',
   };
 
+  const voteCountByOption = new Map<number, number>();
+  for (const vote of voteRows) {
+    if (String(vote.guess_id) === String(row.id)) {
+      voteCountByOption.set(Number(vote.option_index), Number(vote.vote_count ?? 0));
+    }
+  }
+
   return {
     id: toEntityId(row.id),
     title: row.title,
@@ -167,20 +177,7 @@ function buildGuessSummary(
       optionIndex: Number(option.option_index),
       optionText: option.option_text,
       odds: Number(option.odds ?? 1),
-      voteCount:
-        voteRows.find(
-          (vote) =>
-            String(vote.guess_id) === String(row.id) &&
-            Number(vote.option_index) === Number(option.option_index),
-        )?.vote_count != null
-          ? Number(
-              voteRows.find(
-                (vote) =>
-                  String(vote.guess_id) === String(row.id) &&
-                  Number(vote.option_index) === Number(option.option_index),
-              )?.vote_count,
-            )
-          : 0,
+      voteCount: voteCountByOption.get(Number(option.option_index)) ?? 0,
       isResult: Boolean(option.is_result),
     })),
   };
@@ -209,14 +206,20 @@ async function getGuessSummaries(guessIds: string[]) {
         p.price AS product_price,
         p.guess_price AS product_guess_price
       FROM guess g
-      LEFT JOIN guess_product gp ON gp.guess_id = g.id
+      LEFT JOIN (
+        SELECT guess_id, MIN(product_id) AS product_id
+        FROM guess_product
+        GROUP BY guess_id
+      ) gp ON gp.guess_id = g.id
       LEFT JOIN product p ON p.id = gp.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       LEFT JOIN brand b ON b.id = bp.brand_id
       LEFT JOIN category c ON c.id = g.category_id
       WHERE g.id IN (?)
+        AND g.status = ?
+        AND g.review_status = ?
     `,
-    [guessIds],
+    [guessIds, GUESS_ACTIVE, REVIEW_APPROVED],
   );
 
   const [optionRows] = await db.query<mysql.RowDataPacket[]>(
@@ -279,9 +282,12 @@ bannerRouter.get(
   '/',
   asyncHandler(async (request, response) => {
     const position = typeof request.query.position === 'string' ? request.query.position.trim() : '';
+    if (position && !ALLOWED_POSITIONS.includes(position as (typeof ALLOWED_POSITIONS)[number])) {
+      throw new HttpError(400, 'INVALID_POSITION', `position 仅支持 ${ALLOWED_POSITIONS.join(', ')}`);
+    }
     const limit = Math.min(Math.max(Number(request.query.limit ?? 5) || 5, 1), 10);
     const db = getDbPool();
-    const params: Array<string | number> = [];
+    const params: Array<string | number> = [BANNER_ACTIVE];
     const positionSql = position ? 'AND position = ?' : '';
 
     if (position) {
@@ -302,10 +308,7 @@ bannerRouter.get(
           action_url,
           sort
         FROM banner
-        WHERE (
-          status IS NULL
-          OR status IN (10, '10', 'active')
-        )
+        WHERE status = ?
           ${positionSql}
           AND (start_at IS NULL OR start_at <= CURRENT_TIMESTAMP(3))
           AND (end_at IS NULL OR end_at >= CURRENT_TIMESTAMP(3))

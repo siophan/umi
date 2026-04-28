@@ -84,7 +84,14 @@ guessRouter.post(
 guessRouter.get(
   '/',
   asyncHandler(async (request, response) => {
-    ok(response, await getGuessList({ q: request.query.q as string | undefined, limit: request.query.limit as string | undefined }));
+    ok(
+      response,
+      await getGuessList({
+        q: request.query.q as string | undefined,
+        limit: request.query.limit as string | undefined,
+        cursor: request.query.cursor as string | undefined,
+      }),
+    );
   }),
 );
 

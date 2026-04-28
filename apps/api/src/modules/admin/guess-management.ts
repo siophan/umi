@@ -155,6 +155,8 @@ export async function getAdminGuesses(): Promise<GuessListResult> {
     items: rows.map((row) =>
       buildGuessSummary(row, optionsByGuess.get(String(row.id)) || [], voteCountMap),
     ),
+    nextCursor: null,
+    hasMore: false,
   };
 }
 

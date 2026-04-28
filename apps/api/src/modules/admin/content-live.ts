@@ -4,6 +4,7 @@ import { type AdminLiveRoomItem, type AdminLiveRoomListResult, type StopAdminLiv
 
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
+import { LIVE_STATUS_BANNED } from '../live/live-status';
 import {
   type AdminLiveRoomRow,
   type LiveRoomListParams,
@@ -12,8 +13,6 @@ import {
   appendLikeFilter,
   sanitizeLiveRoom,
 } from './content-shared';
-
-const LIVE_STATUS_ENDED = 90;
 
 async function fetchAdminLiveRoomById(id: string): Promise<AdminLiveRoomItem | null> {
   const db = getDbPool();
@@ -168,7 +167,7 @@ export async function stopAdminLiveRoom(id: string): Promise<StopAdminLiveRoomRe
       SET status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `,
-    [LIVE_STATUS_ENDED, id],
+    [LIVE_STATUS_BANNED, id],
   );
 
   const item = await fetchAdminLiveRoomById(id);

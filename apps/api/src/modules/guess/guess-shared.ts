@@ -21,6 +21,7 @@ export type GuessRow = {
   status: number | string;
   review_status: number | string;
   end_time: Date | string;
+  created_at: Date | string;
   creator_id: number | string;
   category: string | null;
   product_id: number | string | null;
@@ -156,6 +157,13 @@ export function buildGuessSummary(
     status: 'active',
   };
 
+  const voteCountByOption = new Map<number, number>();
+  for (const vote of voteRows) {
+    if (String(vote.guess_id) === String(row.id)) {
+      voteCountByOption.set(Number(vote.option_index), Number(vote.vote_count ?? 0));
+    }
+  }
+
   return {
     id: toEntityId(row.id),
     title: row.title,
@@ -170,26 +178,17 @@ export function buildGuessSummary(
       optionIndex: Number(option.option_index),
       optionText: option.option_text,
       odds: Number(option.odds ?? 1),
-      voteCount:
-        voteRows.find(
-          (vote) =>
-            String(vote.guess_id) === String(row.id) &&
-            Number(vote.option_index) === Number(option.option_index),
-        )?.vote_count
-          ? Number(
-              voteRows.find(
-                (vote) =>
-                  String(vote.guess_id) === String(row.id) &&
-                  Number(vote.option_index) === Number(option.option_index),
-              )?.vote_count,
-            )
-          : 0,
+      voteCount: voteCountByOption.get(Number(option.option_index)) ?? 0,
       isResult: Boolean(option.is_result),
     })),
   };
 }
 
-export async function getGuessRows(whereSql = '', params: Array<string | number> = [], limit?: number) {
+export async function getGuessRows(
+  whereSql = '',
+  params: Array<string | number | Date> = [],
+  limit?: number,
+) {
   const db = getDbPool();
   const sqlParams = typeof limit === 'number' ? [...params, limit] : params;
   const [rows] = await db.query<mysql.RowDataPacket[]>(
@@ -200,6 +199,7 @@ export async function getGuessRows(whereSql = '', params: Array<string | number>
         g.status,
         g.review_status,
         g.end_time,
+        g.created_at,
         g.creator_id,
         c.name AS category,
         p.id AS product_id,
@@ -209,11 +209,15 @@ export async function getGuessRows(whereSql = '', params: Array<string | number>
         p.price AS product_price,
         p.guess_price AS product_guess_price
       FROM guess g
-      LEFT JOIN guess_product gp ON gp.guess_id = g.id
+      LEFT JOIN (
+        SELECT guess_id, MIN(product_id) AS product_id
+        FROM guess_product
+        GROUP BY guess_id
+      ) gp ON gp.guess_id = g.id
       LEFT JOIN product p ON p.id = gp.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       LEFT JOIN brand b ON b.id = bp.brand_id
-      LEFT JOIN category c ON c.id = bp.category_id
+      LEFT JOIN category c ON c.id = g.category_id
       ${whereSql}
       ORDER BY g.created_at DESC, g.id DESC
       ${typeof limit === 'number' ? 'LIMIT ?' : ''}

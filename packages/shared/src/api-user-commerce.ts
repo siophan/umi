@@ -12,9 +12,12 @@ import type {
   UserId,
   WarehouseItem,
 } from './domain';
+import type { LiveStatus } from './status';
 
 export interface GuessListResult {
   items: GuessSummary[];
+  nextCursor: string | null;
+  hasMore: boolean;
 }
 
 export interface CreateGuessPayload {
@@ -276,12 +279,11 @@ export interface LiveListItem {
   id: EntityId;
   title: string;
   imageUrl: string | null;
-  status: string | null;
+  status: LiveStatus;
   startTime: string | null;
   hostId: UserId | null;
   hostName: string;
   hostAvatar: string | null;
-  viewers: number;
   guessCount: number;
   participants: number;
   currentGuess: LiveGuessSummary | null;
