@@ -215,6 +215,13 @@
 
 `id`, `user_id`, `comment_id`, `interaction_type`, `created_at`, `updated_at`
 
+说明：
+
+- 这是“评论互动关系表”
+- 当前承载评论点赞关系
+- `user_id + comment_id + interaction_type` 唯一
+- `interaction_type` 不是状态，而是互动动作类型编码
+
 ## 订单、履约、优惠券、权益
 
 ### `order`
