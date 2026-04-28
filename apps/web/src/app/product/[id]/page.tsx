@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toEntityId, type CouponListItem, type ProductDetailResult, type WarehouseItem } from '@umi/shared';
 
 import { addCartItem } from '../../../lib/api/cart';
@@ -20,13 +20,19 @@ import {
 import { ProductDetailSummary } from './product-detail-summary';
 import styles from './page.module.css';
 
+function parseTabParam(value: string | null): ProductMode {
+  return value === 'guess' || value === 'inv' || value === 'direct' ? value : 'direct';
+}
+
 /**
  * 商品详情页主组件。
  * 当前页除了规格区外，按老系统详情页的结构和节奏做 UI 对齐，但数据链保持新系统真实接口。
  */
-export default function ProductDetailPage() {
+function ProductDetailPageInner() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = parseTabParam(searchParams?.get('tab') ?? null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [product, setProduct] = useState<null | ProductDetailResult['product']>(null);
@@ -35,7 +41,7 @@ export default function ProductDetailPage() {
   const [recommendations, setRecommendations] = useState<ProductDetailResult['recommendations']>([]);
   const [coupons, setCoupons] = useState<CouponListItem[]>([]);
   const [reviews, setReviews] = useState<ProductDetailResult['reviews']>([]);
-  const [currentTab, setCurrentTab] = useState<ProductMode>('direct');
+  const [currentTab, setCurrentTab] = useState<ProductMode>(initialTab);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [detailExpanded, setDetailExpanded] = useState(false);
   const [exchangeOpen, setExchangeOpen] = useState(false);
@@ -392,5 +398,13 @@ export default function ProductDetailPage() {
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>
+  );
+}
+
+export default function ProductDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProductDetailPageInner />
+    </Suspense>
   );
 }

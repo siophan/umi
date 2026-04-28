@@ -59,6 +59,19 @@ const collabVisuals: CollabVisual[] = [
 
 const LEGACY_GRID_HEIGHTS = [180, 210, 165, 220, 175, 195, 185, 205, 170, 200, 190, 215];
 
+// 联名穿插卡先隐藏，二期接后台"联名活动"配置后再恢复，详见 CLAUDE.md #17。
+const SHOW_COLLAB_CARDS = false;
+
+// 秒杀 tab 倒计时初始秒数（02:59:48，沿用老系统 mock）；归零后循环，避免视觉僵死。
+const SECKILL_INITIAL_SECONDS = 2 * 3600 + 59 * 60 + 48;
+
+function formatSeckillCountdown(totalSec: number) {
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return [h, m, s].map((value) => String(value).padStart(2, '0'));
+}
+
 /**
  * 商城金额展示统一入口。
  * 这里保留老商城的展示习惯：整数不补小数，非整数保留 1 位。
@@ -212,6 +225,7 @@ export function MallHome() {
   const [activeSort, setActiveSort] = useState<MallSort>('default');
   const [reloadToken, setReloadToken] = useState(0);
   const [categoryReloadToken, setCategoryReloadToken] = useState(0);
+  const [seckillRemaining, setSeckillRemaining] = useState(SECKILL_INITIAL_SECONDS);
 
   useEffect(() => {
     let ignore = false;
@@ -272,6 +286,17 @@ export function MallHome() {
     const timer = window.setTimeout(() => setFeedAnimating(false), 400);
     return () => window.clearTimeout(timer);
   }, [activeCategory, activeSort, contentTab, showAll]);
+
+  useEffect(() => {
+    if (contentTab !== 'seckill') {
+      return;
+    }
+    setSeckillRemaining(SECKILL_INITIAL_SECONDS);
+    const timer = window.setInterval(() => {
+      setSeckillRemaining((current) => (current <= 1 ? SECKILL_INITIAL_SECONDS : current - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [contentTab]);
 
   const categoryOptions = useMemo<CategoryOption[]>(() => {
     const totalCount = productCategories.reduce((sum, item) => sum + item.count, 0);
@@ -489,7 +514,14 @@ export function MallHome() {
       <div className="m-tab-banner" style={{ background: 'linear-gradient(135deg,#FF3D00,#FF6D00)' }}>
         <span className="mtb-icon">⚡</span>
         <span className="mtb-text">限时秒杀 · {filteredItems.length}款折扣商品</span>
-        <span className="mtb-tag">最高省{maxDiscount}%</span>
+        {(() => {
+          const [hh, mm, ss] = formatSeckillCountdown(seckillRemaining);
+          return (
+            <span className="mtb-countdown">
+              <span>{hh}</span>:<span>{mm}</span>:<span>{ss}</span>
+            </span>
+          );
+        })()}
       </div>
     ) : contentTab === 'new' ? (
       <div className="m-tab-banner" style={{ background: 'linear-gradient(135deg,#00C853,#64DD17)' }}>
@@ -558,7 +590,7 @@ export function MallHome() {
       const visual = collabVisuals[Math.floor(index / 4) % collabVisuals.length];
       const nodes = [renderGridCard(item, index)];
 
-      if ((index + 1) % 4 === 0 && collabPool.length > 0) {
+      if (SHOW_COLLAB_CARDS && (index + 1) % 4 === 0 && collabPool.length > 0) {
         const collabItem = collabPool[Math.floor(index / 4) % collabPool.length];
         const collabTitle = splitDisplayCollab(collabItem);
         const collabSubtitle = buildCollabSubtitle(collabItem);
@@ -613,7 +645,7 @@ export function MallHome() {
           <span className="m-logo-main">Umi</span>
           <span className="m-logo-sub">优选</span>
         </div>
-        <div className="m-search" onClick={() => router.push('/search?from=mall')} role="button" tabIndex={0}>
+        <div className="m-search" onClick={() => router.push('/search?tab=product')} role="button" tabIndex={0}>
           <i className="fa-solid fa-magnifying-glass" />
           <span>搜索商品/竞猜</span>
         </div>
