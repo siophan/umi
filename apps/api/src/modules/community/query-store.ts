@@ -8,6 +8,7 @@ import {
   POST_INTERACTION_BOOKMARK,
   POST_INTERACTION_LIKE,
   buildPostVisibilityClause,
+  buildPostVisibilityParams,
   type PostRow,
 } from './constants';
 
@@ -180,7 +181,7 @@ export async function fetchCommunityFeedRows(userId: string | null, tab: 'recomm
         ORDER BY p.created_at DESC, p.id DESC
         LIMIT 20
       `,
-      [...baseParams, viewerId, viewerId, viewerId, viewerId],
+      [...baseParams, viewerId, ...buildPostVisibilityParams(viewerId)],
     );
     return rows as PostRow[];
   }
@@ -248,7 +249,7 @@ export async function fetchCommunityFeedRows(userId: string | null, tab: 'recomm
       ORDER BY p.created_at DESC, p.id DESC
       LIMIT 20
     `,
-    [...baseParams, viewerId, viewerId, viewerId],
+    [...baseParams, ...buildPostVisibilityParams(viewerId)],
   );
   return rows as PostRow[];
 }
@@ -326,9 +327,7 @@ export async function fetchCommunityPostRow(userId: string, postId: string) {
       userId,
       POST_INTERACTION_BOOKMARK,
       postId,
-      userId,
-      userId,
-      userId,
+      ...buildPostVisibilityParams(userId),
     ],
   );
   return (rows[0] as PostRow | undefined) ?? null;

@@ -62,7 +62,7 @@ export interface CommunityFeedItem {
   comments: number;
   shares: number;
   createdAt: string;
-  scope: 'public' | 'followers' | 'private';
+  scope: 'public' | 'followers' | 'friends' | 'private';
   liked: boolean;
   bookmarked: boolean;
   author: {
@@ -107,7 +107,7 @@ export interface CreateCommunityReportPayload {
 export interface CreateCommunityPostPayload {
   content: string;
   tag?: string | null;
-  scope?: 'public' | 'followers' | 'private';
+  scope?: 'public' | 'followers' | 'friends' | 'private';
   guessId?: GuessId | null;
   location?: string | null;
   images?: string[];

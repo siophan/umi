@@ -3,7 +3,7 @@ import type { CommunityFeedItem as CommunityFeedApiItem } from '@umi/shared';
 import styles from './page.module.css';
 
 export type Scope = 'public' | 'friends' | 'fans' | 'followers' | 'private';
-export type PublishScope = 'public' | 'followers' | 'private';
+export type PublishScope = 'public' | 'friends' | 'followers' | 'private';
 
 export type FeedItem = {
   id: string;

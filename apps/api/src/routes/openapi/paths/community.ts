@@ -98,7 +98,7 @@ export const communityPaths = {
         properties: {
           content: { type: 'string', example: '今天这波竞猜我看好黄瓜味反超。' },
           tag: { type: 'string', nullable: true, example: '竞猜心得' },
-          scope: { type: 'string', enum: ['public', 'followers', 'private'], example: 'public' },
+          scope: { type: 'string', enum: ['public', 'followers', 'friends', 'private'], example: 'public' },
           guessId: { type: 'string', nullable: true, example: '1' },
           location: { type: 'string', nullable: true, example: '北京·朝阳区' },
           images: {
@@ -127,7 +127,7 @@ export const communityPaths = {
         type: 'object',
         properties: {
           content: { type: 'string', example: '这条判断我认同。' },
-          scope: { type: 'string', enum: ['public', 'followers', 'private'], example: 'public' },
+          scope: { type: 'string', enum: ['public', 'followers', 'friends', 'private'], example: 'public' },
           location: { type: 'string', nullable: true, example: '北京·朝阳区' },
           images: {
             type: 'array',

@@ -6,6 +6,7 @@ import type {
 } from '@umi/shared';
 
 import {
+  POST_SCOPE_FRIENDS,
   POST_SCOPE_PUBLIC,
   type CommentRow,
   type PostRow,
@@ -27,6 +28,9 @@ function postScopeCodeToValue(code: number | string | null | undefined): Communi
   const value = Number(code ?? POST_SCOPE_PUBLIC);
   if (value === 20) {
     return 'followers';
+  }
+  if (value === POST_SCOPE_FRIENDS) {
+    return 'friends';
   }
   if (value === 90) {
     return 'private';
@@ -98,8 +102,14 @@ export function normalizeCommunityImages(images: string[] | undefined) {
     .filter(Boolean)
     .slice(0, 3);
   for (const image of normalized) {
-    if (image.length > 1024 * 1024 * 2) {
-      throw new Error('单张图片内容过大');
+    if (image.startsWith('data:')) {
+      throw new Error('图片必须先上传 OSS 后传 URL');
+    }
+    if (!/^https?:\/\//i.test(image)) {
+      throw new Error('图片地址不合法');
+    }
+    if (image.length > 1024) {
+      throw new Error('图片地址过长');
     }
   }
   return normalized;

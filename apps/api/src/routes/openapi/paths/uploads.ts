@@ -25,7 +25,7 @@ export const uploadPaths = {
                 },
                 usage: {
                   type: 'string',
-                  enum: ['guess_cover'],
+                  enum: ['guess_cover', 'community_post'],
                 },
               },
             },

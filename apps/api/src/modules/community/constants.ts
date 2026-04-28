@@ -10,6 +10,7 @@ export const POST_INTERACTION_LIKE = 10;
 export const POST_INTERACTION_BOOKMARK = 20;
 export const POST_SCOPE_PUBLIC = 10;
 const POST_SCOPE_FOLLOWERS = 20;
+export const POST_SCOPE_FRIENDS = 30;
 const POST_SCOPE_PRIVATE = 90;
 
 export type PostRow = {
@@ -54,6 +55,9 @@ export function postScopeValueToCode(value: CreateCommunityPostPayload['scope'] 
   if (value === 'followers') {
     return POST_SCOPE_FOLLOWERS;
   }
+  if (value === 'friends') {
+    return POST_SCOPE_FRIENDS;
+  }
   if (value === 'private') {
     return POST_SCOPE_PRIVATE;
   }
@@ -77,9 +81,33 @@ export function buildPostVisibilityClause(alias = 'p') {
         )
       )
       OR (
+        ${alias}.scope = ${POST_SCOPE_FRIENDS}
+        AND (
+          ${alias}.user_id = ?
+          OR (
+            EXISTS (
+              SELECT 1
+              FROM user_follow uf_friends_a
+              WHERE uf_friends_a.follower_id = ?
+                AND uf_friends_a.following_id = ${alias}.user_id
+            )
+            AND EXISTS (
+              SELECT 1
+              FROM user_follow uf_friends_b
+              WHERE uf_friends_b.follower_id = ${alias}.user_id
+                AND uf_friends_b.following_id = ?
+            )
+          )
+        )
+      )
+      OR (
         ${alias}.scope = ${POST_SCOPE_PRIVATE}
         AND ${alias}.user_id = ?
       )
     )
   `;
+}
+
+export function buildPostVisibilityParams(viewerId: string) {
+  return [viewerId, viewerId, viewerId, viewerId, viewerId, viewerId];
 }

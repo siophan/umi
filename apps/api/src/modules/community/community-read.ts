@@ -21,6 +21,7 @@ import {
   type CommentRow,
   type PostRow,
   buildPostVisibilityClause,
+  buildPostVisibilityParams,
 } from './constants';
 import {
   buildCommunityGuessInfoMap,
@@ -233,9 +234,7 @@ export async function getCommunityPostDetail(
       currentGuessId,
       currentTag,
       currentTag,
-      userId,
-      userId,
-      userId,
+      ...buildPostVisibilityParams(userId),
     ],
   );
   const relatedGuessInfoMap = await buildCommunityGuessInfoMap(relatedRows as PostRow[]);
@@ -339,9 +338,7 @@ export async function searchCommunity(userId: string, q: string): Promise<Commun
       POST_INTERACTION_LIKE,
       userId,
       POST_INTERACTION_BOOKMARK,
-      userId,
-      userId,
-      userId,
+      ...buildPostVisibilityParams(userId),
       likeKeyword,
       likeKeyword,
       likeKeyword,
@@ -449,9 +446,7 @@ export async function getCommunityDiscovery(userId: string | null): Promise<Comm
       POST_INTERACTION_LIKE,
       viewerId,
       POST_INTERACTION_BOOKMARK,
-      viewerId,
-      viewerId,
-      viewerId,
+      ...buildPostVisibilityParams(viewerId),
     ],
   );
   const heroRow = (heroRows[0] as PostRow | undefined) ?? null;

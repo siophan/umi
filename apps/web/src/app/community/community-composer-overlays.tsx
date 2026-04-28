@@ -2,7 +2,9 @@
 
 import type { ChangeEvent, RefObject } from 'react';
 
-import type { EmojiCategory, PublishScope } from './page-helpers';
+import type { GuessId } from '@umi/shared';
+
+import type { EmojiCategory, FollowUser, PublishScope } from './page-helpers';
 import { SCOPE_META, emojiCategories, getScopeLabel, myProfile, topicOptions } from './page-helpers';
 import styles from './page.module.css';
 
@@ -12,6 +14,13 @@ type RepostTarget = {
   title: string;
   author: string;
 } | null;
+
+type GuessLinkCandidate = {
+  id: GuessId;
+  title: string;
+  cover?: string | null;
+  desc?: string | null;
+};
 
 type Props = {
   publishOpen: boolean;
@@ -23,12 +32,19 @@ type Props = {
   publishText: string;
   onChangePublishText: (value: string) => void;
   selectedImages: string[];
+  imageUploading: boolean;
   onSelectImages: (event: ChangeEvent<HTMLInputElement>) => void;
   onClearImages: () => void;
   onRemoveSelectedImage: (target: string) => void;
   selectedTopic: string | null;
   onToggleTopic: (topic: string) => void;
   onOpenEmoji: () => void;
+  onOpenMention: () => void;
+  onOpenGuessLink: () => void;
+  selectedMentions: FollowUser[];
+  onRemoveMention: (id: string) => void;
+  selectedGuessLink: GuessLinkCandidate | null;
+  onClearGuessLink: () => void;
   publishing: boolean;
   onSubmitPublish: () => void;
   repostTarget: RepostTarget;
@@ -47,7 +63,23 @@ type Props = {
   emojiCategory: EmojiCategory;
   onChangeEmojiCategory: (category: EmojiCategory) => void;
   onInsertEmoji: (emoji: string) => void;
+  mentionOpen: boolean;
+  onCloseMention: () => void;
+  mentionQuery: string;
+  onChangeMentionQuery: (value: string) => void;
+  mentionCandidates: FollowUser[];
+  mentionLoading: boolean;
+  onToggleMention: (user: FollowUser) => void;
+  guessLinkOpen: boolean;
+  onCloseGuessLink: () => void;
+  guessLinkQuery: string;
+  onChangeGuessLinkQuery: (value: string) => void;
+  guessLinkCandidates: GuessLinkCandidate[];
+  guessLinkLoading: boolean;
+  onSelectGuessLink: (item: GuessLinkCandidate) => void;
 };
+
+const PUBLISH_SCOPE_OPTIONS: PublishScope[] = ['public', 'friends', 'followers', 'private'];
 
 export function CommunityComposerOverlays({
   publishOpen,
@@ -59,12 +91,19 @@ export function CommunityComposerOverlays({
   publishText,
   onChangePublishText,
   selectedImages,
+  imageUploading,
   onSelectImages,
   onClearImages,
   onRemoveSelectedImage,
   selectedTopic,
   onToggleTopic,
   onOpenEmoji,
+  onOpenMention,
+  onOpenGuessLink,
+  selectedMentions,
+  onRemoveMention,
+  selectedGuessLink,
+  onClearGuessLink,
   publishing,
   onSubmitPublish,
   repostTarget,
@@ -83,6 +122,20 @@ export function CommunityComposerOverlays({
   emojiCategory,
   onChangeEmojiCategory,
   onInsertEmoji,
+  mentionOpen,
+  onCloseMention,
+  mentionQuery,
+  onChangeMentionQuery,
+  mentionCandidates,
+  mentionLoading,
+  onToggleMention,
+  guessLinkOpen,
+  onCloseGuessLink,
+  guessLinkQuery,
+  onChangeGuessLinkQuery,
+  guessLinkCandidates,
+  guessLinkLoading,
+  onSelectGuessLink,
 }: Props) {
   return (
     <>
@@ -129,17 +182,36 @@ export function CommunityComposerOverlays({
                 multiple
                 onChange={(event) => void onSelectImages(event)}
               />
-              <button className={styles.mediaBtn} type="button" onClick={() => imageInputRef.current?.click()}>
-                <i className="fa-solid fa-image" />
-                <span>图片</span>
+              <button
+                className={styles.mediaBtn}
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={imageUploading}
+              >
+                <i className={`fa-solid ${imageUploading ? 'fa-spinner fa-spin' : 'fa-image'}`} />
+                <span>{imageUploading ? '上传中' : '图片'}</span>
               </button>
-              <button className={styles.mediaBtn} type="button" onClick={onClearImages}>
+              <button
+                className={`${styles.mediaBtn} ${styles.mediaBtnDisabled}`}
+                type="button"
+                disabled
+                title="视频功能稍后开放"
+              >
+                <i className="fa-solid fa-video" />
+                <span>视频</span>
+              </button>
+              <button
+                className={styles.mediaBtn}
+                type="button"
+                onClick={onClearImages}
+                disabled={imageUploading || selectedImages.length === 0}
+              >
                 <i className="fa-solid fa-eraser" />
                 <span>清空图片</span>
               </button>
             </div>
 
-            {selectedImages.length ? (
+            {selectedImages.length || imageUploading ? (
               <div className={styles.imagePreviewRow}>
                 {selectedImages.map((image) => (
                   <div className={styles.imagePreviewCard} key={image}>
@@ -149,15 +221,40 @@ export function CommunityComposerOverlays({
                     </button>
                   </div>
                 ))}
+                {imageUploading ? (
+                  <div className={styles.imagePreviewSpinner}>
+                    <i className="fa-solid fa-spinner fa-spin" />
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
-            {selectedImages.length ? (
+            {selectedImages.length || selectedMentions.length || selectedGuessLink ? (
               <div className={styles.attachments}>
-                <span className={styles.attachmentTag}>
-                  <i className="fa-solid fa-image" />
-                  已添加 {selectedImages.length} 张图片
-                </span>
+                {selectedImages.length ? (
+                  <span className={styles.attachmentTag}>
+                    <i className="fa-solid fa-image" />
+                    已添加 {selectedImages.length} 张图片
+                  </span>
+                ) : null}
+                {selectedMentions.map((user) => (
+                  <span className={styles.attachmentChip} key={`mention-${user.id}`}>
+                    <i className="fa-solid fa-at" />
+                    {user.name}
+                    <button type="button" onClick={() => onRemoveMention(user.id)} aria-label="移除">
+                      <i className="fa-solid fa-xmark" />
+                    </button>
+                  </span>
+                ))}
+                {selectedGuessLink ? (
+                  <span className={styles.attachmentChip}>
+                    <i className="fa-solid fa-link" />
+                    {selectedGuessLink.title}
+                    <button type="button" onClick={onClearGuessLink} aria-label="移除">
+                      <i className="fa-solid fa-xmark" />
+                    </button>
+                  </span>
+                ) : null}
               </div>
             ) : null}
 
@@ -175,13 +272,35 @@ export function CommunityComposerOverlays({
             </div>
 
             <div className={styles.toolbar}>
+              <button
+                className={`${styles.toolbarItem} ${styles.toolbarItemDisabled}`}
+                type="button"
+                disabled
+                title="位置功能稍后开放"
+              >
+                <i className="fa-solid fa-location-dot" />
+                <span>位置</span>
+              </button>
+              <button className={styles.toolbarItem} type="button" onClick={onOpenMention}>
+                <i className="fa-solid fa-at" />
+                <span>@好友</span>
+              </button>
+              <button className={styles.toolbarItem} type="button" onClick={onOpenGuessLink}>
+                <i className="fa-solid fa-link" />
+                <span>竞猜</span>
+              </button>
               <button className={styles.toolbarItem} type="button" onClick={onOpenEmoji}>
                 <i className="fa-regular fa-face-smile" />
                 <span>表情</span>
               </button>
             </div>
 
-            <button className={styles.submitBtn} type="button" disabled={!publishText.trim() || publishing} onClick={onSubmitPublish}>
+            <button
+              className={styles.submitBtn}
+              type="button"
+              disabled={!publishText.trim() || publishing || imageUploading}
+              onClick={onSubmitPublish}
+            >
               <i className={`fa-solid ${publishing ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`} /> {publishing ? '发布中' : '发布动态'}
             </button>
           </section>
@@ -252,7 +371,7 @@ export function CommunityComposerOverlays({
               </button>
             </div>
 
-            {(['public', 'followers', 'private'] as PublishScope[]).map((item) => (
+            {PUBLISH_SCOPE_OPTIONS.map((item) => (
               <button
                 key={item}
                 className={`${styles.scopeOption} ${scopeDraft === item ? styles.scopeSelected : ''}`}
@@ -312,6 +431,112 @@ export function CommunityComposerOverlays({
                   {item}
                 </button>
               ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {mentionOpen ? (
+        <div className={styles.subOverlay} onClick={onCloseMention} role="presentation">
+          <section className={styles.subPanel} onClick={(event) => event.stopPropagation()} role="presentation">
+            <div className={styles.scopeHandle} />
+            <div className={styles.scopeHeader}>
+              <h3>@ 好友</h3>
+              <button className={styles.closeBtn} type="button" onClick={onCloseMention}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <div className={styles.subSearch}>
+              <i className="fa-solid fa-magnifying-glass" />
+              <input
+                type="text"
+                placeholder="搜索好友..."
+                value={mentionQuery}
+                onChange={(event) => onChangeMentionQuery(event.target.value)}
+              />
+            </div>
+
+            <div className={styles.subList}>
+              {mentionLoading ? (
+                <div className={styles.subEmpty}>
+                  <i className="fa-solid fa-spinner fa-spin" /> 加载中...
+                </div>
+              ) : mentionCandidates.length === 0 ? (
+                <div className={styles.subEmpty}>暂无好友</div>
+              ) : (
+                mentionCandidates.map((user) => {
+                  const selected = selectedMentions.some((item) => item.id === user.id);
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      className={`${styles.subListItem} ${selected ? styles.subListItemSelected : ''}`}
+                      onClick={() => onToggleMention(user)}
+                    >
+                      <img src={user.avatar} alt={user.name} />
+                      <span className={styles.subListItemInfo}>
+                        <span className={styles.subListItemName}>{user.name}</span>
+                        {user.uid ? <span className={styles.subListItemMeta}>UID {user.uid}</span> : null}
+                      </span>
+                      <i className={`fa-solid fa-circle-check ${styles.subListCheck}`} />
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {guessLinkOpen ? (
+        <div className={styles.subOverlay} onClick={onCloseGuessLink} role="presentation">
+          <section className={styles.subPanel} onClick={(event) => event.stopPropagation()} role="presentation">
+            <div className={styles.scopeHandle} />
+            <div className={styles.scopeHeader}>
+              <h3>关联竞猜</h3>
+              <button className={styles.closeBtn} type="button" onClick={onCloseGuessLink}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <div className={styles.subSearch}>
+              <i className="fa-solid fa-magnifying-glass" />
+              <input
+                type="text"
+                placeholder="搜索竞猜活动..."
+                value={guessLinkQuery}
+                onChange={(event) => onChangeGuessLinkQuery(event.target.value)}
+              />
+            </div>
+
+            <div className={styles.subList}>
+              {guessLinkLoading ? (
+                <div className={styles.subEmpty}>
+                  <i className="fa-solid fa-spinner fa-spin" /> 加载中...
+                </div>
+              ) : guessLinkCandidates.length === 0 ? (
+                <div className={styles.subEmpty}>暂无可关联竞猜</div>
+              ) : (
+                guessLinkCandidates.map((item) => {
+                  const selected = selectedGuessLink?.id === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`${styles.subListItem} ${selected ? styles.subListItemSelected : ''}`}
+                      onClick={() => onSelectGuessLink(item)}
+                    >
+                      <img src={item.cover || '/legacy/images/mascot/mouse-main.png'} alt={item.title} />
+                      <span className={styles.subListItemInfo}>
+                        <span className={styles.subListItemName}>{item.title}</span>
+                        {item.desc ? <span className={styles.subListItemMeta}>{item.desc}</span> : null}
+                      </span>
+                      <i className={`fa-solid fa-circle-check ${styles.subListCheck}`} />
+                    </button>
+                  );
+                })
+              )}
             </div>
           </section>
         </div>

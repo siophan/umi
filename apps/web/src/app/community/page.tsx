@@ -44,6 +44,7 @@ export default function CommunityPage() {
     bookmarkSavingId,
     publishing,
     selectedImages,
+    imageUploading,
     hotTopics,
     heroPost,
     repostTarget,
@@ -66,6 +67,26 @@ export default function CommunityPage() {
     submitPublish,
     handleRepostSubmit,
     defaultFollowedUsers,
+    openMentionPanel,
+    closeMentionPanel,
+    toggleMention,
+    removeMention,
+    selectedMentions,
+    mentionOpen,
+    mentionQuery,
+    setMentionQuery,
+    mentionLoading,
+    mentionCandidates,
+    openGuessLinkPanel,
+    closeGuessLinkPanel,
+    guessLinkOpen,
+    guessLinkQuery,
+    setGuessLinkQuery,
+    guessLinkCandidates,
+    guessLinkLoading,
+    selectGuessLink,
+    selectedGuessLink,
+    clearGuessLink,
   } = useCommunityPageState();
 
   function openNotifications() {
@@ -152,12 +173,19 @@ export default function CommunityPage() {
           publishText={publishText}
           onChangePublishText={setPublishText}
           selectedImages={selectedImages}
+          imageUploading={imageUploading}
           onSelectImages={selectImages}
           onClearImages={clearSelectedImages}
           onRemoveSelectedImage={removeSelectedImage}
           selectedTopic={selectedTopic}
           onToggleTopic={toggleTopic}
           onOpenEmoji={() => setEmojiOpen(true)}
+          onOpenMention={() => void openMentionPanel()}
+          onOpenGuessLink={() => void openGuessLinkPanel()}
+          selectedMentions={selectedMentions}
+          onRemoveMention={removeMention}
+          selectedGuessLink={selectedGuessLink}
+          onClearGuessLink={clearGuessLink}
           publishing={publishing}
           onSubmitPublish={() => void submitPublish()}
           repostTarget={repostTarget}
@@ -176,6 +204,20 @@ export default function CommunityPage() {
           emojiCategory={emojiCategory}
           onChangeEmojiCategory={setEmojiCategory}
           onInsertEmoji={insertEmoji}
+          mentionOpen={mentionOpen}
+          onCloseMention={closeMentionPanel}
+          mentionQuery={mentionQuery}
+          onChangeMentionQuery={setMentionQuery}
+          mentionCandidates={mentionCandidates}
+          mentionLoading={mentionLoading}
+          onToggleMention={toggleMention}
+          guessLinkOpen={guessLinkOpen}
+          onCloseGuessLink={closeGuessLinkPanel}
+          guessLinkQuery={guessLinkQuery}
+          onChangeGuessLinkQuery={setGuessLinkQuery}
+          guessLinkCandidates={guessLinkCandidates}
+          guessLinkLoading={guessLinkLoading}
+          onSelectGuessLink={selectGuessLink}
         />
 
         {toast ? <div className={styles.toast}>{toast}</div> : null}
