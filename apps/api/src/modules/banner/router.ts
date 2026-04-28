@@ -221,6 +221,7 @@ async function getGuessSummaries(guessIds: string[]) {
       WHERE g.id IN (?)
         AND g.status = ?
         AND g.review_status = ?
+        AND g.end_time > NOW()
     `,
     [guessIds, GUESS_ACTIVE, REVIEW_APPROVED],
   );

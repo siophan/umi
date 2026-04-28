@@ -52,7 +52,7 @@ export async function getGuessList(query: {
     ? Math.min(Math.max(requestedLimit, 1), MAX_LIMIT)
     : DEFAULT_LIMIT;
 
-  const whereClauses = ['g.review_status = ?', 'g.status = ?'];
+  const whereClauses = ['g.review_status = ?', 'g.status = ?', 'g.end_time > NOW()'];
   const params: Array<string | number | Date> = [REVIEW_APPROVED, GUESS_ACTIVE];
 
   if (keyword) {
