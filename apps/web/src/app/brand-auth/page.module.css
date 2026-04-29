@@ -151,7 +151,16 @@
 }
 
 .mineItem {
+  flex-direction: column;
+  align-items: stretch;
   padding: 12px 14px;
+  gap: 0;
+}
+
+.mineRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .mineItem img {
@@ -227,19 +236,19 @@
   color: #f44336;
 }
 
-.statusCol {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+.rejectReasonRow {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(244, 67, 54, 0.06);
+  color: #c62828;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
 }
 
-.rejectReason {
-  font-size: 11px;
-  color: #f44336;
-  max-width: 120px;
-  text-align: right;
-  line-height: 1.3;
+.rejectReasonLabel {
+  font-weight: 700;
 }
 
 .emptyText {

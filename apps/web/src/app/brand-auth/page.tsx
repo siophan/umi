@@ -196,14 +196,14 @@ export default function BrandAuthPage() {
               const sinceText = item.createdAt ? ` · ${new Date(item.createdAt).toLocaleDateString()}起` : '';
               return (
                 <article className={styles.mineItem} key={item.id}>
-                  <img src={item.brandLogo || brandLogoFallback} alt={item.brandName} />
-                  <div className={styles.info}>
-                    <div className={styles.name}>{item.brandName}</div>
-                    <div className={styles.meta}>
-                      品牌授权记录{sinceText}
+                  <div className={styles.mineRow}>
+                    <img src={item.brandLogo || brandLogoFallback} alt={item.brandName} />
+                    <div className={styles.info}>
+                      <div className={styles.name}>{item.brandName}</div>
+                      <div className={styles.meta}>
+                        品牌授权记录{sinceText}
+                      </div>
                     </div>
-                  </div>
-                  <div className={styles.statusCol}>
                     <span
                       className={`${styles.status} ${
                         item.status === 'approved'
@@ -223,10 +223,13 @@ export default function BrandAuthPage() {
                               ? '❌ 已过期'
                               : '❌ 已拒绝'}
                     </span>
-                    {item.status === 'rejected' && item.rejectReason ? (
-                      <span className={styles.rejectReason}>{item.rejectReason}</span>
-                    ) : null}
                   </div>
+                  {item.status === 'rejected' && item.rejectReason ? (
+                    <div className={styles.rejectReasonRow}>
+                      <span className={styles.rejectReasonLabel}>拒绝原因：</span>
+                      {item.rejectReason}
+                    </div>
+                  ) : null}
                 </article>
               );
             })
