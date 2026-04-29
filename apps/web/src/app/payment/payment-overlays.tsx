@@ -124,7 +124,7 @@ export function PaymentOverlays({
                     className={`${styles.couponItem} ${couponId === item.id ? styles.couponActive : ''}`}
                     onClick={() => onCouponSelect(item.id)}
                   >
-                    <div className={`${styles.couponFace} ${styles.red}`}>
+                    <div className={`${styles.couponFace} ${styles.faceRed}`}>
                       <div className={styles.couponVal}>¥{discount.toFixed(2)}</div>
                       <div className={styles.couponSmall}>优惠券</div>
                     </div>

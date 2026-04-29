@@ -219,6 +219,12 @@
   align-items: flex-start;
 }
 
+.productRow + .productRow {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f5f5f5;
+}
+
 .productPoster {
   position: relative;
   overflow: hidden;
@@ -823,15 +829,15 @@
   border-radius: 10px;
 }
 
-.red {
+.faceRed {
   background: linear-gradient(135deg, #ff5722, #ff9800);
 }
 
-.blue {
+.faceBlue {
   background: linear-gradient(135deg, #2196f3, #03a9f4);
 }
 
-.green {
+.faceGreen {
   background: linear-gradient(135deg, #4caf50, #8bc34a);
 }
 
