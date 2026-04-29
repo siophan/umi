@@ -107,7 +107,11 @@ export function PaymentOrderSections({
               <div className={styles.addrTop}>
                 <div className={styles.addrName}>{selectedAddress.name}</div>
                 <div className={styles.addrPhone}>{selectedAddress.phone}</div>
-                {selectedAddress.tag ? <div className={styles.addrTag}>{selectedAddress.tag}</div> : null}
+                {selectedAddress.isDefault ? (
+                  <div className={styles.addrTag}>默认</div>
+                ) : selectedAddress.tag ? (
+                  <div className={styles.addrTag}>{selectedAddress.tag}</div>
+                ) : null}
               </div>
               <div className={styles.addrDetail}>
                 {selectedAddress.province}

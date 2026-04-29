@@ -85,7 +85,11 @@ export function PaymentOverlays({
                   <div className={styles.addrItemTop}>
                     <span>{item.name}</span>
                     <span className={styles.addrItemPhone}>{item.phone}</span>
-                    {item.tag ? <span className={styles.addrMiniTag}>{item.tag}</span> : null}
+                    {item.isDefault ? (
+                      <span className={styles.addrMiniTag}>默认</span>
+                    ) : item.tag ? (
+                      <span className={styles.addrMiniTag}>{item.tag}</span>
+                    ) : null}
                     <span className={styles.addrItemCheck}>
                       <i className="fa-solid fa-circle-check" />
                     </span>
