@@ -62,6 +62,7 @@ export type BrandAuthRow = {
   product_count: number | string | null;
   apply_status: number | string;
   auth_status: number | string | null;
+  reject_reason: string | null;
   created_at: Date | string;
 };
 

@@ -42,6 +42,7 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
                ) AS product_count,
                sbaa.status AS apply_status,
                sba.status AS auth_status,
+               sbaa.reject_reason,
                sbaa.created_at
         FROM shop_brand_auth_apply sbaa
         INNER JOIN (
@@ -107,6 +108,7 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
         Number(row.apply_status),
         row.auth_status == null ? null : Number(row.auth_status),
       ),
+      rejectReason: row.reject_reason ?? null,
       createdAt: new Date(row.created_at).toISOString(),
     }));
 

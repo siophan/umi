@@ -202,25 +202,30 @@ export default function BrandAuthPage() {
                       品牌授权记录{sinceText}
                     </div>
                   </div>
-                  <span
-                    className={`${styles.status} ${
-                      item.status === 'approved'
-                        ? styles.statusActive
+                  <div className={styles.statusCol}>
+                    <span
+                      className={`${styles.status} ${
+                        item.status === 'approved'
+                          ? styles.statusActive
+                          : item.status === 'pending'
+                            ? styles.statusPending
+                            : styles.statusRejected
+                      }`}
+                    >
+                      {item.status === 'approved'
+                        ? '✅ 已授权'
                         : item.status === 'pending'
-                          ? styles.statusPending
-                          : styles.statusRejected
-                    }`}
-                  >
-                    {item.status === 'approved'
-                      ? '✅ 已授权'
-                      : item.status === 'pending'
-                        ? '⏳ 审核中'
-                        : item.status === 'revoked'
-                          ? '❌ 已撤销'
-                          : item.status === 'expired'
-                            ? '❌ 已过期'
-                            : '❌ 已拒绝'}
-                  </span>
+                          ? '⏳ 审核中'
+                          : item.status === 'revoked'
+                            ? '❌ 已撤销'
+                            : item.status === 'expired'
+                              ? '❌ 已过期'
+                              : '❌ 已拒绝'}
+                    </span>
+                    {item.status === 'rejected' && item.rejectReason ? (
+                      <span className={styles.rejectReason}>{item.rejectReason}</span>
+                    ) : null}
+                  </div>
                 </article>
               );
             })

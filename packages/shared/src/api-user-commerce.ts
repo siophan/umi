@@ -570,6 +570,7 @@ export interface MyShopBrandAuthItem {
   brandLogo: string | null;
   productCount: number;
   status: string;
+  rejectReason: string | null;
   createdAt: string;
 }
 
