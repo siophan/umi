@@ -2,6 +2,10 @@
 
 本文件记录 `apps/web` 用户端当前存在的不合理点，供后续开发参考。
 
+> **老系统代码路径**：`~/projects/umi-origin`（即 `/root/projects/umi-origin`），文中引用如 `umi-origin/frontend/payment.html` 都以此为根。
+>
+> **DB 全量表结构**：`docs/full-schema.md` 是当前数据库 90+ 张表的字段/类型/注释快照（含 `virtual_warehouse / physical_warehouse / warehouse_item_log / fulfillment_order / order / order_status_log / consign_trade` 等所有仓库与订单相关表）。状态码与 type 编码对照表在 `docs/status-codes.md`。需要查 schema 优先看这两个文件，不要直连 mysql。
+
 ---
 
 ## 1. Server Component 硬编码 API 地址（P0）
