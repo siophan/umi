@@ -268,7 +268,6 @@ function PaymentPageInner() {
         addressIndex={addressIndex}
         availableCoupons={availableCoupons}
         couponId={couponId}
-        subtotal={subtotal}
         onAddressClose={() => setAddrOpen(false)}
         onAddressSelect={(index) => {
           setAddressIndex(index);

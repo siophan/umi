@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import type { CouponListItem, UserAddressItem } from '@umi/shared';
 
 import styles from './page.module.css';
-import { getCouponDiscount } from './payment-helpers';
 
 type PaymentOverlaysProps = {
   addrOpen: boolean;
@@ -14,7 +13,6 @@ type PaymentOverlaysProps = {
   addressIndex: number;
   availableCoupons: CouponListItem[];
   couponId: string | null;
-  subtotal: number;
   onAddressClose: () => void;
   onAddressSelect: (index: number) => void;
   onCouponClose: () => void;
@@ -30,7 +28,6 @@ export function PaymentOverlays({
   addressIndex,
   availableCoupons,
   couponId,
-  subtotal,
   onAddressClose,
   onAddressSelect,
   onCouponClose,
@@ -99,7 +96,18 @@ export function PaymentOverlays({
             </div>
             <div className={styles.couponList}>
               {availableCoupons.map((item) => {
-                const discount = getCouponDiscount(item, subtotal);
+                const faceClass =
+                  item.type === 'percent'
+                    ? styles.faceBlue
+                    : item.type === 'shipping'
+                      ? styles.faceGreen
+                      : styles.faceRed;
+                const faceLabel =
+                  item.type === 'percent'
+                    ? '折扣券'
+                    : item.type === 'shipping'
+                      ? '运费券'
+                      : '满减券';
                 return (
                   <button
                     key={item.id}
@@ -107,18 +115,32 @@ export function PaymentOverlays({
                     className={`${styles.couponItem} ${couponId === item.id ? styles.couponActive : ''}`}
                     onClick={() => onCouponSelect(item.id)}
                   >
-                    <div className={`${styles.couponFace} ${styles.faceRed}`}>
-                      <div className={styles.couponVal}>¥{discount.toFixed(2)}</div>
-                      <div className={styles.couponSmall}>优惠券</div>
+                    <div className={`${styles.couponFace} ${faceClass}`}>
+                      <div className={styles.couponVal}>
+                        {item.type === 'percent' ? (
+                          <>
+                            {(item.amount / 10).toFixed(1).replace(/\.0$/, '')}
+                            <small>折</small>
+                          </>
+                        ) : (
+                          <>
+                            <small>¥</small>
+                            {(item.amount / 100).toFixed(0)}
+                          </>
+                        )}
+                      </div>
+                      <div className={styles.couponSmall}>{faceLabel}</div>
                     </div>
                     <div className={styles.couponInfo}>
                       <div className={styles.couponName}>{item.name}</div>
-                      <div className={styles.couponCond}>{item.condition}</div>
+                      <div className={styles.couponCond}>{item.condition || '无门槛'}</div>
                       <div className={styles.couponExp}>
-                        有效期至 {item.expireAt ? item.expireAt.slice(0, 10) : '长期有效'}
+                        {item.expireAt ? `${item.expireAt.slice(0, 10)} 到期` : '长期有效'}
                       </div>
                     </div>
-                    <div className={styles.couponCheck}>{couponId === item.id ? '✓' : ''}</div>
+                    <div className={styles.couponCheck}>
+                      <i className="fa-solid fa-circle-check" />
+                    </div>
                   </button>
                 );
               })}
