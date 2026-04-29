@@ -12,7 +12,14 @@ export type PaymentProduct = {
   img: string;
 };
 
-export const PAYMENT_SERVICE_TAGS = ['正品保障', '破损包赔', '7天无理由', '安全支付', '真实订单'] as const;
+export const PAYMENT_SERVICE_TAGS: ReadonlyArray<{ icon: string; label: string }> = [
+  { icon: 'fa-shield-halved', label: '正品保证' },
+  { icon: 'fa-truck-fast', label: '顺丰包邮' },
+  { icon: 'fa-rotate-left', label: '7天退换' },
+  { icon: 'fa-lock', label: '安全支付' },
+  { icon: 'fa-headset', label: '极速客服' },
+  { icon: 'fa-gift', label: '赠运费险' },
+];
 
 /**
  * 解析优惠券使用门槛。

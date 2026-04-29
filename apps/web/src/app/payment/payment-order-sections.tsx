@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { CouponListItem, UserAddressItem } from '@umi/shared';
 
 import styles from './page.module.css';
@@ -55,6 +56,8 @@ export function PaymentOrderSections({
   onRemarkChange,
   onSubmit,
 }: PaymentOrderSectionsProps) {
+  const [invoiceOn, setInvoiceOn] = useState(false);
+  const couponCount = availableCoupons.length;
   return (
     <>
       <header className={styles.header}>
@@ -124,10 +127,10 @@ export function PaymentOrderSections({
         <div className={styles.sectionTitle}>
           <i className="fa-solid fa-bag-shopping" /> 商品信息
         </div>
-        {products.length === 1 && products[0] ? (
+        {products.length === 1 && products[0]?.img ? (
           <div className={styles.productPoster}>
             <img alt={products[0].name} src={products[0].img} />
-            <span className={styles.productPosterTag}>真实商品</span>
+            <span className={styles.productPosterTag}>🔥 热销商品</span>
           </div>
         ) : null}
         {products.map((item, index) => (
@@ -137,8 +140,8 @@ export function PaymentOrderSections({
             <div className={styles.productInfo}>
               <div className={styles.productName}>{item.name}</div>
               <div className={styles.productTags}>
-                <span className={styles.tagBrand}>真实订单</span>
-                <span className={styles.tag}>正品保障</span>
+                <span className={styles.tag}>包邮</span>
+                <span className={styles.tag}>7天退换</span>
               </div>
               <div className={styles.productBottom}>
                 <div>
@@ -159,17 +162,22 @@ export function PaymentOrderSections({
         <div className={styles.detailRow}>
           <i className="fa-solid fa-truck" />
           <span className={styles.detailLabel}>配送方式</span>
-          <strong className={styles.detailValue}>普通快递</strong>
+          <strong className={styles.detailValue}>顺丰速运</strong>
         </div>
         <div className={styles.detailRow}>
           <i className="fa-regular fa-clock" />
           <span className={styles.detailLabel}>预计送达</span>
-          <strong className={`${styles.detailValue} ${styles.green}`}>支付后尽快发货</strong>
+          <strong className={`${styles.detailValue} ${styles.green}`}>明天 12:00 前</strong>
         </div>
         <div className={styles.detailRow}>
           <i className="fa-solid fa-box-open" />
           <span className={styles.detailLabel}>运费</span>
           <strong className={`${styles.detailValue} ${styles.green}`}>包邮</strong>
+        </div>
+        <div className={styles.detailRow}>
+          <i className="fa-solid fa-shield-halved" />
+          <span className={styles.detailLabel}>运费险</span>
+          <strong className={styles.detailValue}>已赠送</strong>
         </div>
       </section>
 
@@ -189,10 +197,16 @@ export function PaymentOrderSections({
             <div className={styles.couponLeft}>
               <i className="fa-solid fa-ticket" />
               优惠券
-              <span className={styles.couponBadge}>{availableCoupons.length}张可用</span>
+              <span
+                className={`${styles.couponBadge} ${couponCount === 0 ? styles.couponBadgeMuted : ''}`}
+              >
+                {couponCount > 0 ? `${couponCount}张可用` : '未使用'}
+              </span>
             </div>
-            <div className={styles.couponRight}>
-              <span>{selectedCoupon ? `-¥ ${couponValue.toFixed(2)}` : '不使用'}</span>
+            <div
+              className={`${styles.couponRight} ${selectedCoupon ? '' : styles.couponRightMuted}`}
+            >
+              <span>{selectedCoupon ? `-¥${couponValue.toFixed(2)}` : '未使用'}</span>
               <i className="fa-solid fa-chevron-right" />
             </div>
           </button>
@@ -213,7 +227,7 @@ export function PaymentOrderSections({
           </div>
           <div className={styles.pmInfo}>
             <div className={styles.pmName}>微信支付</div>
-            <div className={styles.pmDesc}>提交后直接落真实订单</div>
+            <div className={styles.pmDesc}>推荐使用，支付立减</div>
           </div>
           <div className={styles.pmCheck}>✓</div>
         </button>
@@ -227,10 +241,62 @@ export function PaymentOrderSections({
           </div>
           <div className={styles.pmInfo}>
             <div className={styles.pmName}>支付宝</div>
-            <div className={styles.pmDesc}>提交后直接落真实订单</div>
+            <div className={styles.pmDesc}>支付宝快捷支付</div>
           </div>
           <div className={styles.pmCheck}>✓</div>
         </button>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-rotate-left" /> 退货权益
+        </div>
+        <div className={styles.detailRow}>
+          <i className={`fa-solid fa-circle-check ${styles.detailGreenIcon}`} />
+          <span className={styles.detailLabel}>7天无理由退货</span>
+          <strong className={`${styles.detailValue} ${styles.detailLink}`}>查看详情</strong>
+        </div>
+        <div className={styles.detailRow}>
+          <i className={`fa-solid fa-circle-check ${styles.detailGreenIcon}`} />
+          <span className={styles.detailLabel}>破损包赔</span>
+          <strong className={styles.detailValue}>签收48小时内可申请</strong>
+        </div>
+        <div className={styles.detailRow}>
+          <i className={`fa-solid fa-circle-check ${styles.detailGreenIcon}`} />
+          <span className={styles.detailLabel}>运费险</span>
+          <strong className={styles.detailValue}>退货免运费</strong>
+        </div>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.sectionTitle}>
+          <i className="fa-solid fa-file-invoice" /> 发票信息
+        </div>
+        <button
+          type="button"
+          className={styles.detailRowButton}
+          onClick={() => setInvoiceOn((prev) => !prev)}
+        >
+          <i className="fa-solid fa-receipt" />
+          <span className={styles.detailLabel}>发票类型</span>
+          <strong className={`${styles.detailValue} ${styles.detailLink}`}>
+            {invoiceOn ? '电子发票（个人）' : '不开发票'}
+          </strong>
+        </button>
+        {invoiceOn ? (
+          <>
+            <div className={styles.detailRow}>
+              <i className="fa-regular fa-building" />
+              <span className={styles.detailLabel}>发票抬头</span>
+              <strong className={styles.detailValue}>个人</strong>
+            </div>
+            <div className={styles.detailRow}>
+              <i className="fa-regular fa-envelope" />
+              <span className={styles.detailLabel}>接收邮箱</span>
+              <strong className={styles.detailValue}>user@example.com</strong>
+            </div>
+          </>
+        ) : null}
       </section>
 
       <section className={styles.card}>
@@ -239,9 +305,9 @@ export function PaymentOrderSections({
         </div>
         <div className={styles.services}>
           {PAYMENT_SERVICE_TAGS.map((item) => (
-            <div className={styles.serviceTag} key={item}>
-              <i className="fa-solid fa-circle-check" />
-              {item}
+            <div className={styles.serviceTag} key={item.label}>
+              <i className={`fa-solid ${item.icon}`} />
+              {item.label}
             </div>
           ))}
         </div>
@@ -266,19 +332,24 @@ export function PaymentOrderSections({
         </div>
         <div className={styles.priceRow}>
           <span>商品金额</span>
-          <strong>¥ {subtotal.toFixed(2)}</strong>
-        </div>
-        <div className={styles.priceRow}>
-          <span>优惠金额</span>
-          <strong className={styles.discount}>-¥ {couponValue.toFixed(2)}</strong>
+          <strong>¥{subtotal.toFixed(2)}</strong>
         </div>
         <div className={styles.priceRow}>
           <span>运费</span>
           <strong className={styles.green}>包邮</strong>
         </div>
+        <div className={styles.priceRow}>
+          <span>优惠券</span>
+          <strong className={styles.discount}>
+            {couponValue > 0 ? `-¥${couponValue.toFixed(2)}` : '无'}
+          </strong>
+        </div>
         <div className={`${styles.priceRow} ${styles.totalRow}`}>
           <span>实付金额</span>
-          <strong className={styles.total}>¥ {total.toFixed(2)}</strong>
+          <strong className={styles.total}>
+            <small>¥</small>
+            {total.toFixed(2)}
+          </strong>
         </div>
       </section>
 
