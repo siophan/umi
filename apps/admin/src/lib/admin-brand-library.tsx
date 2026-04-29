@@ -2,7 +2,7 @@ import type { ProColumns } from '@ant-design/pro-components';
 import type { EntityId } from '@umi/shared';
 import { Button, Tag, Typography } from 'antd';
 
-import type { AdminBrandLibraryItem } from './api/catalog';
+import type { AdminBrandLibraryItem, AdminBrandProductSpecRow } from './api/catalog';
 import type { AdminCategoryItem } from './api/categories';
 import type { AdminBrandItem } from './api/merchant';
 import { formatAmount, formatDate, formatDateTime, formatNumber } from './format';
@@ -28,6 +28,13 @@ export type BrandProductFormValues = {
   defaultImg?: string;
   description?: string;
   status: AdminBrandLibraryItem['status'];
+  videoUrl?: string;
+  detailHtml?: string;
+  specTable?: AdminBrandProductSpecRow[];
+  packageList?: { value: string }[];
+  freightYuan?: number;
+  shipFrom?: string;
+  deliveryDays?: string;
 };
 
 export const EMPTY_BRAND_LIBRARY_DATA: BrandLibraryPageData = {
@@ -213,6 +220,15 @@ export function buildEditBrandProductFormValues(
     defaultImg: record.imageUrl || undefined,
     description: record.description || undefined,
     status: record.status,
+    videoUrl: record.videoUrl || undefined,
+    detailHtml: record.detailHtml || undefined,
+    specTable: record.specTable.length ? record.specTable : undefined,
+    packageList: record.packageList.length
+      ? record.packageList.map((value) => ({ value }))
+      : undefined,
+    freightYuan: record.freight == null ? undefined : centsToYuan(record.freight),
+    shipFrom: record.shipFrom || undefined,
+    deliveryDays: record.deliveryDays || undefined,
   };
 }
 

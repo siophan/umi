@@ -17,6 +17,11 @@ export interface AdminProduct {
   brandProductId?: string | null;
 }
 
+export interface AdminBrandProductSpecRow {
+  key: string;
+  value: string;
+}
+
 export interface AdminBrandLibraryItem {
   id: string;
   brandId: string | null;
@@ -31,6 +36,13 @@ export interface AdminBrandLibraryItem {
   createdAt: string;
   updatedAt: string;
   imageUrl: string | null;
+  videoUrl: string | null;
+  detailHtml: string | null;
+  specTable: AdminBrandProductSpecRow[];
+  packageList: string[];
+  freight: number | null;
+  shipFrom: string | null;
+  deliveryDays: string | null;
   productCount: number;
   activeProductCount: number;
 }

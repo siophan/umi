@@ -252,6 +252,15 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
     try {
       const values = await brandProductForm.validateFields();
       setSubmitting(true);
+      const specTable = (values.specTable ?? [])
+        .filter((row): row is { key: string; value: string } =>
+          Boolean(row && typeof row.key === 'string' && row.key.trim()),
+        )
+        .map((row) => ({ key: row.key.trim(), value: (row.value ?? '').trim() }));
+      const packageList = (values.packageList ?? [])
+        .map((item) => (item?.value ?? '').trim())
+        .filter((item) => item.length > 0);
+
       const payload = {
         brandId: values.brandId,
         name: values.name,
@@ -261,6 +270,13 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         defaultImg: values.defaultImg || null,
         description: values.description || null,
         status: values.status,
+        videoUrl: values.videoUrl?.trim() || null,
+        detailHtml: values.detailHtml || null,
+        specTable: specTable.length ? specTable : null,
+        packageList: packageList.length ? packageList : null,
+        freight: values.freightYuan == null ? null : yuanToCents(values.freightYuan),
+        shipFrom: values.shipFrom?.trim() || null,
+        deliveryDays: values.deliveryDays?.trim() || null,
       } as const;
 
       if (editingItem) {
