@@ -1,5 +1,5 @@
 import type mysql from 'mysql2/promise';
-import type { MyShopResult, SubmitShopApplicationResult } from '@umi/shared';
+import type { MyShopResult, MyShopStatsResult, SubmitShopApplicationResult } from '@umi/shared';
 import { toEntityId } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
@@ -31,12 +31,22 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
   let orderCount = 0;
   let revenue = 0;
 
+  let rating = 0;
+
   if (shop) {
     const [brandRows] = await db.execute<mysql.RowDataPacket[]>(
       `
         SELECT sbaa.id,
                sbaa.brand_id,
                b.name AS brand_name,
+               b.logo_url AS brand_logo,
+               (
+                 SELECT COUNT(*)
+                 FROM product p2
+                 INNER JOIN brand_product bp2 ON bp2.id = p2.brand_product_id
+                 WHERE bp2.brand_id = sbaa.brand_id
+                   AND p2.shop_id = sbaa.shop_id
+               ) AS product_count,
                sbaa.status,
                sbaa.created_at
         FROM shop_brand_auth_apply sbaa
@@ -49,10 +59,17 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
 
     const [productRows] = await db.execute<mysql.RowDataPacket[]>(
       `
-        SELECT id, name, price, image_url, status
-        FROM product
-        WHERE shop_id = ?
-        ORDER BY created_at DESC
+        SELECT p.id,
+               p.name,
+               p.price,
+               p.image_url,
+               p.status,
+               b.name AS brand_name
+        FROM product p
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+        LEFT JOIN brand b ON b.id = bp.brand_id
+        WHERE p.shop_id = ?
+        ORDER BY p.created_at DESC
       `,
       [shop.id],
     );
@@ -62,20 +79,34 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
         SELECT
           (SELECT COUNT(*) FROM product p WHERE p.shop_id = ?) AS product_count,
           (SELECT COUNT(*) FROM fulfillment_order fo WHERE fo.shop_id = ?) AS order_count,
-          (SELECT COALESCE(SUM(fo.total_amount), 0) FROM fulfillment_order fo WHERE fo.shop_id = ?) AS revenue
+          (SELECT COALESCE(SUM(fo.total_amount), 0) FROM fulfillment_order fo WHERE fo.shop_id = ?) AS revenue,
+          (
+            SELECT AVG(pr.rating)
+            FROM product_review pr
+            INNER JOIN product p2 ON p2.id = pr.product_id
+            WHERE p2.shop_id = ? AND pr.status = 10
+          ) AS avg_rating
       `,
-      [shop.id, shop.id, shop.id],
+      [shop.id, shop.id, shop.id, shop.id],
     );
 
-    const stats = statsRows[0] as { product_count?: number | string; order_count?: number | string; revenue?: number | string } | undefined;
+    const stats = statsRows[0] as {
+      product_count?: number | string;
+      order_count?: number | string;
+      revenue?: number | string;
+      avg_rating?: number | string | null;
+    } | undefined;
     productCount = Number(stats?.product_count ?? 0);
     orderCount = Number(stats?.order_count ?? 0);
     revenue = Number(stats?.revenue ?? 0);
+    rating = stats?.avg_rating != null ? Number(stats.avg_rating) : 0;
 
     brandAuths = (brandRows as BrandAuthRow[]).map((row) => ({
       id: toEntityId(row.id),
       brandId: toEntityId(row.brand_id),
       brandName: row.brand_name,
+      brandLogo: row.brand_logo ?? null,
+      productCount: Number(row.product_count ?? 0),
       status: Number(row.status) === STATUS_APPROVED ? 'approved' : Number(row.status) === STATUS_PENDING ? 'pending' : 'rejected',
       createdAt: new Date(row.created_at).toISOString(),
     }));
@@ -83,7 +114,7 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
     products = (productRows as ShopProductRow[]).map((row) => ({
       id: toEntityId(row.id),
       name: row.name,
-      brand: null,
+      brand: row.brand_name ?? null,
       price: Number(row.price ?? 0) / 100,
       img: row.image_url ?? null,
       status: Number(row.status) === STATUS_ACTIVE ? 'active' : String(row.status),
@@ -102,12 +133,59 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
           revenue: revenue / 100,
           productCount,
           orderCount,
-          rating: 0,
+          rating,
         }
       : null,
     brandAuths,
     products,
   };
+}
+
+/**
+ * 我的店铺数据统计：今日 / 近 7 天 / 本月 三段聚合，
+ * 与老系统 Api.shop.stats() 的 today/week/month 三段对应。
+ * 时间窗以服务器本地时间的 0 点为界。
+ */
+export async function getMyShopStats(userId: string): Promise<MyShopStatsResult> {
+  const empty = { sales: 0, orders: 0 };
+  const shop = await getCurrentShop(userId);
+  if (!shop) {
+    return { today: empty, week: empty, month: empty };
+  }
+  const shopId = shop.id;
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const db = getDbPool();
+  async function periodStats(since: Date) {
+    const [rows] = await db.execute<mysql.RowDataPacket[]>(
+      `
+        SELECT COALESCE(SUM(total_amount), 0) AS sales,
+               COUNT(*) AS orders
+        FROM fulfillment_order
+        WHERE shop_id = ?
+          AND created_at >= ?
+      `,
+      [shopId, since],
+    );
+    const row = rows[0] as { sales?: number | string; orders?: number | string } | undefined;
+    return {
+      sales: Number(row?.sales ?? 0) / 100,
+      orders: Number(row?.orders ?? 0),
+    };
+  }
+
+  const [today, week, month] = await Promise.all([
+    periodStats(todayStart),
+    periodStats(weekStart),
+    periodStats(monthStart),
+  ]);
+
+  return { today, week, month };
 }
 
 export async function getMyShopStatus(userId: string) {

@@ -4,6 +4,7 @@ import type {
   BrandAuthOverviewResult,
   BrandProductListResult,
   MyShopResult,
+  MyShopStatsResult,
   PublicShopDetailResult,
   ShopStatusResult,
   SubmitBrandAuthApplicationPayload,
@@ -20,6 +21,10 @@ export function fetchMyShop() {
 
 export function fetchShopStatus() {
   return getJson<ShopStatusResult>('/api/shops/me/status');
+}
+
+export function fetchMyShopStats() {
+  return getJson<MyShopStatsResult>('/api/shops/me/stats');
 }
 
 export function submitShopApplication(payload: SubmitShopApplicationPayload) {

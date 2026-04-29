@@ -26,6 +26,8 @@ export type BrandAuthRow = {
   id: number | string;
   brand_id: number | string;
   brand_name: string;
+  brand_logo: string | null;
+  product_count: number | string | null;
   status: number | string;
   created_at: Date | string;
 };

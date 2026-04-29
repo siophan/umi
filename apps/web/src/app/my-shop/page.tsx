@@ -3,17 +3,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { fetchMyShop, fetchShopStatus, submitShopApplication } from '../../lib/api/shops';
+import { fetchMyShop, fetchMyShopStats, fetchShopStatus, submitShopApplication } from '../../lib/api/shops';
 import { hasAuthToken } from '../../lib/api/shared';
 import { ActiveShopContent } from './active-shop-content';
 import {
+  buildMonthChange,
   buildShopOverview,
   getShopStatusText,
   initialShopData,
+  initialShopStats,
   initialShopStatus,
   shopLogo,
   type ShopData,
   type ShopFormState,
+  type ShopStatsData,
   type ShopStatusData,
 } from './my-shop-helpers';
 import styles from './page.module.css';
@@ -28,6 +31,7 @@ export default function MyShopPage() {
   const [submitting, setSubmitting] = useState(false);
   const [shopStatus, setShopStatus] = useState<ShopStatusData>(initialShopStatus);
   const [shopData, setShopData] = useState<ShopData>(initialShopData);
+  const [shopStats, setShopStats] = useState<ShopStatsData>(initialShopStats);
   const [form, setForm] = useState<ShopFormState>({
     shopName: '',
     categoryId: '',
@@ -64,12 +68,14 @@ export default function MyShopPage() {
       setShopStatus(status);
 
       if (status.status === 'active') {
-        const data = await fetchMyShop();
+        const [data, stats] = await Promise.all([fetchMyShop(), fetchMyShopStats()]);
         if (!shouldIgnore()) {
           setShopData(data);
+          setShopStats(stats);
         }
       } else {
         setShopData(initialShopData);
+        setShopStats(initialShopStats);
         if (status.latestApplication) {
           setForm({
             shopName: status.latestApplication.shopName,
@@ -125,15 +131,18 @@ export default function MyShopPage() {
         rating: '--',
         logo: shopLogo,
       };
-  const shopOverview = useMemo(
-    () => buildShopOverview(heroShop.revenue, heroShop.orderCount, approvedBrandCount),
-    [approvedBrandCount, heroShop.orderCount, heroShop.revenue],
-  );
+  const shopOverview = useMemo(() => buildShopOverview(shopStats), [shopStats]);
+  const monthChange = useMemo(() => buildMonthChange(shopStats), [shopStats]);
   const statsCards = useMemo(
     () => [
-      { value: heroShop.revenue, label: '累计收入', helper: '真实累计成交金额', className: styles.revenue },
-      { value: `${heroShop.orderCount}`, label: '累计订单', helper: '履约单统计', className: styles.orders },
-      { value: `${heroShop.productCount}`, label: '在售商品', helper: `${approvedBrandCount} 个授权品牌`, className: styles.views },
+      { value: heroShop.revenue, label: '累计收入', helper: monthChange.revenue, className: styles.revenue },
+      { value: `${heroShop.orderCount}`, label: '累计订单', helper: monthChange.orders, className: styles.orders },
+      {
+        value: `${heroShop.productCount}`,
+        label: '在售商品',
+        helper: `${approvedBrandCount} 个授权品牌`,
+        className: styles.views,
+      },
       {
         value: heroShop.rating,
         label: '店铺评分',
@@ -141,7 +150,16 @@ export default function MyShopPage() {
         className: styles.rate,
       },
     ],
-    [approvedBrandCount, heroShop.orderCount, heroShop.productCount, heroShop.rating, heroShop.revenue, shop?.rating],
+    [
+      approvedBrandCount,
+      heroShop.orderCount,
+      heroShop.productCount,
+      heroShop.rating,
+      heroShop.revenue,
+      monthChange.orders,
+      monthChange.revenue,
+      shop?.rating,
+    ],
   );
 
   function showToast(message: string) {
@@ -152,9 +170,12 @@ export default function MyShopPage() {
     const status = await fetchShopStatus();
     setShopStatus(status);
     if (status.status === 'active') {
-      setShopData(await fetchMyShop());
+      const [data, stats] = await Promise.all([fetchMyShop(), fetchMyShopStats()]);
+      setShopData(data);
+      setShopStats(stats);
     } else {
       setShopData(initialShopData);
+      setShopStats(initialShopStats);
     }
   }
 

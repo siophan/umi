@@ -21,7 +21,19 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
   if (shop) {
     const [mineRows] = await db.execute<mysql.RowDataPacket[]>(
       `
-        SELECT sbaa.id, sbaa.brand_id, b.name AS brand_name, sbaa.status, sbaa.created_at
+        SELECT sbaa.id,
+               sbaa.brand_id,
+               b.name AS brand_name,
+               b.logo_url AS brand_logo,
+               (
+                 SELECT COUNT(*)
+                 FROM product p2
+                 INNER JOIN brand_product bp2 ON bp2.id = p2.brand_product_id
+                 WHERE bp2.brand_id = sbaa.brand_id
+                   AND p2.shop_id = sbaa.shop_id
+               ) AS product_count,
+               sbaa.status,
+               sbaa.created_at
         FROM shop_brand_auth_apply sbaa
         INNER JOIN brand b ON b.id = sbaa.brand_id
         WHERE sbaa.shop_id = ?
@@ -58,6 +70,8 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
       id: toEntityId(row.id),
       brandId: toEntityId(row.brand_id),
       brandName: row.brand_name,
+      brandLogo: row.brand_logo ?? null,
+      productCount: Number(row.product_count ?? 0),
       status: Number(row.status) === STATUS_APPROVED ? 'approved' : Number(row.status) === STATUS_PENDING ? 'pending' : 'rejected',
       createdAt: new Date(row.created_at).toISOString(),
     }));

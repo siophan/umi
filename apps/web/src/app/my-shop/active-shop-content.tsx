@@ -2,7 +2,7 @@
 
 import styles from './page.module.css';
 import {
-  brandLogoMap,
+  brandLogoFallback,
   getBrandStatusText,
   shopActions,
   type ShopData,
@@ -96,13 +96,12 @@ export function ActiveShopContent({
         {brandList.length > 0 ? (
           brandList.map((item) => (
             <article className={styles.brandItem} key={item.id}>
-              <img
-                src={brandLogoMap[item.brandName] || '/legacy/images/products/p001-lays.jpg'}
-                alt={item.brandName}
-              />
+              <img src={item.brandLogo || brandLogoFallback} alt={item.brandName} />
               <div className={styles.brandInfo}>
                 <div className={styles.brandName}>{item.brandName}</div>
-                <div className={styles.brandMeta}>申请时间 {item.createdAt.slice(0, 10)}</div>
+                <div className={styles.brandMeta}>
+                  {item.productCount} 个商品 · 申请时间 {item.createdAt.slice(0, 10)}
+                </div>
               </div>
               <span className={item.status === 'approved' ? styles.statusActive : styles.statusPending}>
                 {getBrandStatusText(item.status)}

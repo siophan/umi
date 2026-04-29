@@ -568,8 +568,21 @@ export interface MyShopBrandAuthItem {
   id: EntityId;
   brandId?: BrandId;
   brandName: string;
+  brandLogo: string | null;
+  productCount: number;
   status: string;
   createdAt: string;
+}
+
+export interface MyShopStatsBucket {
+  sales: number;
+  orders: number;
+}
+
+export interface MyShopStatsResult {
+  today: MyShopStatsBucket;
+  week: MyShopStatsBucket;
+  month: MyShopStatsBucket;
 }
 
 export interface MyShopProductItem {

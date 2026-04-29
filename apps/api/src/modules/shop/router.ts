@@ -16,7 +16,7 @@ import { getRequestUser, requireUser } from '../../lib/auth';
 import { HttpError, sendError, toHttpError } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import { addShopProducts, getBrandAuthOverview, getBrandProducts, submitBrandAuthApplication } from './shop-brand-auth';
-import { getMyShopResult, getMyShopStatus, submitShopApplication } from './shop-my';
+import { getMyShopResult, getMyShopStats, getMyShopStatus, submitShopApplication } from './shop-my';
 import { getPublicShopDetail } from './shop-public';
 
 export const shopRouter = Router();
@@ -48,6 +48,22 @@ shopRouter.get('/me/status', requireUser, async (request, response) => {
         status: 500,
         code: 'SHOP_STATUS_READ_FAILED',
         message: '读取开店状态失败',
+      }),
+    );
+  }
+});
+
+shopRouter.get('/me/stats', requireUser, async (request, response) => {
+  try {
+    const user = getRequestUser(request);
+    ok(response, await getMyShopStats(user.id));
+  } catch (error) {
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_STATS_READ_FAILED',
+        message: '读取店铺统计失败',
       }),
     );
   }

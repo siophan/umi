@@ -1,8 +1,8 @@
 'use client';
 
-import type { CategoryId } from '@umi/shared';
+import type { CategoryId, MyShopStatsResult } from '@umi/shared';
 
-import { fetchMyShop, fetchShopStatus } from '../../lib/api/shops';
+import { fetchMyShop, fetchMyShopStats, fetchShopStatus } from '../../lib/api/shops';
 import styles from './page.module.css';
 
 export const shopActions = [
@@ -12,14 +12,7 @@ export const shopActions = [
 ] as const;
 
 export const shopLogo = '/legacy/images/mascot/mouse-main.png';
-
-export const brandLogoMap: Record<string, string> = {
-  乐事: '/legacy/images/products/p001-lays.jpg',
-  德芙: '/legacy/images/products/p007-dove.jpg',
-  旺旺: '/legacy/images/products/p006-wangwang.jpg',
-  良品铺子: '/legacy/images/products/p005-liangpin.jpg',
-  三只松鼠: '/legacy/images/products/p003-squirrels.jpg',
-};
+export const brandLogoFallback = '/legacy/images/products/p001-lays.jpg';
 
 export function getBrandStatusText(status: string) {
   if (status === 'approved') {
@@ -56,6 +49,7 @@ export function formatDateLabel(value: string | null) {
 
 export type ShopStatusData = Awaited<ReturnType<typeof fetchShopStatus>>;
 export type ShopData = Awaited<ReturnType<typeof fetchMyShop>>;
+export type ShopStatsData = Awaited<ReturnType<typeof fetchMyShopStats>>;
 
 export type ShopFormState = {
   shopName: string;
@@ -76,14 +70,42 @@ export const initialShopData: ShopData = {
   products: [],
 };
 
-export function buildShopOverview(
-  revenue: string,
-  orderCount: number,
-  approvedBrandCount: number,
-) {
+export const initialShopStats: ShopStatsData = {
+  today: { sales: 0, orders: 0 },
+  week: { sales: 0, orders: 0 },
+  month: { sales: 0, orders: 0 },
+};
+
+function formatYuan(value: number) {
+  return Number.isFinite(value) ? value.toFixed(0) : '0';
+}
+
+export function buildShopOverview(stats: MyShopStatsResult) {
   return [
-    { label: '累计收入', value: revenue, meta: '当前店铺累计成交金额', tone: styles.overviewToday },
-    { label: '累计订单', value: `${orderCount}`, meta: '当前店铺累计履约单量', tone: styles.overviewWeek },
-    { label: '品牌授权', value: `${approvedBrandCount}`, meta: '已通过授权品牌数', tone: styles.overviewMonth },
+    {
+      label: '今日',
+      value: `¥${formatYuan(stats.today.sales)}`,
+      meta: `${stats.today.orders} 单`,
+      tone: styles.overviewToday,
+    },
+    {
+      label: '本周',
+      value: `¥${formatYuan(stats.week.sales)}`,
+      meta: `${stats.week.orders} 单`,
+      tone: styles.overviewWeek,
+    },
+    {
+      label: '本月',
+      value: `¥${formatYuan(stats.month.sales)}`,
+      meta: `${stats.month.orders} 单`,
+      tone: styles.overviewMonth,
+    },
   ];
+}
+
+export function buildMonthChange(stats: MyShopStatsResult) {
+  return {
+    revenue: `↑ 本月 +¥${formatYuan(stats.month.sales)}`,
+    orders: `↑ 本月 +${stats.month.orders} 单`,
+  };
 }

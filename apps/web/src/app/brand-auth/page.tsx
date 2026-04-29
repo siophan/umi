@@ -129,6 +129,8 @@ export default function BrandAuthPage() {
             id: created.id,
             brandId: currentBrand.id,
             brandName: currentBrand.name,
+            brandLogo: currentBrand.logo,
+            productCount: 0,
             status: created.status,
             createdAt: new Date().toISOString(),
           },
@@ -198,7 +200,7 @@ export default function BrandAuthPage() {
               const sinceText = item.createdAt ? ` · ${new Date(item.createdAt).toLocaleDateString()}起` : '';
               return (
                 <article className={styles.mineItem} key={item.id}>
-                  <img src={brandLogoMap[item.brandName] || '/legacy/images/products/p001-lays.jpg'} alt={item.brandName} />
+                  <img src={item.brandLogo || brandLogoMap[item.brandName] || '/legacy/images/products/p001-lays.jpg'} alt={item.brandName} />
                   <div className={styles.info}>
                     <div className={styles.name}>{item.brandName}</div>
                     <div className={styles.meta}>
