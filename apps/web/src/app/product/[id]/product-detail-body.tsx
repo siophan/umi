@@ -46,16 +46,13 @@ type ProductDetailBodyProps = {
   detailExpanded: boolean;
   selectedDeduct: number;
   exchangeToPay: number;
-  remainingSlots: number;
   guessTotalVotes: number;
-  guessPercent: number;
   reviewCount: number;
   guessCountdown: GuessCountdown | null;
   onChangeTab: (tab: ProductMode) => void;
   onSelectGuessOption: (index: number) => void;
   onOpenExchange: () => void;
   onToggleDetailExpanded: () => void;
-  onOpenToast: (message: string) => void;
 };
 
 export function ProductDetailBody({
@@ -81,16 +78,13 @@ export function ProductDetailBody({
   detailExpanded,
   selectedDeduct,
   exchangeToPay,
-  remainingSlots,
   guessTotalVotes,
-  guessPercent,
   reviewCount,
   guessCountdown,
   onChangeTab,
   onSelectGuessOption,
   onOpenExchange,
   onToggleDetailExpanded,
-  onOpenToast,
 }: ProductDetailBodyProps) {
   return (
     <section className={styles.body}>
@@ -113,22 +107,16 @@ export function ProductDetailBody({
                   <i className="fa-solid fa-chart-pie" style={{ color: '#ff6b00' }} /> 当前进度
                 </div>
                 <div className={styles.panelMore}>
-                  剩余 <strong>{remainingSlots}</strong> 个名额
+                  已 <strong>{guessTotalVotes}</strong> 人参与
                 </div>
               </div>
               <div className={styles.ringSection}>
-                <div className={styles.ringWrap}>
-                  <div className={styles.ringInner}>
-                    <span className={styles.ringPct}>{guessPercent}%</span>
-                    <span className={styles.ringLabel}>已满</span>
-                  </div>
-                </div>
                 <div className={styles.ringInfo}>
                   <div className={styles.ringStat}>
                     <strong>{guessTotalVotes}</strong>
-                    <span>/50 人</span>
+                    <span>人参与</span>
                   </div>
-                  <div className={styles.ringStatLabel}>已参与人数</div>
+                  <div className={styles.ringStatLabel}>累计下注人数</div>
                   <div className={styles.ringStat}>
                     <strong>¥{product.price}</strong>
                   </div>
@@ -195,9 +183,11 @@ export function ProductDetailBody({
                   );
                 })}
               </div>
-              <button className={styles.guessMore} type="button" onClick={() => onOpenToast('查看全部')}>
-                查看更多 <i className="fa-solid fa-chevron-down" />
-              </button>
+              {activeGuess ? (
+                <Link className={styles.guessMore} href={`/guess/${activeGuess.id}`}>
+                  查看完整记录 <i className="fa-solid fa-chevron-right" />
+                </Link>
+              ) : null}
             </div>
           </div>
 

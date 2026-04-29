@@ -195,8 +195,6 @@ function ProductDetailPageInner() {
       : 0;
   const reviewCount = reviews.length;
   const guessTotalVotes = activeGuess?.options.reduce((sum, option) => sum + option.voteCount, 0) || 0;
-  const guessPercent = Math.min(100, Math.round((guessTotalVotes / 50) * 100));
-  const remainingSlots = Math.max(0, 50 - guessTotalVotes);
   const guessCountdown = activeGuess
     ? buildGuessCountdown(activeGuess.endTime, now)
     : null;
@@ -341,16 +339,13 @@ function ProductDetailPageInner() {
         detailExpanded={detailExpanded}
         selectedDeduct={selectedDeduct}
         exchangeToPay={exchangeToPay}
-        remainingSlots={remainingSlots}
         guessTotalVotes={guessTotalVotes}
-        guessPercent={guessPercent}
         reviewCount={reviewCount}
         guessCountdown={guessCountdown}
         onChangeTab={setCurrentTab}
         onSelectGuessOption={setSelectedGuessOpt}
         onOpenExchange={() => setExchangeOpen(true)}
         onToggleDetailExpanded={() => setDetailExpanded((value) => !value)}
-        onOpenToast={setToast}
       />
 
       <div className={styles.bottomBar}>
