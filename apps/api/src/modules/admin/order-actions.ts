@@ -19,6 +19,7 @@ import {
   FULFILLMENT_PROCESSING,
   FULFILLMENT_SHIPPED,
   FULFILLMENT_COMPLETED,
+  OPERATOR_ROLE_ADMIN,
   ORDER_CLOSED,
   ORDER_PENDING,
   ORDER_REFUNDED,
@@ -314,7 +315,7 @@ export async function completeAdminOrderRefund(
         )
         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
-      [order.id, previousOrderStatus, ORDER_REFUNDED, adminUserId, 'admin', '后台完成退款'],
+      [order.id, previousOrderStatus, ORDER_REFUNDED, adminUserId, OPERATOR_ROLE_ADMIN, '后台完成退款'],
     );
 
     await connection.commit();

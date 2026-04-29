@@ -13,6 +13,7 @@ import {
   type CartPurchaseRow,
   type CouponRow,
   FULFILLMENT_COMPLETED,
+  OPERATOR_ROLE_USER,
   ORDER_FULFILLED,
   ORDER_PAID,
   ORDER_PENDING,
@@ -253,7 +254,7 @@ export async function createPendingOrder(
         INSERT INTO order_status_log (order_id, from_status, to_status, operator_id, operator_role, note, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
-      [orderId, ORDER_PENDING, ORDER_PENDING, userId, 'user', payload.note?.trim() || '用户提交订单'],
+      [orderId, ORDER_PENDING, ORDER_PENDING, userId, OPERATOR_ROLE_USER, payload.note?.trim() || '用户提交订单'],
     );
 
     await connection.commit();
@@ -333,7 +334,7 @@ export async function confirmOrder(userId: string, orderId: string): Promise<Con
         INSERT INTO order_status_log (order_id, from_status, to_status, operator_id, operator_role, note, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
-      [orderId, row.status ?? ORDER_PAID, ORDER_FULFILLED, userId, 'user', '用户确认收货'],
+      [orderId, row.status ?? ORDER_PAID, ORDER_FULFILLED, userId, OPERATOR_ROLE_USER, '用户确认收货'],
     );
 
     await connection.commit();
@@ -364,7 +365,7 @@ export async function urgeOrder(userId: string, orderId: string) {
   await db.execute(
     `INSERT INTO order_status_log (order_id, from_status, to_status, operator_id, operator_role, note, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`,
-    [orderId, row.status, row.status, userId, 'user', '用户催发货'],
+    [orderId, row.status, row.status, userId, OPERATOR_ROLE_USER, '用户催发货'],
   );
 
   return { success: true as const };

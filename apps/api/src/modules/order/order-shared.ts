@@ -9,6 +9,10 @@ export const ORDER_REFUNDED = 90;
 
 export const ORDER_TYPE_SHOP = 20;
 
+export const OPERATOR_ROLE_USER = 10;
+export const OPERATOR_ROLE_ADMIN = 20;
+export const OPERATOR_ROLE_SYSTEM = 30;
+
 export const FULFILLMENT_PENDING = 10;
 export const FULFILLMENT_PROCESSING = 20;
 export const FULFILLMENT_SHIPPED = 30;

@@ -21,6 +21,7 @@ import {
   COUPON_STATUS_USED,
   FULFILLMENT_PENDING,
   FULFILLMENT_TYPE_SHIP,
+  OPERATOR_ROLE_SYSTEM,
   ORDER_CLOSED,
   ORDER_PAID,
   ORDER_PENDING,
@@ -228,7 +229,7 @@ export async function markOrderPaid(payNo: string, tradeNo: string, paidAt: Date
     await connection.execute(
       `INSERT INTO order_status_log (order_id, from_status, to_status, operator_id, operator_role, note, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`,
-      [order.id, ORDER_PENDING, ORDER_PAID, order.user_id, 'system', '支付成功'],
+      [order.id, ORDER_PENDING, ORDER_PAID, order.user_id, OPERATOR_ROLE_SYSTEM, '支付成功'],
     );
 
     if (order.coupon_id) {
