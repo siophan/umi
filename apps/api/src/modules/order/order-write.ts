@@ -53,7 +53,7 @@ async function getAvailableCoupon(
 
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
     `
-      SELECT id, coupon_no, name, amount, type, condition, expire_at, source_type, status
+      SELECT id, coupon_no, name, amount, type, \`condition\`, expire_at, source_type, status
       FROM coupon
       WHERE id = ?
         AND user_id = ?

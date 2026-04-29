@@ -107,7 +107,7 @@ export async function listCoupons(userId: string): Promise<CouponListResult> {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
-      SELECT id, coupon_no, name, amount, type, condition, expire_at, source_type, status
+      SELECT id, coupon_no, name, amount, type, \`condition\`, expire_at, source_type, status
       FROM coupon
       WHERE user_id = ?
       ORDER BY
@@ -347,7 +347,7 @@ export async function claimCouponFromTemplate(
     const [result] = await connection.execute<mysql.ResultSetHeader>(
       `
         INSERT INTO coupon (
-          coupon_no, user_id, template_id, name, amount, type, condition,
+          coupon_no, user_id, template_id, name, amount, type, \`condition\`,
           expire_at, source_type, status, claimed_at, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3), NOW(3))
       `,
