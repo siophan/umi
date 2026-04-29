@@ -276,10 +276,17 @@ export function ProductDetailBody({
                 );
               })()}
               <div className={styles.serviceGrid}>
-                {['正品保障', '7天无理由', '极速售后'].map((item) => (
-                  <div className={styles.serviceItem} key={item}>
-                    <span><i className="fa-solid fa-check" /></span>
-                    <em>{item}</em>
+                {[
+                  { icon: 'fa-certificate', label: '正品保证' },
+                  { icon: 'fa-truck-fast', label: '24h发货' },
+                  { icon: 'fa-box-open', label: '顺丰包邮' },
+                  { icon: 'fa-rotate-left', label: '7天退换' },
+                  { icon: 'fa-shield-halved', label: '运费险' },
+                  { icon: 'fa-bolt', label: '极速退款' },
+                ].map((item) => (
+                  <div className={styles.serviceItem} key={item.label}>
+                    <span><i className={`fa-solid ${item.icon}`} /></span>
+                    <em>{item.label}</em>
                   </div>
                 ))}
               </div>
