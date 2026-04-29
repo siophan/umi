@@ -47,14 +47,29 @@ export function buildGuessStatusItems(guesses: GuessSummary[]) {
       count: guesses.filter((item) => item.reviewStatus === 'pending').length,
     },
     {
+      key: 'draft',
+      label: '草稿',
+      count: guesses.filter((item) => item.status === 'draft').length,
+    },
+    {
       key: 'active',
       label: '进行中',
       count: guesses.filter((item) => item.status === 'active').length,
     },
     {
+      key: 'pending_settle',
+      label: '待结算',
+      count: guesses.filter((item) => item.status === 'pending_settle').length,
+    },
+    {
       key: 'settled',
       label: '已结算',
       count: guesses.filter((item) => item.status === 'settled').length,
+    },
+    {
+      key: 'abandoned',
+      label: '已废弃',
+      count: guesses.filter((item) => item.status === 'abandoned').length,
     },
     {
       key: 'cancelled',
@@ -74,7 +89,7 @@ export function buildGuessCategoryOptions(
     .filter((item) => item.bizType === 'guess' && item.status === 'active')
     .forEach((item) => {
       options.set(String(item.id), {
-        label: `${item.name}${item.parentName ? ` / 上级：${item.parentName}` : ''} / ID:${item.id}`,
+        label: item.parentName ? `${item.parentName} / ${item.name}` : item.name,
         value: String(item.id),
       });
     });
@@ -86,20 +101,15 @@ export function buildGuessCategoryOptions(
     }
     if (!options.has(value)) {
       options.set(value, {
-        label: `${item.category} / ID:${value}（当前结果）`,
+        label: item.category,
         value,
       });
     }
   });
 
-  return Array.from(options.values()).sort((left, right) => {
-    const leftCurrent = left.label.includes('当前结果');
-    const rightCurrent = right.label.includes('当前结果');
-    if (leftCurrent !== rightCurrent) {
-      return leftCurrent ? 1 : -1;
-    }
-    return left.label.localeCompare(right.label, 'zh-CN');
-  });
+  return Array.from(options.values()).sort((left, right) =>
+    left.label.localeCompare(right.label, 'zh-CN'),
+  );
 }
 
 export function buildGuessBrandOptions(guesses: GuessSummary[]) {
@@ -137,16 +147,7 @@ export function buildGuessColumns(args: {
     {
       title: '分类',
       dataIndex: 'category',
-      render: (_, record) => (
-        <div>
-          <Typography.Text>{record.category}</Typography.Text>
-          {record.categoryId ? (
-            <Typography.Text style={{ display: 'block' }} type="secondary">
-              ID: {record.categoryId}
-            </Typography.Text>
-          ) : null}
-        </div>
-      ),
+      render: (_, record) => <Typography.Text>{record.category}</Typography.Text>,
     },
     {
       title: '状态',

@@ -12,7 +12,9 @@ import { getDbPool } from '../../lib/db';
 export const GUESS_DRAFT = 10;
 export const GUESS_PENDING_REVIEW = 20;
 export const GUESS_ACTIVE = 30;
+export const GUESS_PENDING_SETTLE = 35;
 export const GUESS_SETTLED = 40;
+export const GUESS_ABANDONED = 80;
 export const GUESS_REJECTED = 90;
 export const GUESS_TYPE_STANDARD = 10;
 export const GUESS_SCOPE_PUBLIC = 10;
@@ -188,18 +190,13 @@ export function fallbackUserName(
 
 export function mapGuessStatus(code: number | string): GuessSummary['status'] {
   const value = Number(code ?? 0);
-  if (value === GUESS_DRAFT) {
-    return 'draft';
-  }
-  if (value === GUESS_PENDING_REVIEW) {
-    return 'pending_review';
-  }
-  if (value === GUESS_SETTLED) {
-    return 'settled';
-  }
-  if (value === GUESS_REJECTED) {
-    return 'cancelled';
-  }
+  if (value === GUESS_DRAFT) return 'draft';
+  if (value === GUESS_PENDING_REVIEW) return 'pending_review';
+  if (value === GUESS_ACTIVE) return 'active';
+  if (value === GUESS_PENDING_SETTLE) return 'pending_settle';
+  if (value === GUESS_SETTLED) return 'settled';
+  if (value === GUESS_ABANDONED) return 'abandoned';
+  if (value === GUESS_REJECTED) return 'cancelled';
   return 'active';
 }
 
