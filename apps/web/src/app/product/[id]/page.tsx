@@ -473,7 +473,7 @@ function ProductDetailPageInner() {
                   setToast('当前暂无可参与的竞猜');
                   return;
                 }
-                router.push(`/guess-order?id=${encodeURIComponent(activeGuess.id)}`);
+                router.push(`/guess/${encodeURIComponent(activeGuess.id)}`);
               } else if (currentTab === 'direct') {
                 if (product.stock <= 0) {
                   setToast('商品已售罄');
