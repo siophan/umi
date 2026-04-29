@@ -12,6 +12,8 @@ interface AdminBrandLibraryFormModalProps {
   categoryIdOptions: Array<{ label: string; value: string }>;
   editing: boolean;
   form: ReturnType<typeof Form.useForm<BrandProductFormValues>>[0];
+  /** 控制每次打开时 Form 用什么初值; 切 record / 新增/编辑 切换都靠它驱动 remount */
+  initialValues: Partial<BrandProductFormValues>;
   onCancel: () => void;
   onSubmit: () => void;
   open: boolean;
@@ -23,6 +25,7 @@ export function AdminBrandLibraryFormModal({
   categoryIdOptions,
   editing,
   form,
+  initialValues,
   onCancel,
   onSubmit,
   open,
@@ -41,7 +44,12 @@ export function AdminBrandLibraryFormModal({
       destroyOnClose
     >
       <ConfigProvider theme={SEARCH_THEME}>
-        <Form form={form} layout="vertical" preserve={false}>
+        <Form
+          form={form}
+          layout="vertical"
+          preserve={false}
+          initialValues={initialValues}
+        >
           <Divider orientation="left" plain style={{ marginTop: 0 }}>
             基础信息
           </Divider>

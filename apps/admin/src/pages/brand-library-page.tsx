@@ -116,9 +116,17 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
     () => buildCategoryIdOptions(data, editingItem),
     [data, editingItem],
   );
+  // 用 initialValues 走声明式回填: Modal destroyOnClose 每次开都 remount Form,
+  // initialValues 跟 editingItem 联动, 避免在 Form 未挂载时 setFieldsValue 丢值
+  const formInitialValues = useMemo<Partial<BrandProductFormValues>>(
+    () =>
+      editingItem
+        ? buildEditBrandProductFormValues(editingItem)
+        : buildCreateBrandProductFormValues(),
+    [editingItem],
+  );
   const columns = buildBrandLibraryColumns({
     onEdit: (record) => {
-      brandProductForm.setFieldsValue(buildEditBrandProductFormValues(record));
       setEditingItem(record);
       setFormOpen(true);
     },
@@ -213,8 +221,6 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
               key="create"
               type="primary"
               onClick={() => {
-                brandProductForm.resetFields();
-                brandProductForm.setFieldsValue(buildCreateBrandProductFormValues());
                 setEditingItem(null);
                 setFormOpen(true);
               }}
@@ -236,6 +242,7 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         categoryIdOptions={categoryIdOptions}
         editing={editingItem != null}
         form={brandProductForm}
+        initialValues={formInitialValues}
         open={formOpen}
         submitting={submitting}
         onCancel={() => {
