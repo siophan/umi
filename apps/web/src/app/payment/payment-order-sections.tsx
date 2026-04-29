@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import type { CouponListItem, UserAddressItem } from '@umi/shared';
 
 import styles from './page.module.css';
@@ -56,7 +55,6 @@ export function PaymentOrderSections({
   onRemarkChange,
   onSubmit,
 }: PaymentOrderSectionsProps) {
-  const [invoiceOn, setInvoiceOn] = useState(false);
   const couponCount = availableCoupons.length;
   return (
     <>
@@ -276,37 +274,6 @@ export function PaymentOrderSections({
           <span className={styles.detailLabel}>运费险</span>
           <strong className={styles.detailValue}>退货免运费</strong>
         </div>
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.sectionTitle}>
-          <i className="fa-solid fa-file-invoice" /> 发票信息
-        </div>
-        <button
-          type="button"
-          className={styles.detailRowButton}
-          onClick={() => setInvoiceOn((prev) => !prev)}
-        >
-          <i className="fa-solid fa-receipt" />
-          <span className={styles.detailLabel}>发票类型</span>
-          <strong className={`${styles.detailValue} ${styles.detailLink}`}>
-            {invoiceOn ? '电子发票（个人）' : '不开发票'}
-          </strong>
-        </button>
-        {invoiceOn ? (
-          <>
-            <div className={styles.detailRow}>
-              <i className="fa-regular fa-building" />
-              <span className={styles.detailLabel}>发票抬头</span>
-              <strong className={styles.detailValue}>个人</strong>
-            </div>
-            <div className={styles.detailRow}>
-              <i className="fa-regular fa-envelope" />
-              <span className={styles.detailLabel}>接收邮箱</span>
-              <strong className={styles.detailValue}>user@example.com</strong>
-            </div>
-          </>
-        ) : null}
       </section>
 
       <section className={styles.card}>

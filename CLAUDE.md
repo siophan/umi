@@ -212,10 +212,30 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
+## 19. 支付页发票信息整段先隐藏（二期）
+
+**文件**：`apps/web/src/app/payment/payment-order-sections.tsx`（已删除整段 section，2026-04-29）
+
+老系统 `umi-origin/frontend/payment.html:269-281` 的"发票信息"section 是纯 UI 占位：
+
+- 抬头硬编码"个人"，邮箱硬编码 `user@example.com`
+- toggle 状态只是前端 `useState`，没传给 `createPendingOrder`，DB `order` 表也没 invoice 列
+- 用户切到"电子发票（个人）"完全不会真开发票
+
+短期已删除整段 section，避免误导。
+
+**二期方案**：补开票真实流程：
+- DB：`order` 表加 `invoice_type`（none/personal/company）`invoice_title`（公司名）`invoice_tax_no`（税号）`invoice_email` 四列
+- API：`createPendingOrder` payload 接收 invoice 字段，订单详情/导出带出来
+- 前端：发票 sheet 支持"不开 / 个人 / 公司+税号"三态，邮箱默认填 `user.email` 可改
+- 后台：admin 订单页能看到发票字段，可导出报表
+
+---
+
 ## 小结
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口（支付链路主流程已完成 2026-04-29）|
 | P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 好友PK 多人模式空选项结算 / 支付超时库存归还 + 退款 API |
-| P2     | 11   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 |
+| P2     | 12   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 |
