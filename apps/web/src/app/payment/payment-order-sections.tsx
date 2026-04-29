@@ -148,8 +148,13 @@ export function PaymentOrderSections({
               </div>
               <div className={styles.productBottom}>
                 <div>
-                  <span className={styles.price}>¥ {item.price.toFixed(2)}</span>
-                  <span className={styles.orig}>¥ {item.orig.toFixed(2)}</span>
+                  <span className={styles.price}>
+                    <small>¥</small>
+                    {item.price.toFixed(2)}
+                  </span>
+                  {item.orig > item.price ? (
+                    <span className={styles.orig}>¥{item.orig.toFixed(2)}</span>
+                  ) : null}
                 </div>
                 <div className={styles.qty}>×{item.qty}</div>
               </div>
