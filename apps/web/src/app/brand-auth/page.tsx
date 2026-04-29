@@ -220,7 +220,11 @@ export default function BrandAuthPage() {
                       ? '✅ 已授权'
                       : item.status === 'pending'
                         ? '⏳ 审核中'
-                        : '❌ 已拒绝'}
+                        : item.status === 'revoked'
+                          ? '❌ 已撤销'
+                          : item.status === 'expired'
+                            ? '❌ 已过期'
+                            : '❌ 已拒绝'}
                   </span>
                 </article>
               );

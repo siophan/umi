@@ -21,6 +21,12 @@ export function getBrandStatusText(status: string) {
   if (status === 'rejected') {
     return '已拒绝';
   }
+  if (status === 'revoked') {
+    return '已撤销';
+  }
+  if (status === 'expired') {
+    return '已过期';
+  }
   return '审核中';
 }
 

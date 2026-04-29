@@ -103,7 +103,15 @@ export function ActiveShopContent({
                   {item.productCount} 个商品 · 申请时间 {item.createdAt.slice(0, 10)}
                 </div>
               </div>
-              <span className={item.status === 'approved' ? styles.statusActive : styles.statusPending}>
+              <span
+                className={
+                  item.status === 'approved'
+                    ? styles.statusActive
+                    : item.status === 'pending'
+                      ? styles.statusPending
+                      : styles.statusRejected
+                }
+              >
                 {getBrandStatusText(item.status)}
               </span>
             </article>

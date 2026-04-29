@@ -8,6 +8,38 @@ import { getDbPool } from '../../lib/db';
 export const STATUS_ACTIVE = 10;
 export const STATUS_PENDING = 10;
 export const STATUS_APPROVED = 30;
+export const STATUS_REJECTED = 40;
+// shop_brand_auth.status：实际授权关系的真实状态
+export const AUTH_STATUS_ACTIVE = 10;
+export const AUTH_STATUS_EXPIRED = 90;
+export const AUTH_STATUS_REVOKED = 91;
+
+/**
+ * 把申请单状态 + 实际授权关系状态合并成前端单一语义字符串。
+ * 申请已通过(30) 时优先看 shop_brand_auth.status：active=已授权 / revoked=已撤销 / expired=已过期。
+ * sba 行不存在(LEFT JOIN null) 时退回 'approved'，保留向后兼容。
+ */
+export function mapBrandAuthStatus(applyStatus: number, authStatus: number | null): string {
+  if (applyStatus === STATUS_PENDING) {
+    return 'pending';
+  }
+  if (applyStatus === STATUS_REJECTED) {
+    return 'rejected';
+  }
+  if (applyStatus === STATUS_APPROVED) {
+    if (authStatus === AUTH_STATUS_ACTIVE) {
+      return 'approved';
+    }
+    if (authStatus === AUTH_STATUS_REVOKED) {
+      return 'revoked';
+    }
+    if (authStatus === AUTH_STATUS_EXPIRED) {
+      return 'expired';
+    }
+    return 'approved';
+  }
+  return 'rejected';
+}
 
 export function createNo(prefix: string) {
   return `${prefix}${randomBytes(6).toString('hex')}`;
@@ -28,7 +60,8 @@ export type BrandAuthRow = {
   brand_name: string;
   brand_logo: string | null;
   product_count: number | string | null;
-  status: number | string;
+  apply_status: number | string;
+  auth_status: number | string | null;
   created_at: Date | string;
 };
 

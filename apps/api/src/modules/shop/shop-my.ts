@@ -11,9 +11,9 @@ import {
   BrandAuthRow,
   listShopCategories,
   mapApplicationStatus,
+  mapBrandAuthStatus,
   ShopProductRow,
   STATUS_ACTIVE,
-  STATUS_APPROVED,
   STATUS_PENDING,
   toShopStatusResult,
 } from './shop-shared';
@@ -47,10 +47,14 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
                  WHERE bp2.brand_id = sbaa.brand_id
                    AND p2.shop_id = sbaa.shop_id
                ) AS product_count,
-               sbaa.status,
+               sbaa.status AS apply_status,
+               sba.status AS auth_status,
                sbaa.created_at
         FROM shop_brand_auth_apply sbaa
         INNER JOIN brand b ON b.id = sbaa.brand_id
+        LEFT JOIN shop_brand_auth sba
+               ON sba.shop_id = sbaa.shop_id
+              AND sba.brand_id = sbaa.brand_id
         WHERE sbaa.shop_id = ?
         ORDER BY sbaa.created_at DESC
       `,
@@ -107,7 +111,10 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
       brandName: row.brand_name,
       brandLogo: row.brand_logo ?? null,
       productCount: Number(row.product_count ?? 0),
-      status: Number(row.status) === STATUS_APPROVED ? 'approved' : Number(row.status) === STATUS_PENDING ? 'pending' : 'rejected',
+      status: mapBrandAuthStatus(
+        Number(row.apply_status),
+        row.auth_status == null ? null : Number(row.auth_status),
+      ),
       createdAt: new Date(row.created_at).toISOString(),
     }));
 
