@@ -8,6 +8,7 @@ interface AdminCouponGrantModalProps {
   couponName: string | null;
   submitting: boolean;
   form: ReturnType<typeof Form.useForm<GrantFormValues>>[0];
+  initialValues: Partial<GrantFormValues>;
   onCancel: () => void;
   onSubmit: () => void | Promise<void>;
 }
@@ -17,6 +18,7 @@ export function AdminCouponGrantModal({
   couponName,
   submitting,
   form,
+  initialValues,
   onCancel,
   onSubmit,
 }: AdminCouponGrantModalProps) {
@@ -32,7 +34,7 @@ export function AdminCouponGrantModal({
       onOk={() => void onSubmit()}
     >
       <ConfigProvider theme={SEARCH_THEME}>
-        <Form form={form} layout="vertical" preserve={false}>
+        <Form form={form} layout="vertical" preserve={false} initialValues={initialValues}>
           <Form.Item
             label="目标人群"
             name="audience"

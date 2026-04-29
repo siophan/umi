@@ -13,6 +13,7 @@ interface AdminOrderShipModalProps {
   submitting: boolean;
   orderSn: string | null;
   form: FormInstance<AdminOrderShipFormValues>;
+  initialValues: Partial<AdminOrderShipFormValues>;
   onCancel: () => void;
   onSubmit: () => void;
 }
@@ -28,6 +29,7 @@ export function AdminOrderShipModal({
   submitting,
   orderSn,
   form,
+  initialValues,
   onCancel,
   onSubmit,
 }: AdminOrderShipModalProps) {
@@ -45,7 +47,7 @@ export function AdminOrderShipModal({
         onCancel={onCancel}
         onOk={onSubmit}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" initialValues={initialValues}>
           <Form.Item
             label="物流方式"
             name="shippingType"

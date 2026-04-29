@@ -66,6 +66,12 @@ export function useAdminCouponPageState({
   const [grantingCoupon, setGrantingCoupon] = useState<AdminCouponTemplateItem | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [grantOpen, setGrantOpen] = useState(false);
+  const [couponInitialValues, setCouponInitialValues] = useState<Partial<CouponFormValues>>(
+    buildDefaultCouponFormValues,
+  );
+  const [grantInitialValues, setGrantInitialValues] = useState<Partial<GrantFormValues>>(
+    buildCreateGrantFormValues,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [grantSubmitting, setGrantSubmitting] = useState(false);
   const [actionSeed, setActionSeed] = useState(0);
@@ -226,22 +232,19 @@ export function useAdminCouponPageState({
   }
 
   function openCreateCoupon() {
-    couponForm.resetFields();
-    couponForm.setFieldsValue(buildDefaultCouponFormValues());
+    setCouponInitialValues(buildDefaultCouponFormValues());
     setEditingCoupon(null);
     setFormOpen(true);
   }
 
   function openEditCoupon(record: AdminCouponTemplateItem) {
-    couponForm.resetFields();
-    couponForm.setFieldsValue(buildCouponFormValues(record));
+    setCouponInitialValues(buildCouponFormValues(record));
     setEditingCoupon(record);
     setFormOpen(true);
   }
 
   function openGrantCoupon(record: AdminCouponTemplateItem) {
-    grantForm.resetFields();
-    grantForm.setFieldsValue(buildCreateGrantFormValues());
+    setGrantInitialValues(buildCreateGrantFormValues());
     setGrantingCoupon(record);
     setGrantOpen(true);
   }
@@ -271,6 +274,8 @@ export function useAdminCouponPageState({
     setFormOpen,
     grantOpen,
     setGrantOpen,
+    couponInitialValues,
+    grantInitialValues,
     submitting,
     grantSubmitting,
     openCreateCoupon,

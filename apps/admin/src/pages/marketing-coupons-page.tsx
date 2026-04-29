@@ -52,6 +52,8 @@ export function MarketingCouponsPage({ refreshToken = 0 }: MarketingCouponsPageP
     setFormOpen,
     grantOpen,
     setGrantOpen,
+    couponInitialValues,
+    grantInitialValues,
     submitting,
     grantSubmitting,
     openCreateCoupon,
@@ -118,6 +120,7 @@ export function MarketingCouponsPage({ refreshToken = 0 }: MarketingCouponsPageP
         validityType={validityType}
         submitting={submitting}
         form={couponForm}
+        initialValues={couponInitialValues}
         onCancel={() => {
           setFormOpen(false);
           setEditingCoupon(null);
@@ -130,6 +133,7 @@ export function MarketingCouponsPage({ refreshToken = 0 }: MarketingCouponsPageP
         couponName={grantingCoupon?.name ?? null}
         submitting={grantSubmitting}
         form={grantForm}
+        initialValues={grantInitialValues}
         onCancel={() => {
           setGrantOpen(false);
           setGrantingCoupon(null);

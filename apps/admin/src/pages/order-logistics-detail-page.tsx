@@ -31,6 +31,9 @@ export function OrderLogisticsDetailPage({
   const [shippingOpen, setShippingOpen] = useState(false);
   const [shippingSubmitting, setShippingSubmitting] = useState(false);
   const [delivering, setDelivering] = useState(false);
+  const [shipInitialValues, setShipInitialValues] = useState<Partial<AdminOrderShipFormValues>>({
+    shippingType: 'express',
+  });
 
   useEffect(() => {
     let alive = true;
@@ -75,7 +78,7 @@ export function OrderLogisticsDetailPage({
       return;
     }
 
-    shipForm.setFieldsValue({
+    setShipInitialValues({
       shippingType: record.shippingType === 'unknown' ? 'express' : record.shippingType,
       trackingNo: record.trackingNo || undefined,
     });
@@ -209,6 +212,7 @@ export function OrderLogisticsDetailPage({
         submitting={shippingSubmitting}
         orderSn={record.orderSn || null}
         form={shipForm}
+        initialValues={shipInitialValues}
         onCancel={() => setShippingOpen(false)}
         onSubmit={() => void handleShip()}
       />

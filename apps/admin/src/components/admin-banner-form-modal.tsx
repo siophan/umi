@@ -11,6 +11,7 @@ import {
 interface AdminBannerFormModalProps {
   editing: boolean;
   form: ReturnType<typeof Form.useForm<BannerFormValues>>[0];
+  initialValues: Partial<BannerFormValues>;
   onCancel: () => void;
   onSubmit: () => void;
   open: boolean;
@@ -21,6 +22,7 @@ interface AdminBannerFormModalProps {
 export function AdminBannerFormModal({
   editing,
   form,
+  initialValues,
   onCancel,
   onSubmit,
   open,
@@ -39,7 +41,7 @@ export function AdminBannerFormModal({
       onOk={onSubmit}
     >
       <ConfigProvider theme={SEARCH_THEME}>
-        <Form form={form} layout="vertical" preserve={false}>
+        <Form form={form} layout="vertical" preserve={false} initialValues={initialValues}>
           <Form.Item
             label="投放位"
             name="position"

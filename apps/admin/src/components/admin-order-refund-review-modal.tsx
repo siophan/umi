@@ -13,6 +13,7 @@ interface AdminOrderRefundReviewModalProps {
   submitting: boolean;
   refundNo: string | null;
   form: FormInstance<AdminOrderRefundReviewFormValues>;
+  initialValues: Partial<AdminOrderRefundReviewFormValues>;
   onCancel: () => void;
   onSubmit: () => void;
 }
@@ -22,6 +23,7 @@ export function AdminOrderRefundReviewModal({
   submitting,
   refundNo,
   form,
+  initialValues,
   onCancel,
   onSubmit,
 }: AdminOrderRefundReviewModalProps) {
@@ -39,7 +41,7 @@ export function AdminOrderRefundReviewModal({
         onCancel={onCancel}
         onOk={onSubmit}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" initialValues={initialValues}>
           <Form.Item
             label="审核结果"
             name="status"

@@ -49,6 +49,12 @@ export function OrderDetailPage({
   const [shippingSubmitting, setShippingSubmitting] = useState(false);
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [refundCompleting, setRefundCompleting] = useState(false);
+  const [shipInitialValues, setShipInitialValues] = useState<Partial<AdminOrderShipFormValues>>({
+    shippingType: 'express',
+  });
+  const [refundInitialValues, setRefundInitialValues] = useState<
+    Partial<AdminOrderRefundReviewFormValues>
+  >({ status: 'approved' });
 
   useEffect(() => {
     let alive = true;
@@ -181,7 +187,7 @@ export function OrderDetailPage({
       return;
     }
 
-    shipForm.setFieldsValue({
+    setShipInitialValues({
       shippingType:
         record.fulfillment.shippingType === 'unknown'
           ? 'express'
@@ -211,7 +217,7 @@ export function OrderDetailPage({
   }
 
   function openRefundReviewModal(defaultStatus: 'approved' | 'rejected' = 'approved') {
-    refundReviewForm.setFieldsValue({
+    setRefundInitialValues({
       status: defaultStatus,
       reviewNote: undefined,
     });
@@ -465,6 +471,7 @@ export function OrderDetailPage({
         submitting={shippingSubmitting}
         orderSn={record.orderSn}
         form={shipForm}
+        initialValues={shipInitialValues}
         onCancel={() => setShippingOpen(false)}
         onSubmit={() => void handleShip()}
       />
@@ -474,6 +481,7 @@ export function OrderDetailPage({
         submitting={refundSubmitting}
         refundNo={record.refund?.refundNo ?? null}
         form={refundReviewForm}
+        initialValues={refundInitialValues}
         onCancel={() => setRefundReviewOpen(false)}
         onSubmit={() => void handleRefundReview()}
       />

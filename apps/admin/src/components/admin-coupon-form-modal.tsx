@@ -18,6 +18,7 @@ interface AdminCouponFormModalProps {
   validityType?: CouponFormValues['validityType'];
   submitting: boolean;
   form: ReturnType<typeof Form.useForm<CouponFormValues>>[0];
+  initialValues: Partial<CouponFormValues>;
   onCancel: () => void;
   onSubmit: () => void | Promise<void>;
 }
@@ -30,6 +31,7 @@ export function AdminCouponFormModal({
   validityType,
   submitting,
   form,
+  initialValues,
   onCancel,
   onSubmit,
 }: AdminCouponFormModalProps) {
@@ -45,7 +47,7 @@ export function AdminCouponFormModal({
       onOk={() => void onSubmit()}
     >
       <ConfigProvider theme={SEARCH_THEME}>
-        <Form form={form} layout="vertical" preserve={false}>
+        <Form form={form} layout="vertical" preserve={false} initialValues={initialValues}>
           <Form.Item
             label="优惠券名称"
             name="name"

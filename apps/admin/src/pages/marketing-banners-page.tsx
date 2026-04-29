@@ -2,7 +2,7 @@ import type { AdminBannerItem } from '@umi/shared';
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { Alert, Button, ConfigProvider, Form, Input, Select, message } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AdminBannerDetailDrawer } from '../components/admin-banner-detail-drawer';
 import { AdminBannerFormModal } from '../components/admin-banner-form-modal';
@@ -102,11 +102,13 @@ export function MarketingBannersPage({ refreshToken = 0 }: MarketingBannersPageP
   }, [actionSeed, filters.position, filters.targetType, filters.title, refreshToken, status]);
 
   const statusItems = buildBannerStatusItems(summary);
+  const formInitialValues = useMemo<Partial<BannerFormValues>>(
+    () => (editingBanner ? buildEditBannerFormValues(editingBanner) : buildCreateBannerFormValues()),
+    [editingBanner],
+  );
   const columns: ProColumns<AdminBannerItem>[] = buildBannerColumns({
     onDelete: (record) => void handleDelete(record),
     onEdit: (record) => {
-      bannerForm.resetFields();
-      bannerForm.setFieldsValue(buildEditBannerFormValues(record));
       setEditingBanner(record);
       setFormOpen(true);
     },
@@ -166,8 +168,6 @@ export function MarketingBannersPage({ refreshToken = 0 }: MarketingBannersPageP
               key="create"
               type="primary"
               onClick={() => {
-                bannerForm.resetFields();
-                bannerForm.setFieldsValue(buildCreateBannerFormValues());
                 setEditingBanner(null);
                 setFormOpen(true);
               }}
@@ -188,6 +188,7 @@ export function MarketingBannersPage({ refreshToken = 0 }: MarketingBannersPageP
         open={formOpen}
         editing={editingBanner != null}
         form={bannerForm}
+        initialValues={formInitialValues}
         submitting={submitting}
         targetType={targetType}
         onCancel={() => {

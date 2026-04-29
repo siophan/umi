@@ -53,6 +53,9 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
   const [shipTarget, setShipTarget] = useState<AdminLogisticsRow | null>(null);
   const [shipSubmitting, setShipSubmitting] = useState(false);
   const [deliveringId, setDeliveringId] = useState<string | null>(null);
+  const [shipInitialValues, setShipInitialValues] = useState<Partial<AdminOrderShipFormValues>>({
+    shippingType: 'express',
+  });
 
   useEffect(() => {
     let alive = true;
@@ -88,7 +91,7 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
       return;
     }
 
-    shipForm.setFieldsValue({
+    setShipInitialValues({
       shippingType: record.shippingType === 'unknown' ? 'express' : record.shippingType,
       trackingNo: record.trackingNo || undefined,
     });
@@ -270,6 +273,7 @@ export function OrderLogisticsPage({ refreshToken = 0 }: OrderLogisticsPageProps
         submitting={shipSubmitting}
         orderSn={shipTarget?.orderSn || null}
         form={shipForm}
+        initialValues={shipInitialValues}
         onCancel={() => setShipTarget(null)}
         onSubmit={() => void handleShip()}
       />
