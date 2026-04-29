@@ -148,17 +148,28 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
-## 15. 支付链路整体未完成（P0 → 部分完成 2026-04-28）
+## 15. 支付链路整体（P0 → 主链路已完成 2026-04-29）
 
-**进度**：竞猜参与已对接真实支付（微信 H5 + 支付宝 WAP）。
+**进度**：竞猜参与 + 商城下单 都已对接真实支付（微信 H5 + 支付宝 WAP）。
+
+### 竞猜（2026-04-28 完成）
 - 设计：`docs/superpowers/specs/2026-04-28-guess-payment-design.md`
 - 实现：`apps/api/src/modules/payment/`（wechatpay-node-v3 + alipay-sdk）+ `apps/api/src/modules/guess/guess-pay.ts` + 前端 bet 弹层渠道选择 + 回跳轮询。
-- 数据：`packages/db/sql/guess_bet_payment.sql` 已执行（去 unique key + 加 6 个支付字段）。
-- 兜底：notify_url 回调 + 主动 query API 双保险（dev 无公网域名也能跑通）。
+- 数据：`packages/db/sql/guess_bet_payment.sql` 已执行。
 
-**仍待办**（P0）：
-- **商城下单支付**（`apps/web/src/app/payment/page.tsx`）：`createOrder` 仍直接写 `ORDER_PAID`，没接网关。下次复用 `apps/api/src/modules/payment/` 模块改造。
-- **弃赛退款 API**：`pay_status=50 (refunded)` 字段已留位，`markBetPaid` 双付分支也标记了 refunded，但还没调 wechat/alipay refund API。
+### 商城（2026-04-29 完成）
+- 下单流程改成两段：
+  - `createPendingOrder`：写 `order(status=PENDING)` + `order_item` + 扣库存（占用），不动券/履约/购物车
+  - `markOrderPaid`：支付回调或主动查询命中 paid 时，事务里转 `ORDER_PAID` + 建履约单 + 核销券 + 删购物车 + 写状态日志，幂等只在 `pay_status=waiting && status=PENDING` 推进
+- 实现：`apps/api/src/modules/order/order-pay.ts` + 前端 `/payment/return` 回跳轮询页
+- pay_no 前缀：`OR` 商城 / `GB` 竞猜，`payment/router.ts` 按前缀派发到 `markOrderPaid` / `markBetPaid`
+- 数据：`packages/db/sql/order_payment.sql` 已执行（order 表加 pay_status / pay_channel / pay_no / pay_trade_no / paid_at / pay_expires_at + uk_order_pay_no）
+- 兜底：notify_url 回调 + 回跳页主动 query API 双保险
+
+### 仍待办
+- **超时未付订单库存归还**（P1）：当前 `createPendingOrder` 即时扣库存做"占用"，但没有定时 job 把 `pay_status=closed` 的订单库存归还。短期手动 SQL 修，长期补 scheduler。
+- **退款 API**（P1）：`pay_status=50 (refunded)` 字段已留位，竞猜双付 + 商城退款都没调 wechat/alipay refund API。
+- **admin returnUrl 配置**：竞猜支付与商城支付共用同一个 `returnUrl`（admin 后台配），需指向 `/payment/return`，用 `?orderId=` / `?betId=` 区分。
 
 ---
 
@@ -205,6 +216,6 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
-| P0     | 3    | Server Component 硬编码 URL / 仓库寄售无写接口 / 支付链路未完成 |
-| P1     | 3    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 好友PK 多人模式空选项结算 |
+| P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口（支付链路主流程已完成 2026-04-29）|
+| P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 好友PK 多人模式空选项结算 / 支付超时库存归还 + 退款 API |
 | P2     | 11   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 |
