@@ -25,7 +25,6 @@ import { orderRouter } from './modules/order/router';
 import { productRouter } from './modules/product/router';
 import { shopRouter } from './modules/shop/router';
 import { uploadRouter } from './modules/upload/router';
-import { walletRouter } from './modules/wallet/router';
 import { warehouseRouter } from './modules/warehouse/router';
 import { paymentRouter } from './modules/payment/router';
 
@@ -62,6 +61,9 @@ export function createApp(): Express {
   // Payment notify endpoints 必须先于 express.json() 挂载, 因为 wechat 用 raw body 验签
   app.use('/api/pay', paymentRouter);
 
+  // 视频上传 base64 后体积比图片大得多, 单独放宽 body 限制 (50MB raw → ~67MB base64)
+  app.use('/api/admin/uploads/oss/videos', express.json({ limit: '80mb' }));
+
   app.use(express.json({ limit: '16mb' }));
 
   registerHealthRoutes(app);
@@ -84,7 +86,6 @@ export function createApp(): Express {
   app.use('/api/search', searchRouter);
   app.use('/api/shops', shopRouter);
   app.use('/api/uploads', uploadRouter);
-  app.use('/api/wallet', walletRouter);
   app.use('/api/warehouse', warehouseRouter);
   app.use('/api/admin', adminRouter);
 

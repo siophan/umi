@@ -2,6 +2,7 @@ import { Button, ConfigProvider, Divider, Form, Input, InputNumber, Modal, Selec
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 
 import { AdminOssImageUploader } from './admin-oss-image-uploader';
+import { AdminOssVideoUploader } from './admin-oss-video-uploader';
 import { SEARCH_THEME } from './admin-list-controls';
 import type { BrandProductFormValues } from '../lib/admin-brand-library';
 
@@ -72,8 +73,13 @@ export function AdminBrandLibraryFormModal({
           <Divider orientation="left" plain>
             详情页内容
           </Divider>
-          <Form.Item label="主图视频 URL" name="videoUrl" extra="可选；mp4 / m3u8。商品图区第一帧会自动切换为视频">
-            <Input allowClear placeholder="https://..." />
+          <Form.Item
+            label="主图视频"
+            name="videoUrl"
+            valuePropName="value"
+            extra="可选；mp4 / webm / mov，最大 50MB。上传后商品图区第一帧会自动切换为视频"
+          >
+            <AdminOssVideoUploader usage="brand_product" placeholder="上传视频" />
           </Form.Item>
           <Form.Item label="详情 HTML" name="detailHtml" extra="商品详情 tab 的内容；支持 HTML 标签（来源信任范围内）">
             <Input.TextArea rows={6} placeholder="<p>...</p>" />

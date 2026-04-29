@@ -18,3 +18,25 @@ export interface UploadOssImageResult {
   size: number;
   contentType: string;
 }
+
+export type UploadVideoUsage = 'brand_product';
+
+export type UploadOssVideoContentType =
+  | 'video/mp4'
+  | 'video/webm'
+  | 'video/quicktime';
+
+export interface UploadOssVideoPayload {
+  fileName: string;
+  contentType: UploadOssVideoContentType;
+  contentBase64: string;
+  usage: UploadVideoUsage;
+}
+
+export interface UploadOssVideoResult {
+  key: string;
+  url: string;
+  etag: string | null;
+  size: number;
+  contentType: string;
+}
