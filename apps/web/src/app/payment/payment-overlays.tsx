@@ -95,6 +95,13 @@ export function PaymentOverlays({
               </button>
             </div>
             <div className={styles.couponList}>
+              {!availableCoupons.length ? (
+                <div className={styles.couponEmpty}>
+                  <i className="fa-regular fa-folder-open" />
+                  <div className={styles.couponEmptyText}>当前暂无可用优惠券</div>
+                  <div className={styles.couponEmptyHint}>去"我的优惠券"领取更多福利</div>
+                </div>
+              ) : null}
               {availableCoupons.map((item) => {
                 const faceClass =
                   item.type === 'percent'
@@ -144,11 +151,12 @@ export function PaymentOverlays({
                   </button>
                 );
               })}
-              {!availableCoupons.length ? <div className={styles.sheetNotUse}>当前暂无可用优惠券</div> : null}
             </div>
-            <button className={styles.sheetNotUse} type="button" onClick={() => onCouponSelect(null)}>
-              不使用优惠券
-            </button>
+            {availableCoupons.length ? (
+              <button className={styles.sheetNotUse} type="button" onClick={() => onCouponSelect(null)}>
+                不使用优惠券
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
