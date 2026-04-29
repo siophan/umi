@@ -129,17 +129,9 @@ export function PaymentOrderSections({
         <div className={styles.sectionTitle}>
           <i className="fa-solid fa-bag-shopping" /> 商品信息
         </div>
-        {products.length === 1 && products[0]?.img ? (
-          <div className={styles.productPoster}>
-            <img alt={products[0].name} src={products[0].img} />
-            <span className={styles.productPosterTag}>🔥 热销商品</span>
-          </div>
-        ) : null}
         {products.map((item, index) => (
           <div className={styles.productRow} key={`${item.productId}-${index}`}>
-            {products.length === 1 && item.img ? null : (
-              <img alt={item.name} className={styles.productImg} src={item.img} />
-            )}
+            <img alt={item.name} className={styles.productImg} src={item.img} />
             <div className={styles.productInfo}>
               <div className={styles.productName}>{item.name}</div>
               <div className={styles.productTags}>
