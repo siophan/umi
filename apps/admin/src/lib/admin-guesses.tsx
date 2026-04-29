@@ -1,6 +1,6 @@
 import type { GuessSummary } from '@umi/shared';
 import type { TableColumnsType } from 'antd';
-import { Button, Popconfirm, Tag, Typography } from 'antd';
+import { Avatar, Button, Popconfirm, Space, Tag, Typography } from 'antd';
 
 import type { AdminCategoryItem } from './api/categories';
 import { formatDateTime, guessReviewStatusMeta, guessStatusMeta } from './format';
@@ -135,13 +135,28 @@ export function buildGuessColumns(args: {
     {
       title: '竞猜标题',
       dataIndex: 'title',
+      render: (_, record) => <Typography.Text strong>{record.title}</Typography.Text>,
+    },
+    {
+      title: '关联商品',
+      key: 'product',
       render: (_, record) => (
-        <div>
-          <Typography.Text strong>{record.title}</Typography.Text>
-          <Typography.Text style={{ display: 'block' }} type="secondary">
-            {record.product.name}
-          </Typography.Text>
-        </div>
+        <Space>
+          <Avatar
+            shape="square"
+            size={40}
+            src={record.product.img || undefined}
+            style={{ flexShrink: 0, background: '#f5f5f5' }}
+          >
+            {record.product.brand?.[0]}
+          </Avatar>
+          <div>
+            <Typography.Text style={{ display: 'block' }}>{record.product.name}</Typography.Text>
+            <Typography.Text style={{ display: 'block' }} type="secondary">
+              {record.product.brand}
+            </Typography.Text>
+          </div>
+        </Space>
       ),
     },
     {
