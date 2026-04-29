@@ -139,7 +139,9 @@ export function PaymentOrderSections({
         ) : null}
         {products.map((item, index) => (
           <div className={styles.productRow} key={`${item.productId}-${index}`}>
-            <img alt={item.name} className={styles.productImg} src={item.img} />
+            {products.length === 1 && item.img ? null : (
+              <img alt={item.name} className={styles.productImg} src={item.img} />
+            )}
             <div className={styles.productInfo}>
               <div className={styles.productName}>{item.name}</div>
               <div className={styles.productTags}>
