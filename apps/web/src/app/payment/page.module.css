@@ -746,7 +746,18 @@
   padding: 12px 16px;
 }
 
-.addrItem,
+.addrItem {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 14px 12px;
+  border: 1.5px solid #eee;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+}
+
 .couponItem {
   position: relative;
   display: flex;
@@ -779,11 +790,16 @@
 
 .addrMiniTag {
   padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(250, 87, 35, 0.08);
-  color: #ff5722;
+  border-radius: 6px;
+  background: #ff5722;
+  color: #fff;
   font-size: 9px;
   font-weight: 700;
+}
+
+.addrItemPhone {
+  color: #999;
+  font-size: 12px;
 }
 
 .addrItemDetail {

@@ -84,8 +84,11 @@ export function PaymentOverlays({
                 >
                   <div className={styles.addrItemTop}>
                     <span>{item.name}</span>
-                    <span>{item.phone}</span>
+                    <span className={styles.addrItemPhone}>{item.phone}</span>
                     {item.tag ? <span className={styles.addrMiniTag}>{item.tag}</span> : null}
+                    <span className={styles.addrItemCheck}>
+                      <i className="fa-solid fa-circle-check" />
+                    </span>
                   </div>
                   <div className={styles.addrItemDetail}>
                     {item.province}
@@ -93,7 +96,6 @@ export function PaymentOverlays({
                     {item.district}
                     {item.detail}
                   </div>
-                  <div className={styles.addrItemCheck}>{addressIndex === index ? '✓' : ''}</div>
                 </button>
               ))}
             </div>
