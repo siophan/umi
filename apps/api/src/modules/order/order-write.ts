@@ -1,5 +1,5 @@
 import type mysql from 'mysql2/promise';
-import type { ConfirmOrderResult, CreateOrderPayload, CreateOrderResult } from '@umi/shared';
+import type { ConfirmOrderResult, CreateOrderPayload } from '@umi/shared';
 import { toEntityId } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
@@ -7,15 +7,12 @@ import { HttpError } from '../../lib/errors';
 import {
   buildOrderSn,
   COUPON_STATUS_UNUSED,
-  COUPON_STATUS_USED,
   COUPON_TYPE_CASH,
   COUPON_TYPE_DISCOUNT,
   type AddressRow,
   type CartPurchaseRow,
   type CouponRow,
   FULFILLMENT_COMPLETED,
-  FULFILLMENT_PENDING,
-  FULFILLMENT_TYPE_SHIP,
   ORDER_FULFILLED,
   ORDER_PAID,
   ORDER_PENDING,
@@ -178,24 +175,35 @@ async function getCartPurchaseRows(
 }
 
 /**
- * 创建真实商城订单。
- * 商品直购和购物车结算都走这里，库存扣减、优惠券核销、履约单创建在同一事务里完成。
+ * 创建一笔待支付订单。
+ * 库存即时扣减做"占用"，但优惠券核销 / 履约单创建 / 购物车清空都延后到 markOrderPaid。
+ * 库存归还由后续支付超时清理 job 处理（本期 TODO）。
  */
-export async function createOrder(userId: string, payload: CreateOrderPayload): Promise<CreateOrderResult> {
+export async function createPendingOrder(
+  userId: string,
+  payload: CreateOrderPayload,
+): Promise<{ orderId: string; orderSn: string; amountCents: number }> {
   const db = getDbPool();
   const connection = await db.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    const address = await getAddressForUser(connection, userId, String(payload.addressId));
+    await getAddressForUser(connection, userId, String(payload.addressId));
     const cartPurchaseItems = payload.source === 'cart' ? await getCartPurchaseRows(connection, userId, payload) : null;
     const productPurchaseItems = payload.source === 'product' ? await getProductPurchaseRows(connection, payload) : null;
     const purchaseItems = cartPurchaseItems ?? productPurchaseItems ?? [];
 
+    if (!purchaseItems.length) {
+      throw new HttpError(400, 'ORDER_ITEMS_REQUIRED', '请选择要购买的商品');
+    }
+
     const originalAmountCents = purchaseItems.reduce((sum, item) => sum + Number(item.row.price ?? 0) * item.quantity, 0);
     const { couponRow, discountCents } = await getAvailableCoupon(connection, userId, payload.couponId, originalAmountCents);
     const payableAmountCents = Math.max(0, originalAmountCents - discountCents);
+    if (payableAmountCents <= 0) {
+      throw new HttpError(400, 'ORDER_AMOUNT_INVALID', '订单金额异常');
+    }
     const orderSn = buildOrderSn();
 
     const [orderResult] = await connection.execute<mysql.ResultSetHeader>(
@@ -205,7 +213,7 @@ export async function createOrder(userId: string, payload: CreateOrderPayload): 
         )
         VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
-      [orderSn, userId, ORDER_TYPE_SHOP, payableAmountCents, originalAmountCents, couponRow ? couponRow.id : null, discountCents, payload.addressId, ORDER_PAID],
+      [orderSn, userId, ORDER_TYPE_SHOP, payableAmountCents, originalAmountCents, couponRow ? couponRow.id : null, discountCents, payload.addressId, ORDER_PENDING],
     );
 
     const orderId = toEntityId(orderResult.insertId);
@@ -245,62 +253,11 @@ export async function createOrder(userId: string, payload: CreateOrderPayload): 
         INSERT INTO order_status_log (order_id, from_status, to_status, operator_id, operator_role, note, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
-      [orderId, ORDER_PENDING, ORDER_PAID, userId, 'user', payload.note?.trim() || '用户提交订单'],
+      [orderId, ORDER_PENDING, ORDER_PENDING, userId, 'user', payload.note?.trim() || '用户提交订单'],
     );
-
-    await connection.execute<mysql.ResultSetHeader>(
-      `
-        INSERT INTO fulfillment_order (
-          fulfillment_sn, type, status, user_id, order_id, shop_id, address_id, receiver_name, phone_number, province, city, district,
-          detail_address, shipping_type, shipping_fee, total_amount, tracking_no, shipped_at, completed_at, created_at, updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
-      `,
-      [
-        `FO${Date.now()}${Math.floor(Math.random() * 9000) + 1000}`,
-        FULFILLMENT_TYPE_SHIP,
-        FULFILLMENT_PENDING,
-        userId,
-        orderId,
-        purchaseItems[0]?.row.shop_id ?? null,
-        payload.addressId,
-        address.name,
-        address.phone_number,
-        address.province,
-        address.city,
-        address.district,
-        address.detail,
-        FULFILLMENT_TYPE_SHIP,
-        0,
-        payableAmountCents,
-      ],
-    );
-
-    if (couponRow) {
-      await connection.execute(
-        `
-          UPDATE coupon
-          SET status = ?, used_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3)
-          WHERE id = ?
-            AND user_id = ?
-        `,
-        [COUPON_STATUS_USED, couponRow.id, userId],
-      );
-    }
-
-    if (cartPurchaseItems?.length) {
-      await connection.execute(
-        `
-          DELETE FROM cart_item
-          WHERE user_id = ?
-            AND id IN (${cartPurchaseItems.map(() => '?').join(', ')})
-        `,
-        [userId, ...cartPurchaseItems.map((item) => item.cartItemId)],
-      );
-    }
 
     await connection.commit();
-    return { id: orderId };
+    return { orderId, orderSn, amountCents: payableAmountCents };
   } catch (error) {
     await connection.rollback();
     throw error;

@@ -4,7 +4,21 @@ import type { Request, Response, Router as ExpressRouter } from 'express';
 import { asyncHandler } from '../../lib/errors';
 import { appLogger } from '../../lib/logger';
 import { markBetPaid } from '../guess/guess-pay';
+import { markOrderPaid } from '../order/order-pay';
 import { verifyAlipayNotify, verifyWechatNotify } from './payment-service';
+import { PAY_NO_PREFIX_BET, PAY_NO_PREFIX_ORDER } from './payment-shared';
+
+async function dispatchPaid(payNo: string, tradeNo: string, paidAt: Date): Promise<void> {
+  if (payNo.startsWith(PAY_NO_PREFIX_ORDER)) {
+    await markOrderPaid(payNo, tradeNo, paidAt);
+    return;
+  }
+  if (payNo.startsWith(PAY_NO_PREFIX_BET)) {
+    await markBetPaid(payNo, tradeNo, paidAt);
+    return;
+  }
+  appLogger.warn({ payNo }, '[pay/notify] unknown pay_no prefix; ignoring');
+}
 
 export const paymentRouter: ExpressRouter = Router();
 
@@ -28,7 +42,7 @@ paymentRouter.post(
       { payNo: verified.payNo, tradeNo: verified.tradeNo },
       '[pay/notify/wechat] verified',
     );
-    await markBetPaid(verified.payNo, verified.tradeNo, verified.paidAt);
+    await dispatchPaid(verified.payNo, verified.tradeNo, verified.paidAt);
     response.status(200).json({ code: 'SUCCESS' });
   }),
 );
@@ -49,7 +63,7 @@ paymentRouter.post(
       { payNo: verified.payNo, tradeNo: verified.tradeNo },
       '[pay/notify/alipay] verified',
     );
-    await markBetPaid(verified.payNo, verified.tradeNo, verified.paidAt);
+    await dispatchPaid(verified.payNo, verified.tradeNo, verified.paidAt);
     response.status(200).type('text').send('success');
   }),
 );

@@ -43,8 +43,15 @@ export type QueryPayOrderResult = {
   paidAt: Date | null;
 };
 
-/** Generates an out_trade_no: GB{yyyyMMddHHmmss}{6 random}{betId last 6}. */
-export function generatePayNo(betIdLast6: string): string {
+export const PAY_NO_PREFIX_BET = 'GB';
+export const PAY_NO_PREFIX_ORDER = 'OR';
+export type PayNoPrefix = typeof PAY_NO_PREFIX_BET | typeof PAY_NO_PREFIX_ORDER;
+
+/**
+ * Generates an out_trade_no: {prefix}{yyyyMMddHHmmss}{6 random}{ref last 6}.
+ * 前缀用来在支付回调路由里反查到底是竞猜 bet 还是商城 order。
+ */
+export function generatePayNo(refIdLast6: string, prefix: PayNoPrefix = PAY_NO_PREFIX_BET): string {
   const now = new Date();
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -53,5 +60,5 @@ export function generatePayNo(betIdLast6: string): string {
   const mi = String(now.getMinutes()).padStart(2, '0');
   const ss = String(now.getSeconds()).padStart(2, '0');
   const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `GB${yyyy}${mm}${dd}${hh}${mi}${ss}${rand}${betIdLast6.padStart(6, '0')}`;
+  return `${prefix}${yyyy}${mm}${dd}${hh}${mi}${ss}${rand}${refIdLast6.padStart(6, '0')}`;
 }

@@ -2,6 +2,7 @@ import type {
   ConfirmOrderResult,
   CreateOrderPayload,
   CreateOrderResult,
+  FetchOrderPayStatusResult,
   OrderDetailResult,
   OrderListResult,
 } from '@umi/shared';
@@ -18,9 +19,14 @@ export function fetchOrderDetail(orderId: string) {
   return getJson<OrderDetailResult>(`/api/orders/${orderId}`);
 }
 
-// 创建真实订单。
+// 创建真实订单（PENDING）+ 取得对应支付链接。
 export function createOrder(payload: CreateOrderPayload) {
   return postJson<CreateOrderResult, CreateOrderPayload>('/api/orders', payload);
+}
+
+// 主动查询订单支付状态，用于支付回跳页轮询。
+export function fetchOrderPayStatus(orderId: string) {
+  return getJson<FetchOrderPayStatusResult>(`/api/orders/${orderId}/pay-status`);
 }
 
 // 确认收货。

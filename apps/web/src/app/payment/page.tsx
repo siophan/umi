@@ -30,16 +30,12 @@ function PaymentPageInner() {
   const [method, setMethod] = useState<'wechat' | 'alipay'>('wechat');
   const [addrOpen, setAddrOpen] = useState(false);
   const [couponOpen, setCouponOpen] = useState(false);
-  const [pwdOpen, setPwdOpen] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [pwd, setPwd] = useState('');
   const [remark, setRemark] = useState('');
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(true);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -186,8 +182,9 @@ function PaymentPageInner() {
   );
 
   /**
-   * 创建真实订单。
-   * 购物车入口传 cartItemIds，商品入口传 productId + quantity，两条链路共用一个下单动作。
+   * 提交订单 + 跳转真实支付。
+   * 后端创建 PENDING 订单 + 调网关，返回 payUrl 直接跳走。
+   * 用户付款完成后由网关回跳到 /payment/return?orderId=xxx 页面轮询状态。
    */
   async function submitOrder() {
     if (submitting) {
@@ -220,7 +217,7 @@ function PaymentPageInner() {
         source,
         addressId: selectedAddress.id,
         couponId: selectedCoupon?.id || null,
-        paymentMethod: method,
+        payChannel: method,
         note: remark.trim() || null,
         productId:
           source === 'product' && products[0]?.productId
@@ -230,15 +227,9 @@ function PaymentPageInner() {
         cartItemIds: source === 'cart' ? cartItemIds : undefined,
       });
 
-      setCreatedOrderId(result.id);
-      setPwdOpen(false);
-      setSuccessOpen(true);
-      setPwd('');
+      window.location.href = result.payUrl;
     } catch (error) {
       setToast(error instanceof Error ? error.message : '下单失败');
-      setPwd('');
-      setPwdOpen(false);
-    } finally {
       setSubmitting(false);
     }
   }
@@ -267,24 +258,17 @@ function PaymentPageInner() {
         onCouponOpen={() => setCouponOpen(true)}
         onMethodChange={setMethod}
         onRemarkChange={setRemark}
-        onSubmit={() => setPwdOpen(true)}
+        onSubmit={() => void submitOrder()}
       />
       <PaymentOverlays
         addrOpen={addrOpen}
         couponOpen={couponOpen}
-        pwdOpen={pwdOpen}
-        successOpen={successOpen}
         toast={toast}
         addresses={addresses}
         addressIndex={addressIndex}
         availableCoupons={availableCoupons}
         couponId={couponId}
         subtotal={subtotal}
-        method={method}
-        total={total}
-        pwd={pwd}
-        submitting={submitting}
-        createdOrderId={createdOrderId}
         onAddressClose={() => setAddrOpen(false)}
         onAddressSelect={(index) => {
           setAddressIndex(index);
@@ -295,40 +279,6 @@ function PaymentPageInner() {
           setCouponId(nextCouponId);
           setCouponOpen(false);
         }}
-        onPasswordClose={() => {
-          setPwdOpen(false);
-          setPwd('');
-        }}
-        onPasswordKeyPress={(key) => {
-          if (submitting || key === '') {
-            return;
-          }
-          if (key === '⌫') {
-            setPwd((prev) => prev.slice(0, -1));
-            return;
-          }
-          const next = `${pwd}${key}`.slice(0, 6);
-          setPwd(next);
-          if (next.length === 6) {
-            void submitOrder();
-          }
-        }}
-        onPasswordForget={() => setToast('找回密码功能开发中')}
-        successDesc={
-          products.length
-            ? `已支付 ¥${total.toFixed(2)}\n${products[0]?.name}${products.length > 1 ? ` 等${products.length}件商品` : ''}`
-            : '订单已创建'
-        }
-        onContinueShopping={() => {
-          const from = searchParams.get('from');
-          setSuccessOpen(false);
-          if (from === 'cart') {
-            router.push('/cart');
-          } else {
-            router.push('/?tab=mall');
-          }
-        }}
-        onSuccessClose={() => setSuccessOpen(false)}
         onToastClear={() => setToast('')}
       />
     </div>

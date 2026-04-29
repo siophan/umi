@@ -420,7 +420,7 @@ export interface CreateOrderPayload {
   source: 'product' | 'cart';
   addressId: EntityId;
   couponId?: EntityId | null;
-  paymentMethod?: 'wechat' | 'alipay';
+  payChannel: GuessPayChannel;
   note?: string | null;
   productId?: ProductId;
   quantity?: number;
@@ -428,7 +428,20 @@ export interface CreateOrderPayload {
 }
 
 export interface CreateOrderResult {
-  id: EntityId;
+  orderId: EntityId;
+  orderSn: string;
+  payNo: string;
+  payChannel: GuessPayChannel;
+  payUrl: string;
+  expiresAt: string;
+}
+
+export type OrderPayStatus = 'waiting' | 'paid' | 'failed' | 'closed';
+
+export interface FetchOrderPayStatusResult {
+  orderId: EntityId;
+  payStatus: OrderPayStatus;
+  paidAt: string | null;
 }
 
 export interface ConfirmOrderResult {

@@ -1,12 +1,20 @@
 import { Router } from 'express';
-import type { CreateOrderPayload } from '@umi/shared';
+import type { CreateOrderPayload, CreateOrderResult } from '@umi/shared';
+import { toEntityId } from '@umi/shared';
 
 import { getRequestUser, requireUser } from '../../lib/auth';
 import { HttpError, asyncHandler, withErrorBoundary } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import { requireAdmin } from '../admin/auth';
 import { fetchAdminOrderOverview, fetchOrderDetail, fetchUserOrders } from './order-read';
-import { confirmOrder, createOrder, urgeOrder, reviewOrder } from './order-write';
+import { createOrderPayment, queryOrderPayStatus } from './order-pay';
+import { confirmOrder, createPendingOrder, urgeOrder, reviewOrder } from './order-write';
+
+function getClientIp(request: { ip?: string; socket?: { remoteAddress?: string }; headers: Record<string, unknown> }): string {
+  const xff = request.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.length) return xff.split(',')[0].trim();
+  return request.ip || request.socket?.remoteAddress || '127.0.0.1';
+}
 
 export const orderRouter = Router();
 
@@ -30,9 +38,32 @@ orderRouter.post(
     },
     async (request, response) => {
       const user = getRequestUser(request);
-      ok(response, await createOrder(user.id, request.body as CreateOrderPayload));
+      const payload = request.body as CreateOrderPayload;
+      if (payload.payChannel !== 'wechat' && payload.payChannel !== 'alipay') {
+        throw new HttpError(400, 'PAY_CHANNEL_INVALID', '请选择支付渠道');
+      }
+      const pending = await createPendingOrder(user.id, payload);
+      const payment = await createOrderPayment(user.id, pending.orderId, payload.payChannel, getClientIp(request));
+      const result: CreateOrderResult = {
+        orderId: toEntityId(payment.orderId),
+        orderSn: payment.orderSn,
+        payNo: payment.payNo,
+        payChannel: payment.payChannel,
+        payUrl: payment.payUrl,
+        expiresAt: payment.expiresAt.toISOString(),
+      };
+      ok(response, result);
     },
   ),
+);
+
+orderRouter.get(
+  '/:id/pay-status',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    ok(response, await queryOrderPayStatus(user.id, String(request.params.id)));
+  }),
 );
 
 orderRouter.get(
