@@ -258,10 +258,24 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
+## 21. 用户端商品详情未消费 brand_product 的图（P2）
+
+**文件**：`apps/api/src/modules/product/product-shared.ts:294`（getProductById SELECT）+ `apps/api/src/modules/product/product-detail.ts:337`（images 数组拼装）
+
+admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`images` 多图，2026-04-29 接通），但用户端 `getProductDetail` 拼接商品图区时只用 `p.image_url` + `p.images`，店铺铺货没自定义图就直接空相册，**不会回退到品牌商品的图**。
+
+**修法**：
+- `getProductById` SELECT 增加 `bp.default_img AS bp_default_img, bp.images AS bp_images`
+- `ProductRow` 类型加 `bp_default_img?: string | null; bp_images?: unknown`
+- `getProductDetail` 拼 images 数组时：`p.image_url` / `safeJsonArray(p.images)` 都空 → 落回 `bp_default_img` + `safeJsonArray(bp_images)`
+- 商品列表/搜索/推荐场景同理（`product-shared.ts:232`、`product-feed.ts` 已部分回退到 `bp.default_img`，但相册没回退；按需补）
+
+---
+
 ## 小结
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口（支付链路主流程已完成 2026-04-29）|
 | P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 好友PK 多人模式空选项结算 / 支付超时库存归还 + 商城退款 API（竞猜流标退款已完成 2026-04-29）|
-| P2     | 12   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 |
+| P2     | 13   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 |

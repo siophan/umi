@@ -48,6 +48,7 @@ export interface CreateAdminBrandProductPayload {
   guidePrice: number;
   supplyPrice?: number | null;
   defaultImg?: string | null;
+  imageList?: string[] | null;
   description?: string | null;
   status?: 'active' | 'disabled';
   videoUrl?: string | null;
@@ -70,6 +71,7 @@ export interface UpdateAdminBrandProductPayload {
   guidePrice: number;
   supplyPrice?: number | null;
   defaultImg?: string | null;
+  imageList?: string[] | null;
   description?: string | null;
   status: 'active' | 'disabled';
   videoUrl?: string | null;

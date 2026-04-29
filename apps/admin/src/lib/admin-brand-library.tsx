@@ -26,6 +26,7 @@ export type BrandProductFormValues = {
   guidePriceYuan: number;
   supplyPriceYuan?: number;
   defaultImg?: string;
+  imageList?: string[];
   description?: string;
   status: AdminBrandLibraryItem['status'];
   videoUrl?: string;
@@ -218,6 +219,7 @@ export function buildEditBrandProductFormValues(
     guidePriceYuan: centsToYuan(record.guidePrice),
     supplyPriceYuan: centsToYuan(record.supplyPrice),
     defaultImg: record.imageUrl || undefined,
+    imageList: record.imageList.length ? record.imageList : undefined,
     description: record.description || undefined,
     status: record.status,
     videoUrl: record.videoUrl || undefined,
@@ -254,12 +256,14 @@ export function buildBrandLibraryColumns(args: {
     { title: '供货价', dataIndex: 'supplyPrice', width: 120, render: (_, record) => formatAmount(record.supplyPrice) },
     {
       title: '挂载商品',
+      tooltip: '已经挂在某个店铺铺货过的店铺商品总数（含暂停/下架）',
       dataIndex: 'productCount',
       width: 120,
       render: (_, record) => formatNumber(record.productCount),
     },
     {
       title: '在售商品',
+      tooltip: '当前 status=在售 的店铺商品数；店铺铺货后下架/暂停就会从这里减掉',
       dataIndex: 'activeProductCount',
       width: 120,
       render: (_, record) => formatNumber(record.activeProductCount),

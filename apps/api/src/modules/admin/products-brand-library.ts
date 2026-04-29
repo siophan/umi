@@ -83,6 +83,7 @@ export async function getAdminBrandLibrary(
           bp.created_at,
           bp.updated_at,
           bp.default_img,
+          bp.images,
           bp.video_url,
           bp.detail_html,
           bp.spec_table,
@@ -112,6 +113,7 @@ export async function getAdminBrandLibrary(
           bp.created_at,
           bp.updated_at,
           bp.default_img,
+          bp.images,
           bp.video_url,
           bp.detail_html,
           bp.spec_table,
@@ -207,6 +209,7 @@ export async function createAdminBrandProduct(
           guide_price,
           supply_price,
           default_img,
+          images,
           description,
           video_url,
           detail_html,
@@ -219,7 +222,7 @@ export async function createAdminBrandProduct(
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
       [
         normalized.brandId,
@@ -228,6 +231,7 @@ export async function createAdminBrandProduct(
         normalized.guidePrice,
         normalized.supplyPrice,
         normalized.defaultImg,
+        normalized.imageListJson,
         normalized.description,
         normalized.videoUrl,
         normalized.detailHtml,
@@ -339,6 +343,7 @@ export async function updateAdminBrandProduct(
           guide_price = ?,
           supply_price = ?,
           default_img = ?,
+          images = ?,
           description = ?,
           video_url = ?,
           detail_html = ?,
@@ -358,6 +363,7 @@ export async function updateAdminBrandProduct(
         normalized.guidePrice,
         normalized.supplyPrice,
         normalized.defaultImg,
+        normalized.imageListJson,
         normalized.description,
         normalized.videoUrl,
         normalized.detailHtml,

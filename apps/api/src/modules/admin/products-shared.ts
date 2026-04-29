@@ -1,8 +1,51 @@
+import sanitizeHtml from 'sanitize-html';
 import type {
   AdminBrandProductSpecRow,
   CreateAdminBrandProductPayload,
   UpdateAdminBrandProductPayload,
 } from '@umi/shared';
+
+// 商品详情 HTML 写入数据库前必须 sanitize, 哪怕来源是 admin。
+// 用户端 product-detail 页面是 dangerouslySetInnerHTML 渲染, admin 帐号被攻陷
+// 即可注入 script / onerror 拿到访客 cookie。
+const PRODUCT_DETAIL_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [
+    'p', 'div', 'span', 'br', 'hr',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'strong', 'b', 'em', 'i', 'u', 's', 'small', 'sub', 'sup', 'mark', 'code', 'pre',
+    'ul', 'ol', 'li',
+    'blockquote',
+    'table', 'thead', 'tbody', 'tr', 'td', 'th',
+    'img', 'a',
+  ],
+  allowedAttributes: {
+    a: ['href', 'target', 'rel'],
+    img: ['src', 'alt', 'width', 'height'],
+    '*': ['style'],
+  },
+  allowedSchemes: ['http', 'https', 'data'],
+  allowedSchemesByTag: { img: ['http', 'https', 'data'] },
+  allowProtocolRelative: false,
+  // style 只允许少量基础样式, 防止 expression / url() 注入
+  allowedStyles: {
+    '*': {
+      color: [/^#(?:[0-9a-fA-F]{3}){1,2}$/, /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/],
+      'background-color': [/^#(?:[0-9a-fA-F]{3}){1,2}$/, /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/],
+      'text-align': [/^(?:left|right|center|justify)$/],
+      'font-size': [/^\d+(?:\.\d+)?(?:px|em|rem|%)$/],
+      'font-weight': [/^(?:bold|normal|\d{3})$/],
+      width: [/^\d+(?:\.\d+)?(?:px|em|rem|%)$/],
+      'max-width': [/^\d+(?:\.\d+)?(?:px|em|rem|%)$/],
+    },
+  },
+  transformTags: {
+    a: sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer', target: '_blank' }),
+  },
+};
+
+export function sanitizeProductDetailHtml(value: string): string {
+  return sanitizeHtml(value, PRODUCT_DETAIL_SANITIZE_OPTIONS);
+}
 
 export const PRODUCT_STATUS_ACTIVE = 10;
 export const PRODUCT_STATUS_OFF_SHELF = 20;
@@ -55,6 +98,7 @@ export type AdminBrandLibraryRow = {
   created_at: Date | string;
   updated_at: Date | string;
   default_img: string | null;
+  images: unknown;
   video_url: string | null;
   detail_html: string | null;
   spec_table: unknown;
@@ -119,6 +163,7 @@ export interface AdminBrandLibraryItem {
   createdAt: string;
   updatedAt: string;
   imageUrl: string | null;
+  imageList: string[];
   videoUrl: string | null;
   detailHtml: string | null;
   specTable: AdminBrandProductSpecRow[];
@@ -336,6 +381,7 @@ export function sanitizeAdminBrandLibrary(
     createdAt: formatDateTime(row.created_at),
     updatedAt: formatDateTime(row.updated_at),
     imageUrl: row.default_img,
+    imageList: parseBrandProductStringList(row.images),
     videoUrl: row.video_url ?? null,
     detailHtml: row.detail_html ?? null,
     specTable: parseBrandProductSpecTable(row.spec_table),
@@ -528,7 +574,14 @@ export function normalizeAdminBrandProductPayload(
   const defaultImg = payload.defaultImg?.trim() || null;
   const description = payload.description?.trim() || null;
   const videoUrl = payload.videoUrl?.trim() || null;
-  const detailHtml = payload.detailHtml == null ? null : payload.detailHtml;
+  const detailHtmlRaw = payload.detailHtml == null ? null : payload.detailHtml;
+  const detailHtml =
+    detailHtmlRaw == null
+      ? null
+      : (() => {
+          const cleaned = sanitizeProductDetailHtml(detailHtmlRaw).trim();
+          return cleaned.length > 0 ? cleaned : null;
+        })();
   const shipFrom = payload.shipFrom?.trim() || null;
   const deliveryDays = payload.deliveryDays?.trim() || null;
   const freight =
@@ -575,6 +628,16 @@ export function normalizeAdminBrandProductPayload(
     }
   }
 
+  const imageList: string[] = [];
+  if (Array.isArray(payload.imageList)) {
+    for (const item of payload.imageList) {
+      if (typeof item === 'string') {
+        const trimmed = item.trim();
+        if (trimmed) imageList.push(trimmed);
+      }
+    }
+  }
+
   return {
     name,
     brandId,
@@ -587,6 +650,7 @@ export function normalizeAdminBrandProductPayload(
     detailHtml,
     specTableJson: specTable.length ? JSON.stringify(specTable) : null,
     packageListJson: packageList.length ? JSON.stringify(packageList) : null,
+    imageListJson: JSON.stringify(imageList),
     freight,
     shipFrom,
     deliveryDays,

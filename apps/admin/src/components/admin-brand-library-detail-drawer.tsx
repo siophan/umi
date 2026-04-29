@@ -64,6 +64,30 @@ export function AdminBrandLibraryDetailDrawer({
 
           <div>
             <Typography.Title level={5} style={{ marginBottom: 8 }}>
+              商品相册
+            </Typography.Title>
+            {selected.imageList.length > 0 ? (
+              <Image.PreviewGroup>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {selected.imageList.map((url, index) => (
+                    <Image
+                      key={`${url}-${index}`}
+                      src={url}
+                      alt={`${selected.productName}-${index + 1}`}
+                      width={88}
+                      height={88}
+                      style={{ borderRadius: 6, objectFit: 'cover' }}
+                    />
+                  ))}
+                </div>
+              </Image.PreviewGroup>
+            ) : (
+              <Typography.Text type="secondary">未上传</Typography.Text>
+            )}
+          </div>
+
+          <div>
+            <Typography.Title level={5} style={{ marginBottom: 8 }}>
               主图视频
             </Typography.Title>
             {selected.videoUrl ? (

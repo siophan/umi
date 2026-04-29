@@ -36,6 +36,7 @@ export interface AdminBrandLibraryItem {
   createdAt: string;
   updatedAt: string;
   imageUrl: string | null;
+  imageList: string[];
   videoUrl: string | null;
   detailHtml: string | null;
   specTable: AdminBrandProductSpecRow[];

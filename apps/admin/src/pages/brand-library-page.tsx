@@ -1,5 +1,4 @@
 import { ProTable } from '@ant-design/pro-components';
-import type { EntityId } from '@umi/shared';
 import { Alert, Button, ConfigProvider, Form, Input, Select, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -162,7 +161,7 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         }}
       >
         <Form.Item name="productName">
-          <Input allowClear placeholder="商品名称" />
+          <Input allowClear placeholder="商品 / 品牌 / 分类名" />
         </Form.Item>
         <Form.Item name="brandId">
           <Select allowClear options={brandOptions} placeholder="品牌" />
@@ -261,6 +260,10 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         .map((item) => (item?.value ?? '').trim())
         .filter((item) => item.length > 0);
 
+      const imageList = (values.imageList ?? [])
+        .map((url) => (url ?? '').trim())
+        .filter((url) => url.length > 0);
+
       const payload = {
         brandId: values.brandId,
         name: values.name,
@@ -268,6 +271,7 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         guidePrice: yuanToCents(values.guidePriceYuan) ?? 0,
         supplyPrice: yuanToCents(values.supplyPriceYuan),
         defaultImg: values.defaultImg || null,
+        imageList: imageList.length ? imageList : null,
         description: values.description || null,
         status: values.status,
         videoUrl: values.videoUrl?.trim() || null,

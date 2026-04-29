@@ -1,6 +1,7 @@
 import { Button, ConfigProvider, Divider, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 
+import { AdminOssImageGalleryUploader } from './admin-oss-image-gallery-uploader';
 import { AdminOssImageUploader } from './admin-oss-image-uploader';
 import { AdminOssVideoUploader } from './admin-oss-video-uploader';
 import { SEARCH_THEME } from './admin-list-controls';
@@ -65,6 +66,14 @@ export function AdminBrandLibraryFormModal({
           </Form.Item>
           <Form.Item label="封面图" name="defaultImg" valuePropName="value">
             <AdminOssImageUploader usage="brand_product" placeholder="上传封面" />
+          </Form.Item>
+          <Form.Item
+            label="商品相册"
+            name="imageList"
+            valuePropName="value"
+            extra="详情页商品图区轮播展示, 不含封面图; 最多 9 张"
+          >
+            <AdminOssImageGalleryUploader usage="brand_product" placeholder="上传图片" />
           </Form.Item>
           <Form.Item label="商品说明" name="description">
             <Input.TextArea rows={3} placeholder="商品说明（用作店铺铺货时的默认描述）" />
