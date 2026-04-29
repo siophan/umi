@@ -230,10 +230,6 @@ function PaymentPageInner() {
         cartItemIds: source === 'cart' ? cartItemIds : undefined,
       });
 
-      if (source === 'cart') {
-        window.sessionStorage.removeItem('payCartItems');
-      }
-
       setCreatedOrderId(result.id);
       setPwdOpen(false);
       setSuccessOpen(true);

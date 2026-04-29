@@ -142,13 +142,9 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
-## 14. 购物车→支付数据通过 sessionStorage 传递（P1）
+## 14. 购物车→支付数据通过 sessionStorage 传递（已修 2026-04-29）
 
-**文件**：`apps/web/src/app/cart/page.tsx:1466`、`apps/web/src/app/payment/page.tsx:93`
-
-购物车用 `window.sessionStorage.setItem('payCartItems', JSON.stringify(...))` 把结算数据传给支付页，支付页再 `getItem` 读回。标签页关闭、后退再进、SSR 场景均会丢失数据，且 sessionStorage 无法跨标签页共享。
-
-**修法**：改用 URL query（`/payment?cartItemIds=...`）+ 支付页自行调 API 拉取订单明细，或通过 zustand/context 传递。
+购物车现已走 `/payment?from=cart&cartItemIds=<id1,id2,...>` URL 传参，支付页用 `searchParams.get('cartItemIds')` + `fetchCart()` 重新拉真实快照。`sessionStorage('payCartItems')` 已下线。
 
 ---
 
@@ -210,5 +206,5 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 3    | Server Component 硬编码 URL / 仓库寄售无写接口 / 支付链路未完成 |
-| P1     | 4    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 + sessionStorage 传参 / 好友PK 多人模式空选项结算 |
+| P1     | 3    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 好友PK 多人模式空选项结算 |
 | P2     | 11   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 |
