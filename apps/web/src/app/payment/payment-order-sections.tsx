@@ -353,7 +353,7 @@ export function PaymentOrderSections({
       </section>
 
       <footer className={styles.bottom}>
-        <div>
+        <div className={styles.bottomInfo}>
           <div className={styles.bottomLabel}>合计</div>
           <div className={styles.bottomPrice}>
             <small>¥</small>
