@@ -69,13 +69,20 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
               AND sbaa.brand_id = b.id
             ORDER BY sbaa.created_at DESC
             LIMIT 1
-          ) AS current_status
+          ) AS apply_status,
+          (
+            SELECT sba.status
+            FROM shop_brand_auth sba
+            WHERE sba.shop_id = ?
+              AND sba.brand_id = b.id
+            LIMIT 1
+          ) AS auth_status
         FROM brand b
         LEFT JOIN category c ON c.id = b.category_id
         WHERE b.status = 10
         ORDER BY b.name ASC
       `,
-      [shop.id],
+      [shop.id, shop.id],
     );
 
     mine = (mineRows as BrandAuthRow[]).map((row) => ({
@@ -91,20 +98,19 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
       createdAt: new Date(row.created_at).toISOString(),
     }));
 
-    available = (brandRows as Array<{ id: number; name: string; logo_url: string | null; category: string | null; product_count: number | string; current_status: number | string | null }>).map((row) => ({
+    available = (brandRows as Array<{ id: number; name: string; logo_url: string | null; category: string | null; product_count: number | string; apply_status: number | string | null; auth_status: number | string | null }>).map((row) => ({
       id: toEntityId(row.id),
       name: row.name,
       logo: row.logo_url ?? null,
       category: row.category ?? null,
       productCount: Number(row.product_count ?? 0),
       status:
-        row.current_status === null
+        row.apply_status === null
           ? 'idle'
-          : Number(row.current_status) === STATUS_APPROVED
-            ? 'approved'
-            : Number(row.current_status) === STATUS_PENDING
-              ? 'pending'
-              : 'rejected',
+          : mapBrandAuthStatus(
+              Number(row.apply_status),
+              row.auth_status == null ? null : Number(row.auth_status),
+            ),
     }));
   }
 
@@ -130,9 +136,6 @@ export async function submitBrandAuthApplication(
 
   if (!brandId) {
     throw new HttpError(400, 'SHOP_BRAND_REQUIRED', '请选择品牌');
-  }
-  if (!reason) {
-    throw new HttpError(400, 'SHOP_BRAND_AUTH_REASON_REQUIRED', '请填写申请说明');
   }
 
   const db = getDbPool();
@@ -170,7 +173,7 @@ export async function submitBrandAuthApplication(
         updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
     `,
-    [createNo('BA'), shop.id, brandId, reason, license || null, STATUS_PENDING],
+    [createNo('BA'), shop.id, brandId, reason || null, license || null, STATUS_PENDING],
   );
 
   return { id: toEntityId(result.insertId), status: 'pending' };

@@ -355,6 +355,16 @@
   line-height: 1.5;
 }
 
+.protocolLink {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ff5722;
+  font: inherit;
+  cursor: pointer;
+}
+
 .modalFooter {
   display: flex;
   gap: 10px;

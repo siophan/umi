@@ -7,15 +7,7 @@ import { fetchBrandAuthOverview, submitBrandAuthApplication } from '../../lib/ap
 import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
-const brandLogoMap: Record<string, string> = {
-  乐事: '/legacy/images/products/p001-lays.jpg',
-  德芙: '/legacy/images/products/p007-dove.jpg',
-  旺旺: '/legacy/images/products/p006-wangwang.jpg',
-  卫龙: '/legacy/images/products/p008-weilong.jpg',
-  良品铺子: '/legacy/images/products/p005-liangpin.jpg',
-  元气森林: '/legacy/images/products/p009-genki.jpg',
-  海底捞: '/legacy/images/products/p011-haidilao.jpg',
-};
+const brandLogoFallback = '/legacy/images/products/p001-lays.jpg';
 
 export default function BrandAuthPage() {
   const router = useRouter();
@@ -135,6 +127,9 @@ export default function BrandAuthPage() {
             createdAt: new Date().toISOString(),
           },
         ],
+        available: current.available.map((item) =>
+          item.id === currentBrand.id ? { ...item, status: 'pending' } : item,
+        ),
       }));
       setSuccess(true);
     } catch (error) {
@@ -200,7 +195,7 @@ export default function BrandAuthPage() {
               const sinceText = item.createdAt ? ` · ${new Date(item.createdAt).toLocaleDateString()}起` : '';
               return (
                 <article className={styles.mineItem} key={item.id}>
-                  <img src={item.brandLogo || brandLogoMap[item.brandName] || '/legacy/images/products/p001-lays.jpg'} alt={item.brandName} />
+                  <img src={item.brandLogo || brandLogoFallback} alt={item.brandName} />
                   <div className={styles.info}>
                     <div className={styles.name}>{item.brandName}</div>
                     <div className={styles.meta}>
@@ -258,7 +253,7 @@ export default function BrandAuthPage() {
                   }
                 }}
               >
-                <img src={item.logo || brandLogoMap[item.name] || '/legacy/images/products/p001-lays.jpg'} alt={item.name} />
+                <img src={item.logo || brandLogoFallback} alt={item.name} />
                 <div className={styles.info}>
                   <div className={styles.name}>{item.name}</div>
                   <div className={styles.meta}>
@@ -327,7 +322,7 @@ export default function BrandAuthPage() {
               <>
                 <div className={styles.modalHeader}>
                   <div className={styles.modalBrand}>
-                    <img src={currentBrand.logo || brandLogoMap[currentBrand.name] || '/legacy/images/products/p001-lays.jpg'} alt={currentBrand.name} />
+                    <img src={currentBrand.logo || brandLogoFallback} alt={currentBrand.name} />
                     <span className={styles.modalBrandName}>{currentBrand.name}</span>
                   </div>
                   <div className={styles.modalSubtitle}>品牌授权申请</div>
@@ -361,7 +356,18 @@ export default function BrandAuthPage() {
                       onChange={(event) => setAgreed(event.target.checked)}
                     />
                     <label htmlFor="brand-agree">
-                      我已阅读并同意《品牌授权协议》
+                      我已阅读并同意
+                      <button
+                        type="button"
+                        className={styles.protocolLink}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setToast('《品牌授权协议》正在拟定中');
+                        }}
+                      >
+                        《品牌授权协议》
+                      </button>
                     </label>
                   </div>
                 </div>
