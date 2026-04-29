@@ -9,6 +9,7 @@ import {
 } from './routes/auth-routes';
 import { registerAdminContentRoutes } from './routes/content-routes';
 import { registerAdminSystemRoutes } from './routes/system-routes';
+import { registerAdminUploadRoutes } from './routes/upload-routes';
 
 export const adminRouter: ExpressRouter = Router();
 
@@ -16,6 +17,7 @@ registerAdminPublicAuthRoutes(adminRouter);
 
 adminRouter.use(requireAdmin);
 registerAdminSessionRoutes(adminRouter);
+registerAdminUploadRoutes(adminRouter);
 
 adminRouter.use(requireAdminRoutePermission);
 registerAdminContentRoutes(adminRouter);

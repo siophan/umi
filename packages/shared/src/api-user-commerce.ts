@@ -303,6 +303,34 @@ export interface CouponListResult {
   items: CouponListItem[];
 }
 
+export interface CouponTemplateItem {
+  id: EntityId;
+  name: string;
+  description: string | null;
+  amount: number;
+  type: 'amount' | 'percent' | 'shipping';
+  minAmount: number;
+  condition: string;
+  scopeType: 'platform' | 'shop' | 'category';
+  shopId: EntityId | null;
+  expireAt: string | null;
+  validDays: number;
+  remaining: number | null;
+  userClaimed: number;
+  userLimit: number;
+  claimable: boolean;
+  claimDisabledReason: string | null;
+}
+
+export interface CouponTemplateListResult {
+  items: CouponTemplateItem[];
+}
+
+export interface ClaimCouponResult {
+  couponId: EntityId;
+  templateId: EntityId;
+}
+
 export interface GuessHistoryStats {
   total: number;
   active: number;
@@ -442,30 +470,85 @@ export interface WarehouseListResult {
   items: WarehouseItem[];
 }
 
+export interface ProductDetailSpecRow {
+  key: string;
+  value: string;
+}
+
 export interface ProductDetailResult {
   product: ProductSummary & {
     shopId: ShopId | null;
+    shopUserId: EntityId | null;
     shopName: string | null;
+    shopLogo: string | null;
+    shopFollowing: boolean;
     images: string[];
+    videoUrl: string | null;
     originalPrice: number;
     stock: number;
     sales: number;
     rating: number;
     tags: string[];
     description: string;
+    detailHtml: string | null;
+    specTable: ProductDetailSpecRow[];
+    packageList: string[];
+    freight: number | null;
+    shipFrom: string | null;
+    deliveryDays: string | null;
     favorited: boolean;
   };
   activeGuess: GuessSummary | null;
   warehouseItems: WarehouseItem[];
   recommendations: ProductSummary[];
-  reviews: Array<{
-    id: EntityId;
-    userName: string;
-    userAvatar: string | null;
-    rating: number;
-    content: string | null;
-    createdAt: string;
-  }>;
+  sameShopProducts: ProductSummary[];
+  reviews: ProductReviewItem[];
+}
+
+export interface ProductReviewItem {
+  id: EntityId;
+  userName: string;
+  userAvatar: string | null;
+  rating: number;
+  content: string | null;
+  images: string[];
+  helpfulCount: number;
+  helpfulVoted: boolean;
+  reply: string | null;
+  repliedAt: string | null;
+  appendedContent: string | null;
+  appendedImages: string[];
+  appendedAt: string | null;
+  isMine: boolean;
+  createdAt: string;
+}
+
+export interface AppendProductReviewPayload {
+  content: string;
+  images?: string[];
+}
+
+export interface AppendProductReviewResult {
+  id: EntityId;
+  appendedAt: string;
+}
+
+export interface ProductReviewListResult {
+  items: ProductReviewItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: {
+    averageRating: number;
+    totalCount: number;
+    withImages: number;
+  };
+}
+
+export interface ToggleProductReviewHelpfulResult {
+  reviewId: EntityId;
+  helpful: boolean;
+  helpfulCount: number;
 }
 
 export interface MyShopBrandAuthItem {

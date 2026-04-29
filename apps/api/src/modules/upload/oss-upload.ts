@@ -14,7 +14,12 @@ const ALLOWED_IMAGE_TYPES = new Set<UploadOssImagePayload['contentType']>([
   'image/webp',
   'image/gif',
 ]);
-const ALLOWED_UPLOAD_USAGES = new Set(['guess_cover', 'community_post']);
+const ALLOWED_UPLOAD_USAGES = new Set([
+  'guess_cover',
+  'community_post',
+  'product_review',
+  'brand_product',
+]);
 
 function assertOssConfigured() {
   if (!env.ossAccessKeyId || !env.ossAccessKeySecret || !env.ossBucket || !env.ossBaseUrl) {

@@ -1,4 +1,5 @@
 import type {
+  AdminBrandProductSpecRow,
   CreateAdminBrandProductPayload,
   UpdateAdminBrandProductPayload,
 } from '@umi/shared';
@@ -54,6 +55,13 @@ export type AdminBrandLibraryRow = {
   created_at: Date | string;
   updated_at: Date | string;
   default_img: string | null;
+  video_url: string | null;
+  detail_html: string | null;
+  spec_table: unknown;
+  package_list: unknown;
+  freight: number | string | null;
+  ship_from: string | null;
+  delivery_days: string | null;
   brand_name: string | null;
   brand_status: number | string | null;
   category_name: string | null;
@@ -111,6 +119,13 @@ export interface AdminBrandLibraryItem {
   createdAt: string;
   updatedAt: string;
   imageUrl: string | null;
+  videoUrl: string | null;
+  detailHtml: string | null;
+  specTable: AdminBrandProductSpecRow[];
+  packageList: string[];
+  freight: number | null;
+  shipFrom: string | null;
+  deliveryDays: string | null;
   productCount: number;
   activeProductCount: number;
   rawStatusCode: number;
@@ -306,6 +321,7 @@ export function sanitizeAdminProduct(row: AdminProductRow): AdminProductListItem
 export function sanitizeAdminBrandLibrary(
   row: AdminBrandLibraryRow,
 ): AdminBrandLibraryItem {
+  const freightCents = row.freight == null ? null : Number(row.freight);
   return {
     id: String(row.id),
     brandId: row.brand_id == null ? null : String(row.brand_id),
@@ -320,11 +336,64 @@ export function sanitizeAdminBrandLibrary(
     createdAt: formatDateTime(row.created_at),
     updatedAt: formatDateTime(row.updated_at),
     imageUrl: row.default_img,
+    videoUrl: row.video_url ?? null,
+    detailHtml: row.detail_html ?? null,
+    specTable: parseBrandProductSpecTable(row.spec_table),
+    packageList: parseBrandProductStringList(row.package_list),
+    freight: freightCents == null || Number.isNaN(freightCents) ? null : freightCents,
+    shipFrom: row.ship_from ?? null,
+    deliveryDays: row.delivery_days ?? null,
     productCount: Math.max(0, toNumber(row.product_count)),
     activeProductCount: Math.max(0, toNumber(row.active_product_count)),
     rawStatusCode: toNumber(row.status),
     brandStatusCode: toNullableNumber(row.brand_status),
   };
+}
+
+export function parseBrandProductStringList(value: unknown): string[] {
+  if (value == null) {
+    return [];
+  }
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter(
+      (item): item is string => typeof item === 'string' && item.trim().length > 0,
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function parseBrandProductSpecTable(value: unknown): AdminBrandProductSpecRow[] {
+  if (value == null) {
+    return [];
+  }
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    const list: AdminBrandProductSpecRow[] = [];
+    for (const item of parsed) {
+      if (item && typeof item === 'object') {
+        const key = typeof (item as { key?: unknown }).key === 'string'
+          ? (item as { key: string }).key.trim()
+          : '';
+        const val = typeof (item as { value?: unknown }).value === 'string'
+          ? (item as { value: string }).value.trim()
+          : '';
+        if (key) {
+          list.push({ key, value: val });
+        }
+      }
+    }
+    return list;
+  } catch {
+    return [];
+  }
 }
 
 export function buildAdminProductFilters(
@@ -458,6 +527,12 @@ export function normalizeAdminBrandProductPayload(
     payload.supplyPrice == null ? null : Math.round(Number(payload.supplyPrice));
   const defaultImg = payload.defaultImg?.trim() || null;
   const description = payload.description?.trim() || null;
+  const videoUrl = payload.videoUrl?.trim() || null;
+  const detailHtml = payload.detailHtml == null ? null : payload.detailHtml;
+  const shipFrom = payload.shipFrom?.trim() || null;
+  const deliveryDays = payload.deliveryDays?.trim() || null;
+  const freight =
+    payload.freight == null ? null : Math.round(Number(payload.freight));
 
   if (!name) {
     throw new Error('品牌商品名称不能为空');
@@ -474,6 +549,31 @@ export function normalizeAdminBrandProductPayload(
   if (supplyPrice != null && (!Number.isInteger(supplyPrice) || supplyPrice < 0)) {
     throw new Error('供货价不合法');
   }
+  if (freight != null && (!Number.isInteger(freight) || freight < 0)) {
+    throw new Error('运费不合法');
+  }
+
+  const specTable: AdminBrandProductSpecRow[] = [];
+  if (Array.isArray(payload.specTable)) {
+    for (const item of payload.specTable) {
+      if (!item) continue;
+      const key = typeof item.key === 'string' ? item.key.trim() : '';
+      const val = typeof item.value === 'string' ? item.value.trim() : '';
+      if (key) {
+        specTable.push({ key, value: val });
+      }
+    }
+  }
+
+  const packageList: string[] = [];
+  if (Array.isArray(payload.packageList)) {
+    for (const item of payload.packageList) {
+      if (typeof item === 'string') {
+        const trimmed = item.trim();
+        if (trimmed) packageList.push(trimmed);
+      }
+    }
+  }
 
   return {
     name,
@@ -483,5 +583,12 @@ export function normalizeAdminBrandProductPayload(
     supplyPrice,
     defaultImg,
     description,
+    videoUrl,
+    detailHtml,
+    specTableJson: specTable.length ? JSON.stringify(specTable) : null,
+    packageListJson: packageList.length ? JSON.stringify(packageList) : null,
+    freight,
+    shipFrom,
+    deliveryDays,
   };
 }

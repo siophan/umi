@@ -3,6 +3,7 @@ import type mysql from 'mysql2/promise';
 import { toEntityId, toOptionalEntityId, type GuessSummary, type ProductDetailResult, type ProductSummary } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { getRecentProductReviewsWithStats } from './product-review';
 import {
   CATEGORY_STATUS_ACTIVE,
   FULFILLMENT_PENDING,
@@ -18,7 +19,6 @@ import {
   mapGuessStatus,
   PHYSICAL_STATUS_CONSIGNING,
   PHYSICAL_STATUS_STORED,
-  ProductReviewRow,
   ProductRow,
   PRODUCT_CATEGORY_BIZ_TYPE,
   REVIEW_APPROVED,
@@ -212,6 +212,69 @@ async function getWarehouseItems(userId: string, productId: string) {
   );
 }
 
+type RecommendationRow = {
+  id: number | string;
+  name: string;
+  price: number | string;
+  guess_price: number | string | null;
+  image_url: string | null;
+  status: number | string;
+  category: string | null;
+  brand_name: string | null;
+};
+
+function mapRecommendationRow(row: RecommendationRow): ProductSummary {
+  return {
+    id: toEntityId(row.id),
+    name: row.name,
+    brand: row.brand_name || '未知品牌',
+    img: row.image_url || '',
+    price: Number(row.price ?? 0) / 100,
+    guessPrice: Number(row.guess_price ?? row.price ?? 0) / 100,
+    category: row.category || '未分类',
+    status: Number(row.status ?? 0) === 10 ? 'active' : String(row.status),
+  };
+}
+
+async function checkShopFollowing(userId: string, shopUserId: string) {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    'SELECT 1 FROM user_follow WHERE follower_id = ? AND following_id = ? LIMIT 1',
+    [userId, shopUserId],
+  );
+  return rows.length > 0;
+}
+
+async function getSameShopProducts(product: ProductRow) {
+  if (!product.shop_id) return [];
+  const db = getDbPool();
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        p.id,
+        p.name,
+        p.price,
+        p.guess_price,
+        p.image_url,
+        p.status,
+        c.name AS category,
+        b.name AS brand_name
+      FROM product p
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand b ON b.id = bp.brand_id
+      LEFT JOIN category c ON c.id = bp.category_id AND c.biz_type = ${PRODUCT_CATEGORY_BIZ_TYPE}
+      WHERE p.id <> ?
+        AND p.shop_id = ?
+        AND p.status = 10
+      ORDER BY p.sales DESC, p.created_at DESC, p.id DESC
+      LIMIT 6
+    `,
+    [product.id, product.shop_id],
+  );
+
+  return (rows as RecommendationRow[]).map(mapRecommendationRow);
+}
+
 async function getRecommendations(product: ProductRow) {
   const db = getDbPool();
   const [rows] = await db.query<mysql.RowDataPacket[]>(
@@ -230,77 +293,19 @@ async function getRecommendations(product: ProductRow) {
       LEFT JOIN brand b ON b.id = bp.brand_id
       LEFT JOIN category c ON c.id = bp.category_id AND c.biz_type = ${PRODUCT_CATEGORY_BIZ_TYPE}
       WHERE p.id <> ?
+        AND p.status = 10
+        AND (p.shop_id IS NULL OR p.shop_id <> ?)
         AND (
           (bp.brand_id IS NOT NULL AND bp.brand_id = ?)
-          OR (p.shop_id IS NOT NULL AND p.shop_id = ?)
+          OR (bp.category_id IS NOT NULL AND bp.category_id = ?)
         )
-      ORDER BY p.created_at DESC, p.id DESC
+      ORDER BY p.sales DESC, p.created_at DESC, p.id DESC
       LIMIT 6
     `,
-    [product.id, product.brand_id ?? 0, product.shop_id ?? 0],
+    [product.id, product.shop_id ?? 0, product.brand_id ?? 0, product.category_id ?? 0],
   );
 
-  return (rows as Array<{
-    id: number | string;
-    name: string;
-    price: number | string;
-    guess_price: number | string | null;
-    image_url: string | null;
-    status: number | string;
-    category: string | null;
-    brand_name: string | null;
-  }>).map(
-    (row): ProductSummary => ({
-      id: toEntityId(row.id),
-      name: row.name,
-      brand: row.brand_name || '未知品牌',
-      img: row.image_url || '',
-      price: Number(row.price ?? 0) / 100,
-      guessPrice: Number(row.guess_price ?? row.price ?? 0) / 100,
-      category: row.category || '未分类',
-      status: Number(row.status ?? 0) === 10 ? 'active' : String(row.status),
-    }),
-  );
-}
-
-async function getRecentProductReviews(productId: string) {
-  const db = getDbPool();
-  let rows: mysql.RowDataPacket[];
-  try {
-    [rows] = await db.execute<mysql.RowDataPacket[]>(
-      `
-        SELECT
-          pr.id,
-          pr.user_id,
-          pr.rating,
-          pr.content,
-          pr.created_at,
-          up.name AS user_name,
-          up.avatar_url AS user_avatar
-        FROM product_review pr
-        LEFT JOIN user_profile up ON up.user_id = pr.user_id
-        WHERE pr.product_id = ?
-        ORDER BY pr.created_at DESC, pr.id DESC
-        LIMIT 3
-      `,
-      [productId],
-    );
-  } catch (error) {
-    const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
-    if (code === 'ER_NO_SUCH_TABLE') {
-      return [];
-    }
-    throw error;
-  }
-
-  return (rows as ProductReviewRow[]).map((row) => ({
-    id: toEntityId(row.id),
-    userName: row.user_name?.trim() || `用户${String(row.user_id)}`,
-    userAvatar: row.user_avatar?.trim() || null,
-    rating: Math.max(1, Math.min(5, Math.trunc(Number(row.rating) || 5))),
-    content: row.content?.trim() || null,
-    createdAt: new Date(row.created_at).toISOString(),
-  }));
+  return (rows as RecommendationRow[]).map(mapRecommendationRow);
 }
 
 export async function getProductDetail(productId: string, userId?: string | null): Promise<ProductDetailResult> {
@@ -309,12 +314,24 @@ export async function getProductDetail(productId: string, userId?: string | null
     throw new Error('PRODUCT_NOT_FOUND');
   }
 
-  const [activeGuess, warehouseItems, recommendations, favoritedProductIds, reviews] = await Promise.all([
+  const [
+    activeGuess,
+    warehouseItems,
+    recommendations,
+    sameShopProducts,
+    favoritedProductIds,
+    reviews,
+    shopFollowing,
+  ] = await Promise.all([
     getActiveGuess(productId, product),
     userId ? getWarehouseItems(userId, productId) : Promise.resolve([]),
     getRecommendations(product),
+    getSameShopProducts(product),
     userId ? getFavoritedProductIdSet(userId, [productId]) : Promise.resolve(new Set<string>()),
-    getRecentProductReviews(productId),
+    getRecentProductReviewsWithStats(productId, userId),
+    userId && product.shop_user_id
+      ? checkShopFollowing(userId, String(product.shop_user_id))
+      : Promise.resolve(false),
   ]);
 
   const images = [product.image_url, ...safeJsonArray(product.images)].filter(
@@ -323,6 +340,10 @@ export async function getProductDetail(productId: string, userId?: string | null
       item.trim().length > 0 &&
       array.indexOf(item) === index,
   );
+
+  const freightCents = product.bp_freight == null ? null : Number(product.bp_freight);
+  const specTable = parseProductSpecTable(product.bp_spec_table);
+  const packageList = parseProductStringArray(product.bp_package_list);
 
   return {
     product: {
@@ -335,19 +356,66 @@ export async function getProductDetail(productId: string, userId?: string | null
       category: product.category || '未分类',
       status: Number(product.status ?? 0) === 10 ? 'active' : String(product.status),
       shopId: toOptionalEntityId(product.shop_id),
+      shopUserId: toOptionalEntityId(product.shop_user_id),
       shopName: product.shop_name || null,
+      shopLogo: product.shop_logo ?? null,
+      shopFollowing,
       images,
+      videoUrl: product.bp_video_url ?? null,
       originalPrice: Number(product.original_price ?? product.price ?? 0) / 100,
       stock: Number(product.stock ?? 0),
       sales: Number(product.sales ?? 0),
       rating: Number(product.rating ?? 0),
       tags: safeJsonArray(product.tags),
       description: `${product.brand_name || '品牌'} ${product.name}，支持直购、竞猜和仓库换购。`,
+      detailHtml: product.bp_detail_html ?? null,
+      specTable,
+      packageList,
+      freight:
+        freightCents == null || Number.isNaN(freightCents) ? null : freightCents / 100,
+      shipFrom: product.bp_ship_from ?? null,
+      deliveryDays: product.bp_delivery_days ?? null,
       favorited: favoritedProductIds.has(productId),
     },
     activeGuess,
     warehouseItems,
     recommendations,
+    sameShopProducts,
     reviews,
   };
+}
+
+function parseProductStringArray(value: unknown): string[] {
+  if (value == null) return [];
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseProductSpecTable(value: unknown): Array<{ key: string; value: string }> {
+  if (value == null) return [];
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) return [];
+    const result: Array<{ key: string; value: string }> = [];
+    for (const item of parsed) {
+      if (item && typeof item === 'object') {
+        const key = typeof (item as { key?: unknown }).key === 'string'
+          ? (item as { key: string }).key.trim()
+          : '';
+        const val = typeof (item as { value?: unknown }).value === 'string'
+          ? (item as { value: string }).value.trim()
+          : '';
+        if (key) result.push({ key, value: val });
+      }
+    }
+    return result;
+  } catch {
+    return [];
+  }
 }

@@ -40,6 +40,8 @@ export type ProductRow = {
   collab?: string | null;
   status: number | string;
   shop_id: number | string | null;
+  shop_user_id?: number | string | null;
+  shop_logo?: string | null;
   shop_name: string | null;
   brand_name: string | null;
   category_id: number | string | null;
@@ -47,6 +49,13 @@ export type ProductRow = {
   brand_product_id: number | string | null;
   brand_id: number | string | null;
   default_img?: string | null;
+  bp_video_url?: string | null;
+  bp_detail_html?: string | null;
+  bp_spec_table?: unknown;
+  bp_package_list?: unknown;
+  bp_freight?: number | string | null;
+  bp_ship_from?: string | null;
+  bp_delivery_days?: string | null;
   created_at?: Date | string;
   favorited?: number | string | boolean | null;
 };
@@ -296,12 +305,21 @@ export async function getProductById(productId: string) {
         p.stock,
         p.status,
         p.shop_id,
+        s.user_id AS shop_user_id,
+        s.logo_url AS shop_logo,
         s.name AS shop_name,
         b.name AS brand_name,
         bp.category_id,
         c.name AS category,
         p.brand_product_id,
-        bp.brand_id
+        bp.brand_id,
+        bp.video_url     AS bp_video_url,
+        bp.detail_html   AS bp_detail_html,
+        bp.spec_table    AS bp_spec_table,
+        bp.package_list  AS bp_package_list,
+        bp.freight       AS bp_freight,
+        bp.ship_from     AS bp_ship_from,
+        bp.delivery_days AS bp_delivery_days
       FROM product p
       LEFT JOIN shop s ON s.id = p.shop_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id

@@ -36,6 +36,11 @@ export interface UpdateAdminBrandResult {
   id: EntityId;
 }
 
+export interface AdminBrandProductSpecRow {
+  key: string;
+  value: string;
+}
+
 export interface CreateAdminBrandProductPayload {
   brandId: EntityId;
   name: string;
@@ -45,6 +50,13 @@ export interface CreateAdminBrandProductPayload {
   defaultImg?: string | null;
   description?: string | null;
   status?: 'active' | 'disabled';
+  videoUrl?: string | null;
+  detailHtml?: string | null;
+  specTable?: AdminBrandProductSpecRow[] | null;
+  packageList?: string[] | null;
+  freight?: number | null;
+  shipFrom?: string | null;
+  deliveryDays?: string | null;
 }
 
 export interface CreateAdminBrandProductResult {
@@ -60,6 +72,13 @@ export interface UpdateAdminBrandProductPayload {
   defaultImg?: string | null;
   description?: string | null;
   status: 'active' | 'disabled';
+  videoUrl?: string | null;
+  detailHtml?: string | null;
+  specTable?: AdminBrandProductSpecRow[] | null;
+  packageList?: string[] | null;
+  freight?: number | null;
+  shipFrom?: string | null;
+  deliveryDays?: string | null;
 }
 
 export interface UpdateAdminBrandProductResult {
