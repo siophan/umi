@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { fetchGuessHistory } from '../../lib/api/guesses';
+import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
 type TabKey = 'all' | 'active' | 'won' | 'lost' | 'pk';
@@ -39,9 +40,21 @@ export default function GuessHistoryPage() {
   }, [toast]);
 
   useEffect(() => {
+    if (!hasAuthToken()) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
     let ignore = false;
 
     async function loadHistory() {
+      if (!hasAuthToken()) {
+        if (!ignore) {
+          setLoading(false);
+        }
+        return;
+      }
       if (!ignore) {
         setLoading(true);
         setLoadError('');
