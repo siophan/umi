@@ -1,6 +1,6 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import type { EntityId } from '@umi/shared';
-import { Button, Tag } from 'antd';
+import { Avatar, Button, Tag } from 'antd';
 
 import type { AdminCategoryItem } from './api/categories';
 import type { AdminBrandItem } from './api/merchant';
@@ -19,7 +19,7 @@ export type BrandFilters = {
 export type BrandFormValues = {
   name: string;
   categoryId: EntityId;
-  logoUrl?: string | null;
+  logoUrl: string;
   contactName?: string;
   contactPhone?: string;
   description?: string;
@@ -170,7 +170,7 @@ export function buildEditBrandFormValues(record: AdminBrandItem): BrandFormValue
   return {
     name: record.name,
     categoryId: record.categoryId as EntityId,
-    logoUrl: record.logoUrl || undefined,
+    logoUrl: record.logoUrl || '',
     contactName: record.contactName || undefined,
     contactPhone: record.contactPhone || undefined,
     description: record.description || undefined,
@@ -183,7 +183,23 @@ export function buildBrandColumns(args: {
   onView: (record: AdminBrandItem) => void;
 }): ProColumns<AdminBrandItem>[] {
   return [
-    { title: '品牌', dataIndex: 'name', width: 220 },
+    {
+      title: '品牌',
+      width: 240,
+      render: (_, record) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Avatar
+            src={record.logoUrl || undefined}
+            shape="square"
+            size={36}
+            style={{ flexShrink: 0, background: '#f0f0f0', color: '#999', fontSize: 14 }}
+          >
+            {record.name.charAt(0)}
+          </Avatar>
+          <span>{record.name}</span>
+        </div>
+      ),
+    },
     {
       title: '类目',
       dataIndex: 'category',

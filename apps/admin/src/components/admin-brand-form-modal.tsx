@@ -47,7 +47,12 @@ export function AdminBrandFormModal({
           >
             <Input allowClear placeholder="品牌名称" />
           </Form.Item>
-          <Form.Item label="品牌 Logo" name="logoUrl" valuePropName="value">
+          <Form.Item
+            label="品牌 Logo"
+            name="logoUrl"
+            valuePropName="value"
+            rules={[{ required: true, message: '请上传品牌 Logo' }]}
+          >
             <AdminOssImageUploader usage="brand_logo" placeholder="上传 Logo" />
           </Form.Item>
           <Form.Item
