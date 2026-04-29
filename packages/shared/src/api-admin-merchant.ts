@@ -13,6 +13,7 @@ export interface ReviewAdminShopApplyResult {
 export interface CreateAdminBrandPayload {
   name: string;
   categoryId: EntityId;
+  logoUrl?: string | null;
   contactName?: string | null;
   contactPhone?: string | null;
   description?: string | null;
@@ -26,6 +27,7 @@ export interface CreateAdminBrandResult {
 export interface UpdateAdminBrandPayload {
   name: string;
   categoryId: EntityId;
+  logoUrl?: string | null;
   contactName?: string | null;
   contactPhone?: string | null;
   description?: string | null;

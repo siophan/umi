@@ -19,6 +19,7 @@ export type BrandFilters = {
 export type BrandFormValues = {
   name: string;
   categoryId: EntityId;
+  logoUrl?: string | null;
   contactName?: string;
   contactPhone?: string;
   description?: string;
@@ -169,6 +170,7 @@ export function buildEditBrandFormValues(record: AdminBrandItem): BrandFormValue
   return {
     name: record.name,
     categoryId: record.categoryId as EntityId,
+    logoUrl: record.logoUrl || undefined,
     contactName: record.contactName || undefined,
     contactPhone: record.contactPhone || undefined,
     description: record.description || undefined,

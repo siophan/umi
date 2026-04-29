@@ -1,4 +1,4 @@
-import { Descriptions, Drawer, Tag } from 'antd';
+import { Descriptions, Drawer, Image, Tag } from 'antd';
 
 import type { AdminBrandItem } from '../lib/api/merchant';
 import { formatDate, formatNumber } from '../lib/format';
@@ -19,6 +19,11 @@ export function AdminBrandDetailDrawer({
       {selected ? (
         <Descriptions column={1} size="small">
           <Descriptions.Item label="品牌">{selected.name}</Descriptions.Item>
+          {selected.logoUrl ? (
+            <Descriptions.Item label="Logo">
+              <Image src={selected.logoUrl} width={80} height={80} style={{ objectFit: 'contain' }} />
+            </Descriptions.Item>
+          ) : null}
           <Descriptions.Item label="类目">{selected.category || '-'}</Descriptions.Item>
           <Descriptions.Item label="合作店铺">{formatNumber(selected.shopCount)}</Descriptions.Item>
           <Descriptions.Item label="标准商品">{formatNumber(selected.goodsCount)}</Descriptions.Item>

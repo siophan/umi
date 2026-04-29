@@ -196,6 +196,7 @@ export function BrandsPage({ refreshToken = 0 }: BrandsPageProps) {
         await updateAdminBrand(editingBrand.id, {
           name: values.name,
           categoryId: values.categoryId,
+          logoUrl: values.logoUrl || null,
           contactName: values.contactName || null,
           contactPhone: values.contactPhone || null,
           description: values.description || null,
@@ -206,6 +207,7 @@ export function BrandsPage({ refreshToken = 0 }: BrandsPageProps) {
         await createAdminBrand({
           name: values.name,
           categoryId: values.categoryId,
+          logoUrl: values.logoUrl || null,
           contactName: values.contactName || null,
           contactPhone: values.contactPhone || null,
           description: values.description || null,

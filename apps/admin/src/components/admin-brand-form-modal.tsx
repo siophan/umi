@@ -1,5 +1,6 @@
 import { ConfigProvider, Form, Input, Modal, Select } from 'antd';
 
+import { AdminOssImageUploader } from './admin-oss-image-uploader';
 import { SEARCH_THEME } from './admin-list-controls';
 import type { BrandFormValues } from '../lib/admin-brands';
 
@@ -45,6 +46,9 @@ export function AdminBrandFormModal({
             rules={[{ required: true, message: '请输入品牌名称' }]}
           >
             <Input allowClear placeholder="品牌名称" />
+          </Form.Item>
+          <Form.Item label="品牌 Logo" name="logoUrl" valuePropName="value">
+            <AdminOssImageUploader usage="brand_logo" placeholder="上传 Logo" />
           </Form.Item>
           <Form.Item
             label="类目"

@@ -31,6 +31,7 @@ const ALLOWED_IMAGE_USAGES = new Set([
   'community_post',
   'product_review',
   'brand_product',
+  'brand_logo',
 ]);
 const ALLOWED_VIDEO_USAGES = new Set(['brand_product']);
 

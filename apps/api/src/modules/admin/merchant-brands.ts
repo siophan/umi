@@ -25,6 +25,7 @@ export async function createAdminBrand(
   payload: CreateAdminBrandPayload,
 ): Promise<CreateAdminBrandResult> {
   const name = payload.name.trim();
+  const logoUrl = payload.logoUrl?.trim() || null;
   const contactName = payload.contactName?.trim() || null;
   const contactPhone = payload.contactPhone?.trim() || null;
   const description = payload.description?.trim() || null;
@@ -79,6 +80,7 @@ export async function createAdminBrand(
       `
         INSERT INTO brand (
           name,
+          logo_url,
           category_id,
           contact_name,
           contact_phone,
@@ -87,10 +89,11 @@ export async function createAdminBrand(
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
       [
         name,
+        logoUrl,
         categoryId,
         contactName,
         contactPhone,
@@ -114,6 +117,7 @@ export async function updateAdminBrand(
   payload: UpdateAdminBrandPayload,
 ): Promise<UpdateAdminBrandResult> {
   const name = payload.name.trim();
+  const logoUrl = payload.logoUrl?.trim() || null;
   const contactName = payload.contactName?.trim() || null;
   const contactPhone = payload.contactPhone?.trim() || null;
   const description = payload.description?.trim() || null;
@@ -185,6 +189,7 @@ export async function updateAdminBrand(
         UPDATE brand
         SET
           name = ?,
+          logo_url = ?,
           category_id = ?,
           contact_name = ?,
           contact_phone = ?,
@@ -195,6 +200,7 @@ export async function updateAdminBrand(
       `,
       [
         name,
+        logoUrl,
         categoryId,
         contactName,
         contactPhone,
