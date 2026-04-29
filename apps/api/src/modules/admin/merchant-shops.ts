@@ -277,9 +277,11 @@ export async function getAdminShopDetail(shopId: string): Promise<AdminShopDetai
           o.status,
           o.created_at
         FROM \`order\` o
+        INNER JOIN (
+          SELECT DISTINCT order_id FROM fulfillment_order WHERE shop_id = ?
+        ) fo ON fo.order_id = o.id
         LEFT JOIN user u ON u.id = o.user_id
         LEFT JOIN user_profile up ON up.user_id = u.id
-        WHERE o.shop_id = ?
         ORDER BY o.created_at DESC, o.id DESC
         LIMIT 50
       `,

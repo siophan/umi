@@ -1,6 +1,6 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, App, Button, ConfigProvider, Descriptions, Drawer, Form, Input, Popconfirm, Tag } from 'antd';
+import { Alert, Button, ConfigProvider, Descriptions, Drawer, Form, Input, message, Popconfirm, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
@@ -26,7 +26,7 @@ function renderStock(value: number) {
 }
 
 export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
-  const { message: messageApi } = App.useApp();
+  const [messageApi, contextHolder] = message.useMessage();
   const [searchForm] = Form.useForm<ShopProductFilters>();
   const [rows, setRows] = useState<AdminShopProductItem[]>(emptyRows);
   const [loading, setLoading] = useState(false);
@@ -174,6 +174,7 @@ export function ShopProductsPage({ refreshToken = 0 }: ShopProductsPageProps) {
 
   return (
     <div className="page-stack">
+      {contextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
 
       <AdminSearchPanel
