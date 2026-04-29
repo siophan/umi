@@ -15,7 +15,6 @@ import {
   getCurrentShop,
   mapBrandAuthStatus,
   STATUS_ACTIVE,
-  STATUS_APPROVED,
   STATUS_PENDING,
 } from './shop-shared';
 
@@ -141,23 +140,36 @@ export async function submitBrandAuthApplication(
   const db = getDbPool();
   const [existingRows] = await db.execute<mysql.RowDataPacket[]>(
     `
-      SELECT status
-      FROM shop_brand_auth_apply
-      WHERE shop_id = ?
-        AND brand_id = ?
-      ORDER BY created_at DESC
+      SELECT
+        sbaa.status AS apply_status,
+        (
+          SELECT sba.status
+          FROM shop_brand_auth sba
+          WHERE sba.shop_id = sbaa.shop_id
+            AND sba.brand_id = sbaa.brand_id
+          LIMIT 1
+        ) AS auth_status
+      FROM shop_brand_auth_apply sbaa
+      WHERE sbaa.shop_id = ?
+        AND sbaa.brand_id = ?
+      ORDER BY sbaa.created_at DESC
       LIMIT 1
     `,
     [shop.id, brandId],
   );
 
-  const existing = existingRows[0] as { status?: number | string } | undefined;
-  if (existing && [STATUS_PENDING, STATUS_APPROVED].includes(Number(existing.status))) {
-    throw new HttpError(
-      400,
-      Number(existing.status) === STATUS_APPROVED ? 'SHOP_BRAND_AUTH_ALREADY_APPROVED' : 'SHOP_BRAND_AUTH_PENDING',
-      Number(existing.status) === STATUS_APPROVED ? '该品牌已授权' : '该品牌已在审核中',
+  const existing = existingRows[0] as { apply_status?: number | string; auth_status?: number | string | null } | undefined;
+  if (existing) {
+    const effectiveStatus = mapBrandAuthStatus(
+      Number(existing.apply_status),
+      existing.auth_status == null ? null : Number(existing.auth_status),
     );
+    if (effectiveStatus === 'pending') {
+      throw new HttpError(400, 'SHOP_BRAND_AUTH_PENDING', '该品牌已在审核中');
+    }
+    if (effectiveStatus === 'approved') {
+      throw new HttpError(400, 'SHOP_BRAND_AUTH_ALREADY_APPROVED', '该品牌已授权');
+    }
   }
 
   const [result] = await db.execute<mysql.ResultSetHeader>(
