@@ -1,7 +1,6 @@
 import type {
   GuessReviewStatus,
   GuessStatus,
-  LedgerType,
   OrderStatus,
   WarehouseStatus,
 } from './status';
@@ -44,7 +43,6 @@ export interface UserSummary {
   name: string;
   role: UserRole;
   banned?: boolean;
-  coins: number;
   avatar?: string | null;
   level?: number;
   title?: string | null;
@@ -149,18 +147,6 @@ export interface OrderSummary {
   status: OrderStatus;
   createdAt: string;
   items: OrderItem[];
-}
-
-export interface CoinLedgerEntry {
-  id: EntityId;
-  userId: UserId;
-  type: LedgerType;
-  amount: number;
-  balanceAfter: number;
-  sourceType: string;
-  sourceId: EntityId | null;
-  note: string;
-  createdAt: string;
 }
 
 export interface WarehouseItem {

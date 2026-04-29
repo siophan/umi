@@ -31,7 +31,6 @@ export type UserRow = {
   wins: number | string;
   shop_name: string | null;
   shop_verified: number | string;
-  coins: number | string;
   works_privacy: number | string | null;
   fav_privacy: number | string | null;
 };
@@ -145,7 +144,6 @@ export function sanitizeUser(row: UserRow): UserSummary {
     name: row.name || `用户${String(row.phone_number).slice(-4)}`,
     role: resolveUserRole(row),
     banned: Boolean(row.banned),
-    coins: Number(row.coins ?? 0),
     avatar: row.avatar_url ?? null,
     level: Number(row.level ?? 1),
     title: row.title ?? null,

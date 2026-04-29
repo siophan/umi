@@ -1,7 +1,6 @@
 import type {
   BrandId,
   CategoryId,
-  CoinLedgerEntry,
   EntityId,
   GuessId,
   GuessSummary,
@@ -741,7 +740,3 @@ export interface AddShopProductsResult {
   count: number;
 }
 
-export interface WalletLedgerResult {
-  balance: number;
-  items: CoinLedgerEntry[];
-}

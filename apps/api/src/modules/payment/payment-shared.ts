@@ -43,6 +43,24 @@ export type QueryPayOrderResult = {
   paidAt: Date | null;
 };
 
+export type RefundOrderInput = {
+  /** 我方原始支付单 out_trade_no，对应 guess_bet.pay_no / order.pay_no */
+  payNo: string;
+  /** 我方退款单号，幂等键，重复调用同一编号视为同一笔退款 */
+  refundNo: string;
+  /** 原订单总金额，单位分（微信必填，支付宝忽略） */
+  totalCents: number;
+  /** 退款金额，单位分；流标全额退款时等于 totalCents */
+  refundCents: number;
+  /** 退款原因，展示给用户 */
+  reason?: string;
+};
+
+export type RefundOrderResult = {
+  /** 网关返回的退款单号（微信 refund_id / 支付宝 trade_no），用于事后查询 */
+  gatewayRefundNo: string | null;
+};
+
 export const PAY_NO_PREFIX_BET = 'GB';
 export const PAY_NO_PREFIX_ORDER = 'OR';
 export type PayNoPrefix = typeof PAY_NO_PREFIX_BET | typeof PAY_NO_PREFIX_ORDER;

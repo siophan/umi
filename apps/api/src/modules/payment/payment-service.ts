@@ -3,6 +3,7 @@ import {
   closeAlipayOrder,
   createAlipayWapOrder,
   queryAlipayOrder,
+  refundAlipayOrder,
   verifyAlipayNotify,
   type AlipayVerifiedNotify,
 } from './payment-alipay';
@@ -10,6 +11,7 @@ import {
   closeWechatOrder,
   createWechatH5Order,
   queryWechatOrder,
+  refundWechatOrder,
   verifyWechatNotify,
   type WechatVerifiedNotify,
 } from './payment-wechat';
@@ -18,6 +20,8 @@ import {
   type CreatePayOrderResult,
   type PayChannelKey,
   type QueryPayOrderResult,
+  type RefundOrderInput,
+  type RefundOrderResult,
 } from './payment-shared';
 
 export async function createPayOrder(
@@ -41,6 +45,15 @@ export async function queryPayOrder(
 export async function closePayOrder(channel: PayChannelKey, payNo: string): Promise<void> {
   if (channel === 'wechat') return closeWechatOrder(payNo);
   if (channel === 'alipay') return closeAlipayOrder(payNo);
+}
+
+export async function refundPayOrder(
+  channel: PayChannelKey,
+  input: RefundOrderInput,
+): Promise<RefundOrderResult> {
+  if (channel === 'wechat') return refundWechatOrder(input);
+  if (channel === 'alipay') return refundAlipayOrder(input);
+  throw new HttpError(400, 'PAY_CHANNEL_INVALID', '不支持的支付渠道');
 }
 
 export {

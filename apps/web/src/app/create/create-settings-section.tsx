@@ -87,7 +87,7 @@ export function CreateSettingsSection({
               <div className={styles.settingLabel}>
                 最低参与人数<span className={styles.requiredMark}>*</span>
               </div>
-              <div className={styles.settingDesc}>未达标自动流标，已投注金币原路退回</div>
+              <div className={styles.settingDesc}>未达标自动流标，已投注金额按原支付通道退回</div>
             </div>
             <input
               className={styles.datetime}

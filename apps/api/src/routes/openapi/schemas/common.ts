@@ -1,7 +1,7 @@
 export const commonSchemas = {
   UserSummary: {
     type: 'object',
-    required: ['id', 'uid', 'phone', 'name', 'role', 'coins'],
+    required: ['id', 'uid', 'phone', 'name', 'role'],
     properties: {
       id: { type: 'string', example: '1001' },
       uid: { type: 'string', example: 'aZkLmNqP' },
@@ -13,7 +13,6 @@ export const commonSchemas = {
         example: 'shop_owner',
       },
       banned: { type: 'boolean', example: false },
-      coins: { type: 'integer', example: 128800 },
       avatar: { type: 'string', nullable: true, example: 'https://example.com/avatar.png' },
       level: { type: 'integer', example: 6 },
       title: { type: 'string', nullable: true, example: '潮流猜手' },

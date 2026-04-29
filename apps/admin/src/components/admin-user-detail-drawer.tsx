@@ -2,7 +2,7 @@ import type { GuessSummary, OrderSummary, UserSummary } from '@umi/shared';
 import { Alert, Avatar, Button, Descriptions, Drawer, Empty, Spin, Table, Tabs, Tag, Typography } from 'antd';
 
 import { guessColumns, orderColumns } from '../lib/admin-users';
-import { formatAmount, formatDateTime, formatNumber, formatPercent, roleMeta } from '../lib/format';
+import { formatDateTime, formatNumber, formatPercent, roleMeta } from '../lib/format';
 
 interface AdminUserDetailDrawerProps {
   open: boolean;
@@ -153,7 +153,6 @@ export function AdminUserDetailDrawer({
                     </Descriptions.Item>
                     <Descriptions.Item label="地区">{selected.region ?? '-'}</Descriptions.Item>
                     <Descriptions.Item label="店铺">{selected.shopName ?? '-'}</Descriptions.Item>
-                    <Descriptions.Item label="余额">{formatAmount(selected.coins)}</Descriptions.Item>
                     <Descriptions.Item label="粉丝 / 关注">
                       {formatNumber(selected.followers ?? 0)} / {formatNumber(selected.following ?? 0)}
                     </Descriptions.Item>

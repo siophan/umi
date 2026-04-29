@@ -6,6 +6,8 @@ import {
   type CreatePayOrderInput,
   type CreatePayOrderResult,
   type QueryPayOrderResult,
+  type RefundOrderInput,
+  type RefundOrderResult,
 } from './payment-shared';
 
 async function getAliClient(): Promise<{
@@ -97,6 +99,23 @@ export async function closeAlipayOrder(payNo: string): Promise<void> {
   } catch {
     // best-effort
   }
+}
+
+export async function refundAlipayOrder(input: RefundOrderInput): Promise<RefundOrderResult> {
+  const { client } = await getAliClient();
+  const result = (await client.exec('alipay.trade.refund', {
+    bizContent: {
+      out_trade_no: input.payNo,
+      out_request_no: input.refundNo,
+      refund_amount: (input.refundCents / 100).toFixed(2),
+      refund_reason: input.reason ?? '原路退款',
+    },
+  })) as { code: string; tradeNo?: string; fundChange?: string; msg?: string };
+
+  if (result.code !== '10000') {
+    throw new HttpError(503, 'PAY_REFUND_FAILED', `支付宝退款失败：${result.msg ?? result.code}`);
+  }
+  return { gatewayRefundNo: result.tradeNo ?? null };
 }
 
 export type AlipayVerifiedNotify = {

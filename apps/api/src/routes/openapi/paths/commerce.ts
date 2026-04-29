@@ -928,26 +928,6 @@ export const commercePaths = {
       },
     },
   },
-  '/api/wallet/ledger': {
-    get: {
-      tags: ['Wallet'],
-      summary: '获取余额流水',
-      security: bearerSecurity,
-      responses: {
-        200: successResponse({
-          type: 'object',
-          properties: {
-            balance: { type: 'integer', example: 10000 },
-            items: {
-              type: 'array',
-              items: { type: 'object', additionalProperties: true },
-            },
-          },
-        }),
-        401: errorResponse(401, '请先登录'),
-      },
-    },
-  },
   '/api/warehouse/virtual': {
     get: {
       tags: ['Warehouse'],

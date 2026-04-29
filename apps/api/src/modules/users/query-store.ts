@@ -66,14 +66,7 @@ const userSelectSql = `
           AND s.status = 10
       ) THEN 1
       ELSE 0
-    END AS shop_verified,
-    COALESCE((
-      SELECT cl.balance_after
-      FROM coin_ledger cl
-      WHERE cl.user_id = u.id
-      ORDER BY cl.created_at DESC, cl.id DESC
-      LIMIT 1
-    ), 0) AS coins
+    END AS shop_verified
   FROM user u
   LEFT JOIN user_profile up ON up.user_id = u.id
 `;

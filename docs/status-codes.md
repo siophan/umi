@@ -563,15 +563,6 @@
 | `operation` | `20` | 运营模板 |
 | `shop` | `30` | 店铺模板 |
 
-### `coin_ledger.source_type`
-
-| 原语义 | 编码 | 说明 |
-| --- | --- | --- |
-| `guess` | `10` | 竞猜变动 |
-| `order` | `20` | 订单变动 |
-| `refund` | `30` | 退款变动 |
-| `manual` | `40` | 手工调整 |
-
 ### `virtual_warehouse.source_type`
 
 | 原语义 | 编码 | 说明 |
@@ -725,14 +716,6 @@
 - `shopVerified` 不是独立落库字段
 - 当前用户态展示层统一按“存在 `shop.status = 10` 的店铺”推导 `shopVerified = true`
 - 如果后续需要区分“已开店”和“已认证”，应补单独字段，不再复用这个派生语义
-
-### `coin_ledger.operator_role`
-
-| 原语义 | 编码 | 说明 |
-| --- | --- | --- |
-| `system` | `10` | 系统操作 |
-| `user` | `20` | 用户操作 |
-| `admin` | `30` | 管理员操作 |
 
 ### `order_status_log.operator_role`
 

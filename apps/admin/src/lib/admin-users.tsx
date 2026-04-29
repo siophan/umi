@@ -110,11 +110,6 @@ export function buildUserColumns(onOpen: (userId: string) => void): TableColumns
         ),
     },
     {
-      title: '零钱',
-      dataIndex: 'coins',
-      render: (value: number) => formatAmount(value),
-    },
-    {
       title: '状态',
       dataIndex: 'banned',
       render: (value: UserSummary['banned']) =>

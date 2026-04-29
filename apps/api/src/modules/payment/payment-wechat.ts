@@ -6,6 +6,8 @@ import {
   type CreatePayOrderInput,
   type CreatePayOrderResult,
   type QueryPayOrderResult,
+  type RefundOrderInput,
+  type RefundOrderResult,
 } from './payment-shared';
 
 async function getWxClient(): Promise<{
@@ -95,6 +97,26 @@ export async function closeWechatOrder(payNo: string): Promise<void> {
   } catch {
     // best-effort
   }
+}
+
+export async function refundWechatOrder(input: RefundOrderInput): Promise<RefundOrderResult> {
+  const { client } = await getWxClient();
+  const result = (await client.refunds({
+    out_trade_no: input.payNo,
+    out_refund_no: input.refundNo,
+    reason: input.reason ?? '原路退款',
+    amount: {
+      total: input.totalCents,
+      currency: 'CNY',
+      refund: input.refundCents,
+    },
+  })) as WxOutput;
+
+  if (result.status !== 200 || !result.data) {
+    throw new HttpError(503, 'PAY_REFUND_FAILED', '微信退款发起失败');
+  }
+  const data = result.data as { refund_id?: string; status?: string };
+  return { gatewayRefundNo: data.refund_id ?? null };
 }
 
 export type WechatVerifiedNotify = {

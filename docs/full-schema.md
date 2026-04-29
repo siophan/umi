@@ -21,7 +21,6 @@
 - [chat_message](#chat_message)
 - [checkin](#checkin)
 - [checkin_reward_config](#checkin_reward_config)
-- [coin_ledger](#coin_ledger)
 - [comment_interaction](#comment_interaction)
 - [comment_item](#comment_item)
 - [consign_trade](#consign_trade)
@@ -370,25 +369,6 @@
 | 8 | `status` | `tinyint unsigned` | `NO` | `10` | `MUL` | `-` | 状态编码 |
 | 9 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
 | 10 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
-
-## coin_ledger
-
-- 表注释：余额流水表
-
-| 字段顺序 | 字段名 | 列类型 | 是否可空 | 默认值 | 键标记 | Extra | 字段注释 |
-| ---: | --- | --- | --- | --- | --- | --- | --- |
-| 1 | `id` | `bigint` | `NO` | `NULL` | `PRI` | `auto_increment` | 余额流水 ID |
-| 2 | `user_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 用户 ID |
-| 3 | `type` | `tinyint unsigned` | `YES` | `NULL` | `MUL` | `-` | 类型编码 |
-| 4 | `amount` | `decimal(10,2)` | `NO` | `NULL` | `-` | `-` | 变动金额 |
-| 5 | `balance_after` | `decimal(10,2)` | `NO` | `NULL` | `-` | `-` | 变动后余额 |
-| 6 | `source_type` | `smallint unsigned` | `YES` | `NULL` | `MUL` | `-` | 来源类型编码 |
-| 7 | `source_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 来源业务 ID |
-| 8 | `operator_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 操作人 ID |
-| 9 | `operator_role` | `tinyint unsigned` | `YES` | `NULL` | `-` | `-` | 操作角色编码 |
-| 10 | `note` | `text` | `YES` | `NULL` | `-` | `-` | 备注说明 |
-| 11 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `MUL` | `DEFAULT_GENERATED` | 创建时间 |
-| 12 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
 
 ## comment_interaction
 

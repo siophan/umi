@@ -37,18 +37,8 @@ export const warehouseStatuses = [
   'completed',
 ] as const;
 
-export const ledgerTypes = [
-  'credit',
-  'debit',
-  'refund',
-  'reward',
-  'adjust',
-  'init',
-] as const;
-
 export type GuessStatus = (typeof guessStatuses)[number];
 export type GuessReviewStatus = (typeof guessReviewStatuses)[number];
 export type LiveStatus = (typeof liveStatuses)[number];
 export type OrderStatus = (typeof orderStatuses)[number];
 export type WarehouseStatus = (typeof warehouseStatuses)[number];
-export type LedgerType = (typeof ledgerTypes)[number];

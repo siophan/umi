@@ -14,7 +14,6 @@ export const openApiTags = [
   { name: 'Guess', description: '竞猜相关接口' },
   { name: 'Product', description: '商城商品接口' },
   { name: 'Order', description: '订单相关接口' },
-  { name: 'Wallet', description: '余额流水接口' },
   { name: 'Warehouse', description: '仓库接口' },
   { name: 'Shop', description: '店铺与品牌授权接口' },
   { name: 'Upload', description: '文件上传接口' },

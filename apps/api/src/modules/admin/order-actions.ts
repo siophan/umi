@@ -19,7 +19,6 @@ import {
   FULFILLMENT_PROCESSING,
   FULFILLMENT_SHIPPED,
   FULFILLMENT_COMPLETED,
-  OPERATOR_ROLE_ADMIN,
   ORDER_CLOSED,
   ORDER_PENDING,
   ORDER_REFUNDED,
@@ -32,6 +31,7 @@ import {
   SHIPPING_SAME_CITY,
   SHIPPING_SELF_PICKUP,
 } from './orders-shared';
+import { OPERATOR_ROLE_ADMIN } from '../order/order-shared';
 
 type OrderActionRow = {
   id: number | string;

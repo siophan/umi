@@ -19,7 +19,6 @@ const welfare = [
   { href: '/coupons', icon: 'fa-solid fa-ticket', cls: styles.coupon, label: '优惠券', badge: '' },
   { href: '/invite', icon: 'fa-solid fa-gift', cls: styles.invite, label: '邀请好友', badge: '' },
   { href: '/checkin', icon: 'fa-solid fa-calendar-check', cls: styles.checkin, label: '每日签到', badge: '' },
-  { href: '/mall', icon: 'fa-solid fa-coins', cls: styles.coin, label: '零食币充值', badge: '' },
 ];
 
 const moreServices = [

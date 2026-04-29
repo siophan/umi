@@ -236,10 +236,32 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
+## 20. 金币概念全量下线（已完成 2026-04-29）
+
+**决策**：平台不保留任何"用户余额 / 站内代币"语义。所有支付一律走真实通道（微信/支付宝），卖家收款挂在业务表（如 `consign_trade.seller_amount + settlement_status`），提现走 admin 审核 + 真实打款。
+
+**已完成的清理：**
+- `apps/api/src/modules/wallet/` 整模块删除；`app.ts` 卸载 `/api/wallet` 挂载；OpenAPI 移除 `/api/wallet/ledger` + `Wallet` tag
+- `users/query-store.ts` / `admin-store.ts` 移除 `coins` 聚合 SQL；`users/model.ts` 移除 `coins` 字段；`routes/openapi/schemas/common.ts` UserSummary 移除 `coins`
+- `packages/shared/src/domain.ts` 删 `User.coins` + `CoinLedgerEntry`；`api-user-commerce.ts` 删 `WalletLedgerResult`；`status.ts` 删 `ledgerTypes` / `LedgerType`
+- 前端：`apps/web/src/lib/api/wallet.ts` 整文件删；`features/page.tsx` 删"零食币充值"入口；`create-settings-section.tsx` 文案改"已投注金额按原支付通道退回"
+- Admin：`admin-user-detail-drawer.tsx` 删余额展示；`admin-users.tsx` 删"零钱"列
+- 文档：`docs/full-schema.md` 移除 `coin_ledger` 段；`docs/status-codes.md` 移除 `coin_ledger.source_type` / `coin_ledger.operator_role` 两组编码
+
+**竞猜流标退款改造：**
+- `apps/api/src/modules/payment/` 新增 `refundWechatOrder` / `refundAlipayOrder` / `refundPayOrder` 三件套（同时关闭 #15 P1 待办的"退款 API"中的竞猜部分）
+- `guess-scheduler.ts` 重写：从"写 coin_ledger 余额退款"改为"按 pay_no/pay_channel 调原通道 refund + 标记 `guess_bet.pay_status=50(refunded)`"，逐单退款 + 单笔幂等，失败由下个 tick 自动续跑
+
+**待执行**：`packages/db/sql/drop_coin_ledger.sql` 由运维手工执行（之前 `guess_bet_payment.sql` / `order_payment.sql` 也走同样流程）。执行前已确认历史数据可丢弃。
+
+**仍未做**：商城退款 API（`order` 主动调 wechat/alipay refund）—— 留在 #15 P1 待办，思路同竞猜流标，复用 `refundPayOrder`。
+
+---
+
 ## 小结
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口（支付链路主流程已完成 2026-04-29）|
-| P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 好友PK 多人模式空选项结算 / 支付超时库存归还 + 退款 API |
+| P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 好友PK 多人模式空选项结算 / 支付超时库存归还 + 商城退款 API（竞猜流标退款已完成 2026-04-29）|
 | P2     | 12   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 |
