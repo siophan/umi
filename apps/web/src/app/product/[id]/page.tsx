@@ -13,6 +13,7 @@ import {
   toggleProductReviewHelpful,
   unfavoriteProduct,
 } from '../../../lib/api/products';
+import { hasAuthToken } from '../../../lib/api/shared';
 import { fetchShopDetail } from '../../../lib/api/shops';
 import { followUser, unfollowUser } from '../../../lib/api/users';
 import type { PublicShopDetailResult } from '@umi/shared';
@@ -365,6 +366,11 @@ function ProductDetailPageInner() {
               if (!product) {
                 return;
               }
+              if (!hasAuthToken()) {
+                setToast('请先登录');
+                router.push('/login');
+                return;
+              }
               const previous = favActive;
               const next = !previous;
               setFavActive(next);
@@ -388,6 +394,11 @@ function ProductDetailPageInner() {
             className={styles.barIcon}
             type="button"
             onClick={() => {
+              if (!hasAuthToken()) {
+                setToast('请先登录');
+                router.push('/login');
+                return;
+              }
               if (product.shopUserId) {
                 router.push(`/chat/${encodeURIComponent(product.shopUserId)}`);
               } else {
@@ -404,9 +415,30 @@ function ProductDetailPageInner() {
             className={styles.barSub}
             type="button"
             onClick={() => {
-              if (currentTab === 'guess') router.push('/guess-history');
-              else if (currentTab === 'inv') router.push('/warehouse');
-              else if (product) {
+              if (currentTab === 'guess') {
+                if (!hasAuthToken()) {
+                  setToast('请先登录');
+                  router.push('/login');
+                  return;
+                }
+                router.push('/guess-history');
+              } else if (currentTab === 'inv') {
+                if (!hasAuthToken()) {
+                  setToast('请先登录');
+                  router.push('/login');
+                  return;
+                }
+                router.push('/warehouse');
+              } else if (product) {
+                if (!hasAuthToken()) {
+                  setToast('请先登录');
+                  router.push('/login');
+                  return;
+                }
+                if (product.stock <= 0) {
+                  setToast('商品已售罄');
+                  return;
+                }
                 void addCartItem({ productId: toEntityId(product.id), quantity: 1 })
                   .then(() => setToast('已加入购物车 🛒'))
                   .catch(() => setToast('加入购物车失败'));
@@ -431,6 +463,11 @@ function ProductDetailPageInner() {
             className={`${styles.barPrimary} ${currentTab === 'guess' ? styles.barPrimaryGuess : currentTab === 'inv' ? styles.barPrimaryInv : styles.barPrimaryDirect}`}
             type="button"
             onClick={() => {
+              if (!hasAuthToken()) {
+                setToast('请先登录');
+                router.push('/login');
+                return;
+              }
               if (currentTab === 'guess') {
                 if (!activeGuess) {
                   setToast('当前暂无可参与的竞猜');
@@ -438,6 +475,10 @@ function ProductDetailPageInner() {
                 }
                 router.push(`/guess-order?id=${encodeURIComponent(activeGuess.id)}`);
               } else if (currentTab === 'direct') {
+                if (product.stock <= 0) {
+                  setToast('商品已售罄');
+                  return;
+                }
                 router.push(
                   `/payment?from=product&pid=${encodeURIComponent(product.id)}&qty=1`,
                 );

@@ -60,9 +60,15 @@ export function ProductDetailSummary({
           <div className={styles.priceOrig}>¥{product.originalPrice}</div>
           <div className={styles.priceTags}>
             {discountPercent > 0 ? <span className={`${styles.priceTag} ${styles.tagOff}`}>{discountPercent}%OFF</span> : null}
+            <span className={`${styles.priceTag} ${styles.tagHot}`}>
+              <i className="fa-solid fa-fire" style={{ fontSize: 7, marginRight: 2 }} /> 热卖
+            </span>
           </div>
         </div>
         <div className={styles.titleArea}>
+          {activeGuess ? (
+            <span className={`${styles.titleBadge} ${styles.guessBadge}`}>竞猜</span>
+          ) : null}
           <span className={styles.productTitle}>{product.name}</span>
         </div>
         <div className={styles.productSub}>
