@@ -51,11 +51,16 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
                sba.status AS auth_status,
                sbaa.created_at
         FROM shop_brand_auth_apply sbaa
+        INNER JOIN (
+          SELECT brand_id, MAX(id) AS latest_id
+          FROM shop_brand_auth_apply
+          WHERE shop_id = ?
+          GROUP BY brand_id
+        ) latest ON latest.latest_id = sbaa.id
         INNER JOIN brand b ON b.id = sbaa.brand_id
         LEFT JOIN shop_brand_auth sba
                ON sba.shop_id = sbaa.shop_id
               AND sba.brand_id = sbaa.brand_id
-        WHERE sbaa.shop_id = ?
         ORDER BY sbaa.created_at DESC
       `,
       [shop.id],
