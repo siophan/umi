@@ -10,6 +10,7 @@ import { toEntityId } from '@umi/shared';
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
 import {
+  AUTH_STATUS_ACTIVE,
   BrandAuthRow,
   createNo,
   getCurrentShop,
@@ -84,9 +85,16 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
         FROM brand b
         LEFT JOIN category c ON c.id = b.category_id
         WHERE b.status = 10
+          AND NOT EXISTS (
+            SELECT 1
+            FROM shop_brand_auth sba_x
+            WHERE sba_x.shop_id = ?
+              AND sba_x.brand_id = b.id
+              AND sba_x.status = ?
+          )
         ORDER BY b.name ASC
       `,
-      [shop.id, shop.id],
+      [shop.id, shop.id, shop.id, AUTH_STATUS_ACTIVE],
     );
 
     mine = (mineRows as BrandAuthRow[]).map((row) => ({
