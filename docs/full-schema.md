@@ -261,10 +261,17 @@
 | 6 | `supply_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 供货价，单位分 |
 | 7 | `default_img` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 默认主图 |
 | 8 | `images` | `json` | `NO` | `NULL` | `-` | `-` | - |
-| 9 | `description` | `text` | `YES` | `NULL` | `-` | `-` | 商品描述 |
-| 10 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
-| 11 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 12 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED on update CURRENT_TIMESTAMP(3)` | 更新时间 |
+| 9 | `video_url` | `varchar(255)` | `YES` | `NULL` | `-` | `-` | 主图视频 URL（mp4 / m3u8） |
+| 10 | `description` | `text` | `YES` | `NULL` | `-` | `-` | 商品描述 |
+| 11 | `detail_html` | `mediumtext` | `YES` | `NULL` | `-` | `-` | 商品详情 HTML（详情 tab 渲染） |
+| 12 | `spec_table` | `json` | `YES` | `NULL` | `-` | `-` | 参数表 JSON：[{"key":"产地","value":"法国"},...] |
+| 13 | `package_list` | `json` | `YES` | `NULL` | `-` | `-` | 包装清单 JSON：["商品 ×1","保修卡 ×1",...] |
+| 14 | `freight` | `bigint` | `YES` | `NULL` | `-` | `-` | 运费，单位分；NULL=包邮 |
+| 15 | `ship_from` | `varchar(64)` | `YES` | `NULL` | `-` | `-` | 发货地（如 "上海"） |
+| 16 | `delivery_days` | `varchar(32)` | `YES` | `NULL` | `-` | `-` | 发货时效文案（如 "24h内发货"） |
+| 17 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
+| 18 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 19 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED on update CURRENT_TIMESTAMP(3)` | 更新时间 |
 
 ## cart_item
 
@@ -1001,6 +1008,40 @@
 | 18 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
 | 19 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
 | 20 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+
+## product_review
+
+- 表注释：商品评价表
+
+| 字段顺序 | 字段名 | 列类型 | 是否可空 | 默认值 | 键标记 | Extra | 字段注释 |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `id` | `bigint` | `NO` | `NULL` | `PRI` | `auto_increment` | 评价 ID |
+| 2 | `product_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 商品 ID |
+| 3 | `order_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 来源订单 ID |
+| 4 | `user_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 评价人用户 ID |
+| 5 | `rating` | `tinyint unsigned` | `NO` | `5` | `-` | `-` | 评分 1-5 |
+| 6 | `content` | `varchar(1000)` | `YES` | `NULL` | `-` | `-` | 评价正文 |
+| 7 | `images` | `json` | `YES` | `NULL` | `-` | `-` | 晒图 URL 数组 |
+| 8 | `helpful_count` | `int` | `NO` | `0` | `-` | `-` | 点赞数（冗余维护） |
+| 9 | `reply` | `varchar(1000)` | `YES` | `NULL` | `-` | `-` | 卖家/admin 回复 |
+| 10 | `replied_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 回复时间 |
+| 11 | `appended_content` | `varchar(1000)` | `YES` | `NULL` | `-` | `-` | 用户追评正文 |
+| 12 | `appended_images` | `json` | `YES` | `NULL` | `-` | `-` | 追评晒图 URL 数组 |
+| 13 | `appended_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 追评时间（非空 = 已追评） |
+| 14 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 10=正常 90=已删除 |
+| 15 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 16 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED on update CURRENT_TIMESTAMP(3)` | 更新时间 |
+
+## product_review_helpful
+
+- 表注释：商品评价点赞关系表
+
+| 字段顺序 | 字段名 | 列类型 | 是否可空 | 默认值 | 键标记 | Extra | 字段注释 |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `id` | `bigint` | `NO` | `NULL` | `PRI` | `auto_increment` | 点赞关系 ID |
+| 2 | `review_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 评价 ID |
+| 3 | `user_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 点赞用户 ID |
+| 4 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
 
 ## product_interaction
 
