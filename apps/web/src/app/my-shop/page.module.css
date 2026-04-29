@@ -205,11 +205,13 @@
 .section:nth-of-type(4) .sectionTitle i:first-child { color: #4e6ae6; }
 .sectionMore { border:0; background:transparent; font-size: 11px; color: #999; }
 .sectionMore:active { color:#666; }
-.brandItem,.productItem { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #f5f5f5; }
+.brandItem,.productItem { display: flex; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #f5f5f5; }
+.brandItem { align-items: center; }
 .brandItem:last-child,.productItem:last-child { border-bottom: 0; }
 .sectionHint { padding: 0 14px 10px; font-size: 11px; line-height: 1.5; color: #8a8a92; }
 .brandItem img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
-.brandInfo,.productBody { flex: 1; min-width: 0; }
+.brandInfo { flex: 1; min-width: 0; }
+.productBody { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
 .brandName { font-size: 13px; font-weight: 700; color: #1a1a1a; }
 .productName { font-size: 12px; font-weight: 600; color: #333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .brandMeta { margin-top: 2px; font-size: 10px; color: #999; }
@@ -217,7 +219,11 @@
 .statusActive { color: #2e7d32; background: #e8f5e9; }
 .statusPending { color: #e65100; background: #fff3e0; }
 .productItem img { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: #f5f5f5; }
-.productPrice { margin-top: 6px; font-size: 14px; font-weight: 800; color: #E64A19; }
+.productPrice { font-size: 14px; font-weight: 800; color: #E64A19; }
+.productBtns { display: flex; gap: 6px; }
+.productBtn { border: 1px solid #E8E8E8; border-radius: 10px; padding: 3px 10px; background: #fff; color: #666; font-size: 10px; font-weight: 600; cursor: pointer; }
+.productBtn:active { background: #f5f5f5; }
+.productBtnDanger { color: #FF3B30; border-color: #FFCDD2; }
 
 .statsOverlay { position:fixed; inset:0; z-index:999; display:flex; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.5); }
 .statsPanel { width:100%; max-width:500px; max-height:80vh; overflow-y:auto; border-radius:16px 16px 0 0; background:#fff; padding:0 0 calc(16px + env(safe-area-inset-bottom,0px)); animation:statsPanelUp .3s cubic-bezier(.25,.46,.45,.94); }

@@ -27,6 +27,8 @@ type ActiveShopContentProps = {
   onCloseStats: () => void;
   onManageBrands: () => void;
   onAddProduct: () => void;
+  onEditProduct: (productId: string) => void;
+  onRemoveProduct: (productId: string) => void;
 };
 
 export function ActiveShopContent({
@@ -40,6 +42,8 @@ export function ActiveShopContent({
   onCloseStats,
   onManageBrands,
   onAddProduct,
+  onEditProduct,
+  onRemoveProduct,
 }: ActiveShopContentProps) {
   return (
     <>
@@ -124,7 +128,6 @@ export function ActiveShopContent({
             上架 <i className="fa-solid fa-chevron-right" />
           </button>
         </div>
-        <div className={styles.sectionHint}>当前仅开放查看与上架商品，编辑和上下架能力暂未开放。</div>
         {productList.length > 0 ? (
           productList.map((item) => (
             <article className={styles.productItem} key={item.id}>
@@ -132,6 +135,18 @@ export function ActiveShopContent({
               <div className={styles.productBody}>
                 <div className={styles.productName}>{item.name}</div>
                 <div className={styles.productPrice}>¥{item.price.toFixed(1)}</div>
+                <div className={styles.productBtns}>
+                  <button className={styles.productBtn} type="button" onClick={() => onEditProduct(item.id)}>
+                    编辑
+                  </button>
+                  <button
+                    className={`${styles.productBtn} ${styles.productBtnDanger}`}
+                    type="button"
+                    onClick={() => onRemoveProduct(item.id)}
+                  >
+                    下架
+                  </button>
+                </div>
               </div>
             </article>
           ))
