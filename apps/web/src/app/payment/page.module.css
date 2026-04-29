@@ -1002,7 +1002,33 @@
 
 .successDesc {
   margin-top: 6px;
+  margin-bottom: 20px;
   color: #999;
   font-size: 13px;
   line-height: 1.6;
+  white-space: pre-line;
+}
+
+.successContinue {
+  margin-top: 12px;
+  width: 100%;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: #bbb;
+  font-size: 12px;
+}
+
+.successOverlayCenter {
+  align-items: center;
+}
+
+.pwdForget {
+  width: 100%;
+  padding: 0 0 16px;
+  border: 0;
+  background: transparent;
+  color: #ff5722;
+  font-size: 12px;
+  text-align: center;
 }

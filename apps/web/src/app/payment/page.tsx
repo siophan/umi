@@ -299,7 +299,10 @@ function PaymentPageInner() {
           setCouponId(nextCouponId);
           setCouponOpen(false);
         }}
-        onPasswordClose={() => setPwdOpen(false)}
+        onPasswordClose={() => {
+          setPwdOpen(false);
+          setPwd('');
+        }}
         onPasswordKeyPress={(key) => {
           if (submitting || key === '') {
             return;
@@ -312,6 +315,21 @@ function PaymentPageInner() {
           setPwd(next);
           if (next.length === 6) {
             void submitOrder();
+          }
+        }}
+        onPasswordForget={() => setToast('找回密码功能开发中')}
+        successDesc={
+          products.length
+            ? `已支付 ¥${total.toFixed(2)}\n${products[0]?.name}${products.length > 1 ? ` 等${products.length}件商品` : ''}`
+            : '订单已创建'
+        }
+        onContinueShopping={() => {
+          const from = searchParams.get('from');
+          setSuccessOpen(false);
+          if (from === 'cart') {
+            router.push('/cart');
+          } else {
+            router.push('/?tab=mall');
           }
         }}
         onSuccessClose={() => setSuccessOpen(false)}

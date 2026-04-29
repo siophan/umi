@@ -29,6 +29,9 @@ type PaymentOverlaysProps = {
   onCouponSelect: (couponId: string | null) => void;
   onPasswordClose: () => void;
   onPasswordKeyPress: (key: string) => void;
+  onPasswordForget: () => void;
+  successDesc: string;
+  onContinueShopping: () => void;
   onSuccessClose: () => void;
   onToastClear: () => void;
 };
@@ -57,6 +60,9 @@ export function PaymentOverlays({
   onCouponSelect,
   onPasswordClose,
   onPasswordKeyPress,
+  onPasswordForget,
+  successDesc,
+  onContinueShopping,
   onSuccessClose,
   onToastClear,
 }: PaymentOverlaysProps) {
@@ -179,6 +185,9 @@ export function PaymentOverlays({
                 </div>
               ))}
             </div>
+            <button type="button" className={styles.pwdForget} onClick={onPasswordForget}>
+              忘记密码？
+            </button>
             <div className={styles.keypad}>
               {PASSWORD_KEYS.map((key) => (
                 <button
@@ -196,12 +205,12 @@ export function PaymentOverlays({
       ) : null}
 
       {successOpen ? (
-        <div className={styles.successOverlay}>
+        <div className={`${styles.successOverlay} ${styles.successOverlayCenter}`}>
           <div className={styles.sheetBg} onClick={onSuccessClose} />
           <div className={styles.successCard}>
             <div className={styles.successIcon}>🎉</div>
             <div className={styles.successTitle}>支付成功</div>
-            <div className={styles.successDesc}>真实订单已创建</div>
+            <div className={styles.successDesc}>{successDesc}</div>
             <button
               type="button"
               className={styles.payBtn}
@@ -212,6 +221,9 @@ export function PaymentOverlays({
               }
             >
               查看订单
+            </button>
+            <button type="button" className={styles.successContinue} onClick={onContinueShopping}>
+              返回继续购物
             </button>
           </div>
         </div>
