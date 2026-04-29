@@ -86,12 +86,16 @@ function mapCouponSource(sourceType: number) {
  */
 function sanitizeCoupon(row: CouponRow): CouponListItem {
   const sourceType = Number(row.source_type ?? 0);
+  const type = mapCouponType(Number(row.type ?? 0));
+  // cash / shipping 在 DB 存"分"→ 转元；percent 存 0-100 折扣百分制保持不变。
+  const rawAmount = Number(row.amount ?? 0);
+  const amount = type === 'percent' ? rawAmount : rawAmount / 100;
   return {
     id: toEntityId(row.id),
     couponNo: row.coupon_no || '',
     name: row.name || '优惠券',
-    amount: Number(row.amount ?? 0) / 100,
-    type: mapCouponType(Number(row.type ?? 0)),
+    amount,
+    type,
     condition: row.condition || '',
     expireAt: row.expire_at ? new Date(row.expire_at).toISOString() : null,
     status: mapCouponStatus(Number(row.status ?? 0), row.expire_at),
@@ -231,12 +235,16 @@ export async function listClaimableCouponTemplates(
         reason = '已达领取上限';
       }
 
+      const tplType = mapTemplateType(Number(row.type ?? COUPON_TYPE_CASH));
+      const rawAmount = Number(row.discount_amount);
+      // cash / shipping 在 DB 存"分"→ 转元；percent 存 0-100 折扣百分制保持不变。
+      const amount = tplType === 'percent' ? rawAmount : rawAmount / 100;
       return {
         id: toEntityId(row.id),
         name: row.name,
         description: row.description ?? null,
-        amount: Number(row.discount_amount) / 100,
-        type: mapTemplateType(Number(row.type ?? COUPON_TYPE_CASH)),
+        amount,
+        type: tplType,
         minAmount: Number(row.min_amount) / 100,
         condition: buildTemplateConditionText(row),
         scopeType: mapTemplateScopeType(Number(row.scope_type)),

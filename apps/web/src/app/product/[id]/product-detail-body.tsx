@@ -231,7 +231,13 @@ export function ProductDetailBody({
               <div className={styles.couponStrip}>
                 {coupons.length ? coupons.map((coupon) => (
                   <div className={styles.couponCard} key={coupon.id}>
-                    <strong>{coupon.type === 'shipping' ? '包邮' : `¥${coupon.amount}`}</strong>
+                    <strong>
+                      {coupon.type === 'shipping'
+                        ? '包邮'
+                        : coupon.type === 'percent'
+                          ? `${(coupon.amount / 10).toFixed(1).replace(/\.0$/, '')}折`
+                          : `¥${coupon.amount}`}
+                    </strong>
                     <div>
                       <span>{coupon.condition}</span>
                       <em>{coupon.name}</em>

@@ -97,7 +97,7 @@ function CouponCenterInner() {
                 <div className={styles.amountWrap}>
                   {item.type === 'percent' ? (
                     <>
-                      <span className={styles.amount}>{(item.amount * 10).toFixed(1)}</span>
+                      <span className={styles.amount}>{(item.amount / 10).toFixed(1)}</span>
                       <span className={styles.amountUnit}>折</span>
                     </>
                   ) : item.type === 'shipping' ? (

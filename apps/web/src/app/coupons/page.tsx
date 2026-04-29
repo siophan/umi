@@ -116,7 +116,9 @@ export default function CouponsPage() {
           coupons.map((coupon) => (
             <article key={coupon.id} className={`${styles.card} ${coupon.status === 'used' ? styles.used : ''}`}>
               <div className={styles.value}>
-                <div className={styles.amount}>{coupon.type === 'percent' ? `${coupon.amount}%` : `¥${coupon.amount}`}</div>
+                <div className={styles.amount}>
+                  {coupon.type === 'percent' ? `${(coupon.amount / 10).toFixed(1).replace(/\.0$/, '')}折` : `¥${coupon.amount}`}
+                </div>
                 <div className={styles.unit}>{coupon.type === 'percent' ? '折扣' : '满减'}</div>
               </div>
               <div className={styles.info}>

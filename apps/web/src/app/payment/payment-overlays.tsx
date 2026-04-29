@@ -125,7 +125,7 @@ export function PaymentOverlays({
                         ) : (
                           <>
                             <small>¥</small>
-                            {(item.amount / 100).toFixed(0)}
+                            {Number.isInteger(item.amount) ? item.amount : item.amount.toFixed(2)}
                           </>
                         )}
                       </div>

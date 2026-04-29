@@ -177,12 +177,15 @@ function mapCouponSource(sourceType: number) {
 
 export function sanitizeCoupon(row: CouponRow): CouponListItem {
   const sourceType = Number(row.source_type ?? 0);
+  const type = mapCouponType(Number(row.type ?? 0));
+  // cash / shipping 在 DB 存"分"→ 转元；percent 存 0-100 折扣百分制保持不变。
+  const amount = type === 'percent' ? Number(row.amount ?? 0) : toMoney(row.amount);
   return {
     id: toEntityId(row.id),
     couponNo: row.coupon_no || '',
     name: row.name || '优惠券',
-    amount: toMoney(row.amount),
-    type: mapCouponType(Number(row.type ?? 0)),
+    amount,
+    type,
     condition: row.condition || '',
     expireAt: toIso(row.expire_at),
     status: mapCouponStatus(Number(row.status ?? 0), row.expire_at),

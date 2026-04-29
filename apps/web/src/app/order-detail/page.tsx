@@ -278,7 +278,13 @@ function OrderDetailPageInner() {
           <div className={styles.couponCard}>
             <div className={styles.couponIcon}>🎫</div>
             <div className={styles.couponInfo}>
-              <div className={styles.couponAmount}>¥{order.coupon.amount.toFixed(1)}</div>
+              <div className={styles.couponAmount}>
+                {order.coupon.type === 'shipping'
+                  ? '包邮'
+                  : order.coupon.type === 'percent'
+                    ? `${(order.coupon.amount / 10).toFixed(1).replace(/\.0$/, '')}折`
+                    : `¥${order.coupon.amount.toFixed(2)}`}
+              </div>
               <div className={styles.couponCond}>{order.coupon.condition || order.coupon.name}</div>
             </div>
             <div className={styles.couponTag}>{order.coupon.name}</div>
