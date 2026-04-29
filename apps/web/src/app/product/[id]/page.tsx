@@ -7,7 +7,15 @@ import { toEntityId, type CouponListItem, type ProductDetailResult, type Warehou
 
 import { addCartItem } from '../../../lib/api/cart';
 import { fetchCoupons } from '../../../lib/api/coupons';
-import { favoriteProduct, fetchProductDetail, unfavoriteProduct } from '../../../lib/api/products';
+import {
+  favoriteProduct,
+  fetchProductDetail,
+  toggleProductReviewHelpful,
+  unfavoriteProduct,
+} from '../../../lib/api/products';
+import { fetchShopDetail } from '../../../lib/api/shops';
+import { followUser, unfollowUser } from '../../../lib/api/users';
+import type { PublicShopDetailResult } from '@umi/shared';
 import { ProductDetailBody } from './product-detail-body';
 import { ProductDetailExchangeSheet } from './product-detail-exchange-sheet';
 import { ProductDetailHeader } from './product-detail-header';
@@ -39,6 +47,7 @@ function ProductDetailPageInner() {
   const [activeGuess, setActiveGuess] = useState<null | ActiveGuessDetail>(null);
   const [warehouseItems, setWarehouseItems] = useState<ProductDetailResult['warehouseItems']>([]);
   const [recommendations, setRecommendations] = useState<ProductDetailResult['recommendations']>([]);
+  const [sameShopProducts, setSameShopProducts] = useState<ProductDetailResult['sameShopProducts']>([]);
   const [coupons, setCoupons] = useState<CouponListItem[]>([]);
   const [reviews, setReviews] = useState<ProductDetailResult['reviews']>([]);
   const [currentTab, setCurrentTab] = useState<ProductMode>(initialTab);
@@ -49,6 +58,9 @@ function ProductDetailPageInner() {
   const [scrolled, setScrolled] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [favActive, setFavActive] = useState(false);
+  const [shopFollowing, setShopFollowing] = useState(false);
+  const [shopFollowBusy, setShopFollowBusy] = useState(false);
+  const [shopStats, setShopStats] = useState<PublicShopDetailResult['shop'] | null>(null);
   const [selectedGuessOpt, setSelectedGuessOpt] = useState(0);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string[]>([]);
   const [toast, setToast] = useState('');
@@ -90,11 +102,26 @@ function ProductDetailPageInner() {
         );
         setWarehouseItems(result.warehouseItems);
         setRecommendations(result.recommendations);
+        setSameShopProducts(result.sameShopProducts);
         setReviews(result.reviews);
         setCoupons(couponItems.filter((item) => item.status === 'unused').slice(0, 3));
         setFavActive(result.product.favorited);
+        setShopFollowing(result.product.shopFollowing);
         if (!result.activeGuess) {
           setCurrentTab('direct');
+        }
+        if (result.product.shopId) {
+          void fetchShopDetail(result.product.shopId)
+            .then((shopResult) => {
+              if (!ignore) {
+                setShopStats(shopResult.shop);
+              }
+            })
+            .catch(() => {
+              if (!ignore) {
+                setShopStats(null);
+              }
+            });
         }
       } catch (error) {
         if (!ignore) {
@@ -103,6 +130,7 @@ function ProductDetailPageInner() {
           setActiveGuess(null);
           setWarehouseItems([]);
           setRecommendations([]);
+          setSameShopProducts([]);
           setReviews([]);
           setCoupons([]);
           setLoadError(message);
@@ -228,11 +256,11 @@ function ProductDetailPageInner() {
         scrolled={scrolled}
         productName={product.name}
         heroImages={heroImages}
+        videoUrl={product.videoUrl}
         currentSlide={currentSlide}
         heroSliderRef={heroSliderRef}
         onBack={() => router.back()}
         onShare={() => void sharePage()}
-        onMore={() => setToast('更多')}
         onSlideChange={setCurrentSlide}
       />
 
@@ -245,7 +273,13 @@ function ProductDetailPageInner() {
         directPrice={directPrice}
         guessPrice={guessPrice}
         discountPercent={discountPercent}
-        onOpenCoupons={() => router.push('/coupons')}
+        onOpenCoupons={() =>
+          router.push(
+            product.shopId
+              ? `/coupons/center?shopId=${encodeURIComponent(product.shopId)}`
+              : '/coupons/center',
+          )
+        }
         onOpenServiceTip={() => setToast('以下单页和店铺说明为准')}
         onChangeTab={setCurrentTab}
       />
@@ -257,7 +291,47 @@ function ProductDetailPageInner() {
         inventoryPreview={inventoryPreview}
         inventoryTotalValue={inventoryTotalValue}
         recommendations={recommendations}
+        sameShopProducts={sameShopProducts}
+        shopStats={shopStats}
+        shopFollowing={shopFollowing}
+        shopFollowBusy={shopFollowBusy}
+        onToggleShopFollow={async () => {
+          if (!product.shopUserId || shopFollowBusy) return;
+          setShopFollowBusy(true);
+          const previous = shopFollowing;
+          const next = !previous;
+          setShopFollowing(next);
+          try {
+            if (next) {
+              await followUser(product.shopUserId);
+              setToast('已关注店铺');
+            } else {
+              await unfollowUser(product.shopUserId);
+              setToast('已取消关注');
+            }
+          } catch {
+            setShopFollowing(previous);
+            setToast(previous ? '取消关注失败' : '关注失败');
+          } finally {
+            setShopFollowBusy(false);
+          }
+        }}
         reviews={reviews}
+        onToggleReviewHelpful={async (reviewId) => {
+          try {
+            const result = await toggleProductReviewHelpful(reviewId);
+            setReviews((current) =>
+              current.map((item) =>
+                item.id === reviewId
+                  ? { ...item, helpfulVoted: result.helpful, helpfulCount: result.helpfulCount }
+                  : item,
+              ),
+            );
+          } catch {
+            setToast('操作失败，请重试');
+          }
+        }}
+        onViewAllReviews={() => router.push(`/product/${productId}/reviews`)}
         coupons={coupons}
         currentTab={currentTab}
         directPrice={directPrice}
@@ -310,7 +384,17 @@ function ProductDetailPageInner() {
             <i className={`fa-${favActive ? 'solid' : 'regular'} fa-heart`} />
             <span>收藏</span>
           </button>
-          <button className={styles.barIcon} type="button" onClick={() => setToast('💬 正在接入客服...')}>
+          <button
+            className={styles.barIcon}
+            type="button"
+            onClick={() => {
+              if (product.shopUserId) {
+                router.push(`/chat/${encodeURIComponent(product.shopUserId)}`);
+              } else {
+                setToast('该商品暂未绑定店铺，无法联系客服');
+              }
+            }}
+          >
             <i className="fa-regular fa-comment-dots" />
             <span>客服</span>
           </button>

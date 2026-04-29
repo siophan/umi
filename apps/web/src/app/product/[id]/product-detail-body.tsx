@@ -1,11 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import type { CouponListItem, GuessOption, ProductDetailResult, ProductSummary, WarehouseItem } from '@umi/shared';
+import { useMemo, useState } from 'react';
+import type {
+  CouponListItem,
+  GuessOption,
+  ProductDetailResult,
+  ProductSummary,
+  PublicShopDetailResult,
+  WarehouseItem,
+} from '@umi/shared';
 
 import type { ActiveGuessDetail, ProductDetailData, ProductMode } from './product-detail-helpers';
 import { formatPriceNumber } from './product-detail-helpers';
 import styles from './page.module.css';
+
+type DetailTabKey = 'detail' | 'spec' | 'package';
 
 type GuessCountdown = {
   hours: string;
@@ -20,7 +30,14 @@ type ProductDetailBodyProps = {
   inventoryPreview: WarehouseItem[];
   inventoryTotalValue: number;
   recommendations: ProductSummary[];
+  sameShopProducts: ProductSummary[];
+  shopStats: PublicShopDetailResult['shop'] | null;
+  shopFollowing: boolean;
+  shopFollowBusy: boolean;
+  onToggleShopFollow: () => void;
   reviews: ProductDetailResult['reviews'];
+  onToggleReviewHelpful: (reviewId: string) => void;
+  onViewAllReviews: () => void;
   coupons: CouponListItem[];
   currentTab: ProductMode;
   directPrice: number;
@@ -48,7 +65,14 @@ export function ProductDetailBody({
   inventoryPreview,
   inventoryTotalValue,
   recommendations,
+  sameShopProducts,
+  shopStats,
+  shopFollowing,
+  shopFollowBusy,
+  onToggleShopFollow,
   reviews,
+  onToggleReviewHelpful,
+  onViewAllReviews,
   coupons,
   currentTab,
   directPrice,
@@ -241,12 +265,28 @@ export function ProductDetailBody({
               <div className={styles.panelHead}>
                 <div className={styles.panelTitle}><i className="fa-solid fa-shield-halved" style={{ color: '#4e6ae6' }} /> 服务保障</div>
               </div>
+              {(() => {
+                const items: { label: string; value: string }[] = [];
+                if (product.freight === 0 || product.freight == null) {
+                  items.push({ label: '运费', value: '包邮' });
+                } else if (product.freight > 0) {
+                  items.push({ label: '运费', value: `¥${product.freight}` });
+                }
+                if (product.shipFrom) items.push({ label: '发货地', value: product.shipFrom });
+                if (product.deliveryDays) items.push({ label: '发货时效', value: product.deliveryDays });
+                if (items.length === 0) return null;
+                return (
+                  <div className={styles.shipInfo}>
+                    {items.map((item) => (
+                      <span key={item.label}>
+                        {item.label}：<strong>{item.value}</strong>
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
               <div className={styles.serviceGrid}>
-                {[
-                  '服务能力以下单页为准',
-                  '发货时效以店铺说明为准',
-                  '售后规则以下单结果为准',
-                ].map((item) => (
+                {['正品保障', '7天无理由', '极速售后'].map((item) => (
                   <div className={styles.serviceItem} key={item}>
                     <span><i className="fa-solid fa-check" /></span>
                     <em>{item}</em>
@@ -384,33 +424,56 @@ export function ProductDetailBody({
         </>
       )}
 
-      <div className={styles.panel}>
-        <div className={styles.panelInner}>
-          <div className={styles.panelHead}>
-            <div className={styles.panelTitle}><i className="fa-solid fa-file-lines" style={{ color: '#999' }} /> 商品详情</div>
-          </div>
-          <div className={`${styles.detailText} ${detailExpanded ? styles.detailExpanded : ''}`}>
-            {`${product.description}
+      <ProductDetailInfoPanel
+        product={product}
+        detailExpanded={detailExpanded}
+        onToggleDetailExpanded={onToggleDetailExpanded}
+      />
 
-• 品牌：${product.brand}
-• 分类：${product.category}
-• 店铺：${product.shopName || '优米平台'}
-• 库存：${product.stock}
-• 标签：${product.tags.length ? product.tags.join(' / ') : '暂无标签'}
-• 发货与售后：以真实订单和店铺说明为准
-`}
+      {product.shopId ? (
+        <div className={styles.panel}>
+          <div className={styles.panelInner}>
+            <div className={styles.shopCard}>
+              {product.shopLogo ? (
+                <img className={styles.shopLogo} src={product.shopLogo} alt={product.shopName || '店铺'} />
+              ) : (
+                <div className={`${styles.shopLogo} ${styles.shopLogoFallback}`}>
+                  {(product.shopName || '店').slice(0, 1)}
+                </div>
+              )}
+              <div className={styles.shopMeta}>
+                <div className={styles.shopName}>{product.shopName || '官方店铺'}</div>
+                <div className={styles.shopStats}>
+                  <span><strong>{shopStats?.fans ?? 0}</strong>粉丝</span>
+                  <span><strong>{shopStats?.productCount ?? 0}</strong>商品</span>
+                  <span>评分 <strong>{(shopStats?.avgRating ?? 0).toFixed(1)}</strong></span>
+                </div>
+              </div>
+              <div className={styles.shopActions}>
+                {product.shopUserId ? (
+                  <button
+                    className={`${styles.shopFollowBtn} ${shopFollowing ? styles.shopFollowBtnActive : ''}`}
+                    type="button"
+                    disabled={shopFollowBusy}
+                    onClick={onToggleShopFollow}
+                  >
+                    {shopFollowing ? '已关注' : '+ 关注'}
+                  </button>
+                ) : null}
+                <Link className={styles.shopVisitBtn} href={`/shop/${product.shopId}`}>
+                  进店
+                </Link>
+              </div>
+            </div>
           </div>
-          <button className={styles.detailToggle} type="button" onClick={onToggleDetailExpanded}>
-            {detailExpanded ? '收起' : '展开全部'} <span><i className={`fa-solid ${detailExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`} /></span>
-          </button>
         </div>
-      </div>
+      ) : null}
 
       <div className={styles.panel}>
         <div className={styles.panelInner}>
           <div className={styles.panelHead}>
             <div className={styles.panelTitle}><i className="fa-solid fa-comment-dots" style={{ color: '#FFB400' }} /> 用户评价 <span>({reviewCount})</span></div>
-            <button className={styles.panelMore} type="button" onClick={() => onOpenToast('查看全部评价')}>
+            <button className={styles.panelMore} type="button" onClick={onViewAllReviews}>
               全部 <i className="fa-solid fa-chevron-right" style={{ fontSize: 8 }} />
             </button>
           </div>
@@ -423,8 +486,40 @@ export function ProductDetailBody({
                   <span className={styles.reviewStars}>{'★'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}</span>
                 </div>
                 <div className={styles.reviewText}>{review.content || '该用户未填写评价内容。'}</div>
+                {review.images.length ? (
+                  <div className={styles.reviewImages}>
+                    {review.images.slice(0, 4).map((src, index) => (
+                      <img className={styles.reviewImage} src={src} alt={`晒图 ${index + 1}`} key={`${src}-${index}`} />
+                    ))}
+                  </div>
+                ) : null}
+                {review.appendedContent ? (
+                  <div className={styles.reviewAppend}>
+                    <strong>追评</strong>{review.appendedContent}
+                    {review.appendedImages.length ? (
+                      <div className={styles.reviewImages}>
+                        {review.appendedImages.slice(0, 4).map((src, index) => (
+                          <img className={styles.reviewImage} src={src} alt={`追评图 ${index + 1}`} key={`${src}-${index}`} />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+                {review.reply ? (
+                  <div className={styles.reviewReply}>
+                    <strong>店铺回复</strong>{review.reply}
+                  </div>
+                ) : null}
                 <div className={styles.reviewFoot}>
                   <span>{new Date(review.createdAt).toLocaleDateString('zh-CN')}</span>
+                  <button
+                    className={`${styles.reviewLike} ${review.helpfulVoted ? styles.reviewLikeActive : ''}`}
+                    type="button"
+                    onClick={() => onToggleReviewHelpful(review.id)}
+                  >
+                    <i className={`fa-${review.helpfulVoted ? 'solid' : 'regular'} fa-heart`} />{' '}
+                    {review.helpfulCount > 0 ? review.helpfulCount : '有用'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -434,18 +529,136 @@ export function ProductDetailBody({
         </div>
       </div>
 
-      <div className={styles.panel}>
-        <div className={styles.recommendTitle}><i className="fa-solid fa-fire" style={{ color: '#ff6b35' }} /> 猜你喜欢</div>
-        <div className={styles.recommendGrid}>
-          {recommendations.map((item) => (
-            <Link className={styles.recommendItem} href={`/product/${item.id}`} key={item.id}>
-              <img className={styles.recommendImg} src={item.img} alt={item.name} />
-              <div className={styles.recommendName}>{item.name}</div>
-              <div className={styles.recommendPrice}>¥{item.price}</div>
-            </Link>
-          ))}
+      {sameShopProducts.length > 0 ? (
+        <div className={styles.panel}>
+          <div className={styles.recommendTitle}>
+            <i className="fa-solid fa-store" style={{ color: '#4e6ae6' }} /> 同店推荐
+            {product.shopName ? <span style={{ marginLeft: 6, fontSize: 11, color: '#999' }}>{product.shopName}</span> : null}
+          </div>
+          <div className={styles.recommendGrid}>
+            {sameShopProducts.map((item) => (
+              <Link className={styles.recommendItem} href={`/product/${item.id}`} key={item.id}>
+                <img className={styles.recommendImg} src={item.img} alt={item.name} />
+                <div className={styles.recommendName}>{item.name}</div>
+                <div className={styles.recommendPrice}>¥{item.price}</div>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
+
+      {recommendations.length > 0 ? (
+        <div className={styles.panel}>
+          <div className={styles.recommendTitle}><i className="fa-solid fa-fire" style={{ color: '#ff6b35' }} /> 猜你喜欢</div>
+          <div className={styles.recommendGrid}>
+            {recommendations.map((item) => (
+              <Link className={styles.recommendItem} href={`/product/${item.id}`} key={item.id}>
+                <img className={styles.recommendImg} src={item.img} alt={item.name} />
+                <div className={styles.recommendName}>{item.name}</div>
+                <div className={styles.recommendPrice}>¥{item.price}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
+  );
+}
+
+type ProductDetailInfoPanelProps = {
+  product: ProductDetailData;
+  detailExpanded: boolean;
+  onToggleDetailExpanded: () => void;
+};
+
+function ProductDetailInfoPanel({
+  product,
+  detailExpanded,
+  onToggleDetailExpanded,
+}: ProductDetailInfoPanelProps) {
+  const tabs = useMemo(() => {
+    const list: { key: DetailTabKey; label: string }[] = [];
+    list.push({ key: 'detail', label: '商品详情' });
+    if (product.specTable.length > 0) {
+      list.push({ key: 'spec', label: '参数' });
+    }
+    if (product.packageList.length > 0) {
+      list.push({ key: 'package', label: '包装清单' });
+    }
+    return list;
+  }, [product.specTable.length, product.packageList.length]);
+  const [activeTab, setActiveTab] = useState<DetailTabKey>('detail');
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelInner}>
+        <div className={styles.panelHead}>
+          <div className={styles.panelTitle}>
+            <i className="fa-solid fa-file-lines" style={{ color: '#999' }} /> 商品详情
+          </div>
+        </div>
+        {tabs.length > 1 ? (
+          <div className={styles.detailTabs}>
+            {tabs.map((tab) => (
+              <button
+                className={`${styles.detailTab} ${activeTab === tab.key ? styles.detailTabActive : ''}`}
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {activeTab === 'detail' ? (
+          product.detailHtml ? (
+            <div
+              className={styles.detailHtml}
+              dangerouslySetInnerHTML={{ __html: product.detailHtml }}
+            />
+          ) : (
+            <>
+              <div className={`${styles.detailText} ${detailExpanded ? styles.detailExpanded : ''}`}>
+                {`${product.description}
+
+• 品牌：${product.brand}
+• 分类：${product.category}
+• 店铺：${product.shopName || '优米平台'}
+• 库存：${product.stock}
+• 标签：${product.tags.length ? product.tags.join(' / ') : '暂无标签'}
+`}
+              </div>
+              <button className={styles.detailToggle} type="button" onClick={onToggleDetailExpanded}>
+                {detailExpanded ? '收起' : '展开全部'}{' '}
+                <span>
+                  <i className={`fa-solid ${detailExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
+                </span>
+              </button>
+            </>
+          )
+        ) : null}
+
+        {activeTab === 'spec' ? (
+          <div className={styles.specTable}>
+            {product.specTable.map((row) => (
+              <div className={styles.specTableRow} key={row.key}>
+                <span className={styles.specTableKey}>{row.key}</span>
+                <span className={styles.specTableValue}>{row.value || '-'}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {activeTab === 'package' ? (
+          <ul className={styles.packageList}>
+            {product.packageList.map((item, index) => (
+              <li key={`${item}-${index}`}>{item}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </div>
   );
 }

@@ -5,6 +5,23 @@ import type { CouponListItem } from '@umi/shared';
 import type { ActiveGuessDetail, ProductDetailData, ProductMode } from './product-detail-helpers';
 import styles from './page.module.css';
 
+function buildShippingChipText(
+  freight: number | null,
+  shipFrom: string | null,
+  deliveryDays: string | null,
+): string {
+  const parts: string[] = [];
+  if (freight === 0 || freight == null) {
+    parts.push('包邮');
+  } else if (freight > 0) {
+    parts.push(`运费 ¥${freight}`);
+  }
+  if (shipFrom) parts.push(`${shipFrom}发货`);
+  if (deliveryDays) parts.push(deliveryDays);
+  if (parts.length === 0) return '服务说明以下单页和店铺规则为准';
+  return parts.join(' · ');
+}
+
 type ProductDetailSummaryProps = {
   product: ProductDetailData;
   coupons: CouponListItem[];
@@ -67,7 +84,9 @@ export function ProductDetailSummary({
             </button>
           ) : null}
           <button className={styles.promoChip} type="button" onClick={onOpenServiceTip}>
-            <span className={`${styles.pcTag} ${styles.pcSvc}`}>保</span> 服务说明以下单页和店铺规则为准 <i className="fa-solid fa-chevron-right" />
+            <span className={`${styles.pcTag} ${styles.pcSvc}`}>保</span>{' '}
+            {buildShippingChipText(product.freight, product.shipFrom, product.deliveryDays)}{' '}
+            <i className="fa-solid fa-chevron-right" />
           </button>
         </div>
       </section>

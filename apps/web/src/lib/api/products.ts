@@ -1,7 +1,11 @@
 import type {
+  AppendProductReviewPayload,
+  AppendProductReviewResult,
   ProductCategoryListResult,
   ProductDetailResult,
   ProductListResult,
+  ProductReviewListResult,
+  ToggleProductReviewHelpfulResult,
 } from '@umi/shared';
 
 import { deleteJson, getJson, postJson } from './shared';
@@ -60,4 +64,31 @@ export function favoriteProduct(productId: string) {
 
 export function unfavoriteProduct(productId: string) {
   return deleteJson<{ success: true }>(`/api/products/${productId}/favorite`);
+}
+
+export function fetchProductReviews(
+  productId: string,
+  options: { page?: number; pageSize?: number } = {},
+) {
+  const searchParams = new URLSearchParams();
+  if (options.page != null) searchParams.set('page', String(options.page));
+  if (options.pageSize != null) searchParams.set('pageSize', String(options.pageSize));
+  const query = searchParams.toString();
+  return getJson<ProductReviewListResult>(
+    `/api/products/${productId}/reviews${query ? `?${query}` : ''}`,
+  );
+}
+
+export function toggleProductReviewHelpful(reviewId: string) {
+  return postJson<ToggleProductReviewHelpfulResult, Record<string, never>>(
+    `/api/products/reviews/${reviewId}/helpful`,
+    {},
+  );
+}
+
+export function appendProductReview(reviewId: string, payload: AppendProductReviewPayload) {
+  return postJson<AppendProductReviewResult, AppendProductReviewPayload>(
+    `/api/products/reviews/${reviewId}/append`,
+    payload,
+  );
 }
