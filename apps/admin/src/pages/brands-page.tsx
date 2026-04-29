@@ -96,9 +96,12 @@ export function BrandsPage({ refreshToken = 0 }: BrandsPageProps) {
   );
   const statusItems = useMemo(() => buildBrandStatusItems(data.brands), [data.brands]);
   const filteredRows = useMemo(() => filterBrands(data.brands, filters, status), [data.brands, filters, status]);
+  const formInitialValues = useMemo<Partial<BrandFormValues>>(
+    () => (editingBrand ? buildEditBrandFormValues(editingBrand) : buildCreateBrandFormValues()),
+    [editingBrand],
+  );
   const columns = buildBrandColumns({
     onEdit: (record) => {
-      brandForm.setFieldsValue(buildEditBrandFormValues(record));
       setEditingBrand(record);
       setFormOpen(true);
     },
@@ -153,8 +156,6 @@ export function BrandsPage({ refreshToken = 0 }: BrandsPageProps) {
               key="create"
               type="primary"
               onClick={() => {
-                brandForm.resetFields();
-                brandForm.setFieldsValue(buildCreateBrandFormValues());
                 setEditingBrand(null);
                 setFormOpen(true);
               }}
@@ -176,6 +177,7 @@ export function BrandsPage({ refreshToken = 0 }: BrandsPageProps) {
         categoryIssue={categoryIssue}
         editing={editingBrand != null}
         form={brandForm}
+        initialValues={formInitialValues}
         open={formOpen}
         statusOptions={BRAND_STATUS_OPTIONS as unknown as Array<{ label: string; value: string }>}
         submitting={submitting}

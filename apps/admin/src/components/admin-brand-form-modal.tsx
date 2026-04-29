@@ -9,6 +9,7 @@ interface AdminBrandFormModalProps {
   categoryIssue: string | null;
   editing: boolean;
   form: ReturnType<typeof Form.useForm<BrandFormValues>>[0];
+  initialValues: Partial<BrandFormValues>;
   onCancel: () => void;
   onSubmit: () => void;
   open: boolean;
@@ -21,6 +22,7 @@ export function AdminBrandFormModal({
   categoryIssue,
   editing,
   form,
+  initialValues,
   onCancel,
   onSubmit,
   open,
@@ -39,7 +41,7 @@ export function AdminBrandFormModal({
       destroyOnClose
     >
       <ConfigProvider theme={SEARCH_THEME}>
-        <Form form={form} layout="vertical" preserve={false}>
+        <Form form={form} layout="vertical" preserve={false} initialValues={initialValues}>
           <Form.Item
             label="品牌名称"
             name="name"
