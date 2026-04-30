@@ -761,12 +761,13 @@ export async function reviewAdminGuess(
   try {
     await connection.beginTransaction();
 
-    const [guessRows] = await connection.execute<mysql.RowDataPacket[]>(
+    const [guessRows] = await connection.query<mysql.RowDataPacket[]>(
       `
         SELECT id, status, review_status
         FROM guess
         WHERE id = ?
         LIMIT 1
+        FOR UPDATE
       `,
       [guessId],
     );
