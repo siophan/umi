@@ -17,8 +17,9 @@ import {
 } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
-import { GUESS_ABANDONED, GUESS_SETTLED, BET_PENDING, BET_WON, BET_LOST, BET_CANCELED } from '../guess/guess-shared';
+import { GUESS_ABANDONED, GUESS_SETTLED, BET_WON, BET_LOST, BET_CANCELED } from '../guess/guess-shared';
 import { refundAbandonedGuessBets } from '../guess/guess-abandon';
+import { closeUnpaidGuessBetsAfterSettle } from '../guess/guess-settle';
 import {
   PAY_STATUS_WAITING,
   PAY_STATUS_PAID,
@@ -272,13 +273,13 @@ export async function getAdminGuessDetail(guessId: string) {
             COUNT(*) AS vote_count,
             COALESCE(SUM(amount), 0) AS vote_amount
           FROM guess_bet
-          WHERE guess_id = ?
+          WHERE guess_id = ? AND pay_status = ?
           GROUP BY choice_idx
         ) stats ON stats.option_index = go.option_index
         WHERE go.guess_id = ?
         ORDER BY go.option_index ASC
       `,
-      [guessId, guessId],
+      [guessId, PAY_STATUS_PAID, guessId],
     ),
     db.query<mysql.RowDataPacket[]>(
       `
@@ -287,9 +288,9 @@ export async function getAdminGuessDetail(guessId: string) {
           COUNT(DISTINCT user_id) AS total_participants,
           COALESCE(SUM(amount), 0) AS total_amount
         FROM guess_bet
-        WHERE guess_id = ?
+        WHERE guess_id = ? AND pay_status = ?
       `,
-      [guessId],
+      [guessId, PAY_STATUS_PAID],
     ),
     db.query<mysql.RowDataPacket[]>(
       `
@@ -876,6 +877,20 @@ export async function settleAdminGuess(
       [GUESS_SETTLED, guessId],
     );
 
+    // 仅 paid bet 推到 won/lost；未支付 bet 在事务后由 closeUnpaidGuessBetsAfterSettle 取消
+    await connection.execute(
+      `UPDATE guess_bet
+         SET status = ?, updated_at = CURRENT_TIMESTAMP(3)
+       WHERE guess_id = ? AND pay_status = ? AND choice_idx = ?`,
+      [BET_WON, guessId, PAY_STATUS_PAID, winnerOptionIndex],
+    );
+    await connection.execute(
+      `UPDATE guess_bet
+         SET status = ?, updated_at = CURRENT_TIMESTAMP(3)
+       WHERE guess_id = ? AND pay_status = ? AND choice_idx <> ?`,
+      [BET_LOST, guessId, PAY_STATUS_PAID, winnerOptionIndex],
+    );
+
     await connection.execute(
       `
         INSERT INTO guess_review_log (
@@ -887,13 +902,16 @@ export async function settleAdminGuess(
     );
 
     await connection.commit();
-    return { id: toEntityId(guessId), status: 'settled' };
   } catch (error) {
     await connection.rollback();
     throw error;
   } finally {
     connection.release();
   }
+
+  await closeUnpaidGuessBetsAfterSettle(guessId);
+
+  return { id: toEntityId(guessId), status: 'settled' };
 }
 
 type AdminGuessBetRow = {

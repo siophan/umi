@@ -21,6 +21,7 @@ import {
   toOptionalNumber,
   toOptionalStringId,
 } from './guesses-shared';
+import { PAY_STATUS_PAID } from '../payment/payment-shared';
 
 export type AdminFriendGuessStatus =
   | 'pending'
@@ -164,6 +165,7 @@ async function getFriendGuessRows() {
       LEFT JOIN (
         SELECT guess_id, COUNT(*) AS bet_participant_count
         FROM guess_bet
+        WHERE pay_status = ${PAY_STATUS_PAID}
         GROUP BY guess_id
       ) bet_stats ON bet_stats.guess_id = g.id
       LEFT JOIN user inviter_user
