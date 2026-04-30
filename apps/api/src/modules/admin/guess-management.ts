@@ -9,6 +9,8 @@ import {
   type GuessListResult,
   type ReviewAdminGuessPayload,
   type ReviewAdminGuessResult,
+  type SettleAdminGuessPayload,
+  type SettleAdminGuessResult,
   type UpdateAdminGuessPayload,
   type UpdateAdminGuessResult,
 } from '@umi/shared';
@@ -19,6 +21,7 @@ import { refundAbandonedGuessBets } from '../guess/guess-abandon';
 import {
   GUESS_ACTIVE,
   GUESS_PENDING_REVIEW,
+  GUESS_PENDING_SETTLE,
   GUESS_PRODUCT_SOURCE_PLATFORM,
   GUESS_PRODUCT_SOURCE_SHOP,
   GUESS_REJECTED,
@@ -28,6 +31,7 @@ import {
   REVIEW_ACTION_ABANDON,
   REVIEW_ACTION_APPROVE,
   REVIEW_ACTION_REJECT,
+  REVIEW_ACTION_SETTLE,
   REVIEW_APPROVED,
   REVIEW_PENDING,
   REVIEW_REJECTED,
@@ -146,6 +150,9 @@ function mapReviewActionLabel(action: number | string) {
   }
   if (code === REVIEW_ACTION_ABANDON) {
     return { action: 'abandon' as const, label: '运营作废' as const };
+  }
+  if (code === REVIEW_ACTION_SETTLE) {
+    return { action: 'settle' as const, label: '手动开奖' as const };
   }
   return { action: 'submit' as const, label: '提交审核' as const };
 }
@@ -745,6 +752,78 @@ export async function reviewAdminGuess(
       id: toEntityId(guess.id),
       status,
     };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function settleAdminGuess(
+  guessId: string,
+  adminId: string,
+  payload: SettleAdminGuessPayload,
+): Promise<SettleAdminGuessResult> {
+  const winnerOptionIndex = Number(payload.winnerOptionIndex);
+  if (!Number.isInteger(winnerOptionIndex) || winnerOptionIndex < 0) {
+    throw new Error('请选择开奖结果');
+  }
+
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [guessRows] = await connection.query<mysql.RowDataPacket[]>(
+      `SELECT id, status FROM guess WHERE id = ? LIMIT 1 FOR UPDATE`,
+      [guessId],
+    );
+    const guess = guessRows[0] as { id: number | string; status: number | string } | undefined;
+    if (!guess) {
+      throw new Error('竞猜不存在');
+    }
+
+    const fromStatus = Number(guess.status ?? 0);
+    if (fromStatus !== GUESS_PENDING_SETTLE && fromStatus !== GUESS_ACTIVE) {
+      throw new Error('当前竞猜状态不可开奖');
+    }
+
+    const [optionRows] = await connection.query<mysql.RowDataPacket[]>(
+      `SELECT id FROM guess_option WHERE guess_id = ? AND option_index = ? LIMIT 1`,
+      [guessId, winnerOptionIndex],
+    );
+    if (!optionRows[0]) {
+      throw new Error('开奖选项不存在');
+    }
+
+    await connection.execute(
+      `UPDATE guess_option SET is_result = 0 WHERE guess_id = ?`,
+      [guessId],
+    );
+    await connection.execute(
+      `UPDATE guess_option SET is_result = 1 WHERE guess_id = ? AND option_index = ?`,
+      [guessId, winnerOptionIndex],
+    );
+
+    await connection.execute(
+      `UPDATE guess SET status = ?, settled_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?`,
+      [GUESS_SETTLED, guessId],
+    );
+
+    await connection.execute(
+      `
+        INSERT INTO guess_review_log (
+          guess_id, reviewer_id, action, from_status, to_status, note,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      `,
+      [guessId, adminId, REVIEW_ACTION_SETTLE, fromStatus, GUESS_SETTLED, `手动开奖，获胜选项序号 ${winnerOptionIndex}`],
+    );
+
+    await connection.commit();
+    return { id: toEntityId(guessId), status: 'settled' };
   } catch (error) {
     await connection.rollback();
     throw error;

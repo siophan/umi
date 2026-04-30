@@ -5,6 +5,7 @@ import type {
   AdjustAdminEquityPayload,
   CreateAdminGuessPayload,
   ReviewAdminGuessPayload,
+  SettleAdminGuessPayload,
   UpdateAdminCommunityReportPayload,
   UpdateAdminGuessPayload,
   UpdateUserBanPayload,
@@ -32,6 +33,7 @@ import {
   getAdminFriendGuesses,
   getAdminGuesses,
   reviewAdminGuess,
+  settleAdminGuess,
   updateAdminGuess,
 } from '../guesses';
 import { getAdminUserGuesses, getAdminUserOrders } from '../users';
@@ -418,6 +420,37 @@ export function registerAdminContentRoutes(adminRouter: ExpressRouter) {
             { message: '竞猜不存在', status: 404, code: 'ADMIN_GUESS_NOT_FOUND' },
             { message: '请填写作废理由', status: 400, code: 'ADMIN_GUESS_ABANDON_REASON_REQUIRED' },
             { message: '已结算的竞猜不能作废', status: 400, code: 'ADMIN_GUESS_ABANDON_AFTER_SETTLED' },
+          ],
+        );
+      }
+    }),
+  );
+
+  adminRouter.post(
+    '/guesses/:id/settle',
+    asyncHandler(async (request, response) => {
+      try {
+        ok(
+          response,
+          await settleAdminGuess(
+            getRouteParam(request.params.id),
+            getRequestAdmin(request).id,
+            request.body as SettleAdminGuessPayload,
+          ),
+        );
+      } catch (error) {
+        throw toRouteHttpError(
+          error,
+          {
+            status: 400,
+            code: 'ADMIN_GUESS_SETTLE_FAILED',
+            message: '开奖失败',
+          },
+          [
+            { message: '竞猜不存在', status: 404, code: 'ADMIN_GUESS_NOT_FOUND' },
+            { message: '请选择开奖结果', status: 400, code: 'ADMIN_GUESS_SETTLE_OPTION_REQUIRED' },
+            { message: '开奖选项不存在', status: 400, code: 'ADMIN_GUESS_SETTLE_OPTION_INVALID' },
+            { message: '当前竞猜状态不可开奖', status: 400, code: 'ADMIN_GUESS_NOT_SETTLEABLE' },
           ],
         );
       }

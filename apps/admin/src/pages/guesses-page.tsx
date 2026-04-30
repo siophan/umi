@@ -17,6 +17,7 @@ import dayjs from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminGuessRejectModal } from '../components/admin-guess-reject-modal';
+import { GuessDetailDrawer } from '../components/guess-detail-drawer';
 import {
   AdminSearchPanel,
   AdminStatusTabs,
@@ -70,6 +71,7 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
   const [abandonTarget, setAbandonTarget] = useState<GuessSummary | null>(null);
   const [abandonForm] = Form.useForm<{ reason: string }>();
   const [abandoning, setAbandoning] = useState(false);
+  const [drawerGuessId, setDrawerGuessId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -132,7 +134,7 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
     onApprove: (id) => handleApprove(id),
     onReject: (record) => openRejectModal(record),
     onView: (record) => {
-      window.location.hash = `#/guesses/detail/${record.id}`;
+      setDrawerGuessId(record.id);
     },
     onEdit: (record) => {
       editForm.setFieldsValue({
@@ -413,6 +415,11 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
           </Form>
         </Modal>
       </ConfigProvider>
+      <GuessDetailDrawer
+        guessId={drawerGuessId}
+        onClose={() => setDrawerGuessId(null)}
+        onRefresh={() => setActionSeed((v) => v + 1)}
+      />
     </div>
   );
 }

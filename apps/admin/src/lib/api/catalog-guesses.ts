@@ -6,6 +6,8 @@ import type {
   GuessListResult,
   ReviewAdminGuessPayload,
   ReviewAdminGuessResult,
+  SettleAdminGuessPayload,
+  SettleAdminGuessResult,
   UpdateAdminGuessPayload,
   UpdateAdminGuessResult,
 } from '@umi/shared';
@@ -49,6 +51,13 @@ export function fetchAdminFriendGuesses() {
 export function abandonAdminGuess(id: string, payload: AbandonAdminGuessPayload) {
   return postJson<AbandonAdminGuessResult, AbandonAdminGuessPayload>(
     `/api/admin/guesses/${id}/abandon`,
+    payload,
+  );
+}
+
+export function settleAdminGuess(id: string, payload: SettleAdminGuessPayload) {
+  return postJson<SettleAdminGuessResult, SettleAdminGuessPayload>(
+    `/api/admin/guesses/${id}/settle`,
     payload,
   );
 }

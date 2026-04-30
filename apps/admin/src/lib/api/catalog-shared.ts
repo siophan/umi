@@ -87,8 +87,8 @@ export interface AdminGuessDetailOption {
 
 export interface AdminGuessDetailReviewLog {
   id: string;
-  action: 'submit' | 'approve' | 'reject' | 'abandon';
-  actionLabel: '提交审核' | '审核通过' | '审核拒绝' | '运营作废';
+  action: 'submit' | 'approve' | 'reject' | 'abandon' | 'settle';
+  actionLabel: '提交审核' | '审核通过' | '审核拒绝' | '运营作废' | '手动开奖';
   fromStatus: number;
   toStatus: number;
   note: string | null;
@@ -121,7 +121,7 @@ export interface AdminGuessDetailResult {
   guess: {
     id: string;
     title: string;
-    status: 'draft' | 'pending_review' | 'active' | 'settled' | 'cancelled';
+    status: 'draft' | 'pending_review' | 'active' | 'pending_settle' | 'settled' | 'abandoned' | 'cancelled';
     reviewStatus: 'pending' | 'approved' | 'rejected';
     category: string;
     creatorId: string;

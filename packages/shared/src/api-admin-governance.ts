@@ -294,6 +294,15 @@ export interface UpdateAdminGuessResult {
   id: GuessId;
 }
 
+export interface SettleAdminGuessPayload {
+  winnerOptionIndex: number;
+}
+
+export interface SettleAdminGuessResult {
+  id: GuessId;
+  status: 'settled';
+}
+
 export type AdminUserFilter = 'all' | 'user' | 'shop_owner' | 'banned';
 
 export interface AdminUserListQuery {
