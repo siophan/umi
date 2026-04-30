@@ -303,6 +303,27 @@ export interface SettleAdminGuessResult {
   status: 'settled';
 }
 
+export interface AdminGuessParticipantItem {
+  id: string;
+  userId: string;
+  userName: string;
+  phoneNumber: string | null;
+  choiceIdx: number;
+  optionText: string;
+  amount: number;
+  betStatus: 'pending' | 'won' | 'lost' | 'cancelled';
+  payStatus: 'waiting' | 'paid' | 'failed' | 'closed' | 'refunded';
+  payChannel: 'wechat' | 'alipay' | null;
+  createdAt: string;
+}
+
+export interface AdminGuessParticipantsResult {
+  items: AdminGuessParticipantItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export type AdminUserFilter = 'all' | 'user' | 'shop_owner' | 'banned';
 
 export interface AdminUserListQuery {

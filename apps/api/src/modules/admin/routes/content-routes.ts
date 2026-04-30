@@ -32,6 +32,7 @@ import {
   getAdminGuessDetail,
   getAdminFriendGuesses,
   getAdminGuesses,
+  getAdminGuessParticipants,
   reviewAdminGuess,
   settleAdminGuess,
   updateAdminGuess,
@@ -288,6 +289,20 @@ export function registerAdminContentRoutes(adminRouter: ExpressRouter) {
           [{ message: '竞猜不存在', status: 404, code: 'ADMIN_GUESS_NOT_FOUND' }],
         );
       }
+    }),
+  );
+
+  adminRouter.get(
+    '/guesses/:id/participants',
+    asyncHandler(async (request, response) => {
+      ok(
+        response,
+        await getAdminGuessParticipants(
+          getRouteParam(request.params.id),
+          Number(request.query.page ?? 1),
+          Number(request.query.pageSize ?? 10),
+        ),
+      );
     }),
   );
 

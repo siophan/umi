@@ -11,16 +11,19 @@ import {
   Input,
   List,
   Modal,
+  Pagination,
   Radio,
   Space,
   Spin,
   Statistic,
+  Table,
   Tag,
   Typography,
   message,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
+import type { AdminGuessParticipantItem } from '@umi/shared';
 
 import { AdminGuessRejectModal } from './admin-guess-reject-modal';
 import { AdminOssImageUploader } from './admin-oss-image-uploader';
@@ -28,6 +31,7 @@ import { SEARCH_THEME } from './admin-list-controls';
 import {
   abandonAdminGuess,
   fetchAdminGuessDetail,
+  fetchAdminGuessParticipants,
   reviewAdminGuess,
   settleAdminGuess,
   updateAdminGuess,
@@ -41,7 +45,36 @@ interface GuessDetailDrawerProps {
   onRefresh: () => void;
 }
 
-type ActiveTab = 'info' | 'stats' | 'logs' | 'oracle' | 'comments';
+type ActiveTab = 'info' | 'participants' | 'oracle' | 'comments' | 'logs';
+
+const GUESS_STATUS_LABELS: Record<number, string> = {
+  10: '草稿',
+  20: '待审核',
+  30: '进行中',
+  35: '待结算',
+  40: '已结算',
+  80: '已废弃',
+  90: '已取消',
+};
+
+const BET_STATUS_LABELS: Record<string, string> = {
+  pending: '待开奖',
+  won: '已中奖',
+  lost: '未中奖',
+  cancelled: '已取消',
+};
+
+const PAY_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  waiting: { label: '待支付', color: 'default' },
+  paid: { label: '已支付', color: 'success' },
+  failed: { label: '支付失败', color: 'error' },
+  closed: { label: '已关闭', color: 'default' },
+  refunded: { label: '已退款', color: 'warning' },
+};
+
+function guessStatusLabel(code: number): string {
+  return GUESS_STATUS_LABELS[code] ?? `状态${code}`;
+}
 
 export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDrawerProps) {
   const [messageApi, contextHolder] = message.useMessage();
@@ -60,7 +93,7 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
   const [settleForm] = Form.useForm<{ winnerOptionIndex: number }>();
   const [settling, setSettling] = useState(false);
 
-  // abandon
+  // abandon/cancel
   const [abandonOpen, setAbandonOpen] = useState(false);
   const [abandonForm] = Form.useForm<{ reason: string }>();
   const [abandoning, setAbandoning] = useState(false);
@@ -84,15 +117,14 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
     let alive = true;
     setLoading(true);
     setDetail(null);
+    setActiveTab('info');
 
     fetchAdminGuessDetail(guessId)
       .then((result) => {
         if (alive) setDetail(result);
       })
       .catch((error: unknown) => {
-        if (alive) {
-          messageApi.error(error instanceof Error ? error.message : '竞猜详情加载失败');
-        }
+        if (alive) messageApi.error(error instanceof Error ? error.message : '竞猜详情加载失败');
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -162,7 +194,7 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
       const values = await abandonForm.validateFields();
       setAbandoning(true);
       await abandonAdminGuess(guessId, { reason: values.reason.trim() });
-      messageApi.success('竞猜已取消，已支付投注将逐单原路退款');
+      messageApi.success('竞猜已取消，已支付金额将逐单原路退款');
       setAbandonOpen(false);
       abandonForm.resetFields();
       refresh();
@@ -197,15 +229,16 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
 
   const guess = detail?.guess;
   const canSettle = guess?.status === 'pending_settle' || guess?.status === 'active';
-  const canAbandon = guess?.status !== 'settled' && guess?.status !== 'abandoned' && guess?.status !== 'cancelled';
+  const canAbandon =
+    guess?.status !== 'settled' && guess?.status !== 'abandoned' && guess?.status !== 'cancelled';
   const canEdit = guess?.status === 'active' || guess?.status === 'pending_settle';
 
   const tabItems: Array<{ key: ActiveTab; label: string }> = [
     { key: 'info', label: '基本信息' },
-    { key: 'stats', label: '投注统计' },
-    { key: 'logs', label: '审核日志' },
+    { key: 'participants', label: '参与记录' },
     { key: 'oracle', label: 'Oracle证据' },
     { key: 'comments', label: '评论' },
+    { key: 'logs', label: '审核记录' },
   ];
 
   const drawerTitle = guess ? (
@@ -280,7 +313,7 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
       <Drawer
         open={guessId != null}
         onClose={onClose}
-        width={760}
+        width={800}
         title={drawerTitle}
         footer={footerActions}
         footerStyle={{ padding: '12px 24px' }}
@@ -305,10 +338,12 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
                     border: 'none',
                     background: 'none',
                     cursor: 'pointer',
-                    borderBottom: activeTab === tab.key ? '2px solid #1677ff' : '2px solid transparent',
+                    borderBottom:
+                      activeTab === tab.key ? '2px solid #1677ff' : '2px solid transparent',
                     color: activeTab === tab.key ? '#1677ff' : 'inherit',
                     fontWeight: activeTab === tab.key ? 600 : 400,
                     fontSize: 14,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {tab.label}
@@ -317,10 +352,12 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
             </div>
 
             {activeTab === 'info' && <InfoTab detail={detail} />}
-            {activeTab === 'stats' && <StatsTab detail={detail} />}
-            {activeTab === 'logs' && <LogsTab detail={detail} />}
+            {activeTab === 'participants' && guessId && (
+              <ParticipantsTab guessId={guessId} stats={detail.stats} />
+            )}
             {activeTab === 'oracle' && <OracleTab detail={detail} />}
             {activeTab === 'comments' && <CommentsTab detail={detail} />}
+            {activeTab === 'logs' && <LogsTab detail={detail} />}
           </>
         )}
       </Drawer>
@@ -368,7 +405,7 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
                   <Radio key={opt.optionIndex} value={opt.optionIndex}>
                     {opt.optionText}
                     <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
-                      {opt.voteCount} 票 · {formatAmount(opt.voteAmount)}
+                      {opt.voteCount} 次 · {formatAmount(opt.voteAmount)}
                     </Typography.Text>
                   </Radio>
                 ))}
@@ -395,7 +432,7 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
           <Alert
             type="warning"
             showIcon
-            message="取消后所有已支付投注将原路全额退款（含手续费），未付投注将作废。已结算的竞猜不能取消。"
+            message="取消后所有已支付金额将原路全额退款（含手续费），未付款记录将作废。已结算的竞猜不能取消。"
             style={{ marginBottom: 16 }}
           />
           <Form form={abandonForm} layout="vertical">
@@ -407,7 +444,12 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
                 { whitespace: true, message: '请填写取消理由' },
               ]}
             >
-              <Input.TextArea rows={3} maxLength={200} showCount placeholder="例如：某选项 0 投注无法正常结算" />
+              <Input.TextArea
+                rows={3}
+                maxLength={200}
+                showCount
+                placeholder="例如：某选项 0 参与无法正常结算"
+              />
             </Form.Item>
           </Form>
         </Modal>
@@ -455,18 +497,20 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
                   validator: (_, value: Dayjs | null) => {
                     if (!value || !guess) return Promise.resolve();
                     if (!value.isValid()) return Promise.reject(new Error('截止时间不合法'));
-                    if (value.valueOf() <= Date.now()) {
+                    if (value.valueOf() <= Date.now())
                       return Promise.reject(new Error('截止时间必须晚于当前时间'));
-                    }
-                    if (guess.endTime && value.valueOf() < new Date(guess.endTime).getTime()) {
+                    if (guess.endTime && value.valueOf() < new Date(guess.endTime).getTime())
                       return Promise.reject(new Error('截止时间只能延长'));
-                    }
                     return Promise.resolve();
                   },
                 },
               ]}
             >
-              <DatePicker showTime={{ format: 'HH:mm' }} format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
+              <DatePicker
+                showTime={{ format: 'HH:mm' }}
+                format="YYYY-MM-DD HH:mm"
+                style={{ width: '100%' }}
+              />
             </Form.Item>
             <Form.Item label="描述" name="description">
               <Input.TextArea rows={3} maxLength={500} showCount placeholder="补充说明" />
@@ -481,64 +525,176 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
 function InfoTab({ detail }: { detail: AdminGuessDetailResult }) {
   const { guess } = detail;
   return (
-    <Descriptions column={2} size="small" bordered>
-      <Descriptions.Item label="竞猜 ID">{guess.id}</Descriptions.Item>
-      <Descriptions.Item label="分类">{guess.category}</Descriptions.Item>
-      <Descriptions.Item label="创建人">{guess.creatorName}</Descriptions.Item>
-      <Descriptions.Item label="可见范围">{guess.scope === 'public' ? '公开' : '好友'}</Descriptions.Item>
-      <Descriptions.Item label="开奖方式">
-        {guess.settlementMode === 'oracle' ? 'Oracle 结算' : '手动结算'}
-      </Descriptions.Item>
-      <Descriptions.Item label="截止时间">{formatDateTime(guess.endTime)}</Descriptions.Item>
-      <Descriptions.Item label="结算时间">{formatDateTime(guess.settledAt)}</Descriptions.Item>
-      <Descriptions.Item label="更新时间">{formatDateTime(guess.updatedAt)}</Descriptions.Item>
-      <Descriptions.Item label="关联商品">{guess.product.name}</Descriptions.Item>
-      <Descriptions.Item label="品牌">{guess.product.brand}</Descriptions.Item>
-      <Descriptions.Item label="奖品价值">{formatAmount(guess.product.price)}</Descriptions.Item>
-      <Descriptions.Item label="竞猜成本">{formatAmount(guess.product.guessPrice)}</Descriptions.Item>
-      <Descriptions.Item label="描述" span={2}>
-        {guess.description || '-'}
-      </Descriptions.Item>
-      <Descriptions.Item label="补充说明" span={2}>
-        {guess.topicDetail || '-'}
-      </Descriptions.Item>
-    </Descriptions>
-  );
-}
-
-function StatsTab({ detail }: { detail: AdminGuessDetailResult }) {
-  const { stats, guess } = detail;
-  return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Space size={16} style={{ width: '100%' }} wrap>
-        <div style={{ flex: 1, minWidth: 140, background: '#fafafa', borderRadius: 8, padding: '16px 20px' }}>
-          <Statistic title="投注笔数" value={stats.totalBets} />
-        </div>
-        <div style={{ flex: 1, minWidth: 140, background: '#fafafa', borderRadius: 8, padding: '16px 20px' }}>
-          <Statistic title="参与人数" value={stats.totalParticipants} />
-        </div>
-        <div style={{ flex: 1, minWidth: 140, background: '#fafafa', borderRadius: 8, padding: '16px 20px' }}>
-          <Statistic title="总投注额" value={formatAmount(stats.totalAmount)} />
-        </div>
-      </Space>
+      <Descriptions column={2} size="small" bordered>
+        <Descriptions.Item label="竞猜 ID">{guess.id}</Descriptions.Item>
+        <Descriptions.Item label="分类">{guess.category}</Descriptions.Item>
+        <Descriptions.Item label="创建人">{guess.creatorName}</Descriptions.Item>
+        <Descriptions.Item label="可见范围">
+          {guess.scope === 'public' ? '公开' : '好友'}
+        </Descriptions.Item>
+        <Descriptions.Item label="开奖方式">
+          {guess.settlementMode === 'oracle' ? 'Oracle 结算' : '手动结算'}
+        </Descriptions.Item>
+        <Descriptions.Item label="截止时间">{formatDateTime(guess.endTime)}</Descriptions.Item>
+        <Descriptions.Item label="结算时间">{formatDateTime(guess.settledAt)}</Descriptions.Item>
+        <Descriptions.Item label="更新时间">{formatDateTime(guess.updatedAt)}</Descriptions.Item>
+        <Descriptions.Item label="关联商品">{guess.product.name}</Descriptions.Item>
+        <Descriptions.Item label="品牌">{guess.product.brand}</Descriptions.Item>
+        <Descriptions.Item label="奖品价值">{formatAmount(guess.product.price)}</Descriptions.Item>
+        <Descriptions.Item label="参与费用">{formatAmount(guess.product.guessPrice)}</Descriptions.Item>
+        <Descriptions.Item label="描述" span={2}>
+          {guess.description || '-'}
+        </Descriptions.Item>
+        <Descriptions.Item label="补充说明" span={2}>
+          {guess.topicDetail || '-'}
+        </Descriptions.Item>
+      </Descriptions>
+
       <List
         header={<Typography.Text strong>竞猜选项</Typography.Text>}
         bordered
+        size="small"
         dataSource={guess.options}
         renderItem={(item) => (
           <List.Item>
             <div style={{ display: 'grid', gap: 4, width: '100%' }}>
               <Space align="center">
                 <Typography.Text strong>{item.optionText}</Typography.Text>
-                {item.isResult ? <Tag color="success">已开奖结果</Tag> : null}
+                {item.isResult ? <Tag color="success">开奖结果</Tag> : null}
               </Space>
               <Typography.Text type="secondary">
-                赔率 {item.odds.toFixed(2)} · {item.voteCount} 票 · 投注额 {formatAmount(item.voteAmount)}
+                赔率 {item.odds.toFixed(2)} · {item.voteCount} 次参与 · 参与额{' '}
+                {formatAmount(item.voteAmount)}
               </Typography.Text>
             </div>
           </List.Item>
         )}
       />
+    </div>
+  );
+}
+
+function ParticipantsTab({
+  guessId,
+  stats,
+}: {
+  guessId: string;
+  stats: AdminGuessDetailResult['stats'];
+}) {
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<AdminGuessParticipantItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    fetchAdminGuessParticipants(guessId, page, pageSize)
+      .then((result) => {
+        if (alive) {
+          setItems(result.items);
+          setTotal(result.total);
+        }
+      })
+      .catch(() => {
+        if (alive) setItems([]);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [guessId, page]);
+
+  const columns = [
+    {
+      title: '参与者',
+      key: 'user',
+      render: (_: unknown, record: AdminGuessParticipantItem) => (
+        <div>
+          <Typography.Text>{record.userName}</Typography.Text>
+          {record.phoneNumber ? (
+            <Typography.Text type="secondary" style={{ display: 'block', fontSize: 12 }}>
+              {record.phoneNumber}
+            </Typography.Text>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      title: '选择选项',
+      dataIndex: 'optionText',
+      render: (text: string) => <Typography.Text>{text}</Typography.Text>,
+    },
+    {
+      title: '参与金额',
+      dataIndex: 'amount',
+      render: (v: number) => formatAmount(v),
+    },
+    {
+      title: '支付状态',
+      dataIndex: 'payStatus',
+      render: (v: AdminGuessParticipantItem['payStatus']) => {
+        const meta = PAY_STATUS_LABELS[v] ?? { label: v, color: 'default' };
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
+    },
+    {
+      title: '结果',
+      dataIndex: 'betStatus',
+      render: (v: AdminGuessParticipantItem['betStatus']) => {
+        const label = BET_STATUS_LABELS[v] ?? v;
+        const color =
+          v === 'won' ? 'success' : v === 'lost' ? 'default' : v === 'cancelled' ? 'error' : 'processing';
+        return <Tag color={color}>{label}</Tag>;
+      },
+    },
+    {
+      title: '参与时间',
+      dataIndex: 'createdAt',
+      render: (v: string) => formatDateTime(v),
+    },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Space size={16} wrap>
+        <div style={{ background: '#fafafa', borderRadius: 8, padding: '12px 20px' }}>
+          <Statistic title="参与次数" value={stats.totalBets} />
+        </div>
+        <div style={{ background: '#fafafa', borderRadius: 8, padding: '12px 20px' }}>
+          <Statistic title="参与人数" value={stats.totalParticipants} />
+        </div>
+        <div style={{ background: '#fafafa', borderRadius: 8, padding: '12px 20px' }}>
+          <Statistic title="总参与额" value={formatAmount(stats.totalAmount)} />
+        </div>
+      </Space>
+
+      <Table
+        rowKey="id"
+        size="small"
+        loading={loading}
+        dataSource={items}
+        columns={columns}
+        pagination={false}
+        locale={{ emptyText: <Empty description="暂无参与记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+      />
+
+      {total > pageSize ? (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Pagination
+            size="small"
+            current={page}
+            pageSize={pageSize}
+            total={total}
+            onChange={(p) => setPage(p)}
+            showTotal={(t) => `共 ${t} 条`}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -556,15 +712,15 @@ function LogsTab({ detail }: { detail: AdminGuessDetailResult }) {
               <Typography.Text type="secondary">{formatDateTime(item.createdAt)}</Typography.Text>
             </Space>
             <Typography.Text type="secondary">
-              状态流转 {item.fromStatus} → {item.toStatus}
+              {guessStatusLabel(item.fromStatus)} → {guessStatusLabel(item.toStatus)}
             </Typography.Text>
-            <Typography.Text>{item.note || '无备注'}</Typography.Text>
+            {item.note ? <Typography.Text>{item.note}</Typography.Text> : null}
           </div>
         </List.Item>
       )}
     />
   ) : (
-    <Empty description="暂无审核日志" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+    <Empty description="暂无审核记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
   );
 }
 
@@ -581,7 +737,9 @@ function OracleTab({ detail }: { detail: AdminGuessDetailResult }) {
             </Space>
             <Typography.Text>
               匹配结果：{item.matchedIndex == null ? '-' : `选项 ${item.matchedIndex + 1}`}
-              {item.confidence != null ? ` · 置信度 ${(item.confidence * 100).toFixed(1)}%` : ''}
+              {item.confidence != null
+                ? ` · 置信度 ${(item.confidence * 100).toFixed(1)}%`
+                : ''}
             </Typography.Text>
             <Typography.Text type="secondary">原因：{item.reason || '-'}</Typography.Text>
             <Typography.Paragraph copyable={{ text: JSON.stringify(item.queryPayload ?? null) }}>

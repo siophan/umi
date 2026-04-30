@@ -4,6 +4,7 @@ import {
   toOptionalEntityId,
   type AbandonAdminGuessPayload,
   type AbandonAdminGuessResult,
+  type AdminGuessParticipantsResult,
   type CreateAdminGuessPayload,
   type CreateAdminGuessResult,
   type GuessListResult,
@@ -16,8 +17,17 @@ import {
 } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
-import { GUESS_ABANDONED, GUESS_SETTLED } from '../guess/guess-shared';
+import { GUESS_ABANDONED, GUESS_SETTLED, BET_PENDING, BET_WON, BET_LOST, BET_CANCELED } from '../guess/guess-shared';
 import { refundAbandonedGuessBets } from '../guess/guess-abandon';
+import {
+  PAY_STATUS_WAITING,
+  PAY_STATUS_PAID,
+  PAY_STATUS_FAILED,
+  PAY_STATUS_CLOSED,
+  PAY_STATUS_REFUNDED,
+  PAY_CHANNEL_WECHAT,
+  PAY_CHANNEL_ALIPAY,
+} from '../payment/payment-shared';
 import {
   GUESS_ACTIVE,
   GUESS_PENDING_REVIEW,
@@ -830,4 +840,111 @@ export async function settleAdminGuess(
   } finally {
     connection.release();
   }
+}
+
+type AdminGuessBetRow = {
+  id: number | string;
+  user_id: number | string;
+  user_name: string | null;
+  phone_number: string | null;
+  choice_idx: number | string;
+  option_text: string | null;
+  amount: number | string | null;
+  status: number | string;
+  pay_status: number | string | null;
+  pay_channel: number | string | null;
+  created_at: Date | string | null;
+};
+
+function mapBetStatus(value: number | string): 'pending' | 'won' | 'lost' | 'cancelled' {
+  const code = Number(value ?? 0);
+  if (code === BET_WON) return 'won';
+  if (code === BET_LOST) return 'lost';
+  if (code === BET_CANCELED) return 'cancelled';
+  return 'pending';
+}
+
+function mapPayStatus(value: number | string | null): 'waiting' | 'paid' | 'failed' | 'closed' | 'refunded' {
+  const code = Number(value ?? 0);
+  if (code === PAY_STATUS_PAID) return 'paid';
+  if (code === PAY_STATUS_FAILED) return 'failed';
+  if (code === PAY_STATUS_CLOSED) return 'closed';
+  if (code === PAY_STATUS_REFUNDED) return 'refunded';
+  return 'waiting';
+}
+
+function mapPayChannel(value: number | string | null): 'wechat' | 'alipay' | null {
+  const code = Number(value ?? 0);
+  if (code === PAY_CHANNEL_WECHAT) return 'wechat';
+  if (code === PAY_CHANNEL_ALIPAY) return 'alipay';
+  return null;
+}
+
+export async function getAdminGuessParticipants(
+  guessId: string,
+  page: number,
+  pageSize: number,
+): Promise<AdminGuessParticipantsResult> {
+  const db = getDbPool();
+  const offset = (page - 1) * pageSize;
+
+  const [[countRow], [rows]] = await Promise.all([
+    db.query<mysql.RowDataPacket[]>(
+      `SELECT COUNT(*) AS total FROM guess_bet WHERE guess_id = ?`,
+      [guessId],
+    ),
+    db.query<mysql.RowDataPacket[]>(
+      `
+        SELECT
+          gb.id,
+          gb.user_id,
+          COALESCE(
+            up.name,
+            IF(u.phone_number IS NOT NULL, CONCAT('用户', RIGHT(u.phone_number, 4)), NULL),
+            CONCAT('用户', gb.user_id)
+          ) AS user_name,
+          u.phone_number,
+          gb.choice_idx,
+          go.option_text,
+          gb.amount,
+          gb.status,
+          gb.pay_status,
+          gb.pay_channel,
+          gb.created_at
+        FROM guess_bet gb
+        LEFT JOIN user u ON u.id = gb.user_id
+        LEFT JOIN user_profile up ON up.user_id = u.id
+        LEFT JOIN guess_option go
+          ON go.guess_id = gb.guess_id AND go.option_index = gb.choice_idx
+        WHERE gb.guess_id = ?
+        ORDER BY gb.created_at DESC, gb.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [guessId, pageSize, offset],
+    ),
+  ]);
+
+  const total = Number((countRow[0] as { total: number })?.total ?? 0);
+
+  return {
+    items: rows.map((row) => {
+      const r = row as AdminGuessBetRow;
+      return {
+        id: toEntityId(r.id),
+        userId: toEntityId(r.user_id),
+        userName: r.user_name ?? `用户${String(r.user_id)}`,
+        phoneNumber: r.phone_number ? String(r.phone_number) : null,
+        choiceIdx: Number(r.choice_idx ?? 0),
+        optionText: r.option_text ?? '-',
+        amount: Number(r.amount ?? 0),
+        betStatus: mapBetStatus(r.status),
+        payStatus: mapPayStatus(r.pay_status),
+        payChannel: mapPayChannel(r.pay_channel),
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : '',
+      };
+    }),
+    total,
+    page,
+    pageSize,
+  };
 }

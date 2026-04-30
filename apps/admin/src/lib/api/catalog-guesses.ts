@@ -1,6 +1,7 @@
 import type {
   AbandonAdminGuessPayload,
   AbandonAdminGuessResult,
+  AdminGuessParticipantsResult,
   CreateAdminGuessPayload,
   CreateAdminGuessResult,
   GuessListResult,
@@ -59,5 +60,11 @@ export function settleAdminGuess(id: string, payload: SettleAdminGuessPayload) {
   return postJson<SettleAdminGuessResult, SettleAdminGuessPayload>(
     `/api/admin/guesses/${id}/settle`,
     payload,
+  );
+}
+
+export function fetchAdminGuessParticipants(id: string, page: number, pageSize: number) {
+  return getJson<AdminGuessParticipantsResult>(
+    `/api/admin/guesses/${id}/participants?page=${page}&pageSize=${pageSize}`,
   );
 }
