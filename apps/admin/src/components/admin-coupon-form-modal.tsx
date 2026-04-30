@@ -1,5 +1,5 @@
 import type { AdminCouponTemplateItem } from '@umi/shared';
-import { ConfigProvider, Form, Input, InputNumber, Modal, Select } from 'antd';
+import { ConfigProvider, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd';
 
 import {
   type CouponFormValues,
@@ -119,22 +119,18 @@ export function AdminCouponFormModal({
             <Select options={VALIDITY_OPTIONS as never} placeholder="有效期类型" />
           </Form.Item>
           {validityType === 'fixed' ? (
-            <>
-              <Form.Item
-                label="开始时间"
-                name="startAt"
-                rules={[{ required: true, message: '请选择开始时间' }]}
-              >
-                <Input type="datetime-local" />
-              </Form.Item>
-              <Form.Item
-                label="结束时间"
-                name="endAt"
-                rules={[{ required: true, message: '请选择结束时间' }]}
-              >
-                <Input type="datetime-local" />
-              </Form.Item>
-            </>
+            <Form.Item
+              label="生效时间"
+              name="timeRange"
+              rules={[{ required: true, message: '请选择生效时间' }]}
+            >
+              <DatePicker.RangePicker
+                showTime={{ format: 'HH:mm' }}
+                format="YYYY-MM-DD HH:mm"
+                style={{ width: '100%' }}
+                placeholder={['开始时间', '结束时间']}
+              />
+            </Form.Item>
           ) : (
             <Form.Item
               label="领取后有效天数"

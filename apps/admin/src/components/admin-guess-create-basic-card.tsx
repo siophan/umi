@@ -2,7 +2,7 @@ import type { SelectProps } from 'antd';
 
 import type { AdminProduct } from '../lib/api/catalog';
 import { buildProductOptionLabel } from '../lib/admin-guess-create';
-import { Card, Form, Input, Select } from 'antd';
+import { Card, DatePicker, Form, Input, Select } from 'antd';
 
 type AdminGuessCreateBasicCardProps = {
   bootLoading: boolean;
@@ -72,7 +72,7 @@ export function AdminGuessCreateBasicCard({
           name="endTime"
           rules={[{ required: true, message: '请设置截止时间' }]}
         >
-          <Input type="datetime-local" />
+          <DatePicker showTime={{ format: 'HH:mm' }} format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item label="竞猜描述" name="description" style={{ gridColumn: '1 / -1' }}>
           <Input.TextArea

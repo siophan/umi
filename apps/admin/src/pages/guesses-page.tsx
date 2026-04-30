@@ -5,21 +5,16 @@ import {
   Alert,
   Button,
   ConfigProvider,
+  DatePicker,
   Form,
   Input,
   Modal,
   Select,
   message,
 } from 'antd';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
-
-function isoToLocalInputValue(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
-}
 
 import { AdminGuessRejectModal } from '../components/admin-guess-reject-modal';
 import {
@@ -69,7 +64,7 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
     title: string;
     description?: string | null;
     imageUrl?: string | null;
-    endTime: string;
+    endTime: Dayjs | null;
   }>();
   const [editing, setEditing] = useState(false);
   const [abandonTarget, setAbandonTarget] = useState<GuessSummary | null>(null);
@@ -144,7 +139,7 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
         title: record.title,
         description: record.description ?? '',
         imageUrl: record.product.img ?? '',
-        endTime: isoToLocalInputValue(record.endTime),
+        endTime: record.endTime ? dayjs(record.endTime) : null,
       });
       setEditTarget(record);
     },
@@ -182,8 +177,8 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
       await updateAdminGuess(editTarget.id, {
         title: values.title.trim(),
         description: values.description?.trim() || null,
-        imageUrl: values.imageUrl?.trim() || null,
-        endTime: new Date(values.endTime).toISOString(),
+        imageUrl: values.imageUrl ?? null,
+        endTime: values.endTime?.toISOString() ?? '',
       });
       messageApi.success('竞猜已更新');
       setEditTarget(null);
@@ -354,14 +349,13 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
               rules={[
                 { required: true, message: '请选择截止时间' },
                 {
-                  validator: (_, value: string) => {
+                  validator: (_, value: Dayjs | null) => {
                     if (!value || !editTarget) return Promise.resolve();
-                    const next = new Date(value).getTime();
-                    if (Number.isNaN(next)) return Promise.reject(new Error('截止时间不合法'));
-                    if (next <= Date.now()) {
+                    if (!value.isValid()) return Promise.reject(new Error('截止时间不合法'));
+                    if (value.valueOf() <= Date.now()) {
                       return Promise.reject(new Error('截止时间必须晚于当前时间'));
                     }
-                    if (next < new Date(editTarget.endTime).getTime()) {
+                    if (value.valueOf() < new Date(editTarget.endTime).getTime()) {
                       return Promise.reject(new Error('截止时间只能延长'));
                     }
                     return Promise.resolve();
@@ -369,7 +363,7 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
                 },
               ]}
             >
-              <Input type="datetime-local" />
+              <DatePicker showTime={{ format: 'HH:mm' }} format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item label="描述" name="description">
               <Input.TextArea rows={3} maxLength={500} showCount placeholder="补充说明" />

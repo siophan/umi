@@ -1,4 +1,6 @@
 import type { CreateAdminGuessPayload } from '@umi/shared';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 
 import type { AdminCategoryItem } from './api/categories';
 import type { AdminProduct } from './api/catalog';
@@ -7,7 +9,7 @@ export interface GuessCreateFormValues {
   title: string;
   categoryId: CreateAdminGuessPayload['categoryId'];
   productId: CreateAdminGuessPayload['productId'];
-  endTime: string;
+  endTime: Dayjs | null;
   description?: string;
   optionTexts: Array<{ text: string }>;
 }
@@ -16,20 +18,9 @@ export const GUESS_CREATE_INITIAL_VALUES: Pick<
   GuessCreateFormValues,
   'endTime' | 'optionTexts'
 > = {
-  endTime: buildDefaultEndTime(),
+  endTime: dayjs().add(1, 'day').startOf('hour'),
   optionTexts: [{ text: '会' }, { text: '不会' }],
 };
-
-export function toDateTimeLocalValue(date: Date) {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
-}
-
-export function buildDefaultEndTime() {
-  const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  date.setMinutes(0, 0, 0);
-  return toDateTimeLocalValue(date);
-}
 
 export function buildGuessCategoryOptions(categories: AdminCategoryItem[]) {
   return categories.map((item) => ({
@@ -53,7 +44,7 @@ export function toCreateGuessPayload(values: GuessCreateFormValues): CreateAdmin
     title: values.title,
     categoryId: values.categoryId,
     productId: values.productId,
-    endTime: new Date(values.endTime).toISOString(),
+    endTime: values.endTime?.toISOString() ?? '',
     description: values.description?.trim() || null,
     optionTexts: values.optionTexts.map((item) => item.text),
   };

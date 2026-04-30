@@ -233,8 +233,8 @@ export function buildCouponSubmitPayload(
     maxDiscountAmount:
       values.type === 'discount' ? yuanToCents(values.maxDiscountAmountYuan) ?? 0 : undefined,
     validityType: values.validityType,
-    startAt: values.validityType === 'fixed' ? values.startAt || null : null,
-    endAt: values.validityType === 'fixed' ? values.endAt || null : null,
+    startAt: values.validityType === 'fixed' ? (values.timeRange?.[0]?.toISOString() ?? null) : null,
+    endAt: values.validityType === 'fixed' ? (values.timeRange?.[1]?.toISOString() ?? null) : null,
     validDays: values.validityType === 'relative' ? values.validDays ?? 0 : undefined,
     totalQuantity: values.totalQuantity,
     userLimit: values.userLimit,
