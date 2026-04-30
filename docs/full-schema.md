@@ -974,19 +974,13 @@
 | 1 | `id` | `bigint` | `NO` | `NULL` | `PRI` | `auto_increment` | 商品 ID |
 | 2 | `shop_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 所属店铺 ID |
 | 3 | `brand_product_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 关联平台品牌商品 ID |
-| 4 | `name` | `varchar(191)` | `NO` | `NULL` | `-` | `-` | 商品名称（NOT NULL 副本，写入时按 brand_product.name 同步；所有 SELECT 走 bp.name） |
-| 5 | `price` | `bigint` | `NO` | `NULL` | `-` | `-` | 销售价格，单位分 |
-| 9 | `sales` | `int` | `NO` | `0` | `-` | `-` | 销量 |
-| 10 | `rating` | `double` | `NO` | `0` | `-` | `-` | 评分 |
-| 11 | `stock` | `int` | `NO` | `0` | `-` | `-` | 库存 |
-| 12 | `frozen_stock` | `int` | `NO` | `0` | `-` | `-` | 冻结库存 |
-| 15 | `guess_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 竞猜价格，单位分 |
-| 17 | `source_url` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 来源链接 |
-| 18 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
-| 19 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 20 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+| 4 | `sales` | `int` | `NO` | `0` | `-` | `-` | 销量 |
+| 5 | `rating` | `double` | `NO` | `0` | `-` | `-` | 评分 |
+| 6 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
+| 7 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 8 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
 
-> 注：`original_price / image_url / images / description / tags / collab` 列已通过 `drop_product_original_price.sql` 删除，统一从 `brand_product` 取（`guide_price / default_img / images / description / tags / collab`）。`brand_product` 同步新增了 `tags` / `collab` 两列。
+> 注：`product` 已彻底退化成"店铺铺货关联表"——`name / price / stock / frozen_stock / guess_price / source_url / original_price / image_url / images / description / tags / collab` 全部删除。所有商品本身的属性走 `brand_product`：`name / guide_price / supply_price / default_img / images / description / tags / collab / video_url / detail_html / spec_table / package_list / freight / ship_from / delivery_days`。库存概念整体移除（系统目前无库存约束，所有 active 行视为可售）。竞猜价由 admin 创建竞猜时单独配置，不再随店铺存储。
 
 ## product_review
 

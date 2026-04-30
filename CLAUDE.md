@@ -296,16 +296,11 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 **简化的 COALESCE**：之前有 ~15 处 `COALESCE(p.image_url, bp.default_img)` / `COALESCE(p.name, bp.name)`，现在 p.* 列要么 DROP 要么不再读，统一收成 `bp.default_img` / `bp.name`。
 
-**写入点**：`shop/shop-brand-auth.ts` 创建铺货 INSERT 只剩 `shop_id, brand_product_id, name, price, stock, frozen_stock, status` 七列。`name` 仍写 `brand_product.name`（保 NOT NULL 约束）。
-
-**待运维执行**：`packages/db/sql/drop_product_original_price.sql`（同时 ALTER brand_product 加 tags/collab + ALTER product DROP 6 列）。
-
-⚠️ **部署顺序**：必须先跑 SQL 再发布新版后端。否则 `shop-brand-auth.ts` INSERT product 会因为 `images / tags` 列仍是 NOT NULL 无默认值而报错。
-
-**遗留 / 二期**：
-- product.name 长期可以彻底干掉（同步改一些 admin/老查询里裸 p.name 习惯），本期没做。
+**写入点**：`shop/shop-brand-auth.ts addShopProducts` 创建铺货 INSERT 仅剩 `shop_id, brand_product_id, status` 三列（详见 #24 / #25）。
 
 **2026-04-30 收尾**：admin 「品牌商品库」编辑/新增弹层补 tags（`Select mode="tags"` 自由输入 + 逗号分隔）和 collab（单行 Input）输入控件；shared payload + products-shared 的 Row/Item/sanitize/normalize + products-brand-library 的 SELECT/GROUP BY/INSERT/UPDATE 全链路打通；OpenAPI schema 同步加字段。
+
+**2026-04-30 二期收尾**：`product` 表 `name / price / stock / frozen_stock / guess_price / source_url` 全列 DROP，product 退化为纯店铺铺货关联表（id / shop_id / brand_product_id / sales / rating / status + ts），库存/价格语义彻底外迁——详见 #25 关于其余模块未跟进的列举。
 
 ---
 
@@ -336,49 +331,87 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
-## 24. 店铺侧 product 操作语义（已完成 2026-04-30）
+## 24. 店铺侧 product 操作语义 + product 表彻底退化（2026-04-30）
 
-**决策**：店铺侧（`apps/web` my-shop / add-product）对 `product` 表只有「上架」和「下架」两种操作，**不允许卖家编辑** `price / stock / guess_price / status` 任何字段。商品维度的所有信息由平台后台（admin）通过 `brand_product` 统一维护（与 #22 一致）。
+**决策**：店铺侧（`apps/web` my-shop / add-product）对 `product` 表只有「上架」和「下架」两种操作，**不允许卖家编辑**任何商品属性。同时 `product` 表本身彻底退化成"店铺铺货关联表"——只剩 `id / shop_id / brand_product_id / sales / rating / status + 时间戳` 共 8 列。所有商品维度信息（名称、价格、图、描述、tags 等）走 `brand_product`，由 admin 维护（与 #22 一致）。
 
-**字段来源**：
-- `product.price`：上架时 INSERT 写 `brand_product.guide_price`，之后店铺侧无法改（admin 也不会改 product.price，统一改 brand_product.guide_price 后再考虑同步）
-- `product.stock`：上架时 INSERT 写 0；目前用户端没有 UI 让店铺补库存，admin 也未对接（待二期）
-- `product.frozen_stock`：一直 0，未启用
-- `product.guess_price`：上架时不写，由 admin 创建竞猜时单独配置
-- `product.status`：10=active 由 add 写入；20=off_shelf 由 remove 写入；90=disabled 走 admin 强制下架（未实现）
+**当前 product 表结构**：
+```sql
+id, shop_id, brand_product_id, sales, rating, status, created_at, updated_at
+```
+DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_stock / guess_price / source_url / original_price / image_url / images / description / tags / collab`
 
-**上架链路**（`apps/api/src/modules/shop/shop-brand-auth.ts` `addShopProducts`）：
+**字段语义**：
+- `shop_id + brand_product_id`：唯一一组业务键，`(shop_id, brand_product_id)` 应该建 UNIQUE 但 schema 没建（dedup 在应用层 `addShopProducts` 兜底）
+- `sales`：销量计数器，订单履约时累加（暂未对接）
+- `rating`：店铺铺货层评分（暂未对接，my-shop hero 评分实际取 `AVG(product_review.rating)`）
+- `status`：10=active 由 add 写；20=off_shelf 由 remove 写；90=disabled 留位 admin 强制下架（未实现）
+- 价格 / 库存 / 竞猜价 / 名称 / 图 全部走 `brand_product` JOIN
+
+**上架链路**（`apps/api/src/modules/shop/shop-brand-auth.ts addShopProducts`）：
 - 入口：`POST /api/shops/products`，payload `{ brandId, brandProductIds }`
-- dedup：按 `(shop_id, brand_product_id)` 查已有 `product` 行
+- INSERT 仅写 `(shop_id, brand_product_id, status)`，其他列由 DEFAULT/null
+- dedup 按 `(shop_id, brand_product_id)` 查已有行：
   - 命中且 `status=10` → 跳过（已上架）
-  - 命中且 `status=20` → `UPDATE status=10` reactivate（重新上架不留孤儿行）
-  - 未命中 → INSERT 新行
-- `getBrandProducts` 返回的 `listed: boolean` 只看 `status=10` 行，因此下架后的商品在 add-product picker 里仍可重新选
+  - 命中且 `status=20` → `UPDATE status=10` reactivate（重新上架不留孤儿）
+  - 未命中 → INSERT
+- `getBrandProducts` 的 `listed: boolean` 只看 `status=10` 行，下架后的商品在 picker 里仍可重新选
 
 **下架链路**（`removeShopProduct`）：
 - 入口：`DELETE /api/shops/products/:id`
 - 软删：`UPDATE product SET status=20 WHERE id=? AND shop_id=?`，幂等
-- **不物理删除**：`order_item / fulfillment_order / product_review / consign_trade` 等都引用 `product.id`，硬删会破坏历史订单/评价
+- **不物理删除**：`order_item / fulfillment_order / product_review / consign_trade` 等都引用 `product.id`，硬删破坏历史订单/评价
 
 **my-shop 视角统一过滤 active**（`shop-my.ts`）：
-- 商品列表 SELECT：`WHERE p.shop_id=? AND p.status=10`
+- 商品列表 SELECT：`WHERE p.shop_id=? AND p.status=10`，price 列 `bp.guide_price AS price`
 - hero「在售商品」count：`COUNT(*) WHERE shop_id=? AND status=10`
-- 每个 `MyShopBrandAuthItem.productCount`（已上架到本店的数量）：子查询加 `AND p2.status=10`
-- 下架后这些数字立即归零/减一，下架行从 my-shop 完全消失
+- 每个 `MyShopBrandAuthItem.productCount`：子查询加 `AND p2.status=10`
 
-**MyShopBrandAuthItem 双计数语义**（`packages/shared/src/api-user-commerce.ts:566`）：
-- `productCount: number` — 该品牌已上架到本店的 active 商品数（用于 my-shop hero、品牌卡 meta）
-- `catalogProductCount: number` — 该品牌商品库（`brand_product` 表）的 active 商品总数（用于 add-product step1 品牌卡 badge）
+**MyShopBrandAuthItem 双计数语义**：
+- `productCount` — 该品牌已上架到本店的 active 商品数（my-shop hero / 品牌卡 meta）
+- `catalogProductCount` — 该品牌库总数（add-product step1 品牌卡 badge）
+
+**库存概念整体外迁**：DROP `stock / frozen_stock` 后系统目前**没有任何库存约束**——所有 active 商品永远视为"可售"。下游 cart/order 任何 `WHERE stock > 0` / `stock - frozen_stock > 0` 检查都已失效，全员当无限库存处理。要重新引入库存得新建独立表（如 `shop_product_stock`）或者把库存挪到 `brand_product` 维度。
 
 **已完成**：
-- 后端：上架 dedup 改造 + 下架软删接口；my-shop 三处 SQL 加 status 过滤；shop-brand-auth dedup map by status
-- 前端：my-shop 编辑按钮删除；下架确认换 bottom-sheet（替换 native `window.confirm`）；下架真实调 `DELETE /api/shops/products/:id` + 刷新；add-product step3 文案「商品的价格、库存、竞猜价等由平台统一维护，店铺侧无法自行编辑」
-- shared：`RemoveShopProductResult` + `MyShopBrandAuthItem.catalogProductCount`
+- 后端：addShopProducts INSERT/dedup 适配新 schema；shop-my 列表 SELECT 把 price 切到 `bp.guide_price`；下架软删接口
+- 前端：my-shop 编辑按钮删除；下架确认 bottom-sheet（替 `window.confirm`）；下架真实调接口
+- 文档：`docs/full-schema.md` product 表已更新
 
-**待办（二期）**：
-- 卖家维护库存的入口（admin 后台或店铺侧补一个"补库存"窄入口；当前 stock 永远是 0，前台直接缺货不可买）
-- admin 后台批量「强制下架」店铺商品（status=90 disabled），与卖家自助下架（status=20 off_shelf）区分
-- 下架商品的"重新上架"入口：当前流程是回 add-product picker 里重选；如果用户期望在 my-shop 看到下架历史并一键恢复，得加 UI（含一个 status 切换 API）
+---
+
+## 25. product schema 减字段后，下游模块未跟进列举（P0）
+
+**背景**：`product` 表 `name / price / stock / frozen_stock / guess_price / source_url` 列已 DROP（详见 #24）。除了 `apps/api/src/modules/shop/*` 已修，其他模块仍按旧 schema 读这些列，**当前都会 SQL 报错或返回脏数据**。需要逐个 sweep。
+
+**待 sweep 模块（grep 自 `apps/api/src` 截至 2026-04-30）**：
+
+| 模块 | 文件 | 引用的旧列 | 修法建议 |
+| --- | --- | --- | --- |
+| 商品流 | `product/product-feed.ts:18,73,75,81` | p.price/p.guess_price/p.stock | 全切 bp.guide_price，stock 视为无限（删检查） |
+| 商品流 | `product/product-shared.ts:297,299,305` | p.price/p.guess_price/p.stock | 同上 |
+| 商品详情 | `product/product-detail.ts:97,100,101,256-257,285-286,351,354-355,365-366,370` | p.name/p.price/p.guess_price/p.stock/p.original_price | name→bp.name, price→bp.guide_price, original_price→bp.guide_price, guessPrice→单独逻辑(详见下) |
+| 搜索 | `search/search-products.ts:50,52,75,77,83` | p.price/p.guess_price/p.stock | 同商品流 |
+| 搜索 | `search/search-guesses.ts:106-107,131-132` | p.price/p.guess_price | 同上 |
+| 购物车 | `cart/store.ts:99,170,174,220,232` | p.price/p.stock | price→bp.guide_price，stock 检查删（无限库存） |
+| Banner | `banner/router.ts:210-211` | p.price/p.guess_price | 同上 |
+| Admin 库存监控 | `admin/products-inventory.ts:61,72,104-106` | p.price/p.stock/p.frozen_stock | 整页废掉或重写——库存概念已不存在 |
+| Admin 竞猜 | `admin/guesses-shared.ts:295-296,331` | p.stock/p.frozen_stock | 创建竞猜的库存校验删除 |
+
+**`guess_price` 单独说明**：原本 `product.guess_price` 是商品维度的"竞猜单价"，现在列已删。竞猜创建（admin 端）需要重新决定来源：
+- 选项 A：`brand_product` 加 `guess_price` 列，admin 在品牌商品库维护
+- 选项 B：竞猜表自带 `bet_unit_amount`，admin 创建竞猜时单独填
+- 选项 C：写死或按 `bp.guide_price` 的某个比例
+（当前未拍板）
+
+**`stock`/`frozen_stock` 单独说明**：库存概念已整体下线（详见 #24）。所有 `stock > 0` / `stock - frozen_stock > 0` 检查需要删除或改成默认 true。如果将来要重启库存：
+- 短期：在 `brand_product` 加 `stock` 列做"平台总库存"
+- 长期：独立 `shop_product_stock` 表 + 占用/释放 API
+
+**部署影响**：
+- 老版后端 + 新 schema → 任何读上述列的接口直接 SQL 报错（unknown column）
+- 已 push 的 `apps/api/src/modules/shop/*`（commit 6463716 + 后续 hotfix）已适配
+- 未 sweep 的模块（cart/search/product-feed/product-detail/banner/admin）当前**不可用**，需要紧急 sweep
 
 ---
 
@@ -400,6 +433,6 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
-| P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口（支付链路主流程已完成 2026-04-29）|
+| P0     | 3    | Server Component 硬编码 URL / 仓库寄售无写接口 / product schema 减字段后 cart-search-product-detail-banner-admin 模块仍读旧列（见 #25）|
 | P1     | 4    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 支付超时库存归还 + 商城退款 API（竞猜流标退款已完成 2026-04-29，好友 PK 空选项 admin 兜底作废已完成 2026-04-30）|
 | P2     | 13   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 |

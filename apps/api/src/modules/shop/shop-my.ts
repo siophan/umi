@@ -78,7 +78,7 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
       `
         SELECT p.id,
                bp.name AS name,
-               p.price,
+               bp.guide_price AS price,
                bp.default_img AS image_url,
                p.status,
                b.name AS brand_name

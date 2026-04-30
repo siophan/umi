@@ -320,7 +320,7 @@ export async function addShopProducts(
 
   const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
-      SELECT id, name, default_img, guide_price
+      SELECT id
       FROM brand_product
       WHERE brand_id = ?
         AND id IN (?)
@@ -329,7 +329,7 @@ export async function addShopProducts(
     [brandId, brandProductIds, STATUS_ACTIVE],
   );
 
-  const products = rows as Array<{ id: number | string; name: string; default_img: string | null; guide_price: number | string }>;
+  const products = rows as Array<{ id: number | string }>;
   if (products.length === 0) {
     return { count: 0 };
   }
@@ -368,16 +368,12 @@ export async function addShopProducts(
         INSERT INTO product (
           shop_id,
           brand_product_id,
-          name,
-          price,
-          stock,
-          frozen_stock,
           status,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, 0, 0, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+        ) VALUES (?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
-      [shop.id, product.id, product.name, product.guide_price, STATUS_ACTIVE],
+      [shop.id, product.id, STATUS_ACTIVE],
     );
     inserted += 1;
   }
