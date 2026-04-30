@@ -374,12 +374,26 @@ export default function AddProductPage() {
           </button>
         ) : null}
         <button
-          className={`${styles.primary} ${step === 3 ? styles.primaryWide : ''}`}
+          className={`${styles.primary} ${step === 3 ? styles.primaryConfirm : ''}`}
           type="button"
           disabled={(step === 1 && !selectedBrandId) || (step === 2 && selectedProducts.length === 0) || submitting}
           onClick={goNext}
         >
-          {step === 3 ? (submitting ? '上架中...' : '✅ 确认上架') : '下一步'}
+          {step === 3 ? (
+            submitting ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" />
+                <span>上架中...</span>
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-circle-check" />
+                <span>确认上架</span>
+              </>
+            )
+          ) : (
+            '下一步'
+          )}
         </button>
       </footer>
 
