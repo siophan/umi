@@ -145,10 +145,14 @@ export default function AddProductPage() {
     [products, selectedProducts],
   );
 
-  const toggleProduct = (productId: BrandProduct['id']) => {
+  const toggleProduct = (product: BrandProduct) => {
+    if (product.listed) {
+      setToast('该商品已在本店铺上架');
+      return;
+    }
     setSelectedProducts((current) => {
-      if (current.includes(productId)) {
-        return current.filter((item) => item !== productId);
+      if (current.includes(product.id)) {
+        return current.filter((item) => item !== product.id);
       }
 
       if (current.length >= 10) {
@@ -156,7 +160,7 @@ export default function AddProductPage() {
         return current;
       }
 
-      return [...current, productId];
+      return [...current, product.id];
     });
   };
 
@@ -284,12 +288,14 @@ export default function AddProductPage() {
             {products.length > 0 ? (
               products.map((product) => {
                 const selected = selectedProducts.includes(product.id);
+                const disabled = product.listed;
                 return (
                   <button
-                    className={`${styles.productItem} ${selected ? styles.productItemSelected : ''}`}
+                    className={`${styles.productItem} ${selected ? styles.productItemSelected : ''} ${disabled ? styles.productItemDisabled : ''}`}
                     key={product.id}
                     type="button"
-                    onClick={() => toggleProduct(product.id)}
+                    disabled={disabled}
+                    onClick={() => toggleProduct(product)}
                   >
                     <img src={product.defaultImg || '/legacy/images/products/p001-lays.jpg'} alt={product.name} />
                     <div className={styles.productInfo}>
@@ -303,9 +309,13 @@ export default function AddProductPage() {
                         <span className={styles.productPriceOri}>¥{product.guidePrice.toFixed(1)}</span>
                       </div>
                     </div>
-                    <span className={`${styles.productCheck} ${selected ? styles.productCheckOn : ''}`}>
-                      {selected ? <i className="fa-solid fa-check" /> : null}
-                    </span>
+                    {disabled ? (
+                      <span className={styles.listedBadge}>已上架</span>
+                    ) : (
+                      <span className={`${styles.productCheck} ${selected ? styles.productCheckOn : ''}`}>
+                        {selected ? <i className="fa-solid fa-check" /> : null}
+                      </span>
+                    )}
                   </button>
                 );
               })

@@ -243,7 +243,11 @@ export async function getBrandProducts(userId: string, brandId: string): Promise
         bp.guide_price,
         bp.supply_price,
         bp.default_img,
-        bp.status
+        bp.status,
+        EXISTS(
+          SELECT 1 FROM product p
+          WHERE p.shop_id = ? AND p.brand_product_id = bp.id AND p.status = ?
+        ) AS listed
       FROM brand_product bp
       INNER JOIN brand b ON b.id = bp.brand_id
       LEFT JOIN category c ON c.id = bp.category_id
@@ -251,10 +255,10 @@ export async function getBrandProducts(userId: string, brandId: string): Promise
         AND bp.status = ?
       ORDER BY bp.created_at DESC
     `,
-    [brandId, STATUS_ACTIVE],
+    [shop.id, STATUS_ACTIVE, brandId, STATUS_ACTIVE],
   );
 
-  const items: BrandProductListResult['items'] = (rows as Array<{ id: number | string; brand_id: number | string; brand_name: string; name: string; category: string | null; guide_price: number | string; supply_price: number | string; default_img: string | null; status: number | string }>).map((row) => ({
+  const items: BrandProductListResult['items'] = (rows as Array<{ id: number | string; brand_id: number | string; brand_name: string; name: string; category: string | null; guide_price: number | string; supply_price: number | string; default_img: string | null; status: number | string; listed: number | string | boolean }>).map((row) => ({
     id: toEntityId(row.id),
     brandId: toEntityId(row.brand_id),
     brandName: row.brand_name,
@@ -264,6 +268,7 @@ export async function getBrandProducts(userId: string, brandId: string): Promise
     supplyPrice: Number(row.supply_price ?? 0) / 100,
     defaultImg: row.default_img ?? null,
     status: Number(row.status) === STATUS_ACTIVE ? 'active' : String(row.status),
+    listed: Number(row.listed) === 1,
   }));
 
   return { items };
@@ -315,7 +320,28 @@ export async function addShopProducts(
   );
 
   const products = rows as Array<{ id: number | string; name: string; default_img: string | null; guide_price: number | string }>;
+  if (products.length === 0) {
+    return { count: 0 };
+  }
+
+  const [existingRows] = await db.query<mysql.RowDataPacket[]>(
+    `
+      SELECT brand_product_id
+      FROM product
+      WHERE shop_id = ?
+        AND brand_product_id IN (?)
+    `,
+    [shop.id, products.map((product) => product.id)],
+  );
+  const existing = new Set(
+    (existingRows as Array<{ brand_product_id: number | string }>).map((row) => String(row.brand_product_id)),
+  );
+
+  let inserted = 0;
   for (const product of products) {
+    if (existing.has(String(product.id))) {
+      continue;
+    }
     await db.execute(
       `
         INSERT INTO product (
@@ -332,8 +358,9 @@ export async function addShopProducts(
       `,
       [shop.id, product.id, product.name, product.guide_price, STATUS_ACTIVE],
     );
+    inserted += 1;
   }
 
-  return { count: products.length };
+  return { count: inserted };
 }
 

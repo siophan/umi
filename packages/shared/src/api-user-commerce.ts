@@ -726,6 +726,7 @@ export interface BrandProductItem {
   supplyPrice: number;
   defaultImg: string | null;
   status: string;
+  listed: boolean;
 }
 
 export interface BrandProductListResult {
