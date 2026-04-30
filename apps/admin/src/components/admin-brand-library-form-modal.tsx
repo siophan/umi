@@ -86,6 +86,17 @@ export function AdminBrandLibraryFormModal({
           <Form.Item label="商品说明" name="description">
             <Input.TextArea rows={3} placeholder="商品说明（用作店铺铺货时的默认描述）" />
           </Form.Item>
+          <Form.Item label="联名" name="collab" extra="联名信息文案，用于商品列表/详情页徽标；可留空">
+            <Input allowClear placeholder="如 LISA × CELINE" />
+          </Form.Item>
+          <Form.Item label="标签" name="tags" extra="回车 / 逗号添加；用于商品列表/详情页徽标">
+            <Select
+              mode="tags"
+              allowClear
+              tokenSeparators={[',', '，']}
+              placeholder="如 新品、限定、联名"
+            />
+          </Form.Item>
 
           <Divider orientation="left" plain>
             详情页内容

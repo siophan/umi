@@ -271,6 +271,10 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         .map((url) => (url ?? '').trim())
         .filter((url) => url.length > 0);
 
+      const tags = (values.tags ?? [])
+        .map((tag) => (tag ?? '').trim())
+        .filter((tag) => tag.length > 0);
+
       const payload = {
         brandId: values.brandId,
         name: values.name,
@@ -288,6 +292,8 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         freight: values.freightYuan == null ? null : yuanToCents(values.freightYuan),
         shipFrom: values.shipFrom?.trim() || null,
         deliveryDays: values.deliveryDays?.trim() || null,
+        tags: tags.length ? tags : null,
+        collab: values.collab?.trim() || null,
       } as const;
 
       if (editingItem) {

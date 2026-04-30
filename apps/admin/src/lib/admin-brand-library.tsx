@@ -36,6 +36,8 @@ export type BrandProductFormValues = {
   freightYuan?: number;
   shipFrom?: string;
   deliveryDays?: string;
+  tags?: string[];
+  collab?: string;
 };
 
 export const EMPTY_BRAND_LIBRARY_DATA: BrandLibraryPageData = {
@@ -231,6 +233,8 @@ export function buildEditBrandProductFormValues(
     freightYuan: record.freight == null ? undefined : centsToYuan(record.freight),
     shipFrom: record.shipFrom || undefined,
     deliveryDays: record.deliveryDays || undefined,
+    tags: record.tags.length ? record.tags : undefined,
+    collab: record.collab || undefined,
   };
 }
 

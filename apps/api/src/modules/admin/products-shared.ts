@@ -106,6 +106,8 @@ export type AdminBrandLibraryRow = {
   freight: number | string | null;
   ship_from: string | null;
   delivery_days: string | null;
+  tags: unknown;
+  collab: string | null;
   brand_name: string | null;
   brand_status: number | string | null;
   category_name: string | null;
@@ -171,6 +173,8 @@ export interface AdminBrandLibraryItem {
   freight: number | null;
   shipFrom: string | null;
   deliveryDays: string | null;
+  tags: string[];
+  collab: string | null;
   productCount: number;
   activeProductCount: number;
   rawStatusCode: number;
@@ -389,6 +393,8 @@ export function sanitizeAdminBrandLibrary(
     freight: freightCents == null || Number.isNaN(freightCents) ? null : freightCents,
     shipFrom: row.ship_from ?? null,
     deliveryDays: row.delivery_days ?? null,
+    tags: parseBrandProductStringList(row.tags),
+    collab: row.collab?.trim() || null,
     productCount: Math.max(0, toNumber(row.product_count)),
     activeProductCount: Math.max(0, toNumber(row.active_product_count)),
     rawStatusCode: toNumber(row.status),
@@ -638,6 +644,20 @@ export function normalizeAdminBrandProductPayload(
     }
   }
 
+  const tags: string[] = [];
+  if (Array.isArray(payload.tags)) {
+    for (const item of payload.tags) {
+      if (typeof item === 'string') {
+        const trimmed = item.trim();
+        if (trimmed && !tags.includes(trimmed)) {
+          tags.push(trimmed);
+        }
+      }
+    }
+  }
+
+  const collab = payload.collab?.trim() || null;
+
   return {
     name,
     brandId,
@@ -654,5 +674,7 @@ export function normalizeAdminBrandProductPayload(
     freight,
     shipFrom,
     deliveryDays,
+    tagsJson: JSON.stringify(tags),
+    collab,
   };
 }

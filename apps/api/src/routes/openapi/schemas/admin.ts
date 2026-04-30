@@ -2477,6 +2477,13 @@ export const adminSchemas = {
       defaultImg: { type: 'string', nullable: true, example: 'https://example.com/shoe.png' },
       description: { type: 'string', nullable: true, example: '品牌标准商品' },
       status: { type: 'string', enum: ['active', 'disabled'], example: 'active' },
+      tags: {
+        type: 'array',
+        nullable: true,
+        items: { type: 'string' },
+        example: ['新品', '限定', '联名'],
+      },
+      collab: { type: 'string', nullable: true, example: 'LISA × CELINE' },
     },
   },
   CreateAdminBrandProductResult: {
@@ -2498,6 +2505,13 @@ export const adminSchemas = {
       defaultImg: { type: 'string', nullable: true, example: 'https://example.com/shoe.png' },
       description: { type: 'string', nullable: true, example: '品牌标准商品' },
       status: { type: 'string', enum: ['active', 'disabled'], example: 'active' },
+      tags: {
+        type: 'array',
+        nullable: true,
+        items: { type: 'string' },
+        example: ['新品', '限定', '联名'],
+      },
+      collab: { type: 'string', nullable: true, example: 'LISA × CELINE' },
     },
   },
   UpdateAdminBrandProductResult: {

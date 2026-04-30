@@ -60,6 +60,8 @@ export interface CreateAdminBrandProductPayload {
   freight?: number | null;
   shipFrom?: string | null;
   deliveryDays?: string | null;
+  tags?: string[] | null;
+  collab?: string | null;
 }
 
 export interface CreateAdminBrandProductResult {
@@ -83,6 +85,8 @@ export interface UpdateAdminBrandProductPayload {
   freight?: number | null;
   shipFrom?: string | null;
   deliveryDays?: string | null;
+  tags?: string[] | null;
+  collab?: string | null;
 }
 
 export interface UpdateAdminBrandProductResult {

@@ -91,6 +91,8 @@ export async function getAdminBrandLibrary(
           bp.freight,
           bp.ship_from,
           bp.delivery_days,
+          bp.tags,
+          bp.collab,
           b.name AS brand_name,
           b.status AS brand_status,
           c.name AS category_name,
@@ -121,6 +123,8 @@ export async function getAdminBrandLibrary(
           bp.freight,
           bp.ship_from,
           bp.delivery_days,
+          bp.tags,
+          bp.collab,
           b.name,
           b.status,
           c.name
@@ -218,11 +222,13 @@ export async function createAdminBrandProduct(
           freight,
           ship_from,
           delivery_days,
+          tags,
+          collab,
           status,
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
       [
         normalized.brandId,
@@ -240,6 +246,8 @@ export async function createAdminBrandProduct(
         normalized.freight,
         normalized.shipFrom,
         normalized.deliveryDays,
+        normalized.tagsJson,
+        normalized.collab,
         normalizeBrandProductStatus(payload.status),
       ],
     );
@@ -352,6 +360,8 @@ export async function updateAdminBrandProduct(
           freight = ?,
           ship_from = ?,
           delivery_days = ?,
+          tags = ?,
+          collab = ?,
           status = ?,
           updated_at = CURRENT_TIMESTAMP(3)
         WHERE id = ?
@@ -372,6 +382,8 @@ export async function updateAdminBrandProduct(
         normalized.freight,
         normalized.shipFrom,
         normalized.deliveryDays,
+        normalized.tagsJson,
+        normalized.collab,
         normalizeBrandProductStatus(payload.status),
         brandProductId,
       ],
