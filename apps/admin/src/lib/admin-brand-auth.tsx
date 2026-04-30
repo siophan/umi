@@ -119,14 +119,11 @@ export function formatBrandAuthScopeValue(value: unknown): string {
         ? String(record[firstIdKey]).trim()
         : '';
 
-    if (nameText && idText) {
-      return `${nameText}（ID: ${idText}）`;
-    }
     if (nameText) {
       return nameText;
     }
     if (idText) {
-      return `ID: ${idText}`;
+      return idText;
     }
 
     const nestedKeys = ['items', 'records', 'categories', 'products', 'values', 'ids'];
