@@ -56,7 +56,7 @@ export function buildBrandFilterCategoryOptions(data: BrandsPageData) {
       continue;
     }
     fallback.set(item.categoryId as EntityId, {
-      label: `${item.category}（ID:${item.categoryId}）`,
+      label: item.category,
       value: item.categoryId as EntityId,
     });
   }

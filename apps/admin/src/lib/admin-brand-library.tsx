@@ -66,7 +66,6 @@ export function formatCategoryLabel(
   if (item.parentName) {
     parts.push(item.parentName);
   }
-  parts.push(`ID:${item.id}`);
   const suffix: string[] = [];
   if (item.status === 'disabled' && options?.disabledTag) {
     suffix.push(options.disabledTag);
@@ -183,7 +182,7 @@ export function buildCategoryIdOptions(
       });
     } else {
       options.set(editingItem.categoryId as EntityId, {
-        label: `${editingItem.category} / ID:${editingItem.categoryId}（当前绑定）`,
+        label: `${editingItem.category}（当前绑定）`,
         value: editingItem.categoryId as EntityId,
       });
     }
@@ -198,8 +197,8 @@ export function buildCategoryIdOptions(
         {
           label:
             editingItem?.categoryId === item.categoryId
-              ? `${item.category} / ID:${item.categoryId}（当前绑定）`
-              : `${item.category} / ID:${item.categoryId}`,
+              ? `${item.category}（当前绑定）`
+              : item.category,
           value: item.categoryId as EntityId,
         },
       ]),
