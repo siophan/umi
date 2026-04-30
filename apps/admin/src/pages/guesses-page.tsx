@@ -43,6 +43,7 @@ import {
   reviewAdminGuess,
   updateAdminGuess,
 } from '../lib/api/catalog';
+import { AdminOssImageUploader } from '../components/admin-oss-image-uploader';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 
 interface GuessesPageProps {
@@ -344,8 +345,8 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
             >
               <Input maxLength={100} placeholder="竞猜标题" />
             </Form.Item>
-            <Form.Item label="封面 URL" name="imageUrl">
-              <Input allowClear placeholder="留空则保持原值" />
+            <Form.Item label="封面" name="imageUrl">
+              <AdminOssImageUploader usage="guess_cover" />
             </Form.Item>
             <Form.Item
               label="截止时间"
