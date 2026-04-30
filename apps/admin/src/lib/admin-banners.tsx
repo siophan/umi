@@ -6,6 +6,8 @@ import type {
 } from '@umi/shared';
 import type { ProColumns } from '@ant-design/pro-components';
 import { Button, Image, Modal, Tag, Typography } from 'antd';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 
 import { formatDateTime } from './format';
 
@@ -25,8 +27,7 @@ export type BannerFormValues = {
   actionUrl?: string;
   sort?: number;
   status: 'active' | 'disabled';
-  startAt?: string;
-  endAt?: string;
+  timeRange?: [Dayjs | null, Dayjs | null] | null;
 };
 
 export const POSITION_OPTIONS = [
@@ -62,24 +63,6 @@ export function getBannerStatusColor(status: AdminBannerItem['status']) {
   return 'default';
 }
 
-export function formatLocalDateTimeInput(value: string | null) {
-  if (!value) {
-    return undefined;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return undefined;
-  }
-
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  const hours = `${date.getHours()}`.padStart(2, '0');
-  const minutes = `${date.getMinutes()}`.padStart(2, '0');
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
 
 export function buildBannerStatusItems(summary: {
   total: number;
@@ -109,6 +92,8 @@ export function buildCreateBannerFormValues(): BannerFormValues {
 }
 
 export function buildEditBannerFormValues(record: AdminBannerItem): BannerFormValues {
+  const startDayjs = record.startAt ? dayjs(record.startAt) : null;
+  const endDayjs = record.endAt ? dayjs(record.endAt) : null;
   return {
     position: record.position,
     title: record.title,
@@ -119,8 +104,7 @@ export function buildEditBannerFormValues(record: AdminBannerItem): BannerFormVa
     actionUrl: record.actionUrl || undefined,
     sort: record.sort,
     status: record.rawStatus,
-    startAt: formatLocalDateTimeInput(record.startAt),
-    endAt: formatLocalDateTimeInput(record.endAt),
+    timeRange: startDayjs || endDayjs ? [startDayjs, endDayjs] : null,
   };
 }
 
@@ -128,18 +112,20 @@ export function buildBannerPayload(
   values: BannerFormValues,
 ): CreateAdminBannerPayload | UpdateAdminBannerPayload {
   const usesActionUrl = values.targetType === 'external' || values.targetType === 'page';
+  const startDayjs = values.timeRange?.[0];
+  const endDayjs = values.timeRange?.[1];
   return {
     position: values.position,
     title: values.title.trim(),
     subtitle: values.subtitle?.trim() || null,
-    imageUrl: values.imageUrl.trim(),
+    imageUrl: values.imageUrl,
     targetType: values.targetType,
     targetId: usesActionUrl ? null : ((values.targetId?.trim() || null) as EntityId | null),
     actionUrl: usesActionUrl ? values.actionUrl?.trim() || null : null,
     sort: values.sort ?? 0,
     status: values.status,
-    startAt: values.startAt || null,
-    endAt: values.endAt || null,
+    startAt: startDayjs ? startDayjs.toISOString() : null,
+    endAt: endDayjs ? endDayjs.toISOString() : null,
   };
 }
 

@@ -3,7 +3,8 @@ export type UploadImageUsage =
   | 'community_post'
   | 'product_review'
   | 'brand_product'
-  | 'brand_logo';
+  | 'brand_logo'
+  | 'banner';
 
 export interface UploadOssImagePayload {
   fileName: string;

@@ -1,5 +1,6 @@
-import { ConfigProvider, Form, Input, InputNumber, Modal, Select } from 'antd';
+import { ConfigProvider, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd';
 
+import { AdminOssImageUploader } from './admin-oss-image-uploader';
 import { SEARCH_THEME } from './admin-list-controls';
 import {
   type BannerFormValues,
@@ -60,11 +61,11 @@ export function AdminBannerFormModal({
             <Input allowClear placeholder="副标题" />
           </Form.Item>
           <Form.Item
-            label="图片地址"
+            label="图片"
             name="imageUrl"
-            rules={[{ required: true, message: '请输入图片地址' }]}
+            rules={[{ required: true, message: '请上传图片' }]}
           >
-            <Input allowClear placeholder="图片地址" />
+            <AdminOssImageUploader usage="banner" placeholder="上传轮播图" />
           </Form.Item>
           <Form.Item
             label="跳转类型"
@@ -108,11 +109,13 @@ export function AdminBannerFormModal({
           >
             <Select options={RAW_STATUS_OPTIONS as never} placeholder="状态" />
           </Form.Item>
-          <Form.Item label="开始时间" name="startAt">
-            <Input type="datetime-local" />
-          </Form.Item>
-          <Form.Item label="结束时间" name="endAt">
-            <Input type="datetime-local" />
+          <Form.Item label="有效期" name="timeRange">
+            <DatePicker.RangePicker
+              showTime={{ format: 'HH:mm' }}
+              format="YYYY-MM-DD HH:mm"
+              style={{ width: '100%' }}
+              placeholder={['开始时间', '结束时间']}
+            />
           </Form.Item>
         </Form>
       </ConfigProvider>

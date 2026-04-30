@@ -32,6 +32,7 @@ const ALLOWED_IMAGE_USAGES = new Set([
   'product_review',
   'brand_product',
   'brand_logo',
+  'banner',
 ]);
 const ALLOWED_VIDEO_USAGES = new Set(['brand_product']);
 
