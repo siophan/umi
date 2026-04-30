@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Avatar,
   Button,
   ConfigProvider,
   DatePicker,
@@ -524,6 +525,8 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
 
 function InfoTab({ detail }: { detail: AdminGuessDetailResult }) {
   const { guess } = detail;
+  const product = guess.product;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Descriptions column={2} size="small" bordered>
@@ -539,10 +542,6 @@ function InfoTab({ detail }: { detail: AdminGuessDetailResult }) {
         <Descriptions.Item label="截止时间">{formatDateTime(guess.endTime)}</Descriptions.Item>
         <Descriptions.Item label="结算时间">{formatDateTime(guess.settledAt)}</Descriptions.Item>
         <Descriptions.Item label="更新时间">{formatDateTime(guess.updatedAt)}</Descriptions.Item>
-        <Descriptions.Item label="关联商品">{guess.product.name}</Descriptions.Item>
-        <Descriptions.Item label="品牌">{guess.product.brand}</Descriptions.Item>
-        <Descriptions.Item label="奖品价值">{formatAmount(guess.product.price)}</Descriptions.Item>
-        <Descriptions.Item label="参与费用">{formatAmount(guess.product.guessPrice)}</Descriptions.Item>
         <Descriptions.Item label="描述" span={2}>
           {guess.description || '-'}
         </Descriptions.Item>
@@ -550,6 +549,52 @@ function InfoTab({ detail }: { detail: AdminGuessDetailResult }) {
           {guess.topicDetail || '-'}
         </Descriptions.Item>
       </Descriptions>
+
+      {/* 关联商品卡片 */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 12,
+          padding: '12px 14px',
+          border: '1px solid #f0f0f0',
+          borderRadius: 8,
+          background: '#fafafa',
+          alignItems: 'center',
+        }}
+      >
+        <Avatar
+          shape="square"
+          size={72}
+          src={product.imageUrl ?? undefined}
+          style={{ flexShrink: 0, background: '#e8e8e8', borderRadius: 6, fontSize: 20 }}
+        >
+          {product.brand?.[0]}
+        </Avatar>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {product.brand}
+          </Typography.Text>
+          <div>
+            <Typography.Text strong style={{ fontSize: 14 }}>
+              {product.name}
+            </Typography.Text>
+          </div>
+          <Space size={16} style={{ marginTop: 4 }}>
+            <span>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>奖品价值 </Typography.Text>
+              <Typography.Text style={{ color: '#ff4d4f', fontWeight: 600 }}>
+                {formatAmount(product.price)}
+              </Typography.Text>
+            </span>
+            <span>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>参与费用 </Typography.Text>
+              <Typography.Text style={{ fontWeight: 600 }}>
+                {formatAmount(product.guessPrice)}
+              </Typography.Text>
+            </span>
+          </Space>
+        </div>
+      </div>
 
       <List
         header={<Typography.Text strong>竞猜选项</Typography.Text>}
