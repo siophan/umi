@@ -247,6 +247,13 @@ export function registerAdminContentRoutes(adminRouter: ExpressRouter) {
   );
 
   adminRouter.get(
+    '/guesses/friends',
+    asyncHandler(async (_request, response) => {
+      ok(response, await getAdminFriendGuesses());
+    }),
+  );
+
+  adminRouter.get(
     '/guesses/:id',
     asyncHandler(async (request, response) => {
       try {
@@ -397,13 +404,6 @@ export function registerAdminContentRoutes(adminRouter: ExpressRouter) {
           ],
         );
       }
-    }),
-  );
-
-  adminRouter.get(
-    '/guesses/friends',
-    asyncHandler(async (_request, response) => {
-      ok(response, await getAdminFriendGuesses());
     }),
   );
 
