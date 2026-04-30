@@ -273,6 +273,103 @@
 
 .toast { position:fixed; left:50%; bottom:calc(100px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); z-index:1000; padding:10px 16px; border-radius:999px; background:rgba(26,26,26,.9); color:#fff; font-size:12px; font-weight:600; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.18); }
 
+.confirmSheet {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 18px 18px 0 0;
+  background: #fff;
+  padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  animation: statsPanelUp 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.confirmIcon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  color: #ff6d00;
+  font-size: 28px;
+}
+.confirmHeading {
+  margin-top: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a1a1a;
+  text-align: center;
+}
+.confirmProduct {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #f8f8fa;
+}
+.confirmProduct img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #fff;
+}
+.confirmProductInfo { flex: 1; min-width: 0; }
+.confirmProductName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.confirmProductPrice {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #e64a19;
+}
+.confirmDesc {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff8e1;
+  color: #8c6500;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.confirmActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.confirmCancel,
+.confirmSubmit {
+  flex: 1;
+  height: 46px;
+  border: 0;
+  border-radius: 23px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+.confirmCancel { background: #f0f0f2; color: #555; }
+.confirmCancel:active { background: #e6e6e8; transform: scale(0.97); }
+.confirmSubmit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #ff5252, #ff8a65);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(255, 82, 82, 0.32);
+}
+.confirmSubmit:active { transform: scale(0.97); filter: brightness(0.96); }
+.confirmSubmit i { font-size: 14px; }
+
 @keyframes statsPanelUp {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }

@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import styles from './page.module.css';
 import {
   brandLogoFallback,
@@ -43,6 +45,8 @@ export function ActiveShopContent({
   onAddProduct,
   onRemoveProduct,
 }: ActiveShopContentProps) {
+  const [pendingRemove, setPendingRemove] = useState<ShopData['products'][number] | null>(null);
+
   return (
     <>
       <section className={styles.hero}>
@@ -144,7 +148,7 @@ export function ActiveShopContent({
                   <button
                     className={`${styles.productBtn} ${styles.productBtnDanger}`}
                     type="button"
-                    onClick={() => onRemoveProduct(item.id)}
+                    onClick={() => setPendingRemove(item)}
                   >
                     下架
                   </button>
@@ -228,6 +232,51 @@ export function ActiveShopContent({
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingRemove ? (
+        <div className={styles.statsOverlay} onClick={() => setPendingRemove(null)} role="presentation">
+          <div className={styles.confirmSheet} onClick={(event) => event.stopPropagation()} role="presentation">
+            <div className={styles.confirmIcon}>
+              <i className="fa-solid fa-circle-exclamation" />
+            </div>
+            <div className={styles.confirmHeading}>确认下架此商品？</div>
+            <div className={styles.confirmProduct}>
+              <img
+                src={pendingRemove.img || '/legacy/images/products/p001-lays.jpg'}
+                alt={pendingRemove.name}
+              />
+              <div className={styles.confirmProductInfo}>
+                <div className={styles.confirmProductName}>{pendingRemove.name}</div>
+                <div className={styles.confirmProductPrice}>¥{pendingRemove.price.toFixed(1)}</div>
+              </div>
+            </div>
+            <div className={styles.confirmDesc}>
+              下架后该商品不再对外展示，已下单/履约中的订单不受影响。
+            </div>
+            <div className={styles.confirmActions}>
+              <button
+                className={styles.confirmCancel}
+                type="button"
+                onClick={() => setPendingRemove(null)}
+              >
+                取消
+              </button>
+              <button
+                className={styles.confirmSubmit}
+                type="button"
+                onClick={() => {
+                  const target = pendingRemove;
+                  setPendingRemove(null);
+                  onRemoveProduct(target.id);
+                }}
+              >
+                <i className="fa-solid fa-box-archive" />
+                确认下架
+              </button>
             </div>
           </div>
         </div>
