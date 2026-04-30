@@ -13,6 +13,7 @@ import {
   message,
 } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
+import { formatDateTime } from '../lib/format';
 
 import type {
   AdminInviteRewardConfigItem,
@@ -163,12 +164,6 @@ function InviteRewardPanel() {
 
 type AdminPageProps = { refreshToken?: number };
 
-function formatUpdatedAt(iso: string | null): string {
-  if (!iso) return '尚未配置';
-  const date = new Date(iso);
-  if (Number.isNaN(date.valueOf())) return iso;
-  return date.toLocaleString('zh-CN', { hour12: false });
-}
 
 export function SystemSettingsPage({ refreshToken }: AdminPageProps) {
   const [messageApi, contextHolder] = message.useMessage();
@@ -254,7 +249,7 @@ export function SystemSettingsPage({ refreshToken }: AdminPageProps) {
       extra={
         currentChannel ? (
           <Typography.Text type="secondary">
-            最后更新：{formatUpdatedAt(currentChannel.updated_at)}
+            最后更新：{currentChannel.updated_at ? formatDateTime(currentChannel.updated_at) : '尚未配置'}
             {currentChannel.updated_by ? ` by ${currentChannel.updated_by.username}` : ''}
           </Typography.Text>
         ) : null
