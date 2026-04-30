@@ -40,6 +40,12 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
                  WHERE bp2.brand_id = sbaa.brand_id
                    AND p2.shop_id = sbaa.shop_id
                ) AS product_count,
+               (
+                 SELECT COUNT(*)
+                 FROM brand_product bp3
+                 WHERE bp3.brand_id = sbaa.brand_id
+                   AND bp3.status = 10
+               ) AS catalog_count,
                sbaa.status AS apply_status,
                sba.status AS auth_status,
                sbaa.reject_reason,
@@ -104,6 +110,7 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
       brandName: row.brand_name,
       brandLogo: row.brand_logo ?? null,
       productCount: Number(row.product_count ?? 0),
+      catalogProductCount: Number(row.catalog_count ?? 0),
       status: mapBrandAuthStatus(
         Number(row.apply_status),
         row.auth_status == null ? null : Number(row.auth_status),

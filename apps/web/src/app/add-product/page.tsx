@@ -31,6 +31,7 @@ type BrandRow = {
   logo: string;
   deposit: number;
   createdAt: string;
+  catalogProductCount: number;
 };
 
 export default function AddProductPage() {
@@ -72,6 +73,7 @@ export default function AddProductPage() {
               logo: meta?.logo || '/legacy/images/products/p001-lays.jpg',
               deposit: meta?.deposit || 0,
               createdAt: item.createdAt,
+              catalogProductCount: item.catalogProductCount,
             };
           });
 
@@ -256,7 +258,7 @@ export default function AddProductPage() {
                         {brand.createdAt ? new Date(brand.createdAt).toLocaleDateString() : '已授权'}
                       </div>
                     </div>
-                    <span className={styles.brandCount}>{selectedBrandId === brand.id ? products.length : 0}款商品</span>
+                    <span className={styles.brandCount}>{brand.catalogProductCount}款商品</span>
                     <i className={`fa-solid fa-circle-check ${styles.brandCheck}`} />
                   </button>
                 );
@@ -346,7 +348,7 @@ export default function AddProductPage() {
             </div>
 
             <div className={styles.confirmCard}>
-              <div className={styles.confirmTitle}>本次上架将真实提交以下内容</div>
+              <div className={styles.confirmTitle}>本次上架信息</div>
               <div className={styles.confirmList}>
                 <div className={styles.confirmRow}>
                   <span>授权品牌</span>
@@ -358,7 +360,7 @@ export default function AddProductPage() {
                 </div>
               </div>
               <div className={styles.confirmDesc}>
-                确认后，页面只会把你选中的品牌商品加入店铺商品库。竞猜价格、补偿券、包邮和自动补货等配置当前不在这里设置，也不会随本次提交生效。
+                确认后，所选商品将加入店铺商品库；商品的价格、库存、竞猜价等由平台统一维护，店铺侧无法自行编辑。
               </div>
             </div>
           </div>

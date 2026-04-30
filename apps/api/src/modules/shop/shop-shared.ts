@@ -60,6 +60,7 @@ export type BrandAuthRow = {
   brand_name: string;
   brand_logo: string | null;
   product_count: number | string | null;
+  catalog_count?: number | string | null;
   apply_status: number | string;
   auth_status: number | string | null;
   reject_reason: string | null;
