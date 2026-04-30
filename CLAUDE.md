@@ -336,6 +336,52 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
+## 24. 店铺侧 product 操作语义（已完成 2026-04-30）
+
+**决策**：店铺侧（`apps/web` my-shop / add-product）对 `product` 表只有「上架」和「下架」两种操作，**不允许卖家编辑** `price / stock / guess_price / status` 任何字段。商品维度的所有信息由平台后台（admin）通过 `brand_product` 统一维护（与 #22 一致）。
+
+**字段来源**：
+- `product.price`：上架时 INSERT 写 `brand_product.guide_price`，之后店铺侧无法改（admin 也不会改 product.price，统一改 brand_product.guide_price 后再考虑同步）
+- `product.stock`：上架时 INSERT 写 0；目前用户端没有 UI 让店铺补库存，admin 也未对接（待二期）
+- `product.frozen_stock`：一直 0，未启用
+- `product.guess_price`：上架时不写，由 admin 创建竞猜时单独配置
+- `product.status`：10=active 由 add 写入；20=off_shelf 由 remove 写入；90=disabled 走 admin 强制下架（未实现）
+
+**上架链路**（`apps/api/src/modules/shop/shop-brand-auth.ts` `addShopProducts`）：
+- 入口：`POST /api/shops/products`，payload `{ brandId, brandProductIds }`
+- dedup：按 `(shop_id, brand_product_id)` 查已有 `product` 行
+  - 命中且 `status=10` → 跳过（已上架）
+  - 命中且 `status=20` → `UPDATE status=10` reactivate（重新上架不留孤儿行）
+  - 未命中 → INSERT 新行
+- `getBrandProducts` 返回的 `listed: boolean` 只看 `status=10` 行，因此下架后的商品在 add-product picker 里仍可重新选
+
+**下架链路**（`removeShopProduct`）：
+- 入口：`DELETE /api/shops/products/:id`
+- 软删：`UPDATE product SET status=20 WHERE id=? AND shop_id=?`，幂等
+- **不物理删除**：`order_item / fulfillment_order / product_review / consign_trade` 等都引用 `product.id`，硬删会破坏历史订单/评价
+
+**my-shop 视角统一过滤 active**（`shop-my.ts`）：
+- 商品列表 SELECT：`WHERE p.shop_id=? AND p.status=10`
+- hero「在售商品」count：`COUNT(*) WHERE shop_id=? AND status=10`
+- 每个 `MyShopBrandAuthItem.productCount`（已上架到本店的数量）：子查询加 `AND p2.status=10`
+- 下架后这些数字立即归零/减一，下架行从 my-shop 完全消失
+
+**MyShopBrandAuthItem 双计数语义**（`packages/shared/src/api-user-commerce.ts:566`）：
+- `productCount: number` — 该品牌已上架到本店的 active 商品数（用于 my-shop hero、品牌卡 meta）
+- `catalogProductCount: number` — 该品牌商品库（`brand_product` 表）的 active 商品总数（用于 add-product step1 品牌卡 badge）
+
+**已完成**：
+- 后端：上架 dedup 改造 + 下架软删接口；my-shop 三处 SQL 加 status 过滤；shop-brand-auth dedup map by status
+- 前端：my-shop 编辑按钮删除；下架确认换 bottom-sheet（替换 native `window.confirm`）；下架真实调 `DELETE /api/shops/products/:id` + 刷新；add-product step3 文案「商品的价格、库存、竞猜价等由平台统一维护，店铺侧无法自行编辑」
+- shared：`RemoveShopProductResult` + `MyShopBrandAuthItem.catalogProductCount`
+
+**待办（二期）**：
+- 卖家维护库存的入口（admin 后台或店铺侧补一个"补库存"窄入口；当前 stock 永远是 0，前台直接缺货不可买）
+- admin 后台批量「强制下架」店铺商品（status=90 disabled），与卖家自助下架（status=20 off_shelf）区分
+- 下架商品的"重新上架"入口：当前流程是回 add-product picker 里重选；如果用户期望在 my-shop 看到下架历史并一键恢复，得加 UI（含一个 status 切换 API）
+
+---
+
 ## 21. 用户端商品详情未消费 brand_product 的图（P2）
 
 **文件**：`apps/api/src/modules/product/product-shared.ts:294`（getProductById SELECT）+ `apps/api/src/modules/product/product-detail.ts:337`（images 数组拼装）
