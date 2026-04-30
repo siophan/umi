@@ -117,10 +117,12 @@ export interface GuessSummary {
   tags?: string[];
   description?: string | null;
   topicDetail?: string | null;
+  imageUrl?: string | null;
   endTime: string;
   creatorId: UserId;
   product: ProductSummary;
   options: GuessOption[];
+  participantCount?: number;
   totalOrders?: number;
   commentCount?: number;
   isFavorited?: boolean;
@@ -153,6 +155,7 @@ export interface OrderSummary {
 export interface WarehouseItem {
   id: EntityId;
   userId: UserId;
+  userName?: string | null;
   productId: ProductId;
   productName: string;
   productImg?: string | null;

@@ -16,6 +16,7 @@ export const FULFILLMENT_SHIPPED = 30;
 export type VirtualWarehouseRow = {
   id: number | string;
   user_id: number | string;
+  user_name: string | null;
   product_id: number | string | null;
   product_name: string | null;
   product_img: string | null;
@@ -27,8 +28,9 @@ export type VirtualWarehouseRow = {
 };
 
 export type PhysicalWarehouseRow = {
-  id: string;
+  id: number | string;
   user_id: number | string;
+  user_name: string | null;
   product_id: number | string | null;
   product_name: string | null;
   product_img: string | null;
@@ -54,6 +56,32 @@ function mapVirtualSourceType(code: number) {
   return '手工入仓';
 }
 
+export function virtualStatusLabelToCode(label: string): number | null {
+  switch (label) {
+    case 'stored':
+      return VIRTUAL_STATUS_STORED;
+    case 'locked':
+      return VIRTUAL_STATUS_LOCKED;
+    case 'converted':
+      return VIRTUAL_STATUS_CONVERTED;
+    default:
+      return null;
+  }
+}
+
+export function physicalStatusLabelToCode(label: string): number | null {
+  switch (label) {
+    case 'stored':
+      return PHYSICAL_STATUS_STORED;
+    case 'consigning':
+      return PHYSICAL_STATUS_CONSIGNING;
+    case 'completed':
+      return PHYSICAL_STATUS_FULFILLED;
+    default:
+      return null;
+  }
+}
+
 function mapVirtualStatus(code: number): WarehouseItem['status'] {
   if (code === VIRTUAL_STATUS_LOCKED) {
     return 'locked';
@@ -68,6 +96,7 @@ export function sanitizeVirtualRow(row: VirtualWarehouseRow): WarehouseItem {
   return {
     id: toEntityId(row.id),
     userId: toEntityId(row.user_id),
+    userName: row.user_name || null,
     productId: toEntityId(row.product_id ?? 0),
     productName: row.product_name || '未命名商品',
     productImg: row.product_img || null,
@@ -84,6 +113,7 @@ export function sanitizePhysicalRow(row: PhysicalWarehouseRow): WarehouseItem {
   return {
     id: toEntityId(row.id),
     userId: toEntityId(row.user_id),
+    userName: row.user_name || null,
     productId: toEntityId(row.product_id ?? 0),
     productName: row.product_name || '未命名商品',
     productImg: row.product_img || null,

@@ -25,11 +25,16 @@ export interface DeliverAdminLogisticsResult {
   completedAt: string;
 }
 
+export interface CancelAdminConsignPayload {
+  reason: string;
+}
+
 export interface CancelAdminConsignResult {
   id: EntityId;
   physicalItemId: EntityId | null;
   status: 'canceled';
   canceledAt: string;
+  cancelReason: string;
 }
 
 export interface ReviewAdminOrderRefundPayload {

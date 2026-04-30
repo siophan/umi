@@ -90,10 +90,43 @@ export function WarehouseItemDetailPage({
       </Button>
       {issue ? <Alert message={issue} showIcon type="warning" /> : null}
 
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        {record.productImg ? (
+          <img
+            src={record.productImg}
+            alt={record.productName}
+            style={{ width: 96, height: 96, borderRadius: 8, objectFit: 'cover', border: '1px solid #f0f0f0' }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: 8,
+              background: '#fafafa',
+              border: '1px solid #f0f0f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#bfbfbf',
+            }}
+          >
+            无图
+          </div>
+        )}
+        <div>
+          <Typography.Title level={4} style={{ margin: 0 }}>{record.productName}</Typography.Title>
+          <Typography.Text type="secondary">商品 ID {record.productId}</Typography.Text>
+        </div>
+      </div>
+
       <Descriptions bordered column={2} size="small" title={pageTitle}>
-        <Descriptions.Item label="商品">{record.productName}</Descriptions.Item>
-        <Descriptions.Item label="商品 ID">{record.productId}</Descriptions.Item>
-        <Descriptions.Item label="用户 ID">{record.userId}</Descriptions.Item>
+        <Descriptions.Item label="持有人">
+          {record.userName || '-'}
+          <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+            ID {record.userId}
+          </Typography.Text>
+        </Descriptions.Item>
         <Descriptions.Item label="仓型">{warehouseType === 'virtual' ? '虚拟仓' : '实体仓'}</Descriptions.Item>
         <Descriptions.Item label="状态">
           <Tag color={warehouseStatusMeta[record.status].color}>

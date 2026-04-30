@@ -85,8 +85,34 @@ export function registerAdminOrderRoutes(adminRouter: ExpressRouter) {
 
   adminRouter.get(
     '/orders/consign',
-    asyncHandler(async (_request, response) => {
-      ok(response, { items: await getAdminConsignRows() });
+    asyncHandler(async (request, response) => {
+      const query = request.query as Record<string, unknown>;
+      const pickStr = (key: string) => {
+        const value = query[key];
+        if (typeof value !== 'string') return undefined;
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      };
+      const pickNum = (key: string) => {
+        const value = query[key];
+        if (typeof value !== 'string') return undefined;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      };
+
+      ok(
+        response,
+        await getAdminConsignRows({
+          page: pickNum('page'),
+          pageSize: pickNum('pageSize'),
+          tradeNo: pickStr('tradeNo'),
+          productName: pickStr('productName'),
+          sellerUserId: pickStr('sellerUserId'),
+          orderSn: pickStr('orderSn'),
+          sourceType: pickStr('sourceType'),
+          statusKey: pickStr('statusKey'),
+        }),
+      );
     }),
   );
 
@@ -100,10 +126,11 @@ export function registerAdminOrderRoutes(adminRouter: ExpressRouter) {
   adminRouter.put(
     '/orders/consign/:id/cancel',
     asyncHandler(async (request, response) => {
+      const body = (request.body ?? {}) as { reason?: string };
       try {
         ok(
           response,
-          await cancelAdminConsign(getRouteParam(request.params.id)),
+          await cancelAdminConsign(getRouteParam(request.params.id), body.reason ?? ''),
         );
       } catch (error) {
         throw toRouteHttpError(
@@ -116,6 +143,8 @@ export function registerAdminOrderRoutes(adminRouter: ExpressRouter) {
           [
             { message: '寄售记录不存在', status: 404, code: 'ADMIN_CONSIGN_NOT_FOUND' },
             { message: '当前寄售状态不支持强制下架', status: 400, code: 'ADMIN_CONSIGN_STATUS_INVALID' },
+            { message: '强制下架理由必填', status: 400, code: 'ADMIN_CONSIGN_REASON_REQUIRED' },
+            { message: '强制下架理由最多 255 字', status: 400, code: 'ADMIN_CONSIGN_REASON_TOO_LONG' },
           ],
         );
       }

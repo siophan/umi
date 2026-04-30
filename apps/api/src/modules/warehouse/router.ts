@@ -62,11 +62,35 @@ warehouseRouter.get(
   }),
 );
 
+function parseWarehouseListQuery(query: Record<string, unknown>) {
+  const pickStr = (key: string) => {
+    const value = query[key];
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  };
+  const pickNum = (key: string) => {
+    const value = query[key];
+    if (typeof value !== 'string') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  return {
+    page: pickNum('page'),
+    pageSize: pickNum('pageSize'),
+    productName: pickStr('productName'),
+    sourceType: pickStr('sourceType'),
+    userId: pickStr('userId'),
+    status: pickStr('status'),
+  };
+}
+
 warehouseRouter.get(
   '/admin/virtual',
   requireAdmin,
-  asyncHandler(async (_request, response) => {
-    ok(response, { items: await getAdminVirtualWarehouseItems() });
+  asyncHandler(async (request, response) => {
+    ok(response, await getAdminVirtualWarehouseItems(parseWarehouseListQuery(request.query as Record<string, unknown>)));
   }),
 );
 
@@ -81,8 +105,8 @@ warehouseRouter.get(
 warehouseRouter.get(
   '/admin/physical',
   requireAdmin,
-  asyncHandler(async (_request, response) => {
-    ok(response, { items: await getAdminPhysicalWarehouseItems() });
+  asyncHandler(async (request, response) => {
+    ok(response, await getAdminPhysicalWarehouseItems(parseWarehouseListQuery(request.query as Record<string, unknown>)));
   }),
 );
 

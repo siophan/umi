@@ -132,12 +132,15 @@ export interface AdminConsignRow {
   productName: string;
   productImg: string | null;
   userId: string;
+  userName: string | null;
   buyerUserId: string | null;
+  buyerUserName: string | null;
   orderId: string | null;
   orderSn: string | null;
   price: number;
   listingPrice: number | null;
   commissionAmount: number;
+  commissionRate: number | null;
   sellerAmount: number;
   statusCode: number;
   settlementStatusCode: number | null;
@@ -149,6 +152,26 @@ export interface AdminConsignRow {
   tradedAt: string | null;
   settledAt: string | null;
   canceledAt: string | null;
+  cancelReason: string | null;
+}
+
+export interface AdminConsignListParams {
+  page?: number;
+  pageSize?: number;
+  tradeNo?: string;
+  productName?: string;
+  sellerUserId?: string;
+  orderSn?: string;
+  sourceType?: string;
+  statusKey?: string;
+}
+
+export interface AdminConsignListResult {
+  items: AdminConsignRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  statusCounts: Record<string, number>;
 }
 
 export function fetchAdminOrders() {
@@ -205,17 +228,28 @@ export function deliverAdminLogistics(
   );
 }
 
-export function fetchAdminConsignRows() {
-  return getJson<{ items: AdminConsignRow[] }>('/api/admin/orders/consign');
+export function fetchAdminConsignRows(params: AdminConsignListParams = {}) {
+  const search = new URLSearchParams();
+  if (params.page != null) search.set('page', String(params.page));
+  if (params.pageSize != null) search.set('pageSize', String(params.pageSize));
+  if (params.tradeNo) search.set('tradeNo', params.tradeNo);
+  if (params.productName) search.set('productName', params.productName);
+  if (params.sellerUserId) search.set('sellerUserId', params.sellerUserId);
+  if (params.orderSn) search.set('orderSn', params.orderSn);
+  if (params.sourceType) search.set('sourceType', params.sourceType);
+  if (params.statusKey) search.set('statusKey', params.statusKey);
+  const qs = search.toString();
+  const url = qs ? `/api/admin/orders/consign?${qs}` : '/api/admin/orders/consign';
+  return getJson<AdminConsignListResult>(url);
 }
 
 export function fetchAdminConsignDetail(id: string) {
   return getJson<AdminConsignRow>(`/api/admin/orders/consign/${id}`);
 }
 
-export function cancelAdminConsign(id: string) {
-  return putJson<CancelAdminConsignResult, Record<string, never>>(
+export function cancelAdminConsign(id: string, reason: string) {
+  return putJson<CancelAdminConsignResult, { reason: string }>(
     `/api/admin/orders/consign/${id}/cancel`,
-    {},
+    { reason },
   );
 }

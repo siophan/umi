@@ -141,7 +141,9 @@ export type AdminConsignQueryRow = {
   trade_no: string | null;
   physical_item_id: number | string | null;
   seller_user_id: number | string;
+  seller_user_name: string | null;
   buyer_user_id: number | string | null;
+  buyer_user_name: string | null;
   order_id: number | string | null;
   order_sn: string | null;
   status: number | string;
@@ -154,6 +156,7 @@ export type AdminConsignQueryRow = {
   traded_at: NullableDate;
   settled_at: NullableDate;
   canceled_at: NullableDate;
+  cancel_reason: string | null;
   created_at: Date | string;
   product_name: string | null;
   product_img: string | null;
@@ -263,12 +266,15 @@ export interface AdminConsignRow {
   productName: string;
   productImg: string | null;
   userId: string;
+  userName: string | null;
   buyerUserId: string | null;
+  buyerUserName: string | null;
   orderId: string | null;
   orderSn: string | null;
   price: number;
   listingPrice: number | null;
   commissionAmount: number;
+  commissionRate: number | null;
   sellerAmount: number;
   statusCode: number;
   settlementStatusCode: number | null;
@@ -280,6 +286,15 @@ export interface AdminConsignRow {
   tradedAt: string | null;
   settledAt: string | null;
   canceledAt: string | null;
+  cancelReason: string | null;
+}
+
+export interface AdminConsignListResult {
+  items: AdminConsignRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  statusCounts: Record<string, number>;
 }
 
 type ShippingType = AdminLogisticsRow['shippingType'];

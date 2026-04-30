@@ -834,11 +834,29 @@ export const adminPaths = {
       tags: ['Admin'],
       summary: '管理台寄售列表',
       security: bearerSecurity,
+      parameters: [
+        { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, example: 1 } },
+        { name: 'pageSize', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, example: 10 } },
+        { name: 'tradeNo', in: 'query', schema: { type: 'string' } },
+        { name: 'productName', in: 'query', schema: { type: 'string' } },
+        { name: 'sellerUserId', in: 'query', schema: { type: 'string', description: '卖家 ID 或昵称模糊匹配' } },
+        { name: 'orderSn', in: 'query', schema: { type: 'string' } },
+        { name: 'sourceType', in: 'query', schema: { type: 'string', enum: ['仓库商品', '仓库调入'] } },
+        {
+          name: 'statusKey',
+          in: 'query',
+          schema: { type: 'string', enum: ['listed', 'pending_settle', 'settled', 'canceled'] },
+        },
+      ],
       responses: {
         200: successResponse({
           type: 'object',
           properties: {
             items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            pageSize: { type: 'integer' },
+            statusCounts: { type: 'object', additionalProperties: { type: 'integer' } },
           },
         }),
         401: errorResponse(401, '请先登录'),
@@ -867,6 +885,20 @@ export const adminPaths = {
       summary: '管理台强制下架寄售商品',
       security: bearerSecurity,
       parameters: [pathIdParameter('id', '寄售记录 ID')],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['reason'],
+              properties: {
+                reason: { type: 'string', maxLength: 255, example: '商品涉嫌违规' },
+              },
+            },
+          },
+        },
+      },
       responses: {
         200: successResponse({
           $ref: '#/components/schemas/CancelAdminConsignResult',

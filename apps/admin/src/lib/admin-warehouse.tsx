@@ -20,8 +20,6 @@ export const virtualSourceTypeOptions = [
 ];
 
 export const physicalSourceTypeOptions = [
-  { label: '商家发货', value: '商家发货' },
-  { label: '竞猜奖励', value: '竞猜奖励' },
   { label: '仓库商品', value: '仓库商品' },
   { label: '仓库调入', value: '仓库调入' },
 ];
@@ -30,61 +28,23 @@ export function buildWarehouseSourceTypeOptions(warehouseType: WarehouseItem['wa
   return warehouseType === 'virtual' ? virtualSourceTypeOptions : physicalSourceTypeOptions;
 }
 
-export function filterWarehouseItems(
-  items: WarehouseItem[],
-  filters: WarehouseFilters,
-  status: WarehouseStatusFilter,
-  warehouseType: WarehouseItem['warehouseType'],
-) {
-  const visibleItems =
-    warehouseType === 'physical'
-      ? items.filter((item) => item.status !== 'consigning')
-      : items;
-
-  return visibleItems.filter((item) => {
-    if (status !== 'all' && item.status !== status) {
-      return false;
-    }
-    if (
-      filters.productName &&
-      !item.productName.toLowerCase().includes(filters.productName.trim().toLowerCase())
-    ) {
-      return false;
-    }
-    if (filters.sourceType && item.sourceType !== filters.sourceType) {
-      return false;
-    }
-    if (
-      filters.userId &&
-      !String(item.userId).toLowerCase().includes(filters.userId.trim().toLowerCase())
-    ) {
-      return false;
-    }
-    return true;
-  });
-}
-
 export function buildWarehouseStatusItems(
-  items: WarehouseItem[],
+  counts: Record<string, number>,
   warehouseType: WarehouseItem['warehouseType'],
 ) {
   if (warehouseType === 'virtual') {
     return [
-      { key: 'all', label: '全部', count: items.length },
-      { key: 'stored', label: '在库', count: items.filter((item) => item.status === 'stored').length },
-      { key: 'locked', label: '冻结中', count: items.filter((item) => item.status === 'locked').length },
-      { key: 'converted', label: '已转换', count: items.filter((item) => item.status === 'converted').length },
+      { key: 'all', label: '全部', count: counts.all ?? 0 },
+      { key: 'stored', label: '在库', count: counts.stored ?? 0 },
+      { key: 'locked', label: '冻结中', count: counts.locked ?? 0 },
+      { key: 'converted', label: '已转换', count: counts.converted ?? 0 },
     ];
   }
 
-  const pageItems = items.filter((item) => item.status !== 'consigning');
-
   return [
-    { key: 'all', label: '全部', count: pageItems.length },
-    { key: 'stored', label: '在库', count: pageItems.filter((item) => item.status === 'stored').length },
-    { key: 'shipping', label: '配送中', count: pageItems.filter((item) => item.status === 'shipping').length },
-    { key: 'delivered', label: '已送达', count: pageItems.filter((item) => item.status === 'delivered').length },
-    { key: 'completed', label: '已完成', count: pageItems.filter((item) => item.status === 'completed').length },
+    { key: 'all', label: '全部', count: counts.all ?? 0 },
+    { key: 'stored', label: '在库', count: counts.stored ?? 0 },
+    { key: 'completed', label: '已提货', count: counts.completed ?? 0 },
   ];
 }
 
@@ -116,9 +76,17 @@ export function buildWarehouseColumns({
       ),
     },
     {
-      title: '用户 ID',
+      title: '用户',
       dataIndex: 'userId',
-      width: 160,
+      width: 200,
+      render: (_, record) => (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography.Text>{record.userName || '-'}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            ID {record.userId}
+          </Typography.Text>
+        </div>
+      ),
     },
     {
       title: '数量',

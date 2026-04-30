@@ -10,7 +10,6 @@ import {
   buildWarehouseColumns,
   buildWarehouseSourceTypeOptions,
   buildWarehouseStatusItems,
-  filterWarehouseItems,
   type WarehouseFilters,
   type WarehouseStatusFilter,
 } from '../lib/admin-warehouse';
@@ -27,8 +26,12 @@ export function WarehousePage({
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [items, setItems] = useState<WarehouseItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [filters, setFilters] = useState<WarehouseFilters>({});
   const [status, setStatus] = useState<WarehouseStatusFilter>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [form] = Form.useForm<WarehouseFilters>();
 
   useEffect(() => {
@@ -38,21 +41,26 @@ export function WarehousePage({
       setLoading(true);
       setIssue(null);
       try {
-        const itemsResult = await fetchAdminWarehouseItems(warehouseType);
-        if (!alive) {
-          return;
-        }
-        setItems(itemsResult.items);
+        const result = await fetchAdminWarehouseItems(warehouseType, {
+          page,
+          pageSize,
+          productName: filters.productName,
+          sourceType: filters.sourceType,
+          userId: filters.userId,
+          status: status === 'all' ? undefined : status,
+        });
+        if (!alive) return;
+        setItems(result.items);
+        setTotal(result.total);
+        setStatusCounts(result.statusCounts ?? {});
       } catch (error) {
-        if (!alive) {
-          return;
-        }
+        if (!alive) return;
         setItems([]);
+        setTotal(0);
+        setStatusCounts({});
         setIssue(error instanceof Error ? error.message : '仓库列表加载失败');
       } finally {
-        if (alive) {
-          setLoading(false);
-        }
+        if (alive) setLoading(false);
       }
     }
 
@@ -61,12 +69,17 @@ export function WarehousePage({
     return () => {
       alive = false;
     };
-  }, [refreshToken, warehouseType]);
+  }, [
+    filters.productName,
+    filters.sourceType,
+    filters.userId,
+    page,
+    pageSize,
+    refreshToken,
+    status,
+    warehouseType,
+  ]);
 
-  const filteredItems = useMemo(
-    () => filterWarehouseItems(items, filters, status, warehouseType),
-    [filters, items, status, warehouseType],
-  );
   const sourceTypeOptions = useMemo(
     () => buildWarehouseSourceTypeOptions(warehouseType),
     [warehouseType],
@@ -82,8 +95,8 @@ export function WarehousePage({
     [warehouseType],
   );
   const statusItems = useMemo(
-    () => buildWarehouseStatusItems(items, warehouseType),
-    [items, warehouseType],
+    () => buildWarehouseStatusItems(statusCounts, warehouseType),
+    [statusCounts, warehouseType],
   );
 
   return (
@@ -92,10 +105,12 @@ export function WarehousePage({
       <AdminSearchPanel
         form={form}
         onSearch={() => {
+          setPage(1);
           setFilters(form.getFieldsValue());
         }}
         onReset={() => {
           form.resetFields();
+          setPage(1);
           setFilters({});
           setStatus('all');
         }}
@@ -107,13 +122,16 @@ export function WarehousePage({
           <Select placeholder="来源类型" allowClear options={sourceTypeOptions} />
         </Form.Item>
         <Form.Item name="userId">
-          <Input placeholder="用户 ID" allowClear />
+          <Input placeholder="用户 ID / 昵称" allowClear />
         </Form.Item>
       </AdminSearchPanel>
       <AdminStatusTabs
         activeKey={status}
         items={statusItems}
-        onChange={(key) => setStatus(key as 'all' | WarehouseItem['status'])}
+        onChange={(key) => {
+          setPage(1);
+          setStatus(key as 'all' | WarehouseItem['status']);
+        }}
       />
       <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
         <ProTable<WarehouseItem>
@@ -121,13 +139,27 @@ export function WarehousePage({
           rowKey="id"
           columns={columns as never}
           columnsState={{}}
-          dataSource={filteredItems}
+          dataSource={items}
           loading={loading}
-        options={{ reload: true, density: true, fullScreen: false, setting: true }}
-        pagination={{ defaultPageSize: 10, showSizeChanger: true }}
-        search={false}
-        toolBarRender={() => []}
-      />
+          options={{ reload: true, density: true, fullScreen: false, setting: true }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (value) => `共 ${value} 条`,
+            onChange: (nextPage, nextPageSize) => {
+              if (nextPageSize !== pageSize) {
+                setPage(1);
+                setPageSize(nextPageSize);
+                return;
+              }
+              setPage(nextPage);
+            },
+          }}
+          search={false}
+          toolBarRender={() => []}
+        />
       </ConfigProvider>
     </div>
   );

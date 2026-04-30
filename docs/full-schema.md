@@ -421,8 +421,9 @@
 | 13 | `traded_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 成交时间 |
 | 14 | `settled_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 结算时间 |
 | 15 | `canceled_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 取消时间 |
-| 16 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 17 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+| 16 | `cancel_reason` | `varchar(255)` | `YES` | `NULL` | `-` | `-` | 取消理由（admin 强制下架时填写） |
+| 17 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 18 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
 
 ## coupon
 

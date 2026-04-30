@@ -1069,6 +1069,14 @@ export const commercePaths = {
       tags: ['Warehouse'],
       summary: '管理台获取虚拟仓库列表',
       security: bearerSecurity,
+      parameters: [
+        { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, example: 1 } },
+        { name: 'pageSize', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, example: 10 } },
+        { name: 'productName', in: 'query', schema: { type: 'string' } },
+        { name: 'sourceType', in: 'query', schema: { type: 'string', example: '竞猜奖励' } },
+        { name: 'userId', in: 'query', schema: { type: 'string', description: '用户 ID 或昵称模糊匹配' } },
+        { name: 'status', in: 'query', schema: { type: 'string', enum: ['stored', 'locked', 'converted'] } },
+      ],
       responses: {
         200: successResponse({
           type: 'object',
@@ -1077,6 +1085,10 @@ export const commercePaths = {
               type: 'array',
               items: { type: 'object', additionalProperties: true },
             },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            pageSize: { type: 'integer' },
+            statusCounts: { type: 'object', additionalProperties: { type: 'integer' } },
           },
         }),
         401: errorResponse(401, '请先登录'),
@@ -1104,6 +1116,14 @@ export const commercePaths = {
       tags: ['Warehouse'],
       summary: '管理台获取实体仓库列表',
       security: bearerSecurity,
+      parameters: [
+        { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, example: 1 } },
+        { name: 'pageSize', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, example: 10 } },
+        { name: 'productName', in: 'query', schema: { type: 'string' } },
+        { name: 'sourceType', in: 'query', schema: { type: 'string', enum: ['仓库商品', '仓库调入'] } },
+        { name: 'userId', in: 'query', schema: { type: 'string', description: '用户 ID 或昵称模糊匹配' } },
+        { name: 'status', in: 'query', schema: { type: 'string', enum: ['stored', 'completed'] } },
+      ],
       responses: {
         200: successResponse({
           type: 'object',
@@ -1112,6 +1132,10 @@ export const commercePaths = {
               type: 'array',
               items: { type: 'object', additionalProperties: true },
             },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            pageSize: { type: 'integer' },
+            statusCounts: { type: 'object', additionalProperties: { type: 'integer' } },
           },
         }),
         401: errorResponse(401, '请先登录'),

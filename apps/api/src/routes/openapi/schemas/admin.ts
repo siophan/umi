@@ -749,7 +749,7 @@ export const adminSchemas = {
   },
   CancelAdminConsignResult: {
     type: 'object',
-    required: ['id', 'physicalItemId', 'status', 'canceledAt'],
+    required: ['id', 'physicalItemId', 'status', 'canceledAt', 'cancelReason'],
     properties: {
       id: { type: 'string', example: '301' },
       physicalItemId: { type: 'string', nullable: true, example: '9001' },
@@ -763,6 +763,7 @@ export const adminSchemas = {
         format: 'date-time',
         example: '2026-04-22T08:30:00.000Z',
       },
+      cancelReason: { type: 'string', example: '商品涉嫌违规' },
     },
   },
   UpdateAdminSystemUserStatusPayload: {
