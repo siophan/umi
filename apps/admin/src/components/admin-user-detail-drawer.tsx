@@ -1,7 +1,7 @@
-import type { GuessSummary, OrderSummary, UserSummary } from '@umi/shared';
+import type { AdminInviteRecordItem, GuessSummary, OrderSummary, UserSummary } from '@umi/shared';
 import { Alert, Avatar, Button, Descriptions, Drawer, Empty, Spin, Table, Tabs, Tag, Typography } from 'antd';
 
-import { guessColumns, orderColumns } from '../lib/admin-users';
+import { guessColumns, inviteColumns, orderColumns } from '../lib/admin-users';
 import { formatDateTime, formatNumber, formatPercent, roleMeta } from '../lib/format';
 
 interface AdminUserDetailDrawerProps {
@@ -13,21 +13,28 @@ interface AdminUserDetailDrawerProps {
   detailIssue: string;
   orderIssue: string | null;
   guessIssue: string | null;
+  inviteIssue: string | null;
   ordersLoading: boolean;
   guessesLoading: boolean;
+  invitesLoading: boolean;
   userOrders: OrderSummary[];
   userGuesses: GuessSummary[];
+  userInvites: AdminInviteRecordItem[];
   orderPage: number;
   orderPageSize: number;
   orderTotal: number;
   guessPage: number;
   guessPageSize: number;
   guessTotal: number;
+  invitePage: number;
+  invitePageSize: number;
+  inviteTotal: number;
   onClose: () => void;
   onToggleBan: () => void | Promise<void>;
   onTabChange: (key: string) => void;
   onOrderPageChange: (page: number, pageSize: number) => void;
   onGuessPageChange: (page: number, pageSize: number) => void;
+  onInvitePageChange: (page: number, pageSize: number) => void;
 }
 
 export function AdminUserDetailDrawer({
@@ -39,21 +46,28 @@ export function AdminUserDetailDrawer({
   detailIssue,
   orderIssue,
   guessIssue,
+  inviteIssue,
   ordersLoading,
   guessesLoading,
+  invitesLoading,
   userOrders,
   userGuesses,
+  userInvites,
   orderPage,
   orderPageSize,
   orderTotal,
   guessPage,
   guessPageSize,
   guessTotal,
+  invitePage,
+  invitePageSize,
+  inviteTotal,
   onClose,
   onToggleBan,
   onTabChange,
   onOrderPageChange,
   onGuessPageChange,
+  onInvitePageChange,
 }: AdminUserDetailDrawerProps) {
   const orderTabContent = orderIssue ? (
     <Alert showIcon type="warning" message="订单记录加载失败" description={orderIssue} />
@@ -105,6 +119,32 @@ export function AdminUserDetailDrawer({
     />
   ) : (
     <Empty description="暂无竞猜记录" />
+  );
+
+  const inviteTabContent = inviteIssue ? (
+    <Alert showIcon type="warning" message="邀请记录加载失败" description={inviteIssue} />
+  ) : userInvites.length > 0 || invitesLoading ? (
+    <Table
+      columns={inviteColumns}
+      dataSource={userInvites}
+      loading={invitesLoading}
+      pagination={{
+        current: invitePage,
+        pageSize: invitePageSize,
+        total: inviteTotal,
+        showSizeChanger: true,
+        showTotal: (value) => `共 ${value} 条`,
+        pageSizeOptions: [10, 20, 50],
+        locale: {
+          items_per_page: '条/页',
+        },
+        onChange: onInvitePageChange,
+      }}
+      rowKey="id"
+      size="small"
+    />
+  ) : (
+    <Empty description="暂无邀请记录" />
   );
 
   return (
@@ -174,6 +214,11 @@ export function AdminUserDetailDrawer({
                 key: 'guesses',
                 label: `竞猜记录 (${guessTotal})`,
                 children: guessTabContent,
+              },
+              {
+                key: 'invites',
+                label: `邀请记录 (${inviteTotal})`,
+                children: inviteTabContent,
               },
             ]}
           />

@@ -33,6 +33,7 @@ export type UserRow = {
   shop_verified: number | string;
   works_privacy: number | string | null;
   fav_privacy: number | string | null;
+  invite_count?: number | string;
 };
 
 function resolveUserRole(row: Pick<UserRow, 'shop_name' | 'shop_verified'>): UserSummary['role'] {
@@ -162,6 +163,7 @@ export function sanitizeUser(row: UserRow): UserSummary {
     shopVerified: Number(row.shop_verified ?? 0) > 0,
     worksPrivacy: worksPrivacyCodeToValue(row.works_privacy),
     favPrivacy: favPrivacyCodeToValue(row.fav_privacy),
+    inviteCount: row.invite_count != null ? Number(row.invite_count) : undefined,
   };
 }
 

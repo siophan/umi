@@ -211,6 +211,13 @@ export interface AdminInviteRecordListResult {
   };
 }
 
+export interface AdminUserInviteListResult {
+  items: AdminInviteRecordItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface UpdateAdminInviteRewardConfigPayload {
   inviterRewardType: AdminInviteRewardType;
   inviterRewardValue: number;

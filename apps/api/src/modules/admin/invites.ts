@@ -4,6 +4,7 @@ import {
   type AdminInviteRecordItem,
   type AdminInviteRecordListResult,
   type AdminInviteRewardConfigItem,
+  type AdminUserInviteListResult,
   type UpdateAdminInviteRewardConfigPayload,
   type UpdateAdminInviteRewardConfigResult,
 } from '@umi/shared';
@@ -243,6 +244,64 @@ function buildInviteRecordWhere(params: InviteRecordListParams) {
     whereSql: `WHERE ${clauses.join(' AND ')}`,
     values,
   };
+}
+
+export async function getAdminUserInvites(
+  inviterId: string,
+  page = 1,
+  pageSize = 10,
+): Promise<AdminUserInviteListResult> {
+  const db = getDbPool();
+  const safePage = Math.max(1, page);
+  const safePageSize = Math.min(50, Math.max(1, pageSize));
+  const offset = (safePage - 1) * safePageSize;
+
+  const [[countRows], [rows]] = await Promise.all([
+    db.query<mysql.RowDataPacket[]>(
+      `SELECT COUNT(*) AS total FROM user WHERE invited_by = ?`,
+      [inviterId],
+    ),
+    db.query<mysql.RowDataPacket[]>(
+      `
+        SELECT
+          invitee.id AS invitee_id,
+          invitee_profile.name AS invitee_name,
+          invitee.phone_number AS invitee_phone,
+          invitee.uid_code AS invitee_uid_code,
+          invitee.created_at AS invitee_created_at,
+          inviter.id AS inviter_id,
+          inviter_profile.name AS inviter_name,
+          inviter.phone_number AS inviter_phone,
+          inviter.uid_code AS inviter_uid_code,
+          inviter.invite_code AS invite_code
+        FROM user invitee
+        INNER JOIN user inviter ON inviter.id = invitee.invited_by
+        LEFT JOIN user_profile invitee_profile ON invitee_profile.user_id = invitee.id
+        LEFT JOIN user_profile inviter_profile ON inviter_profile.user_id = inviter.id
+        WHERE inviter.id = ?
+        ORDER BY invitee.created_at DESC, invitee.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [inviterId, safePageSize, offset],
+    ),
+  ]);
+
+  const total = Number((countRows[0] as { total?: number | string } | undefined)?.total ?? 0);
+  const items = (rows as InviteRecordRow[]).map((row) => ({
+    id: toEntityId(row.invitee_id),
+    inviterId: toEntityId(row.inviter_id),
+    inviterName: fallbackUserName(row.inviter_name, row.inviter_phone, row.inviter_id),
+    inviterPhone: row.inviter_phone,
+    inviterUidCode: row.inviter_uid_code,
+    inviteCode: row.invite_code,
+    inviteeId: toEntityId(row.invitee_id),
+    inviteeName: fallbackUserName(row.invitee_name, row.invitee_phone, row.invitee_id),
+    inviteePhone: row.invitee_phone,
+    inviteeUidCode: row.invitee_uid_code,
+    registeredAt: toIso(row.invitee_created_at),
+  }));
+
+  return { items, total, page: safePage, pageSize: safePageSize };
 }
 
 export async function getAdminInviteRewardConfig() {

@@ -61,6 +61,7 @@ export interface UserSummary {
   shopVerified?: boolean;
   worksPrivacy?: 'all' | 'friends' | 'me';
   favPrivacy?: 'all' | 'me';
+  inviteCount?: number;
 }
 
 export interface UserPublicProfile {

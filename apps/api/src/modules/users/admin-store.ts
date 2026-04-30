@@ -137,7 +137,12 @@ const adminUserSelectSql = `
           AND s.status = 10
       ) THEN 1
       ELSE 0
-    END AS shop_verified
+    END AS shop_verified,
+    COALESCE((
+      SELECT COUNT(*)
+      FROM user invited
+      WHERE invited.invited_by = u.id
+    ), 0) AS invite_count
   FROM user u
   LEFT JOIN user_profile up ON up.user_id = u.id
 `;

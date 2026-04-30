@@ -1,5 +1,6 @@
 import type {
   AdminUserGuessListResult,
+  AdminUserInviteListResult,
   AdminUserListQuery,
   AdminUserOrderListResult,
   UpdateUserBanPayload,
@@ -71,6 +72,21 @@ export function fetchAdminUserGuesses(
   }
   const suffix = search.size > 0 ? `?${search.toString()}` : '';
   return getJson<AdminUserGuessListResult>(`/api/admin/users/${userId}/guesses${suffix}`);
+}
+
+export function fetchAdminUserInvites(
+  userId: string,
+  query: { page?: number; pageSize?: number } = {},
+) {
+  const search = new URLSearchParams();
+  if (query.page != null) {
+    search.set('page', String(query.page));
+  }
+  if (query.pageSize != null) {
+    search.set('pageSize', String(query.pageSize));
+  }
+  const suffix = search.size > 0 ? `?${search.toString()}` : '';
+  return getJson<AdminUserInviteListResult>(`/api/admin/users/${userId}/invites${suffix}`);
 }
 
 export function updateAdminUserBan(userId: string, payload: UpdateUserBanPayload) {

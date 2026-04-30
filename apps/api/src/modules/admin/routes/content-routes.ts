@@ -35,6 +35,7 @@ import {
   updateAdminGuess,
 } from '../guesses';
 import { getAdminUserGuesses, getAdminUserOrders } from '../users';
+import { getAdminUserInvites } from '../invites';
 import { requireExistingUserSummary, getRouteParam, toRouteHttpError } from '../route-helpers';
 import { getRequestAdmin } from '../auth';
 import type { AdminUserFilter } from '@umi/shared';
@@ -215,6 +216,22 @@ export function registerAdminContentRoutes(adminRouter: ExpressRouter) {
       ok(
         response,
         await getAdminUserOrders(
+          userId,
+          Number(request.query.page ?? 1),
+          Number(request.query.pageSize ?? 10),
+        ),
+      );
+    }),
+  );
+
+  adminRouter.get(
+    '/users/:id/invites',
+    asyncHandler(async (request, response) => {
+      const userId = getRouteParam(request.params.id);
+      await requireExistingUserSummary(userId);
+      ok(
+        response,
+        await getAdminUserInvites(
           userId,
           Number(request.query.page ?? 1),
           Number(request.query.pageSize ?? 10),

@@ -1,4 +1,4 @@
-import type { AdminUserFilter, GuessSummary, OrderSummary, UserSummary } from '@umi/shared';
+import type { AdminInviteRecordItem, AdminUserFilter, GuessSummary, OrderSummary, UserSummary } from '@umi/shared';
 import type { TableColumnsType } from 'antd';
 import { Avatar, Button, Tag, Typography } from 'antd';
 
@@ -93,6 +93,11 @@ export function buildUserColumns(onOpen: (userId: string) => void): TableColumns
           </Typography.Text>
         </div>
       ),
+    },
+    {
+      title: '邀请人数',
+      dataIndex: 'inviteCount',
+      render: (_, record) => formatNumber(record.inviteCount ?? 0),
     },
     {
       title: '店铺',
@@ -191,6 +196,31 @@ export const guessColumns: TableColumnsType<GuessSummary> = [
   {
     title: '截止',
     dataIndex: 'endTime',
+    render: (value) => formatDateTime(value),
+  },
+];
+
+export const inviteColumns: TableColumnsType<AdminInviteRecordItem> = [
+  {
+    title: '被邀请人',
+    dataIndex: 'inviteeName',
+    render: (_, record) => (
+      <div>
+        <Typography.Text strong>{record.inviteeName}</Typography.Text>
+        <Typography.Text style={{ display: 'block' }} type="secondary">
+          {record.inviteePhone ?? '-'}
+        </Typography.Text>
+      </div>
+    ),
+  },
+  {
+    title: '邀请码',
+    dataIndex: 'inviteCode',
+    render: (_, record) => record.inviteCode || '-',
+  },
+  {
+    title: '注册时间',
+    dataIndex: 'registeredAt',
     render: (value) => formatDateTime(value),
   },
 ];

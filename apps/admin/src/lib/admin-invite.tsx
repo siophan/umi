@@ -17,10 +17,10 @@ export type InviteFilters = {
 };
 
 export type InviteFormValues = {
-  inviterRewardType: AdminInviteRewardType;
+  inviterRewardType: Exclude<AdminInviteRewardType, 'coin'>;
   inviterRewardValue: number;
   inviterRewardRefId?: string;
-  inviteeRewardType: AdminInviteRewardType;
+  inviteeRewardType: Exclude<AdminInviteRewardType, 'coin'>;
   inviteeRewardValue: number;
   inviteeRewardRefId?: string;
   status: AdminInviteRewardConfigStatus;
@@ -29,7 +29,6 @@ export type InviteFormValues = {
 export type InviteRecord = AdminInviteRecordListResult['items'][number];
 
 export const REWARD_TYPE_OPTIONS = [
-  { label: '零食币', value: 'coin' },
   { label: '优惠券', value: 'coupon' },
   { label: '实物', value: 'physical' },
 ] as const;
@@ -59,14 +58,19 @@ export function normalizeInviteRewardRefIdInput(value: string | undefined) {
   return /^\d+$/.test(text) ? (text as `${bigint}`) : null;
 }
 
+function resolveRewardType(type: AdminInviteRewardType | undefined): Exclude<AdminInviteRewardType, 'coin'> {
+  if (type === 'coupon' || type === 'physical') return type;
+  return 'coupon';
+}
+
 export function buildInviteConfigFormValues(
   config: AdminInviteRewardConfigItem | null,
 ): InviteFormValues {
   return {
-    inviterRewardType: config?.inviterRewardType ?? 'coin',
+    inviterRewardType: resolveRewardType(config?.inviterRewardType),
     inviterRewardValue: config?.inviterRewardValue ?? 50,
     inviterRewardRefId: config?.inviterRewardRefId ?? undefined,
-    inviteeRewardType: config?.inviteeRewardType ?? 'coin',
+    inviteeRewardType: resolveRewardType(config?.inviteeRewardType),
     inviteeRewardValue: config?.inviteeRewardValue ?? 30,
     inviteeRewardRefId: config?.inviteeRewardRefId ?? undefined,
     status: config?.status ?? 'active',

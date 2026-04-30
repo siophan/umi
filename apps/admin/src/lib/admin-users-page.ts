@@ -1,10 +1,11 @@
-import type { GuessSummary, OrderSummary, UserSummary } from '@umi/shared';
+import type { AdminInviteRecordItem, GuessSummary, OrderSummary, UserSummary } from '@umi/shared';
 
 import { useEffect, useMemo, useState } from 'react';
 
 import {
   fetchAdminUserDetail,
   fetchAdminUserGuesses,
+  fetchAdminUserInvites,
   fetchAdminUserOrders,
   updateAdminUserBan,
 } from './api/users';
@@ -24,21 +25,28 @@ export interface AdminUserDetailState {
   detailIssue: string;
   orderIssue: string | null;
   guessIssue: string | null;
+  inviteIssue: string | null;
   ordersLoading: boolean;
   guessesLoading: boolean;
+  invitesLoading: boolean;
   userOrders: OrderSummary[];
   userGuesses: GuessSummary[];
+  userInvites: AdminInviteRecordItem[];
   orderPage: number;
   orderPageSize: number;
   orderTotal: number;
   guessPage: number;
   guessPageSize: number;
   guessTotal: number;
+  invitePage: number;
+  invitePageSize: number;
+  inviteTotal: number;
   setSelectedId: (userId: string | null) => void;
   setDetailTab: (tab: string) => void;
   handleToggleBan: () => Promise<void>;
   handleOrderPageChange: (page: number, pageSize: number) => void;
   handleGuessPageChange: (page: number, pageSize: number) => void;
+  handleInvitePageChange: (page: number, pageSize: number) => void;
 }
 
 function handleTablePageChange(
@@ -80,15 +88,23 @@ export function useAdminUserDetailState({
   const [guessPage, setGuessPage] = useState(1);
   const [guessPageSize, setGuessPageSize] = useState(10);
   const [guessTotal, setGuessTotal] = useState(0);
+  const [inviteIssue, setInviteIssue] = useState<string | null>(null);
+  const [invitesLoading, setInvitesLoading] = useState(false);
+  const [userInvites, setUserInvites] = useState<AdminInviteRecordItem[]>([]);
+  const [invitePage, setInvitePage] = useState(1);
+  const [invitePageSize, setInvitePageSize] = useState(10);
+  const [inviteTotal, setInviteTotal] = useState(0);
 
   useEffect(() => {
     if (!selectedId) {
       setSelected(null);
       setUserOrders([]);
       setUserGuesses([]);
+      setUserInvites([]);
       setProfileIssue(null);
       setOrderIssue(null);
       setGuessIssue(null);
+      setInviteIssue(null);
       setDetailTab('info');
       setOrderPage(1);
       setOrderPageSize(10);
@@ -96,6 +112,9 @@ export function useAdminUserDetailState({
       setGuessPage(1);
       setGuessPageSize(10);
       setGuessTotal(0);
+      setInvitePage(1);
+      setInvitePageSize(10);
+      setInviteTotal(0);
       return;
     }
 
@@ -105,12 +124,15 @@ export function useAdminUserDetailState({
     setSelected(null);
     setUserOrders([]);
     setUserGuesses([]);
+    setUserInvites([]);
     setProfileIssue(null);
     setOrderIssue(null);
     setGuessIssue(null);
+    setInviteIssue(null);
     setDetailTab('info');
     setOrderTotal(0);
     setGuessTotal(0);
+    setInviteTotal(0);
 
     async function loadUserDetail() {
       setDetailLoading(true);
@@ -234,6 +256,50 @@ export function useAdminUserDetailState({
     };
   }, [guessPage, guessPageSize, selectedId]);
 
+  useEffect(() => {
+    if (!selectedId) {
+      return;
+    }
+
+    const currentSelectedId = selectedId;
+    let alive = true;
+
+    async function loadInvites() {
+      setInvitesLoading(true);
+      setInviteIssue(null);
+      try {
+        const result = await fetchAdminUserInvites(currentSelectedId, {
+          page: invitePage,
+          pageSize: invitePageSize,
+        });
+
+        if (!alive) {
+          return;
+        }
+
+        setUserInvites(result.items);
+        setInviteTotal(result.total);
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+
+        setUserInvites([]);
+        setInviteIssue(error instanceof Error ? `邀请记录：${error.message}` : '邀请记录加载失败');
+      } finally {
+        if (alive) {
+          setInvitesLoading(false);
+        }
+      }
+    }
+
+    void loadInvites();
+
+    return () => {
+      alive = false;
+    };
+  }, [invitePage, invitePageSize, selectedId]);
+
   const detailIssue = useMemo(
     () => [profileIssue, orderIssue, guessIssue].filter(Boolean).join('；'),
     [guessIssue, orderIssue, profileIssue],
@@ -269,16 +335,22 @@ export function useAdminUserDetailState({
     detailIssue,
     orderIssue,
     guessIssue,
+    inviteIssue,
     ordersLoading,
     guessesLoading,
+    invitesLoading,
     userOrders,
     userGuesses,
+    userInvites,
     orderPage,
     orderPageSize,
     orderTotal,
     guessPage,
     guessPageSize,
     guessTotal,
+    invitePage,
+    invitePageSize,
+    inviteTotal,
     setSelectedId,
     setDetailTab,
     handleToggleBan,
@@ -286,5 +358,7 @@ export function useAdminUserDetailState({
       handleTablePageChange(orderPageSize, setOrderPage, setOrderPageSize, nextPage, nextPageSize),
     handleGuessPageChange: (nextPage, nextPageSize) =>
       handleTablePageChange(guessPageSize, setGuessPage, setGuessPageSize, nextPage, nextPageSize),
+    handleInvitePageChange: (nextPage, nextPageSize) =>
+      handleTablePageChange(invitePageSize, setInvitePage, setInvitePageSize, nextPage, nextPageSize),
   };
 }

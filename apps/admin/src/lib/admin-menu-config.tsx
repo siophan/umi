@@ -220,13 +220,6 @@ export const adminMenuTree: AdminMenuNode[] = [
         access: menuAccess('/marketing/checkin'),
       },
       {
-        key: '/marketing/invite',
-        path: '/marketing/invite',
-        icon: <ShareAltOutlined />,
-        name: '邀请管理',
-        access: menuAccess('/marketing/invite'),
-      },
-      {
         key: '/system/rankings',
         path: '/system/rankings',
         icon: <CrownOutlined />,

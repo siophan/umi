@@ -69,21 +69,28 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
     detailIssue,
     orderIssue,
     guessIssue,
+    inviteIssue,
     ordersLoading,
     guessesLoading,
+    invitesLoading,
     userOrders,
     userGuesses,
+    userInvites,
     orderPage,
     orderPageSize,
     orderTotal,
     guessPage,
     guessPageSize,
     guessTotal,
+    invitePage,
+    invitePageSize,
+    inviteTotal,
     setSelectedId,
     setDetailTab,
     handleToggleBan,
     handleOrderPageChange,
     handleGuessPageChange,
+    handleInvitePageChange,
   } = useAdminUserDetailState({
     onUserBanUpdated: reloadUsers,
     onBanSuccess: (banned) => {
@@ -205,21 +212,28 @@ export function UsersPage({ refreshToken = 0 }: UsersPageProps) {
         detailIssue={detailIssue}
         orderIssue={orderIssue}
         guessIssue={guessIssue}
+        inviteIssue={inviteIssue}
         ordersLoading={ordersLoading}
         guessesLoading={guessesLoading}
+        invitesLoading={invitesLoading}
         userOrders={userOrders}
         userGuesses={userGuesses}
+        userInvites={userInvites}
         orderPage={orderPage}
         orderPageSize={orderPageSize}
         orderTotal={orderTotal}
         guessPage={guessPage}
         guessPageSize={guessPageSize}
         guessTotal={guessTotal}
+        invitePage={invitePage}
+        invitePageSize={invitePageSize}
+        inviteTotal={inviteTotal}
         onClose={() => setSelectedId(null)}
         onToggleBan={handleToggleBan}
         onTabChange={setDetailTab}
         onOrderPageChange={handleOrderPageChange}
         onGuessPageChange={handleGuessPageChange}
+        onInvitePageChange={handleInvitePageChange}
       />
     </div>
   );
