@@ -184,7 +184,7 @@ export async function getAdminConsignRows(
 
   const fullWhere = fullClauses.length > 0 ? `WHERE ${fullClauses.join(' AND ')}` : '';
 
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT ${SELECT_COLUMNS}
       ${CONSIGN_BASE_SQL}
@@ -195,7 +195,7 @@ export async function getAdminConsignRows(
     [...fullValues, pageSize, offset],
   );
 
-  const [countRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [countRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT COUNT(*) AS total
       ${CONSIGN_BASE_SQL}
@@ -204,7 +204,7 @@ export async function getAdminConsignRows(
     fullValues,
   );
 
-  const [statusGroupRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [statusGroupRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         ct.status AS status,

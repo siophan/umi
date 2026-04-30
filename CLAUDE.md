@@ -6,7 +6,7 @@
 >
 > **DB 全量表结构**：`docs/full-schema.md` 是当前数据库 90+ 张表的字段/类型/注释快照（含 `virtual_warehouse / physical_warehouse / warehouse_item_log / fulfillment_order / order / order_status_log / consign_trade` 等所有仓库与订单相关表）。状态码与 type 编码对照表在 `docs/status-codes.md`。需要查 schema 优先看这两个文件，不要直连 mysql。
 >
-> **不跑 typecheck**：改完代码不要主动跑 `pnpm typecheck` / `tsc`（无论单包还是 turbo 全跑）；编译/类型校验由用户自己在本地 IDE / CI 中处理。
+> **不跑 typecheck / 不本地起服务 / 不查日志**：改完代码不要主动跑 `pnpm typecheck` / `tsc`（无论单包还是 turbo 全跑）；也不要 `pnpm dev` 起 api/web/admin 进程；也不要 tail/cat `/tmp/*.log` 或类似日志文件去定位运行时错误。编译、运行、日志排查全由用户在本地 IDE / CI 处理；调试运行时报错只能纯靠读代码。
 
 ---
 

@@ -110,7 +110,7 @@ export async function getAdminVirtualWarehouseItems(
   }
   const fullWhere = statusClauses.filter(Boolean).join(' AND ');
 
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         vw.id,
@@ -135,7 +135,7 @@ export async function getAdminVirtualWarehouseItems(
     [...statusValues, pageSize, offset],
   );
 
-  const [countRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [countRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT COUNT(*) AS total
       FROM virtual_warehouse vw
@@ -147,7 +147,7 @@ export async function getAdminVirtualWarehouseItems(
     statusValues,
   );
 
-  const [statusGroupRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [statusGroupRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT vw.status AS status, COUNT(*) AS cnt
       FROM virtual_warehouse vw
@@ -261,7 +261,7 @@ export async function getAdminPhysicalWarehouseItems(
   const fullWhere = `${filterWhere} AND ${pageWhereExtras.join(' AND ')}`;
   const fullValues = [...filterValues, ...pageWhereValues];
 
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         pw.id,
@@ -300,7 +300,7 @@ export async function getAdminPhysicalWarehouseItems(
     ],
   );
 
-  const [countRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [countRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT COUNT(*) AS total
       FROM physical_warehouse pw
@@ -312,7 +312,7 @@ export async function getAdminPhysicalWarehouseItems(
     fullValues,
   );
 
-  const [statusGroupRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [statusGroupRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT pw.status AS status, COUNT(*) AS cnt
       FROM physical_warehouse pw
