@@ -281,7 +281,6 @@ export default function MyShopPage() {
         onCloseStats={() => setStatsOpen(false)}
         onManageBrands={() => router.push('/brand-auth')}
         onAddProduct={() => router.push('/add-product')}
-        onEditProduct={() => showToast('编辑功能即将上线')}
         onRemoveProduct={() => {
           if (typeof window !== 'undefined' && !window.confirm('确认下架此商品？')) {
             return;

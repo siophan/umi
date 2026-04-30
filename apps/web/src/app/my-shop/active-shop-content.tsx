@@ -27,7 +27,6 @@ type ActiveShopContentProps = {
   onCloseStats: () => void;
   onManageBrands: () => void;
   onAddProduct: () => void;
-  onEditProduct: (productId: string) => void;
   onRemoveProduct: (productId: string) => void;
 };
 
@@ -42,7 +41,6 @@ export function ActiveShopContent({
   onCloseStats,
   onManageBrands,
   onAddProduct,
-  onEditProduct,
   onRemoveProduct,
 }: ActiveShopContentProps) {
   return (
@@ -143,9 +141,6 @@ export function ActiveShopContent({
                 <div className={styles.productName}>{item.name}</div>
                 <div className={styles.productPrice}>¥{item.price.toFixed(1)}</div>
                 <div className={styles.productBtns}>
-                  <button className={styles.productBtn} type="button" onClick={() => onEditProduct(item.id)}>
-                    编辑
-                  </button>
                   <button
                     className={`${styles.productBtn} ${styles.productBtnDanger}`}
                     type="button"
