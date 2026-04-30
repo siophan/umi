@@ -120,9 +120,12 @@ export interface GuessSummary {
   imageUrl?: string | null;
   endTime: string;
   creatorId: UserId;
+  creatorName?: string | null;
+  createdAt?: string | null;
   product: ProductSummary;
   options: GuessOption[];
   participantCount?: number;
+  paidAmount?: number;
   totalOrders?: number;
   commentCount?: number;
   isFavorited?: boolean;

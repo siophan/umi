@@ -634,6 +634,53 @@ function ParticipantsTab({
   );
 }
 
+const EDIT_FIELD_LABELS: Record<string, string> = {
+  title: '标题',
+  description: '描述',
+  imageUrl: '封面',
+  endTime: '截止时间',
+};
+
+function formatEditFieldValue(field: string, value: unknown) {
+  if (value == null || value === '') return '（空）';
+  if (field === 'endTime' && typeof value === 'string') {
+    return formatDateTime(value);
+  }
+  if (field === 'imageUrl') return '已设置';
+  return String(value);
+}
+
+function renderLogNote(action: string, note: string) {
+  if (action !== 'edit') {
+    return <Typography.Text>{note}</Typography.Text>;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(note);
+  } catch {
+    return <Typography.Text>{note}</Typography.Text>;
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return <Typography.Text>{note}</Typography.Text>;
+  }
+  const entries = Object.entries(parsed as Record<string, { from: unknown; to: unknown }>);
+  if (entries.length === 0) {
+    return <Typography.Text type="secondary">无字段变更</Typography.Text>;
+  }
+  return (
+    <div style={{ display: 'grid', gap: 2 }}>
+      {entries.map(([field, change]) => (
+        <Typography.Text key={field}>
+          <Typography.Text type="secondary">
+            {EDIT_FIELD_LABELS[field] ?? field}:{' '}
+          </Typography.Text>
+          {formatEditFieldValue(field, change?.from)} → {formatEditFieldValue(field, change?.to)}
+        </Typography.Text>
+      ))}
+    </div>
+  );
+}
+
 function LogsTab({ detail }: { detail: AdminGuessDetailResult }) {
   return detail.reviewLogs.length > 0 ? (
     <List
@@ -649,7 +696,7 @@ function LogsTab({ detail }: { detail: AdminGuessDetailResult }) {
             <Typography.Text type="secondary">
               {guessStatusLabel(item.fromStatus)} → {guessStatusLabel(item.toStatus)}
             </Typography.Text>
-            {item.note ? <Typography.Text>{item.note}</Typography.Text> : null}
+            {item.note ? renderLogNote(item.action, item.note) : null}
           </div>
         </List.Item>
       )}

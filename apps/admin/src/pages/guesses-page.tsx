@@ -108,20 +108,24 @@ export function GuessesPage({ refreshToken = 0 }: GuessesPageProps) {
 
   const categoryOptions = useMemo(() => buildGuessCategoryOptions(categories, guesses), [categories, guesses]);
   const brandOptions = useMemo(() => buildGuessBrandOptions(guesses), [guesses]);
-  const columns = buildGuessColumns({
-    onApprove: (id) => handleApprove(id),
-    onReject: (record) => openRejectModal(record),
-    onView: (record) => {
-      setDrawerGuessId(record.id);
-    },
-    onEdit: (record) => {
-      setEditTarget(record);
-    },
-    onAbandon: (record) => {
-      setAbandonTarget(record);
-    },
-    reviewingId,
-  });
+  const columns = useMemo(
+    () =>
+      buildGuessColumns({
+        onApprove: (id) => handleApprove(id),
+        onReject: (record) => openRejectModal(record),
+        onView: (record) => {
+          setDrawerGuessId(record.id);
+        },
+        onEdit: (record) => {
+          setEditTarget(record);
+        },
+        onAbandon: (record) => {
+          setAbandonTarget(record);
+        },
+        reviewingId,
+      }),
+    [reviewingId],
+  );
 
   function openRejectModal(record: GuessSummary) {
     rejectForm.setFieldsValue({ rejectReason: '' });

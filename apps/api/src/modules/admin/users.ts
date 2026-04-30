@@ -12,6 +12,7 @@ import {
 } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { PAY_STATUS_PAID } from '../payment/payment-shared';
 
 const GUESS_DRAFT = 10;
 const GUESS_PENDING_REVIEW = 20;
@@ -285,9 +286,10 @@ async function getGuessVoteRows(guessIds: string[]) {
         COUNT(*) AS vote_count
       FROM guess_bet
       WHERE guess_id IN (?)
+        AND pay_status = ?
       GROUP BY guess_id, choice_idx
     `,
-    [guessIds],
+    [guessIds, PAY_STATUS_PAID],
   );
   return rows as GuessVoteRow[];
 }

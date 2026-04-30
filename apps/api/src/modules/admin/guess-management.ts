@@ -52,6 +52,7 @@ import {
   buildVoteCountLookup,
   ensureGuessPendingReview,
   getGuessOptionRows,
+  getGuessPaidAmounts,
   getGuessParticipantCounts,
   getGuessRows,
   getGuessVoteRows,
@@ -176,10 +177,11 @@ function mapReviewActionLabel(action: number | string) {
 export async function getAdminGuesses(): Promise<GuessListResult> {
   const rows = await getGuessRows();
   const guessIds = rows.map((row) => String(row.id));
-  const [optionRows, voteRows, participantCounts] = await Promise.all([
+  const [optionRows, voteRows, participantCounts, paidAmounts] = await Promise.all([
     getGuessOptionRows(guessIds),
     getGuessVoteRows(guessIds),
     getGuessParticipantCounts(guessIds),
+    getGuessPaidAmounts(guessIds),
   ]);
 
   const optionsByGuess = groupRowsByGuess(optionRows);
@@ -192,6 +194,7 @@ export async function getAdminGuesses(): Promise<GuessListResult> {
         optionsByGuess.get(String(row.id)) || [],
         voteCountMap,
         participantCounts.get(String(row.id)) ?? 0,
+        paidAmounts.get(String(row.id)) ?? 0,
       ),
     ),
     nextCursor: null,

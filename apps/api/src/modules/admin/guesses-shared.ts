@@ -55,7 +55,9 @@ export type GuessRow = {
   status: number | string;
   review_status: number | string;
   end_time: Date | string;
+  created_at: Date | string | null;
   creator_id: number | string;
+  creator_name: string | null;
   category_id: number | string | null;
   category: string | null;
   guess_image_url: string | null;
@@ -395,6 +397,7 @@ export function buildGuessSummary(
   options: GuessOptionRow[],
   voteCountMap: Map<string, number>,
   participantCount = 0,
+  paidAmount = 0,
 ): GuessSummary {
   return {
     id: toEntityId(row.id),
@@ -405,9 +408,12 @@ export function buildGuessSummary(
     category: row.category || '未分类',
     imageUrl: row.guess_image_url ?? null,
     endTime: toIsoString(row.end_time),
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
     creatorId: toEntityId(row.creator_id),
+    creatorName: row.creator_name ?? null,
     product: buildProductSummary(row),
     participantCount,
+    paidAmount,
     options: options.map((option) => ({
       id: `${String(row.id)}-${Number(option.option_index)}`,
       optionIndex: Number(option.option_index),
@@ -429,8 +435,16 @@ export async function getGuessRows() {
         g.status,
         g.review_status,
         g.end_time,
+        g.created_at,
         g.creator_id,
-        g.category_id,
+        COALESCE(
+          au.display_name,
+          au.username,
+          up.name,
+          IF(u.phone_number IS NOT NULL, CONCAT('用户', RIGHT(u.phone_number, 4)), NULL),
+          CONCAT('用户', g.creator_id)
+        ) AS creator_name,
+        COALESCE(g.category_id, bp.category_id) AS category_id,
         g.image_url AS guess_image_url,
         COALESCE(gc.name, pc.name) AS category,
         p.id AS product_id,
@@ -440,6 +454,9 @@ export async function getGuessRows() {
         p.price AS product_price,
         p.guess_price AS product_guess_price
       FROM guess g
+      LEFT JOIN admin_user au ON au.id = g.creator_id
+      LEFT JOIN user u ON u.id = g.creator_id
+      LEFT JOIN user_profile up ON up.user_id = u.id
       LEFT JOIN (
         SELECT guess_id, MIN(id) AS first_guess_product_id
         FROM guess_product
@@ -527,6 +544,33 @@ export async function getGuessParticipantCounts(guessIds: string[]) {
 
   for (const row of rows as Array<{ guess_id: number | string; participant_count: number | string }>) {
     map.set(String(row.guess_id), Number(row.participant_count ?? 0));
+  }
+
+  return map;
+}
+
+export async function getGuessPaidAmounts(guessIds: string[]) {
+  const map = new Map<string, number>();
+  if (guessIds.length === 0) {
+    return map;
+  }
+
+  const db = getDbPool();
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        guess_id,
+        COALESCE(SUM(amount), 0) AS paid_amount
+      FROM guess_bet
+      WHERE guess_id IN (?)
+        AND pay_status = ?
+      GROUP BY guess_id
+    `,
+    [guessIds, PAY_STATUS_PAID],
+  );
+
+  for (const row of rows as Array<{ guess_id: number | string; paid_amount: number | string }>) {
+    map.set(String(row.guess_id), Number(row.paid_amount ?? 0));
   }
 
   return map;

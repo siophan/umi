@@ -3,7 +3,7 @@ import type { TableColumnsType } from 'antd';
 import { Avatar, Button, Popconfirm, Space, Tag, Typography } from 'antd';
 
 import type { AdminCategoryItem } from './api/categories';
-import { formatDateTime, guessReviewStatusMeta, guessStatusMeta } from './format';
+import { formatAmount, formatDateTime, guessReviewStatusMeta, guessStatusMeta } from './format';
 
 export type GuessFilters = {
   title?: string;
@@ -39,18 +39,22 @@ export function filterGuesses(
 }
 
 export function buildGuessStatusItems(guesses: GuessSummary[]) {
-  return [
+  const draftCount = guesses.filter((item) => item.status === 'draft').length;
+
+  const items: Array<{ key: GuessStatusFilter; label: string; count: number }> = [
     { key: 'all', label: '全部', count: guesses.length },
     {
       key: 'pending_review',
       label: '待审核',
       count: guesses.filter((item) => item.reviewStatus === 'pending').length,
     },
-    {
-      key: 'draft',
-      label: '草稿',
-      count: guesses.filter((item) => item.status === 'draft').length,
-    },
+  ];
+
+  if (draftCount > 0) {
+    items.push({ key: 'draft', label: '草稿', count: draftCount });
+  }
+
+  items.push(
     {
       key: 'active',
       label: '进行中',
@@ -76,7 +80,9 @@ export function buildGuessStatusItems(guesses: GuessSummary[]) {
       label: '审核拒绝',
       count: guesses.filter((item) => item.status === 'cancelled').length,
     },
-  ] satisfies Array<{ key: GuessStatusFilter; label: string; count: number }>;
+  );
+
+  return items;
 }
 
 export function buildGuessCategoryOptions(
@@ -180,11 +186,33 @@ export function buildGuessColumns(args: {
     },
     {
       title: '参与人数',
+      width: 90,
       render: (_, record) => record.participantCount ?? 0,
+    },
+    {
+      title: '奖池',
+      width: 110,
+      render: (_, record) => formatAmount(record.paidAmount ?? 0),
+    },
+    {
+      title: '创建人',
+      width: 120,
+      render: (_, record) => (
+        <Typography.Text type="secondary" ellipsis style={{ maxWidth: 110 }}>
+          {record.creatorName || `用户${record.creatorId}`}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      width: 150,
+      render: (value) => formatDateTime(value as string | null | undefined),
     },
     {
       title: '截止时间',
       dataIndex: 'endTime',
+      width: 150,
       render: (value) => formatDateTime(value),
     },
     {
@@ -193,13 +221,16 @@ export function buildGuessColumns(args: {
       width: 240,
       fixed: 'right',
       render: (_, record) => {
-        const editable = record.status === 'active' || record.status === 'pending_settle';
+        const isPendingReview = record.reviewStatus === 'pending';
+        const isEditable =
+          !isPendingReview &&
+          (record.status === 'active' || record.status === 'pending_settle');
         return (
           <div style={{ display: 'flex', gap: 8 }}>
             <Button size="small" type="link" onClick={() => args.onView(record)}>
               查看
             </Button>
-            {record.reviewStatus === 'pending' ? (
+            {isPendingReview ? (
               <>
                 <Popconfirm
                   okButtonProps={{ loading: args.reviewingId === record.id }}
@@ -215,7 +246,7 @@ export function buildGuessColumns(args: {
                 </Button>
               </>
             ) : null}
-            {editable ? (
+            {isEditable ? (
               <>
                 <Button size="small" type="link" onClick={() => args.onEdit(record)}>
                   编辑
