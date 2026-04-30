@@ -230,7 +230,7 @@ export async function getAdminConsignRows(
     `
       SELECT
         ct.status AS status,
-        ct.settled_at AS settled_at,
+        (ct.settled_at IS NOT NULL) AS has_settled,
         COUNT(*) AS cnt
       ${CONSIGN_BASE_SQL}
       ${filterWhere}
@@ -248,15 +248,16 @@ export async function getAdminConsignRows(
   };
   for (const row of statusGroupRows as Array<{
     status: number | string;
-    settled_at: Date | string | null;
+    has_settled: number | string;
     cnt: number | string;
   }>) {
     const code = Number(row.status);
     const count = Number(row.cnt ?? 0);
+    const hasSettled = Number(row.has_settled) === 1;
     statusCounts.all += count;
     if (code === CONSIGN_LISTED) statusCounts.listed += count;
     else if (code === CONSIGN_TRADED) {
-      if (row.settled_at) statusCounts.settled += count;
+      if (hasSettled) statusCounts.settled += count;
       else statusCounts.pending_settle += count;
     } else if (code === CONSIGN_CANCELED) statusCounts.canceled += count;
   }
