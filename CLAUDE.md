@@ -386,27 +386,51 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 **待 sweep 模块（grep 自 `apps/api/src` 截至 2026-04-30）**：
 
-| 模块 | 文件 | 引用的旧列 | 修法建议 |
+| 模块 | 文件 | 引用的旧列 | 修法 |
 | --- | --- | --- | --- |
-| 商品流 | `product/product-feed.ts:18,73,75,81` | p.price/p.guess_price/p.stock | 全切 bp.guide_price，stock 视为无限（删检查） |
+| 商品流 | `product/product-feed.ts:18,73,75,81` | p.price/p.guess_price/p.stock | bp.guide_price / bp.guess_price / bp.stock |
 | 商品流 | `product/product-shared.ts:297,299,305` | p.price/p.guess_price/p.stock | 同上 |
-| 商品详情 | `product/product-detail.ts:97,100,101,256-257,285-286,351,354-355,365-366,370` | p.name/p.price/p.guess_price/p.stock/p.original_price | name→bp.name, price→bp.guide_price, original_price→bp.guide_price, guessPrice→单独逻辑(详见下) |
-| 搜索 | `search/search-products.ts:50,52,75,77,83` | p.price/p.guess_price/p.stock | 同商品流 |
-| 搜索 | `search/search-guesses.ts:106-107,131-132` | p.price/p.guess_price | 同上 |
-| 购物车 | `cart/store.ts:99,170,174,220,232` | p.price/p.stock | price→bp.guide_price，stock 检查删（无限库存） |
-| Banner | `banner/router.ts:210-211` | p.price/p.guess_price | 同上 |
-| Admin 库存监控 | `admin/products-inventory.ts:61,72,104-106` | p.price/p.stock/p.frozen_stock | 整页废掉或重写——库存概念已不存在 |
-| Admin 竞猜 | `admin/guesses-shared.ts:295-296,331` | p.stock/p.frozen_stock | 创建竞猜的库存校验删除 |
+| 商品详情 | `product/product-detail.ts:97,100,101,256-257,285-286,351,354-355,365-366,370` | p.name/p.price/p.guess_price/p.stock/p.original_price | name→bp.name / price/original_price→bp.guide_price / guessPrice→bp.guess_price / stock→bp.stock |
+| 搜索 | `search/search-products.ts:50,52,75,77,83` | p.price/p.guess_price/p.stock | bp.guide_price / bp.guess_price / bp.stock |
+| 搜索 | `search/search-guesses.ts:106-107,131-132` | p.price/p.guess_price | bp.guide_price / bp.guess_price |
+| 购物车 | `cart/store.ts:99,170,174,220,232` | p.price/p.stock | bp.guide_price / bp.stock |
+| Banner | `banner/router.ts:210-211` | p.price/p.guess_price | bp.guide_price / bp.guess_price |
+| Admin 库存监控 | `admin/products-inventory.ts:61,72,104-106` | p.price/p.stock/p.frozen_stock | 改成基于 brand_product 维度的库存监控（跨店共享池）；frozen_stock 看决策 |
+| Admin 竞猜 | `admin/guesses-shared.ts:295-296,331` | p.stock/p.frozen_stock | bp.stock；frozen_stock 看决策 |
 
-**`guess_price` 单独说明**：原本 `product.guess_price` 是商品维度的"竞猜单价"，现在列已删。竞猜创建（admin 端）需要重新决定来源：
-- 选项 A：`brand_product` 加 `guess_price` 列，admin 在品牌商品库维护
-- 选项 B：竞猜表自带 `bet_unit_amount`，admin 创建竞猜时单独填
-- 选项 C：写死或按 `bp.guide_price` 的某个比例
-（当前未拍板）
+**已决策（2026-04-30）**：
+- **`guess_price` 移到 `brand_product.guess_price`**：admin 在品牌商品库维护，所有读 `p.guess_price` 的地方改 `bp.guess_price`
+- **`stock` 移到 `brand_product.stock`**：admin 在品牌商品库维护"平台总库存"，所有读 `p.stock` 的地方改 `bp.stock`
+- **`frozen_stock` 命运待定**：原本 `product.frozen_stock` 是订单占用库存（下单 +N，支付/取消 ±N），如果 `brand_product.stock` 是跨店共享的平台总库存，那 `frozen_stock` 也得挂在 `brand_product` 维度（多店并发占用同一池子）。开新线程时一并拍板，候选两种：
+  - 加 `brand_product.frozen_stock`（保留占用模式，多店共享）
+  - 不加 frozen，下单直接 stock-=N，支付失败 stock+=N（接受瞬时不一致，回滚成本低）
 
-**`stock`/`frozen_stock` 单独说明**：库存概念已整体下线（详见 #24）。所有 `stock > 0` / `stock - frozen_stock > 0` 检查需要删除或改成默认 true。如果将来要重启库存：
-- 短期：在 `brand_product` 加 `stock` 列做"平台总库存"
-- 长期：独立 `shop_product_stock` 表 + 占用/释放 API
+**待新线程 sweep（开线程时按这套规则做）**：
+
+DDL（先跑）：
+```sql
+ALTER TABLE brand_product
+  ADD COLUMN guess_price BIGINT NULL COMMENT '竞猜价格，单位分' AFTER supply_price,
+  ADD COLUMN stock INT NOT NULL DEFAULT 0 COMMENT '平台总库存（跨店共享）' AFTER guess_price;
+-- frozen_stock 看决策再加
+```
+
+代码 sweep（按上面的表逐个处理）：
+- `p.price` → `bp.guide_price`
+- `p.guess_price` → `bp.guess_price`
+- `p.stock` → `bp.stock`
+- `p.frozen_stock` → 待决（先用常量 0，或者去掉相关检查）
+- `p.name` → `bp.name`
+- `p.original_price` → `bp.guide_price`（同 #22 的语义）
+
+Admin 端 brand_product 编辑界面要补：
+- `apps/admin/src/lib/admin-products-shared.ts` Row/Item/sanitize/normalize 加 guessPrice / stock
+- `apps/admin/src/pages/products-brand-library-page.tsx` 编辑/新增弹层加两个 input
+- `apps/api/src/modules/admin/products-brand-library.ts` SELECT/INSERT/UPDATE 加字段
+- `packages/shared/src/admin-...` Payload/Result 加字段
+- OpenAPI schema
+
+`docs/full-schema.md` brand_product 表加两行（guess_price + stock）。
 
 **部署影响**：
 - 老版后端 + 新 schema → 任何读上述列的接口直接 SQL 报错（unknown column）
