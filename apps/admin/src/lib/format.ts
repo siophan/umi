@@ -43,8 +43,8 @@ export const guessStatusMeta: Record<GuessStatus, StatusMeta> = {
   active: { color: 'processing', label: '进行中' },
   pending_settle: { color: 'gold', label: '待结算' },
   settled: { color: 'success', label: '已结算' },
-  abandoned: { color: 'default', label: '已废弃' },
-  cancelled: { color: 'error', label: '已取消' },
+  abandoned: { color: 'default', label: '已作废' },
+  cancelled: { color: 'error', label: '审核拒绝' },
 };
 
 export const guessReviewStatusMeta: Record<GuessReviewStatus, StatusMeta> = {

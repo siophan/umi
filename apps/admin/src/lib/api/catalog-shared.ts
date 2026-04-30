@@ -87,8 +87,8 @@ export interface AdminGuessDetailOption {
 
 export interface AdminGuessDetailReviewLog {
   id: string;
-  action: 'submit' | 'approve' | 'reject' | 'abandon' | 'settle';
-  actionLabel: '提交审核' | '审核通过' | '审核拒绝' | '运营作废' | '手动开奖';
+  action: 'submit' | 'approve' | 'reject' | 'abandon' | 'settle' | 'edit';
+  actionLabel: '提交审核' | '审核通过' | '审核拒绝' | '运营作废' | '手动开奖' | '运营编辑';
   fromStatus: number;
   toStatus: number;
   note: string | null;
@@ -128,6 +128,7 @@ export interface AdminGuessDetailResult {
     creatorName: string;
     description: string | null;
     topicDetail: string | null;
+    imageUrl: string | null;
     scope: 'public' | 'friends';
     settlementMode: 'oracle' | 'manual';
     endTime: string | null;

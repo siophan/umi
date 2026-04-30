@@ -635,6 +635,9 @@
 | `submit` | `10` | 提交审核 |
 | `approve` | `20` | 审核通过 |
 | `reject` | `30` | 审核拒绝 |
+| `abandon` | `40` | 运营作废 |
+| `settle` | `50` | 手动开奖 |
+| `edit` | `60` | 运营编辑（note 为字段 diff JSON） |
 
 ### `friend_guess_confirm.action`
 

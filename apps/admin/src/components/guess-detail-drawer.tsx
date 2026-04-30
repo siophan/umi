@@ -4,12 +4,10 @@ import {
   Avatar,
   Button,
   ConfigProvider,
-  DatePicker,
   Descriptions,
   Drawer,
   Empty,
   Form,
-  Input,
   List,
   Modal,
   Pagination,
@@ -22,12 +20,11 @@ import {
   Typography,
   message,
 } from 'antd';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
 import type { AdminGuessParticipantItem } from '@umi/shared';
 
+import { AdminGuessAbandonModal } from './admin-guess-abandon-modal';
+import { AdminGuessEditModal } from './admin-guess-edit-modal';
 import { AdminGuessRejectModal } from './admin-guess-reject-modal';
-import { AdminOssImageUploader } from './admin-oss-image-uploader';
 import { SEARCH_THEME } from './admin-list-controls';
 import {
   abandonAdminGuess,
@@ -94,19 +91,12 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
   const [settleForm] = Form.useForm<{ winnerOptionIndex: number }>();
   const [settling, setSettling] = useState(false);
 
-  // abandon/cancel
+  // abandon
   const [abandonOpen, setAbandonOpen] = useState(false);
-  const [abandonForm] = Form.useForm<{ reason: string }>();
   const [abandoning, setAbandoning] = useState(false);
 
   // edit
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm] = Form.useForm<{
-    title: string;
-    description?: string | null;
-    imageUrl?: string | null;
-    endTime: Dayjs | null;
-  }>();
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
@@ -189,37 +179,33 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
     }
   }
 
-  async function handleAbandon() {
+  async function handleAbandon(reason: string) {
     if (!guessId) return;
+    setAbandoning(true);
     try {
-      const values = await abandonForm.validateFields();
-      setAbandoning(true);
-      await abandonAdminGuess(guessId, { reason: values.reason.trim() });
-      messageApi.success('竞猜已取消，已支付金额将逐单原路退款');
+      await abandonAdminGuess(guessId, { reason });
+      messageApi.success('竞猜已作废，已支付投注将逐单原路退款');
       setAbandonOpen(false);
-      abandonForm.resetFields();
       refresh();
     } catch (error) {
-      if (error instanceof Error) messageApi.error(error.message);
+      messageApi.error(error instanceof Error ? error.message : '作废失败');
     } finally {
       setAbandoning(false);
     }
   }
 
-  async function handleEditSubmit() {
+  async function handleEditSubmit(values: {
+    title: string;
+    description: string | null;
+    imageUrl: string | null;
+    endTime: string;
+  }) {
     if (!guessId || !detail) return;
-    const values = await editForm.validateFields();
     setEditing(true);
     try {
-      await updateAdminGuess(guessId, {
-        title: values.title.trim(),
-        description: values.description?.trim() || null,
-        imageUrl: values.imageUrl ?? null,
-        endTime: values.endTime?.toISOString() ?? '',
-      });
+      await updateAdminGuess(guessId, values);
       messageApi.success('竞猜已更新');
       setEditOpen(false);
-      editForm.resetFields();
       refresh();
     } catch (error) {
       messageApi.error(error instanceof Error ? error.message : '编辑失败');
@@ -280,29 +266,11 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
         </Button>
       ) : null}
       {canEdit ? (
-        <Button
-          onClick={() => {
-            editForm.setFieldsValue({
-              title: guess.title,
-              description: guess.description ?? '',
-              imageUrl: '',
-              endTime: guess.endTime ? dayjs(guess.endTime) : null,
-            });
-            setEditOpen(true);
-          }}
-        >
-          编辑
-        </Button>
+        <Button onClick={() => setEditOpen(true)}>编辑</Button>
       ) : null}
       {canAbandon ? (
-        <Button
-          danger
-          onClick={() => {
-            abandonForm.resetFields();
-            setAbandonOpen(true);
-          }}
-        >
-          取消
+        <Button danger onClick={() => setAbandonOpen(true)}>
+          作废
         </Button>
       ) : null}
     </Space>
@@ -415,110 +383,32 @@ export function GuessDetailDrawer({ guessId, onClose, onRefresh }: GuessDetailDr
           </Form>
         </Modal>
 
-        <Modal
-          title="取消竞猜"
-          open={abandonOpen}
-          confirmLoading={abandoning}
-          onOk={() => void handleAbandon()}
-          onCancel={() => {
-            if (abandoning) return;
-            setAbandonOpen(false);
-            abandonForm.resetFields();
-          }}
-          okText="确认取消"
-          cancelText="关闭"
-          okButtonProps={{ danger: true }}
-          destroyOnClose
-        >
-          <Alert
-            type="warning"
-            showIcon
-            message="取消后所有已支付金额将原路全额退款（含手续费），未付款记录将作废。已结算的竞猜不能取消。"
-            style={{ marginBottom: 16 }}
-          />
-          <Form form={abandonForm} layout="vertical">
-            <Form.Item
-              label="取消理由"
-              name="reason"
-              rules={[
-                { required: true, message: '请填写取消理由' },
-                { whitespace: true, message: '请填写取消理由' },
-              ]}
-            >
-              <Input.TextArea
-                rows={3}
-                maxLength={200}
-                showCount
-                placeholder="例如：某选项 0 参与无法正常结算"
-              />
-            </Form.Item>
-          </Form>
-        </Modal>
-
-        <Modal
-          title="编辑竞猜"
-          open={editOpen}
-          confirmLoading={editing}
-          onOk={() => void handleEditSubmit()}
-          onCancel={() => {
-            if (editing) return;
-            setEditOpen(false);
-            editForm.resetFields();
-          }}
-          okText="保存"
-          cancelText="取消"
-          destroyOnClose
-        >
-          <Alert
-            type="info"
-            showIcon
-            message="本期仅支持编辑标题、封面、截止时间（只能延长）、描述。选项与赔率不可修改。"
-            style={{ marginBottom: 16 }}
-          />
-          <Form form={editForm} layout="vertical">
-            <Form.Item
-              label="竞猜标题"
-              name="title"
-              rules={[
-                { required: true, message: '请填写竞猜标题' },
-                { whitespace: true, message: '请填写竞猜标题' },
-              ]}
-            >
-              <Input maxLength={100} placeholder="竞猜标题" />
-            </Form.Item>
-            <Form.Item label="封面" name="imageUrl">
-              <AdminOssImageUploader usage="guess_cover" />
-            </Form.Item>
-            <Form.Item
-              label="截止时间"
-              name="endTime"
-              rules={[
-                { required: true, message: '请选择截止时间' },
-                {
-                  validator: (_, value: Dayjs | null) => {
-                    if (!value || !guess) return Promise.resolve();
-                    if (!value.isValid()) return Promise.reject(new Error('截止时间不合法'));
-                    if (value.valueOf() <= Date.now())
-                      return Promise.reject(new Error('截止时间必须晚于当前时间'));
-                    if (guess.endTime && value.valueOf() < new Date(guess.endTime).getTime())
-                      return Promise.reject(new Error('截止时间只能延长'));
-                    return Promise.resolve();
-                  },
-                },
-              ]}
-            >
-              <DatePicker
-                showTime={{ format: 'HH:mm' }}
-                format="YYYY-MM-DD HH:mm"
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-            <Form.Item label="描述" name="description">
-              <Input.TextArea rows={3} maxLength={500} showCount placeholder="补充说明" />
-            </Form.Item>
-          </Form>
-        </Modal>
       </ConfigProvider>
+
+      <AdminGuessAbandonModal
+        open={abandonOpen}
+        guessTitle={guess?.title ?? null}
+        submitting={abandoning}
+        onCancel={() => setAbandonOpen(false)}
+        onSubmit={(reason) => void handleAbandon(reason)}
+      />
+
+      <AdminGuessEditModal
+        open={editOpen}
+        initialValues={
+          guess
+            ? {
+                title: guess.title,
+                description: guess.description ?? null,
+                imageUrl: guess.imageUrl ?? null,
+                endTime: guess.endTime,
+              }
+            : null
+        }
+        submitting={editing}
+        onCancel={() => setEditOpen(false)}
+        onSubmit={(values) => void handleEditSubmit(values)}
+      />
     </>
   );
 }

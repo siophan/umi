@@ -356,6 +356,7 @@ export function registerAdminContentRoutes(adminRouter: ExpressRouter) {
           response,
           await updateAdminGuess(
             getRouteParam(request.params.id),
+            getRequestAdmin(request).id,
             request.body as UpdateAdminGuessPayload,
           ),
         );

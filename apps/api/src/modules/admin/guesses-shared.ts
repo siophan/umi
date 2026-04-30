@@ -8,6 +8,7 @@ import {
 } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { PAY_STATUS_PAID } from '../payment/payment-shared';
 
 export const GUESS_DRAFT = 10;
 export const GUESS_PENDING_REVIEW = 20;
@@ -32,6 +33,7 @@ export const REVIEW_ACTION_APPROVE = 20;
 export const REVIEW_ACTION_REJECT = 30;
 export const REVIEW_ACTION_ABANDON = 40;
 export const REVIEW_ACTION_SETTLE = 50;
+export const REVIEW_ACTION_EDIT = 60;
 
 export const INVITATION_PENDING = 10;
 export const INVITATION_ACCEPTED = 30;
@@ -56,6 +58,7 @@ export type GuessRow = {
   creator_id: number | string;
   category_id: number | string | null;
   category: string | null;
+  guess_image_url: string | null;
   product_id: number | string | null;
   product_name: string | null;
   brand_name: string | null;
@@ -391,6 +394,7 @@ export function buildGuessSummary(
   row: GuessRow,
   options: GuessOptionRow[],
   voteCountMap: Map<string, number>,
+  participantCount = 0,
 ): GuessSummary {
   return {
     id: toEntityId(row.id),
@@ -399,9 +403,11 @@ export function buildGuessSummary(
     reviewStatus: mapGuessReviewStatus(row.review_status),
     categoryId: toOptionalStringId(row.category_id),
     category: row.category || '未分类',
+    imageUrl: row.guess_image_url ?? null,
     endTime: toIsoString(row.end_time),
     creatorId: toEntityId(row.creator_id),
     product: buildProductSummary(row),
+    participantCount,
     options: options.map((option) => ({
       id: `${String(row.id)}-${Number(option.option_index)}`,
       optionIndex: Number(option.option_index),
@@ -425,6 +431,7 @@ export async function getGuessRows() {
         g.end_time,
         g.creator_id,
         g.category_id,
+        g.image_url AS guess_image_url,
         COALESCE(gc.name, pc.name) AS category,
         p.id AS product_id,
         bp.name AS product_name,
@@ -489,12 +496,40 @@ export async function getGuessVoteRows(guessIds: string[]) {
         COUNT(*) AS vote_count
       FROM guess_bet
       WHERE guess_id IN (?)
+        AND pay_status = ?
       GROUP BY guess_id, choice_idx
     `,
-    [guessIds],
+    [guessIds, PAY_STATUS_PAID],
   );
 
   return rows as GuessVoteRow[];
+}
+
+export async function getGuessParticipantCounts(guessIds: string[]) {
+  const map = new Map<string, number>();
+  if (guessIds.length === 0) {
+    return map;
+  }
+
+  const db = getDbPool();
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        guess_id,
+        COUNT(DISTINCT user_id) AS participant_count
+      FROM guess_bet
+      WHERE guess_id IN (?)
+        AND pay_status = ?
+      GROUP BY guess_id
+    `,
+    [guessIds, PAY_STATUS_PAID],
+  );
+
+  for (const row of rows as Array<{ guess_id: number | string; participant_count: number | string }>) {
+    map.set(String(row.guess_id), Number(row.participant_count ?? 0));
+  }
+
+  return map;
 }
 
 export async function getOptionTextMap(guessIds: string[]) {

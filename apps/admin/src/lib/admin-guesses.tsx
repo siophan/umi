@@ -68,12 +68,12 @@ export function buildGuessStatusItems(guesses: GuessSummary[]) {
     },
     {
       key: 'abandoned',
-      label: '已废弃',
+      label: '已作废',
       count: guesses.filter((item) => item.status === 'abandoned').length,
     },
     {
       key: 'cancelled',
-      label: '已取消',
+      label: '审核拒绝',
       count: guesses.filter((item) => item.status === 'cancelled').length,
     },
   ] satisfies Array<{ key: GuessStatusFilter; label: string; count: number }>;
@@ -119,10 +119,6 @@ export function buildGuessBrandOptions(guesses: GuessSummary[]) {
       value,
     }),
   );
-}
-
-export function getGuessTotalVotes(guess: GuessSummary) {
-  return guess.options.reduce((sum, option) => sum + option.voteCount, 0);
 }
 
 export function buildGuessColumns(args: {
@@ -184,7 +180,7 @@ export function buildGuessColumns(args: {
     },
     {
       title: '参与人数',
-      render: (_, record) => getGuessTotalVotes(record),
+      render: (_, record) => record.participantCount ?? 0,
     },
     {
       title: '截止时间',

@@ -40,6 +40,7 @@ import {
   GUESS_TYPE_STANDARD,
   REVIEW_ACTION_ABANDON,
   REVIEW_ACTION_APPROVE,
+  REVIEW_ACTION_EDIT,
   REVIEW_ACTION_REJECT,
   REVIEW_ACTION_SETTLE,
   REVIEW_APPROVED,
@@ -51,6 +52,7 @@ import {
   buildVoteCountLookup,
   ensureGuessPendingReview,
   getGuessOptionRows,
+  getGuessParticipantCounts,
   getGuessRows,
   getGuessVoteRows,
   normalizeCreateGuessEndTime,
@@ -77,6 +79,7 @@ type AdminGuessDetailBaseRow = {
   category_name: string | null;
   description: string | null;
   topic_detail: string | null;
+  guess_image_url: string | null;
   scope: number | string;
   settlement_mode: number | string;
   end_time: Date | string | null;
@@ -164,15 +167,19 @@ function mapReviewActionLabel(action: number | string) {
   if (code === REVIEW_ACTION_SETTLE) {
     return { action: 'settle' as const, label: '手动开奖' as const };
   }
+  if (code === REVIEW_ACTION_EDIT) {
+    return { action: 'edit' as const, label: '运营编辑' as const };
+  }
   return { action: 'submit' as const, label: '提交审核' as const };
 }
 
 export async function getAdminGuesses(): Promise<GuessListResult> {
   const rows = await getGuessRows();
   const guessIds = rows.map((row) => String(row.id));
-  const [optionRows, voteRows] = await Promise.all([
+  const [optionRows, voteRows, participantCounts] = await Promise.all([
     getGuessOptionRows(guessIds),
     getGuessVoteRows(guessIds),
+    getGuessParticipantCounts(guessIds),
   ]);
 
   const optionsByGuess = groupRowsByGuess(optionRows);
@@ -180,7 +187,12 @@ export async function getAdminGuesses(): Promise<GuessListResult> {
 
   return {
     items: rows.map((row) =>
-      buildGuessSummary(row, optionsByGuess.get(String(row.id)) || [], voteCountMap),
+      buildGuessSummary(
+        row,
+        optionsByGuess.get(String(row.id)) || [],
+        voteCountMap,
+        participantCounts.get(String(row.id)) ?? 0,
+      ),
     ),
     nextCursor: null,
     hasMore: false,
@@ -201,6 +213,7 @@ export async function getAdminGuessDetail(guessId: string) {
         gc.name AS category_name,
         g.description,
         g.topic_detail,
+        g.image_url AS guess_image_url,
         g.scope,
         g.settlement_mode,
         g.end_time,
@@ -354,6 +367,7 @@ export async function getAdminGuessDetail(guessId: string) {
       creatorName: guess.creator_name ?? '-',
       description: guess.description ?? null,
       topicDetail: guess.topic_detail ?? null,
+      imageUrl: guess.guess_image_url ?? null,
       scope: Number(guess.scope ?? 0) === GUESS_SCOPE_PUBLIC ? 'public' : 'friends',
       settlementMode: Number(guess.settlement_mode ?? 0) === SETTLEMENT_MODE_ORACLE ? 'oracle' : 'manual',
       endTime: guess.end_time ? new Date(guess.end_time).toISOString() : null,
@@ -543,6 +557,7 @@ export async function createAdminGuess(
 
 export async function updateAdminGuess(
   guessId: string,
+  adminId: string,
   payload: UpdateAdminGuessPayload,
 ): Promise<UpdateAdminGuessResult> {
   const db = getDbPool();
@@ -552,11 +567,18 @@ export async function updateAdminGuess(
     await connection.beginTransaction();
 
     const [guessRows] = await connection.query<mysql.RowDataPacket[]>(
-      `SELECT id, status, end_time FROM guess WHERE id = ? LIMIT 1 FOR UPDATE`,
+      `SELECT id, status, title, description, image_url, end_time FROM guess WHERE id = ? LIMIT 1 FOR UPDATE`,
       [guessId],
     );
     const guess = guessRows[0] as
-      | { id: number | string; status: number | string; end_time: Date | string | null }
+      | {
+          id: number | string;
+          status: number | string;
+          title: string;
+          description: string | null;
+          image_url: string | null;
+          end_time: Date | string | null;
+        }
       | undefined;
     if (!guess) {
       throw new Error('竞猜不存在');
@@ -569,24 +591,36 @@ export async function updateAdminGuess(
 
     const updates: string[] = [];
     const params: Array<string | Date | null> = [];
+    const diff: Record<string, { from: unknown; to: unknown }> = {};
 
     if (payload.title !== undefined) {
       const title = payload.title.trim();
       if (!title) {
         throw new Error('竞猜标题不能为空');
       }
-      updates.push('title = ?');
-      params.push(title);
+      if (title !== guess.title) {
+        updates.push('title = ?');
+        params.push(title);
+        diff.title = { from: guess.title, to: title };
+      }
     }
 
     if (payload.description !== undefined) {
-      updates.push('description = ?');
-      params.push(payload.description?.trim() || null);
+      const next = payload.description?.trim() || null;
+      if (next !== (guess.description ?? null)) {
+        updates.push('description = ?');
+        params.push(next);
+        diff.description = { from: guess.description ?? null, to: next };
+      }
     }
 
     if (payload.imageUrl !== undefined) {
-      updates.push('image_url = ?');
-      params.push(payload.imageUrl?.trim() || null);
+      const next = payload.imageUrl?.trim() || null;
+      if (next !== (guess.image_url ?? null)) {
+        updates.push('image_url = ?');
+        params.push(next);
+        diff.imageUrl = { from: guess.image_url ?? null, to: next };
+      }
     }
 
     if (payload.endTime !== undefined) {
@@ -601,8 +635,14 @@ export async function updateAdminGuess(
       if (parsed.getTime() < currentEndTime) {
         throw new Error('截止时间只能延长');
       }
-      updates.push('end_time = ?');
-      params.push(parsed);
+      if (parsed.getTime() !== currentEndTime) {
+        updates.push('end_time = ?');
+        params.push(parsed);
+        diff.endTime = {
+          from: guess.end_time ? new Date(guess.end_time).toISOString() : null,
+          to: parsed.toISOString(),
+        };
+      }
     }
 
     if (updates.length === 0) {
@@ -614,6 +654,16 @@ export async function updateAdminGuess(
     await connection.execute(
       `UPDATE guess SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?`,
       params,
+    );
+
+    await connection.execute(
+      `
+        INSERT INTO guess_review_log (
+          guess_id, reviewer_id, action, from_status, to_status, note,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      `,
+      [guessId, adminId, REVIEW_ACTION_EDIT, status, status, JSON.stringify(diff)],
     );
 
     await connection.commit();
