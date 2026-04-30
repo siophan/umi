@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs, SEARCH_THEME } from '../components/admin-list-controls';
+import { WarehouseConsignDetailDrawer } from '../components/warehouse-consign-detail-drawer';
 import type { AdminConsignRow } from '../lib/api/orders';
 import { cancelAdminConsign, fetchAdminConsignRows } from '../lib/api/orders';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
@@ -71,6 +72,7 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
 
   const [cancelTarget, setCancelTarget] = useState<AdminConsignRow | null>(null);
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [selectedConsignId, setSelectedConsignId] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -211,9 +213,7 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
           <Button
             size="small"
             type="link"
-            onClick={() => {
-              window.location.hash = `#/warehouse/consign/detail/${record.id}`;
-            }}
+            onClick={() => setSelectedConsignId(record.id)}
           >
             查看
           </Button>
@@ -343,6 +343,12 @@ export function WarehouseConsignPage({ refreshToken = 0 }: WarehouseConsignPageP
           </Form>
         </Modal>
       </ConfigProvider>
+
+      <WarehouseConsignDetailDrawer
+        consignId={selectedConsignId}
+        onClose={() => setSelectedConsignId(null)}
+        onRefresh={() => setActionSeed((value) => value + 1)}
+      />
     </div>
   );
 }

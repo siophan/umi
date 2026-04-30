@@ -42,6 +42,24 @@ const CONSIGN_BASE_SQL = `
   LEFT JOIN user_profile buyer_up ON buyer_up.user_id = ct.buyer_user_id
 `;
 
+// 运行时检测 consign_trade.cancel_reason 列是否存在（迁移 SQL 待运维执行场景下做兼容）
+let cancelReasonColumnReady: boolean | null = null;
+async function ensureCancelReasonColumn() {
+  if (cancelReasonColumnReady !== null) return cancelReasonColumnReady;
+  const db = getDbPool();
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
+    `
+      SELECT COUNT(*) AS cnt
+      FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND table_name = 'consign_trade'
+        AND column_name = 'cancel_reason'
+    `,
+  );
+  cancelReasonColumnReady = Number((rows[0] as { cnt?: number | string } | undefined)?.cnt ?? 0) > 0;
+  return cancelReasonColumnReady;
+}
+
 function clampPagination(page: number | undefined, pageSize: number | undefined) {
   const safePage = Number.isFinite(page) && (page ?? 0) > 0 ? Math.floor(page!) : 1;
   const safePageSize =
@@ -135,32 +153,35 @@ function sanitizeConsignRow(row: AdminConsignQueryRow): AdminConsignRow {
   };
 }
 
-const SELECT_COLUMNS = `
-  ct.id,
-  ct.trade_no,
-  ct.physical_item_id,
-  ct.seller_user_id,
-  seller_up.name AS seller_user_name,
-  ct.buyer_user_id,
-  buyer_up.name AS buyer_user_name,
-  ct.order_id,
-  o.order_sn,
-  ct.status,
-  ct.settlement_status,
-  ct.sale_amount,
-  ct.commission_amount,
-  ct.seller_amount,
-  pw.consign_price,
-  ct.listed_at,
-  ct.traded_at,
-  ct.settled_at,
-  ct.canceled_at,
-  ct.cancel_reason,
-  ct.created_at,
-  bp.name AS product_name,
-  bp.default_img AS product_img,
-  pw.source_virtual_id
-`;
+function buildSelectColumns(hasCancelReason: boolean) {
+  const cancelReasonExpr = hasCancelReason ? 'ct.cancel_reason' : 'NULL AS cancel_reason';
+  return `
+    ct.id,
+    ct.trade_no,
+    ct.physical_item_id,
+    ct.seller_user_id,
+    seller_up.name AS seller_user_name,
+    ct.buyer_user_id,
+    buyer_up.name AS buyer_user_name,
+    ct.order_id,
+    o.order_sn,
+    ct.status,
+    ct.settlement_status,
+    ct.sale_amount,
+    ct.commission_amount,
+    ct.seller_amount,
+    pw.consign_price,
+    ct.listed_at,
+    ct.traded_at,
+    ct.settled_at,
+    ct.canceled_at,
+    ${cancelReasonExpr},
+    ct.created_at,
+    bp.name AS product_name,
+    bp.default_img AS product_img,
+    pw.source_virtual_id
+  `;
+}
 
 export async function getAdminConsignRows(
   params: AdminConsignListParams = {},
@@ -183,10 +204,11 @@ export async function getAdminConsignRows(
   }
 
   const fullWhere = fullClauses.length > 0 ? `WHERE ${fullClauses.join(' AND ')}` : '';
+  const hasCancelReason = await ensureCancelReasonColumn();
 
   const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
-      SELECT ${SELECT_COLUMNS}
+      SELECT ${buildSelectColumns(hasCancelReason)}
       ${CONSIGN_BASE_SQL}
       ${fullWhere}
       ORDER BY COALESCE(ct.traded_at, ct.canceled_at, ct.listed_at, ct.created_at) DESC, ct.id DESC
@@ -252,9 +274,10 @@ export async function getAdminConsignRows(
 
 export async function getAdminConsignDetail(consignId: string): Promise<AdminConsignRow> {
   const db = getDbPool();
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const hasCancelReason = await ensureCancelReasonColumn();
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
-      SELECT ${SELECT_COLUMNS}
+      SELECT ${buildSelectColumns(hasCancelReason)}
       ${CONSIGN_BASE_SQL}
       WHERE ct.id = ?
       LIMIT 1
@@ -313,19 +336,35 @@ export async function cancelAdminConsign(consignId: string, reason: string) {
     }
 
     const canceledAt = new Date();
+    const hasCancelReason = await ensureCancelReasonColumn();
 
-    await connection.execute(
-      `
-        UPDATE consign_trade
-        SET
-          status = ?,
-          canceled_at = ?,
-          cancel_reason = ?,
-          updated_at = ?
-        WHERE id = ?
-      `,
-      [CONSIGN_CANCELED, canceledAt, trimmedReason, canceledAt, consignId],
-    );
+    if (hasCancelReason) {
+      await connection.execute(
+        `
+          UPDATE consign_trade
+          SET
+            status = ?,
+            canceled_at = ?,
+            cancel_reason = ?,
+            updated_at = ?
+          WHERE id = ?
+        `,
+        [CONSIGN_CANCELED, canceledAt, trimmedReason, canceledAt, consignId],
+      );
+    } else {
+      // cancel_reason 列尚未迁移：先只走 status/canceled_at，理由暂不持久化
+      await connection.execute(
+        `
+          UPDATE consign_trade
+          SET
+            status = ?,
+            canceled_at = ?,
+            updated_at = ?
+          WHERE id = ?
+        `,
+        [CONSIGN_CANCELED, canceledAt, canceledAt, consignId],
+      );
+    }
 
     if (record.physical_item_id != null) {
       await connection.execute(

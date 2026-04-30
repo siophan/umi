@@ -4,6 +4,7 @@ import { Alert, ConfigProvider, Form, Input, Select } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { WarehouseItemDetailDrawer } from '../components/warehouse-item-detail-drawer';
 import { fetchAdminWarehouseItems } from '../lib/api/catalog';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import {
@@ -32,6 +33,7 @@ export function WarehousePage({
   const [status, setStatus] = useState<WarehouseStatusFilter>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [form] = Form.useForm<WarehouseFilters>();
 
   useEffect(() => {
@@ -88,9 +90,7 @@ export function WarehousePage({
     () =>
       buildWarehouseColumns({
         warehouseType,
-        onView: (record) => {
-          window.location.hash = `#/warehouse/${warehouseType}/detail/${record.id}`;
-        },
+        onView: (record) => setSelectedItemId(record.id),
       }),
     [warehouseType],
   );
@@ -161,6 +161,12 @@ export function WarehousePage({
           toolBarRender={() => []}
         />
       </ConfigProvider>
+
+      <WarehouseItemDetailDrawer
+        itemId={selectedItemId}
+        warehouseType={warehouseType}
+        onClose={() => setSelectedItemId(null)}
+      />
     </div>
   );
 }

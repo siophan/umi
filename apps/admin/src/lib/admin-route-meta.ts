@@ -35,27 +35,6 @@ export const ADMIN_DETAIL_ROUTE_META = [
     parentName: '竞猜管理',
   },
   {
-    prefix: '/warehouse/virtual/detail/',
-    selectedPath: '/warehouse/virtual',
-    accessPath: '/warehouse/virtual',
-    name: '虚拟仓详情',
-    parentName: '履约管理',
-  },
-  {
-    prefix: '/warehouse/physical/detail/',
-    selectedPath: '/warehouse/physical',
-    accessPath: '/warehouse/physical',
-    name: '实体仓详情',
-    parentName: '履约管理',
-  },
-  {
-    prefix: '/warehouse/consign/detail/',
-    selectedPath: '/warehouse/consign',
-    accessPath: '/warehouse/consign',
-    name: '寄售详情',
-    parentName: '履约管理',
-  },
-  {
     prefix: '/system/chats/detail/',
     selectedPath: '/system/chats',
     accessPath: '/system/chats',

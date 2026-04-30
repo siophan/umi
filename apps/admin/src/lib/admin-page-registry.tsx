@@ -35,9 +35,7 @@ import { SystemRankingsPage } from '../pages/system-rankings-page';
 import { SystemSettingsPage } from '../pages/system-settings-page';
 import { SystemUsersPage } from '../pages/system-users-page';
 import { UsersPage } from '../pages/users-page';
-import { WarehouseConsignDetailPage } from '../pages/warehouse-consign-detail-page';
 import { WarehouseConsignPage } from '../pages/warehouse-consign-page';
-import { WarehouseItemDetailPage } from '../pages/warehouse-item-detail-page';
 import { WarehousePage } from '../pages/warehouse-page';
 
 type AdminPageProps = { refreshToken?: number };
@@ -98,27 +96,6 @@ export function renderAdminPage(path: string, refreshToken?: number): ReactNode 
   if (path.startsWith('/guesses/detail/')) {
     const guessId = path.slice('/guesses/detail/'.length).trim();
     return guessId ? <GuessDetailPage guessId={guessId} refreshToken={refreshToken} /> : null;
-  }
-
-  if (path.startsWith('/warehouse/virtual/detail/')) {
-    const itemId = path.slice('/warehouse/virtual/detail/'.length).trim();
-    return itemId ? (
-      <WarehouseItemDetailPage itemId={itemId} refreshToken={refreshToken} warehouseType="virtual" />
-    ) : null;
-  }
-
-  if (path.startsWith('/warehouse/physical/detail/')) {
-    const itemId = path.slice('/warehouse/physical/detail/'.length).trim();
-    return itemId ? (
-      <WarehouseItemDetailPage itemId={itemId} refreshToken={refreshToken} warehouseType="physical" />
-    ) : null;
-  }
-
-  if (path.startsWith('/warehouse/consign/detail/')) {
-    const consignId = path.slice('/warehouse/consign/detail/'.length).trim();
-    return consignId ? (
-      <WarehouseConsignDetailPage consignId={consignId} refreshToken={refreshToken} />
-    ) : null;
   }
 
   if (path.startsWith('/system/chats/detail/')) {
