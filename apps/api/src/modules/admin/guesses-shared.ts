@@ -30,6 +30,7 @@ export const REVIEW_REJECTED = 40;
 
 export const REVIEW_ACTION_APPROVE = 20;
 export const REVIEW_ACTION_REJECT = 30;
+export const REVIEW_ACTION_ABANDON = 40;
 
 export const INVITATION_PENDING = 10;
 export const INVITATION_ACCEPTED = 30;

@@ -54,7 +54,6 @@ export const ADMIN_PERMISSION_DEFINITIONS: AdminPermissionDefinition[] = [
   ...menuPermission({ code: 'product.brands', name: '品牌商品', module: 'product', sort: 510, path: '/products/brands', actions: ['create', 'edit', 'manage'] }),
   ...menuPermission({ code: 'guess.list', name: '竞猜列表', module: 'guess', sort: 610, path: '/guesses/list', actions: ['create', 'edit', 'manage'] }),
   ...menuPermission({ code: 'guess.friends', name: '好友竞猜', module: 'guess', sort: 630, path: '/guesses/friends', actions: ['edit', 'manage'] }),
-  ...menuPermission({ code: 'guess.pk', name: 'PK 对战', module: 'guess', sort: 640, path: '/pk', actions: ['edit', 'manage'] }),
   ...menuPermission({ code: 'order.list', name: '订单列表', module: 'order', sort: 710, path: '/orders/list', actions: ['edit', 'manage'] }),
   ...menuPermission({ code: 'order.transactions', name: '交易流水', module: 'order', sort: 720, path: '/orders/transactions', actions: ['manage'] }),
   ...menuPermission({ code: 'order.warehouse.virtual', name: '虚拟仓库', module: 'order', sort: 740, path: '/warehouse/virtual', actions: ['edit', 'manage'] }),

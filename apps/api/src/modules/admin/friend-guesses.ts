@@ -4,7 +4,9 @@ import { getDbPool } from '../../lib/db';
 import {
   FRIEND_CONFIRM_CONFIRMED,
   FRIEND_CONFIRM_REJECTED,
+  GUESS_ABANDONED,
   GUESS_ACTIVE,
+  GUESS_PENDING_SETTLE,
   GUESS_REJECTED,
   GUESS_SCOPE_FRIENDS,
   GUESS_SETTLED,
@@ -20,7 +22,12 @@ import {
   toOptionalStringId,
 } from './guesses-shared';
 
-export type AdminFriendGuessStatus = 'pending' | 'active' | 'pending_confirm' | 'ended';
+export type AdminFriendGuessStatus =
+  | 'pending'
+  | 'active'
+  | 'pending_confirm'
+  | 'settled'
+  | 'abandoned';
 
 export interface AdminFriendGuessItem {
   id: string;
@@ -31,7 +38,7 @@ export interface AdminFriendGuessItem {
   participants: number;
   reward: string;
   status: AdminFriendGuessStatus;
-  statusLabel: '待开赛' | '进行中' | '待确认' | '已结束';
+  statusLabel: '待开赛' | '进行中' | '待确认' | '已结算' | '已作废';
   endTime: string;
   invitationCount: number;
   pendingInvitations: number;
@@ -60,15 +67,23 @@ function mapFriendGuessStatus(
   const status = Number(guessStatus ?? 0);
   const review = Number(reviewStatus ?? 0);
 
+  if (status === GUESS_ABANDONED || status === GUESS_REJECTED) {
+    return 'abandoned';
+  }
+
+  if (status === GUESS_PENDING_SETTLE) {
+    return 'pending_confirm';
+  }
+
   if (status === GUESS_ACTIVE && review === 30) {
     return 'active';
   }
 
-  if (status === GUESS_SETTLED || status === GUESS_REJECTED) {
+  if (status === GUESS_SETTLED) {
     if (betParticipantCount > 0 && confirmedResults + rejectedResults < betParticipantCount) {
       return 'pending_confirm';
     }
-    return 'ended';
+    return 'settled';
   }
 
   return 'pending';
@@ -85,8 +100,12 @@ function mapFriendGuessStatusLabel(
     return '待确认';
   }
 
-  if (status === 'ended') {
-    return '已结束';
+  if (status === 'settled') {
+    return '已结算';
+  }
+
+  if (status === 'abandoned') {
+    return '已作废';
   }
 
   return '待开赛';
@@ -106,7 +125,7 @@ async function getFriendGuessRows() {
         invitation_stats.inviter_id,
         inviter_profile.name AS inviter_name,
         inviter_user.phone_number AS inviter_phone,
-        p.name AS product_name,
+        bp.name AS product_name,
         invitation_stats.invitation_count,
         invitation_stats.pending_count,
         invitation_stats.accepted_count,
@@ -158,6 +177,7 @@ async function getFriendGuessRows() {
       ) first_gp ON first_gp.guess_id = g.id
       LEFT JOIN guess_product gp ON gp.id = first_gp.first_guess_product_id
       LEFT JOIN product p ON p.id = gp.product_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE g.scope = ${GUESS_SCOPE_FRIENDS}
       ORDER BY g.created_at DESC, g.id DESC
     `,
@@ -182,7 +202,7 @@ export async function getAdminFriendGuesses(): Promise<AdminFriendGuessListResul
         rejectedResults,
         betParticipantCount,
       );
-      const participants = Math.max(2, acceptedInvitations + 1, betParticipantCount);
+      const participants = betParticipantCount;
       const inviterId = toOptionalStringId(row.inviter_id ?? row.creator_id) ?? '';
 
       return {

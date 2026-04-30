@@ -124,15 +124,6 @@ export const ADMIN_PERMISSION_DEFINITIONS = [
         path: '/guesses/friends',
     },
     {
-        code: 'guess.pk.view',
-        name: 'PK 对战',
-        module: 'guess',
-        action: 'view',
-        parentCode: 'guess.manage',
-        sort: 640,
-        path: '/pk',
-    },
-    {
         code: 'order.manage',
         name: '订单与履约',
         module: 'order',

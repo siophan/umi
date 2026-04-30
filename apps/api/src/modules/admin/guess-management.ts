@@ -2,14 +2,20 @@ import type mysql from 'mysql2/promise';
 import {
   toEntityId,
   toOptionalEntityId,
+  type AbandonAdminGuessPayload,
+  type AbandonAdminGuessResult,
   type CreateAdminGuessPayload,
   type CreateAdminGuessResult,
   type GuessListResult,
   type ReviewAdminGuessPayload,
   type ReviewAdminGuessResult,
+  type UpdateAdminGuessPayload,
+  type UpdateAdminGuessResult,
 } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { GUESS_ABANDONED, GUESS_SETTLED } from '../guess/guess-shared';
+import { refundAbandonedGuessBets } from '../guess/guess-abandon';
 import {
   GUESS_ACTIVE,
   GUESS_PENDING_REVIEW,
@@ -19,6 +25,7 @@ import {
   GUESS_SCOPE_PUBLIC,
   GUESS_SOURCE_OPERATION,
   GUESS_TYPE_STANDARD,
+  REVIEW_ACTION_ABANDON,
   REVIEW_ACTION_APPROVE,
   REVIEW_ACTION_REJECT,
   REVIEW_APPROVED,
@@ -137,6 +144,9 @@ function mapReviewActionLabel(action: number | string) {
   if (code === REVIEW_ACTION_REJECT) {
     return { action: 'reject' as const, label: '审核拒绝' as const };
   }
+  if (code === REVIEW_ACTION_ABANDON) {
+    return { action: 'abandon' as const, label: '运营作废' as const };
+  }
   return { action: 'submit' as const, label: '提交审核' as const };
 }
 
@@ -181,9 +191,9 @@ export async function getAdminGuessDetail(guessId: string) {
         g.created_at,
         g.updated_at,
         p.id AS product_id,
-        p.name AS product_name,
+        bp.name AS product_name,
         b.name AS brand_name,
-        COALESCE(p.image_url, bp.default_img, g.image_url) AS product_image_url,
+        COALESCE(bp.default_img, g.image_url) AS product_image_url,
         p.price AS product_price,
         p.guess_price AS product_guess_price
       FROM guess g
@@ -512,6 +522,160 @@ export async function createAdminGuess(
   } finally {
     connection.release();
   }
+}
+
+export async function updateAdminGuess(
+  guessId: string,
+  payload: UpdateAdminGuessPayload,
+): Promise<UpdateAdminGuessResult> {
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [guessRows] = await connection.query<mysql.RowDataPacket[]>(
+      `SELECT id, status, end_time FROM guess WHERE id = ? LIMIT 1 FOR UPDATE`,
+      [guessId],
+    );
+    const guess = guessRows[0] as
+      | { id: number | string; status: number | string; end_time: Date | string | null }
+      | undefined;
+    if (!guess) {
+      throw new Error('竞猜不存在');
+    }
+
+    const status = Number(guess.status ?? 0);
+    if (status === GUESS_SETTLED || status === GUESS_ABANDONED || status === GUESS_REJECTED) {
+      throw new Error('当前状态的竞猜不可编辑');
+    }
+
+    const updates: string[] = [];
+    const params: Array<string | Date | null> = [];
+
+    if (payload.title !== undefined) {
+      const title = payload.title.trim();
+      if (!title) {
+        throw new Error('竞猜标题不能为空');
+      }
+      updates.push('title = ?');
+      params.push(title);
+    }
+
+    if (payload.description !== undefined) {
+      updates.push('description = ?');
+      params.push(payload.description?.trim() || null);
+    }
+
+    if (payload.imageUrl !== undefined) {
+      updates.push('image_url = ?');
+      params.push(payload.imageUrl?.trim() || null);
+    }
+
+    if (payload.endTime !== undefined) {
+      const parsed = new Date(payload.endTime);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new Error('截止时间不合法');
+      }
+      if (parsed.getTime() <= Date.now()) {
+        throw new Error('截止时间必须晚于当前时间');
+      }
+      const currentEndTime = guess.end_time ? new Date(guess.end_time).getTime() : 0;
+      if (parsed.getTime() < currentEndTime) {
+        throw new Error('截止时间只能延长');
+      }
+      updates.push('end_time = ?');
+      params.push(parsed);
+    }
+
+    if (updates.length === 0) {
+      await connection.rollback();
+      return { id: toEntityId(guessId) };
+    }
+
+    params.push(guessId);
+    await connection.execute(
+      `UPDATE guess SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?`,
+      params,
+    );
+
+    await connection.commit();
+    return { id: toEntityId(guessId) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+export async function abandonAdminGuess(
+  guessId: string,
+  adminId: string,
+  payload: AbandonAdminGuessPayload,
+): Promise<AbandonAdminGuessResult> {
+  const reason = payload.reason?.trim();
+  if (!reason) {
+    throw new Error('请填写作废理由');
+  }
+
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [guessRows] = await connection.query<mysql.RowDataPacket[]>(
+      `SELECT id, status FROM guess WHERE id = ? LIMIT 1 FOR UPDATE`,
+      [guessId],
+    );
+    const guess = guessRows[0] as { id: number | string; status: number | string } | undefined;
+    if (!guess) {
+      throw new Error('竞猜不存在');
+    }
+
+    const fromStatus = Number(guess.status ?? 0);
+    if (fromStatus === GUESS_SETTLED) {
+      throw new Error('已结算的竞猜不能作废');
+    }
+
+    if (fromStatus !== GUESS_ABANDONED) {
+      await connection.execute(
+        `UPDATE guess SET status = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?`,
+        [GUESS_ABANDONED, guessId],
+      );
+    }
+
+    await connection.execute(
+      `
+        INSERT INTO guess_review_log (
+          guess_id,
+          reviewer_id,
+          action,
+          from_status,
+          to_status,
+          note,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      `,
+      [guessId, adminId, REVIEW_ACTION_ABANDON, fromStatus, GUESS_ABANDONED, reason],
+    );
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  await refundAbandonedGuessBets(guessId);
+
+  return {
+    id: toEntityId(guessId),
+    status: 'abandoned',
+  };
 }
 
 export async function reviewAdminGuess(

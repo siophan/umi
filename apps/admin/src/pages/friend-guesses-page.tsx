@@ -1,11 +1,22 @@
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Form, Input, Select, Space, Tag } from 'antd';
+import {
+  Alert,
+  Button,
+  ConfigProvider,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Tag,
+  message as messageApi,
+} from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
-import { AdminSearchPanel, AdminStatusTabs } from '../components/admin-list-controls';
+import { AdminSearchPanel, AdminStatusTabs, SEARCH_THEME } from '../components/admin-list-controls';
 import type { AdminFriendGuessItem } from '../lib/api/catalog';
-import { fetchAdminFriendGuesses } from '../lib/api/catalog';
+import { abandonAdminGuess, fetchAdminFriendGuesses } from '../lib/api/catalog';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import { formatAmount, formatDateTime, formatNumber } from '../lib/format';
 
@@ -28,13 +39,26 @@ function paymentModeLabel(mode: number | null) {
   return '-';
 }
 
+function statusTagColor(status: AdminFriendGuessItem['status']) {
+  if (status === 'active') return 'processing';
+  if (status === 'pending_confirm') return 'gold';
+  if (status === 'settled') return 'success';
+  if (status === 'abandoned') return 'red';
+  return 'warning';
+}
+
 export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) {
   const [searchForm] = Form.useForm<FriendGuessFilters>();
+  const [abandonForm] = Form.useForm<{ reason: string }>();
   const [rows, setRows] = useState<AdminFriendGuessItem[]>(emptyRows);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<FriendGuessFilters>({});
   const [status, setStatus] = useState<'all' | AdminFriendGuessItem['status']>('all');
+  const [abandonTarget, setAbandonTarget] = useState<AdminFriendGuessItem | null>(null);
+  const [abandoning, setAbandoning] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const [toast, toastHolder] = messageApi.useMessage();
 
   useEffect(() => {
     let alive = true;
@@ -57,7 +81,7 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
     return () => {
       alive = false;
     };
-  }, [refreshToken]);
+  }, [refreshToken, reloadNonce]);
 
   const paymentModeOptions = useMemo(
     () => [
@@ -91,6 +115,23 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
       }),
     [filters.inviter, filters.paymentMode, filters.reward, filters.roomName, rows, status],
   );
+
+  async function handleAbandonSubmit() {
+    if (!abandonTarget) return;
+    const values = await abandonForm.validateFields();
+    setAbandoning(true);
+    try {
+      await abandonAdminGuess(abandonTarget.guessId, { reason: values.reason.trim() });
+      toast.success('已提交作废，已支付的投注将逐单原路退款');
+      setAbandonTarget(null);
+      abandonForm.resetFields();
+      setReloadNonce((n) => n + 1);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '作废失败');
+    } finally {
+      setAbandoning(false);
+    }
+  }
 
   const columns: ProColumns<AdminFriendGuessItem>[] = [
     {
@@ -128,27 +169,13 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
       title: '状态',
       dataIndex: 'status',
       width: 120,
-      render: (_, record) => (
-        <Tag
-          color={
-            record.status === 'active'
-              ? 'processing'
-              : record.status === 'pending_confirm'
-                ? 'gold'
-                : record.status === 'ended'
-                  ? 'default'
-                  : 'warning'
-          }
-        >
-          {record.statusLabel}
-        </Tag>
-      ),
+      render: (_, record) => <Tag color={statusTagColor(record.status)}>{record.statusLabel}</Tag>,
     },
     { title: '截止时间', dataIndex: 'endTime', width: 180, render: (_, record) => formatDateTime(record.endTime) },
     {
       title: '操作',
       key: 'actions',
-      width: 160,
+      width: 200,
       fixed: 'right',
       valueType: 'option',
       render: (_, record) => (
@@ -162,15 +189,17 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
           >
             详情
           </Button>
-          {record.status === 'active' ? (
+          {record.status !== 'settled' && record.status !== 'abandoned' ? (
             <Button
+              danger
               size="small"
               type="link"
               onClick={() => {
-                window.location.hash = `#/guesses/detail/${record.guessId}`;
+                abandonForm.resetFields();
+                setAbandonTarget(record);
               }}
             >
-              去处理
+              作废
             </Button>
           ) : null}
         </Space>
@@ -180,6 +209,7 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
 
   return (
     <div className="page-stack">
+      {toastHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
       <AdminSearchPanel
         form={searchForm}
@@ -211,7 +241,8 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
           { key: 'pending', label: '待开赛', count: rows.filter((item) => item.status === 'pending').length },
           { key: 'active', label: '进行中', count: rows.filter((item) => item.status === 'active').length },
           { key: 'pending_confirm', label: '待确认', count: rows.filter((item) => item.status === 'pending_confirm').length },
-          { key: 'ended', label: '已结束', count: rows.filter((item) => item.status === 'ended').length },
+          { key: 'settled', label: '已结算', count: rows.filter((item) => item.status === 'settled').length },
+          { key: 'abandoned', label: '已作废', count: rows.filter((item) => item.status === 'abandoned').length },
         ]}
         onChange={(key) => setStatus(key as typeof status)}
       />
@@ -228,6 +259,50 @@ export function FriendGuessesPage({ refreshToken = 0 }: FriendGuessesPageProps) 
           search={false}
           toolBarRender={() => []}
         />
+      </ConfigProvider>
+      <ConfigProvider theme={SEARCH_THEME}>
+        <Modal
+          title="作废好友竞猜"
+          open={abandonTarget != null}
+          confirmLoading={abandoning}
+          onOk={() => void handleAbandonSubmit()}
+          onCancel={() => {
+            if (abandoning) return;
+            setAbandonTarget(null);
+            abandonForm.resetFields();
+          }}
+          okText="确认作废"
+          cancelText="取消"
+          okButtonProps={{ danger: true }}
+          destroyOnClose
+        >
+          <Alert
+            type="warning"
+            showIcon
+            message="作废后所有已支付投注将原路全额退款（含手续费），未付投注将取消。已结算的竞猜不能作废。"
+            style={{ marginBottom: 16 }}
+          />
+          <Form form={abandonForm} layout="vertical">
+            <Form.Item label="房间">
+              <span>{abandonTarget?.roomName ?? '-'}</span>
+            </Form.Item>
+            <Form.Item
+              label="作废理由"
+              name="reason"
+              rules={[
+                { required: true, message: '请填写作废理由' },
+                { whitespace: true, message: '请填写作废理由' },
+              ]}
+            >
+              <Input.TextArea
+                rows={3}
+                maxLength={200}
+                showCount
+                placeholder="例如：某选项 0 投注无法正常结算"
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
       </ConfigProvider>
     </div>
   );

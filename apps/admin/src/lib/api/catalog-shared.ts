@@ -44,6 +44,8 @@ export interface AdminBrandLibraryItem {
   freight: number | null;
   shipFrom: string | null;
   deliveryDays: string | null;
+  tags: string[];
+  collab: string | null;
   productCount: number;
   activeProductCount: number;
 }
@@ -56,8 +58,8 @@ export interface AdminFriendGuessItem {
   inviter: string;
   participants: number;
   reward: string;
-  status: 'pending' | 'active' | 'pending_confirm' | 'ended';
-  statusLabel: '待开赛' | '进行中' | '待确认' | '已结束';
+  status: 'pending' | 'active' | 'pending_confirm' | 'settled' | 'abandoned';
+  statusLabel: '待开赛' | '进行中' | '待确认' | '已结算' | '已作废';
   endTime: string;
   invitationCount: number;
   pendingInvitations: number;
@@ -72,36 +74,6 @@ export interface AdminFriendGuessItem {
   paidBy: string | null;
 }
 
-export interface AdminPkMatchItem {
-  id: string;
-  guessId: string;
-  title: string;
-  leftUserId: string;
-  leftUser: string;
-  rightUserId: string;
-  rightUser: string;
-  leftChoice: string | null;
-  rightChoice: string | null;
-  stake: number;
-  result: string;
-  resultCode: number;
-  status: 'pending' | 'active' | 'completed' | 'cancelled';
-  statusLabel: '待开赛' | '进行中' | '完成' | '已取消';
-  rewardType: number | null;
-  rewardValue: number | null;
-  rewardRefId: string | null;
-  createdAt: string;
-  settledAt: string | null;
-}
-
-export interface AdminPkMatchStats {
-  total: number;
-  pending: number;
-  active: number;
-  completed: number;
-  cancelled: number;
-  totalStakeAmount: number;
-}
 
 export interface AdminGuessDetailOption {
   id: string;
@@ -115,8 +87,8 @@ export interface AdminGuessDetailOption {
 
 export interface AdminGuessDetailReviewLog {
   id: string;
-  action: 'submit' | 'approve' | 'reject';
-  actionLabel: '提交审核' | '审核通过' | '审核拒绝';
+  action: 'submit' | 'approve' | 'reject' | 'abandon';
+  actionLabel: '提交审核' | '审核通过' | '审核拒绝' | '运营作废';
   fromStatus: number;
   toStatus: number;
   note: string | null;

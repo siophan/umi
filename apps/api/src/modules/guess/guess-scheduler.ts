@@ -2,14 +2,9 @@ import type mysql from 'mysql2/promise';
 
 import { getDbPool } from '../../lib/db';
 import { appLogger } from '../../lib/logger';
+import { PAY_STATUS_REFUNDED } from '../payment/payment-shared';
+import { refundAbandonedGuessBets } from './guess-abandon';
 import {
-  PAY_STATUS_PAID,
-  PAY_STATUS_REFUNDED,
-  payChannelCodeToKey,
-} from '../payment/payment-shared';
-import { refundPayOrder } from '../payment/payment-service';
-import {
-  BET_CANCELED,
   BET_PENDING,
   BET_WAITING_PAY,
   GUESS_ABANDONED,
@@ -26,28 +21,13 @@ type DueGuessRow = {
   min_participants: number | string | null;
 };
 
-type RefundableBetRow = {
-  id: number | string;
-  user_id: number | string;
-  amount: number | string | null;
-  status: number | string;
-  pay_status: number | string | null;
-  pay_channel: number | string | null;
-  pay_no: string | null;
-};
-
 /**
- * 流标退款：竞猜未达最低参与人数时，把所有已支付的投注按原支付通道退回。
- *
- * 不放进单一长事务里：退款 API 是外部网络请求，长事务会持锁。
- * 改为"逐单退款 + 单笔幂等更新"，依赖 pay_status=50 防重入；scheduler tick 失败时下次 tick 自动续跑。
+ * 流标退款：竞猜未达最低参与人数时，先把 guess 抢占到 ABANDONED，再逐单退款。
+ * 抢占成功后调 refundAbandonedGuessBets 复用同一份退款循环。
  */
 async function refundAndAbandon(guessId: string) {
   const db = getDbPool();
 
-  // 锁定 guess + 抢占处理权：只在 status=ACTIVE 时切到 ABANDONED 处理状态码外的"标记位"是没有的，
-  // 这里直接预先把 guess 切到 ABANDONED，让其他 tick 看到非 ACTIVE 就跳过；
-  // 即使本次中断，未退款的 bet 仍然 pay_status=20，下次会被同一函数继续清理。
   const claimConn = await db.getConnection();
   try {
     await claimConn.beginTransaction();
@@ -72,79 +52,7 @@ async function refundAndAbandon(guessId: string) {
     claimConn.release();
   }
 
-  // 拉所有需要处理的 bet：已支付的要退款，未支付的直接取消。
-  const [pendingRows] = await db.query<mysql.RowDataPacket[]>(
-    `
-      SELECT id, user_id, amount, status, pay_status, pay_channel, pay_no
-      FROM guess_bet
-      WHERE guess_id = ?
-        AND status IN (?, ?)
-    `,
-    [guessId, BET_WAITING_PAY, BET_PENDING],
-  );
-
-  for (const row of pendingRows as RefundableBetRow[]) {
-    const betId = String(row.id);
-    const status = Number(row.status);
-    const payStatus = Number(row.pay_status ?? 0);
-    const amountCents = Number(row.amount ?? 0);
-
-    // 未支付的 bet：直接取消
-    if (status === BET_WAITING_PAY) {
-      await db.execute(
-        `UPDATE guess_bet SET status = ? WHERE id = ? AND status = ?`,
-        [BET_CANCELED, betId, BET_WAITING_PAY],
-      );
-      continue;
-    }
-
-    // 已退款过的跳过（幂等）
-    if (payStatus === PAY_STATUS_REFUNDED) {
-      await db.execute(
-        `UPDATE guess_bet SET status = ? WHERE id = ? AND status <> ?`,
-        [BET_CANCELED, betId, BET_CANCELED],
-      );
-      continue;
-    }
-
-    // 已支付的 bet：调真实退款
-    if (payStatus !== PAY_STATUS_PAID || !row.pay_no || amountCents <= 0) {
-      appLogger.warn(
-        { betId, payStatus, payNo: row.pay_no, amountCents },
-        '流标退款跳过：bet 状态异常',
-      );
-      continue;
-    }
-
-    const channelKey = payChannelCodeToKey(Number(row.pay_channel ?? 0));
-    if (!channelKey) {
-      appLogger.warn({ betId, payChannel: row.pay_channel }, '流标退款跳过：未知支付渠道');
-      continue;
-    }
-
-    try {
-      await refundPayOrder(channelKey, {
-        payNo: row.pay_no,
-        refundNo: `GBR${betId}`,
-        totalCents: amountCents,
-        refundCents: amountCents,
-        reason: '竞猜流标全额退款',
-      });
-      await db.execute(
-        `UPDATE guess_bet SET status = ?, pay_status = ? WHERE id = ?`,
-        [BET_CANCELED, PAY_STATUS_REFUNDED, betId],
-      );
-      appLogger.info(
-        { betId, channel: channelKey, payNo: row.pay_no, amountCents },
-        '流标退款成功',
-      );
-    } catch (error) {
-      appLogger.error(
-        { err: error, betId, channel: channelKey, payNo: row.pay_no },
-        '流标退款失败：单笔退款将在下个 tick 自动重试',
-      );
-    }
-  }
+  await refundAbandonedGuessBets(guessId);
 }
 
 async function processDueGuess(row: DueGuessRow) {
@@ -263,9 +171,9 @@ async function runGuessTransitionTick() {
 
   for (const row of retryRows as { id: number | string }[]) {
     try {
-      await refundAndAbandon(String(row.id));
+      await refundAbandonedGuessBets(String(row.id));
     } catch (error) {
-      appLogger.error({ err: error, guessId: row.id }, 'retry refundAndAbandon failed');
+      appLogger.error({ err: error, guessId: row.id }, 'retry refundAbandonedGuessBets failed');
     }
   }
 }

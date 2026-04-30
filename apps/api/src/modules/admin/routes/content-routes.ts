@@ -1,10 +1,12 @@
 import type { Router as ExpressRouter } from 'express';
 
 import type {
+  AbandonAdminGuessPayload,
   AdjustAdminEquityPayload,
   CreateAdminGuessPayload,
   ReviewAdminGuessPayload,
   UpdateAdminCommunityReportPayload,
+  UpdateAdminGuessPayload,
   UpdateUserBanPayload,
 } from '@umi/shared';
 
@@ -24,13 +26,13 @@ import {
 } from '../content';
 import { getAdminEquityAccounts, getAdminEquityDetail, adjustAdminEquity } from '../equity';
 import {
+  abandonAdminGuess,
   createAdminGuess,
   getAdminGuessDetail,
   getAdminFriendGuesses,
   getAdminGuesses,
-  getAdminPkMatchStats,
-  getAdminPkMatches,
   reviewAdminGuess,
+  updateAdminGuess,
 } from '../guesses';
 import { getAdminUserGuesses, getAdminUserOrders } from '../users';
 import { requireExistingUserSummary, getRouteParam, toRouteHttpError } from '../route-helpers';
@@ -306,6 +308,38 @@ export function registerAdminContentRoutes(adminRouter: ExpressRouter) {
   );
 
   adminRouter.put(
+    '/guesses/:id',
+    asyncHandler(async (request, response) => {
+      try {
+        ok(
+          response,
+          await updateAdminGuess(
+            getRouteParam(request.params.id),
+            request.body as UpdateAdminGuessPayload,
+          ),
+        );
+      } catch (error) {
+        throw toRouteHttpError(
+          error,
+          {
+            status: 400,
+            code: 'ADMIN_GUESS_UPDATE_FAILED',
+            message: '编辑竞猜失败',
+          },
+          [
+            { message: '竞猜不存在', status: 404, code: 'ADMIN_GUESS_NOT_FOUND' },
+            { message: '当前状态的竞猜不可编辑', status: 400, code: 'ADMIN_GUESS_NOT_EDITABLE' },
+            { message: '竞猜标题不能为空', status: 400, code: 'ADMIN_GUESS_TITLE_REQUIRED' },
+            { message: '截止时间不合法', status: 400, code: 'ADMIN_GUESS_END_TIME_INVALID' },
+            { message: '截止时间必须晚于当前时间', status: 400, code: 'ADMIN_GUESS_END_TIME_PAST' },
+            { message: '截止时间只能延长', status: 400, code: 'ADMIN_GUESS_END_TIME_NOT_LATER' },
+          ],
+        );
+      }
+    }),
+  );
+
+  adminRouter.put(
     '/guesses/:id/review',
     asyncHandler(async (request, response) => {
       try {
@@ -336,24 +370,40 @@ export function registerAdminContentRoutes(adminRouter: ExpressRouter) {
     }),
   );
 
+  adminRouter.post(
+    '/guesses/:id/abandon',
+    asyncHandler(async (request, response) => {
+      try {
+        ok(
+          response,
+          await abandonAdminGuess(
+            getRouteParam(request.params.id),
+            getRequestAdmin(request).id,
+            request.body as AbandonAdminGuessPayload,
+          ),
+        );
+      } catch (error) {
+        throw toRouteHttpError(
+          error,
+          {
+            status: 400,
+            code: 'ADMIN_GUESS_ABANDON_FAILED',
+            message: '作废竞猜失败',
+          },
+          [
+            { message: '竞猜不存在', status: 404, code: 'ADMIN_GUESS_NOT_FOUND' },
+            { message: '请填写作废理由', status: 400, code: 'ADMIN_GUESS_ABANDON_REASON_REQUIRED' },
+            { message: '已结算的竞猜不能作废', status: 400, code: 'ADMIN_GUESS_ABANDON_AFTER_SETTLED' },
+          ],
+        );
+      }
+    }),
+  );
+
   adminRouter.get(
     '/guesses/friends',
     asyncHandler(async (_request, response) => {
       ok(response, await getAdminFriendGuesses());
-    }),
-  );
-
-  adminRouter.get(
-    '/pk',
-    asyncHandler(async (_request, response) => {
-      ok(response, await getAdminPkMatches());
-    }),
-  );
-
-  adminRouter.get(
-    '/pk/stats',
-    asyncHandler(async (_request, response) => {
-      ok(response, await getAdminPkMatchStats());
     }),
   );
 

@@ -129,6 +129,8 @@ export function buildGuessColumns(args: {
   onApprove: (id: string) => void | Promise<void>;
   onReject: (record: GuessSummary) => void;
   onView: (record: GuessSummary) => void;
+  onEdit: (record: GuessSummary) => void;
+  onAbandon: (record: GuessSummary) => void;
   reviewingId: string | null;
 }): TableColumnsType<GuessSummary> {
   return [
@@ -192,31 +194,44 @@ export function buildGuessColumns(args: {
     {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 240,
       fixed: 'right',
-      render: (_, record) => (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="small" type="link" onClick={() => args.onView(record)}>
-            查看
-          </Button>
-          {record.reviewStatus === 'pending' ? (
-            <>
-              <Popconfirm
-                okButtonProps={{ loading: args.reviewingId === record.id }}
-                title="确认通过该竞猜审核？"
-                onConfirm={() => void args.onApprove(record.id)}
-              >
-                <Button size="small" type="link">
-                  通过
+      render: (_, record) => {
+        const editable = record.status === 'active' || record.status === 'pending_settle';
+        return (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button size="small" type="link" onClick={() => args.onView(record)}>
+              查看
+            </Button>
+            {record.reviewStatus === 'pending' ? (
+              <>
+                <Popconfirm
+                  okButtonProps={{ loading: args.reviewingId === record.id }}
+                  title="确认通过该竞猜审核？"
+                  onConfirm={() => void args.onApprove(record.id)}
+                >
+                  <Button size="small" type="link">
+                    通过
+                  </Button>
+                </Popconfirm>
+                <Button size="small" type="link" danger onClick={() => args.onReject(record)}>
+                  拒绝
                 </Button>
-              </Popconfirm>
-              <Button size="small" type="link" danger onClick={() => args.onReject(record)}>
-                拒绝
-              </Button>
-            </>
-          ) : null}
-        </div>
-      ),
+              </>
+            ) : null}
+            {editable ? (
+              <>
+                <Button size="small" type="link" onClick={() => args.onEdit(record)}>
+                  编辑
+                </Button>
+                <Button size="small" type="link" danger onClick={() => args.onAbandon(record)}>
+                  作废
+                </Button>
+              </>
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
 }

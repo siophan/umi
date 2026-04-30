@@ -5,6 +5,8 @@
 > **老系统代码路径**：`~/projects/umi-origin`（即 `/root/projects/umi-origin`），文中引用如 `umi-origin/frontend/payment.html` 都以此为根。
 >
 > **DB 全量表结构**：`docs/full-schema.md` 是当前数据库 90+ 张表的字段/类型/注释快照（含 `virtual_warehouse / physical_warehouse / warehouse_item_log / fulfillment_order / order / order_status_log / consign_trade` 等所有仓库与订单相关表）。状态码与 type 编码对照表在 `docs/status-codes.md`。需要查 schema 优先看这两个文件，不要直连 mysql。
+>
+> **不跑 typecheck**：改完代码不要主动跑 `pnpm typecheck` / `tsc`（无论单包还是 turbo 全跑）；编译/类型校验由用户自己在本地 IDE / CI 中处理。
 
 ---
 
@@ -177,13 +179,19 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
-## 16. 好友 PK 多人模式结算空选项校验缺失（P1）
+## 16. 好友 PK 多人模式结算空选项校验缺失（admin 兜底已完成 2026-04-30）
 
-**文件**：后端结算逻辑（`apps/api/src/modules/guess/guess-settle.ts` 等）
+**进度**：admin 后台「好友竞猜」+「竞猜列表」均已加「作废」按钮——运营在结算前自助作废+全员原路退款（本金+手续费），覆盖了"某选项 0 投注"等异常场景。
 
-创建页已合并双人/多人 PK 为单一"好友PK"模板，多人模式下选项数不再受限。但目前结算时不校验"每个选项是否都有人下注"——若某个选项全程无人下注，按现行结算规则可能导致下注用户的份额被错误瓜分或结算逻辑异常。
+- 后端：`apps/api/src/modules/admin/guess-management.ts:abandonAdminGuess`（POST `/api/admin/guesses/:id/abandon`）+ 抽出的 `apps/api/src/modules/guess/guess-abandon.ts:refundAbandonedGuessBets`（与 `guess-scheduler` 流标退款共用同一退款循环）
+- 前端：`friend-guesses-page.tsx` / `guesses-page.tsx` 操作列加「作废」+ 弹层填理由 → 调 `abandonAdminGuess`
+- 状态：`guess_review_log.action=40 (abandon)` 新编码记一笔运营操作日志
+- 兼容：scheduler 中 retry 链路同时改为直接调 `refundAbandonedGuessBets`（修了一个原 retry 永远 short-circuit 的 bug——`refundAndAbandon` 第一步只在 `status=ACTIVE` 时切，retry 时 status 已是 ABANDONED，永远跳过）
 
-**修法**：结算入口检查每个选项的下注人数，存在 0 下注的选项时跳过结算并标记为"作废"，所有已下注用户全额退款（含手续费）。需要前后端约定一个新的竞猜状态（如 `voided`）和退款流程。
+**仍未做（二期）**：
+- 自动检测"某选项 0 投注 → 自动作废"。当前需要 admin 手动盯，自动化留待二期。
+- 流标退款重试入口（pay_status=50 单笔重试）。当前只能等 scheduler 下个 tick 自动续跑，admin 没有"立即重试"按钮。
+- **paid-after-abandon race**：admin 作废瞬间若有支付回调同时落地（极小概率），`markBetPaid` 不感知 guess 已 ABANDONED，会把 bet 推到 `PAID/PENDING`。scheduler retry 在 60s 内会兜底退款，user 短时间内可能看到"已支付"。彻底修法是 `markBetPaid` 的 FOR UPDATE 同事务里 SELECT `guess.status`，命中 ABANDONED 直接回写 `pay_status=REFUNDED` 并退款，留二期。
 
 ---
 
@@ -295,8 +303,36 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 ⚠️ **部署顺序**：必须先跑 SQL 再发布新版后端。否则 `shop-brand-auth.ts` INSERT product 会因为 `images / tags` 列仍是 NOT NULL 无默认值而报错。
 
 **遗留 / 二期**：
-- admin 端 brand_product 编辑表单还没有 tags / collab 输入控件，需要在品牌商品库 page 补上（默认空数组/空字符串能跑，但运营暂时无法配置）。
 - product.name 长期可以彻底干掉（同步改一些 admin/老查询里裸 p.name 习惯），本期没做。
+
+**2026-04-30 收尾**：admin 「品牌商品库」编辑/新增弹层补 tags（`Select mode="tags"` 自由输入 + 逗号分隔）和 collab（单行 Input）输入控件；shared payload + products-shared 的 Row/Item/sanitize/normalize + products-brand-library 的 SELECT/GROUP BY/INSERT/UPDATE 全链路打通；OpenAPI schema 同步加字段。
+
+---
+
+## 23. 竞猜后台 2026-04-30 改造
+
+**背景**：审计「竞猜管理」三个子菜单后整改，关闭 #16 P1 + 拆解了若干历史残留菜单。
+
+**已完成：**
+
+- **「PK 对战」菜单+后端+表全套下线**：
+  - admin 菜单 `/pk` 删；`apps/admin/src/pages/pk-matches-page.tsx` 删；后端 `apps/api/src/modules/admin/pk-matches.ts` 删 + `content-routes.ts` 中 2 个 GET 删 + `auth.ts` 中 `/pk` 权限分支删
+  - OpenAPI `/api/admin/pk` / `/api/admin/pk/stats` 段删；`packages/shared/src/admin-permissions.ts(.js)` 中 `guess.pk` 行删
+  - `pk_record` 表迁移 SQL：`packages/db/sql/drop_pk_record.sql`（与 `drop_coin_ledger.sql` 走同样流程，运维手工执行）
+  - 原因：产品定义"好友 PK 是竞猜的一种"，`pk_record` 是冗余建模——整个仓库 grep 没有任何 INSERT 路径，admin 页面查的永远是空表，是历史残留菜单
+
+- **好友竞猜状态枚举补齐 + tab 拆分**：`AdminFriendGuessStatus` 加 `settled` / `abandoned`，移除原 `ended`（无法区分流标 vs 正常结算），tabs 由「已结束」拆为「已结算」+「已作废」两列
+
+- **好友竞猜参与人数公式修正**：`Math.max(2, acceptedInvitations + 1, betParticipantCount)` → `betParticipantCount`（早期双人 PK 时代的硬编码下限，多人 PK 上线后会虚高）
+
+- **竞猜列表补「编辑」按钮**：`PUT /api/admin/guesses/:id`，仅可改 `title / description / image_url / end_time(只能延长)`。选项/赔率/分类/商品本期不动（已有投注的竞猜改这些会破坏下注语义）。仅 status=`active|pending_settle` 显示
+
+**仍未做（二期）**：
+- 流标退款重试入口（admin 列表层显示 `pay_status=50` 状态 + 一键重试某竞猜下所有未退款 bet，复用 `refundAbandonedGuessBets`）
+- 列表加创建人 / 奖池字段、关联商品/店铺/创建人跳转链接
+- 后端真分页（当前两个列表都拉全量后前端过滤，量大会卡）
+- 自动检测"0 投注选项 → 自动作废"
+- `guess.is_visible` 上下架字段（让运营隐藏但不影响已下注的竞猜）；本期判定运营要藏可走「作废+全退」语义更干净
 
 ---
 
@@ -319,5 +355,5 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口（支付链路主流程已完成 2026-04-29）|
-| P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 好友PK 多人模式空选项结算 / 支付超时库存归还 + 商城退款 API（竞猜流标退款已完成 2026-04-29）|
+| P1     | 4    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 支付超时库存归还 + 商城退款 API（竞猜流标退款已完成 2026-04-29，好友 PK 空选项 admin 兜底作废已完成 2026-04-30）|
 | P2     | 13   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 |

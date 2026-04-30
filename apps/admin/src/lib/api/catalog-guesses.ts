@@ -1,17 +1,19 @@
 import type {
+  AbandonAdminGuessPayload,
+  AbandonAdminGuessResult,
   CreateAdminGuessPayload,
   CreateAdminGuessResult,
   GuessListResult,
   ReviewAdminGuessPayload,
   ReviewAdminGuessResult,
+  UpdateAdminGuessPayload,
+  UpdateAdminGuessResult,
 } from '@umi/shared';
 
 import { getJson, postJson, putJson } from './shared';
 import type {
   AdminFriendGuessItem,
   AdminGuessDetailResult,
-  AdminPkMatchItem,
-  AdminPkMatchStats,
 } from './catalog-shared';
 
 export function fetchAdminGuesses() {
@@ -33,14 +35,20 @@ export function reviewAdminGuess(id: string, payload: ReviewAdminGuessPayload) {
   );
 }
 
+export function updateAdminGuess(id: string, payload: UpdateAdminGuessPayload) {
+  return putJson<UpdateAdminGuessResult, UpdateAdminGuessPayload>(
+    `/api/admin/guesses/${id}`,
+    payload,
+  );
+}
+
 export function fetchAdminFriendGuesses() {
   return getJson<{ items: AdminFriendGuessItem[] }>('/api/admin/guesses/friends');
 }
 
-export function fetchAdminPkMatches() {
-  return getJson<{ items: AdminPkMatchItem[] }>('/api/admin/pk');
-}
-
-export function fetchAdminPkStats() {
-  return getJson<AdminPkMatchStats>('/api/admin/pk/stats');
+export function abandonAdminGuess(id: string, payload: AbandonAdminGuessPayload) {
+  return postJson<AbandonAdminGuessResult, AbandonAdminGuessPayload>(
+    `/api/admin/guesses/${id}/abandon`,
+    payload,
+  );
 }

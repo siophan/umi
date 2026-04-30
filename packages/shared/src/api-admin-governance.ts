@@ -274,6 +274,26 @@ export interface ReviewAdminGuessResult {
   status: 'approved' | 'rejected';
 }
 
+export interface AbandonAdminGuessPayload {
+  reason: string;
+}
+
+export interface AbandonAdminGuessResult {
+  id: GuessId;
+  status: 'abandoned';
+}
+
+export interface UpdateAdminGuessPayload {
+  title?: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  endTime?: string;
+}
+
+export interface UpdateAdminGuessResult {
+  id: GuessId;
+}
+
 export type AdminUserFilter = 'all' | 'user' | 'shop_owner' | 'banned';
 
 export interface AdminUserListQuery {

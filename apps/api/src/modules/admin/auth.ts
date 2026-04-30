@@ -411,10 +411,6 @@ function resolveAdminRoutePermissionCodes(method: string, path: string) {
     return resolveActionPermissionCode('guess.friends.view', method);
   }
 
-  if (matchesRoutePrefix(path, '/pk')) {
-    return resolveActionPermissionCode('guess.pk.view', method);
-  }
-
   if (matchesRoutePrefix(path, '/guesses')) {
     return resolveActionPermissionCode('guess.list.view', method);
   }

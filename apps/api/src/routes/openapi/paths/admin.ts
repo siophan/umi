@@ -467,6 +467,31 @@ export const adminPaths = {
         404: errorResponse(404, '竞猜不存在'),
       },
     },
+    put: {
+      tags: ['Admin'],
+      summary: '管理台编辑竞猜（仅可改标题/封面/截止时间/描述）',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '竞猜 ID')],
+      requestBody: jsonRequestBody({
+        type: 'object',
+        properties: {
+          title: { type: 'string', example: '世界杯决赛冠军' },
+          description: { type: 'string', nullable: true, example: '更新后的描述' },
+          imageUrl: { type: 'string', nullable: true, example: 'https://cdn.example.com/x.png' },
+          endTime: { type: 'string', example: '2026-05-15T12:00:00.000Z' },
+        },
+      }),
+      responses: {
+        200: successResponse({
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string', example: '108' } },
+        }),
+        400: errorResponse(400, '编辑竞猜失败'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '竞猜不存在'),
+      },
+    },
   },
   '/api/admin/guesses/{id}/review': {
     put: {
@@ -482,6 +507,34 @@ export const adminPaths = {
           $ref: '#/components/schemas/ReviewAdminGuessResult',
         }),
         400: errorResponse(400, '竞猜审核失败'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '竞猜不存在'),
+      },
+    },
+  },
+  '/api/admin/guesses/{id}/abandon': {
+    post: {
+      tags: ['Admin'],
+      summary: '管理台作废竞猜并全额退款',
+      security: bearerSecurity,
+      parameters: [pathIdParameter('id', '竞猜 ID')],
+      requestBody: jsonRequestBody({
+        type: 'object',
+        required: ['reason'],
+        properties: {
+          reason: { type: 'string', example: '某选项 0 投注，运营手动作废' },
+        },
+      }),
+      responses: {
+        200: successResponse({
+          type: 'object',
+          required: ['id', 'status'],
+          properties: {
+            id: { type: 'string', example: '108' },
+            status: { type: 'string', enum: ['abandoned'] },
+          },
+        }),
+        400: errorResponse(400, '作废竞猜失败'),
         401: errorResponse(401, '请先登录'),
         404: errorResponse(404, '竞猜不存在'),
       },
@@ -704,44 +757,6 @@ export const adminPaths = {
           properties: {
             items: { type: 'array', items: { type: 'object', additionalProperties: true } },
           },
-        }),
-        401: errorResponse(401, '请先登录'),
-      },
-    },
-  },
-  '/api/admin/pk': {
-    get: {
-      tags: ['Admin'],
-      summary: '管理台 PK 对战列表',
-      security: bearerSecurity,
-      responses: {
-        200: successResponse({
-          type: 'object',
-          properties: {
-            items: { type: 'array', items: { type: 'object', additionalProperties: true } },
-          },
-        }),
-        401: errorResponse(401, '请先登录'),
-      },
-    },
-  },
-  '/api/admin/pk/stats': {
-    get: {
-      tags: ['Admin'],
-      summary: '管理台 PK 对战统计',
-      security: bearerSecurity,
-      responses: {
-        200: successResponse({
-          type: 'object',
-          properties: {
-            total: { type: 'integer' },
-            pending: { type: 'integer' },
-            active: { type: 'integer' },
-            completed: { type: 'integer' },
-            cancelled: { type: 'integer' },
-            totalStakeAmount: { type: 'integer' },
-          },
-          required: ['total', 'pending', 'active', 'completed', 'cancelled', 'totalStakeAmount'],
         }),
         401: errorResponse(401, '请先登录'),
       },
