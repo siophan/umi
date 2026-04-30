@@ -42,8 +42,8 @@ export async function getAdminConsignRows(): Promise<AdminConsignRow[]> {
         ct.settled_at,
         ct.canceled_at,
         ct.created_at,
-        COALESCE(p.name, bp.name) AS product_name,
-        COALESCE(p.image_url, bp.default_img) AS product_img,
+        bp.name AS product_name,
+        bp.default_img AS product_img,
         pw.source_virtual_id
       FROM consign_trade ct
       LEFT JOIN physical_warehouse pw ON pw.id = ct.physical_item_id

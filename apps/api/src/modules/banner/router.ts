@@ -204,9 +204,9 @@ async function getGuessSummaries(guessIds: string[]) {
         g.category_id,
         c.name AS category,
         p.id AS product_id,
-        p.name AS product_name,
+        bp.name AS product_name,
         b.name AS brand_name,
-        COALESCE(p.image_url, bp.default_img, g.image_url) AS product_img,
+        COALESCE(bp.default_img, g.image_url) AS product_img,
         p.price AS product_price,
         p.guess_price AS product_guess_price
       FROM guess g

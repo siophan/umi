@@ -268,9 +268,11 @@
 | 14 | `freight` | `bigint` | `YES` | `NULL` | `-` | `-` | 运费，单位分；NULL=包邮 |
 | 15 | `ship_from` | `varchar(64)` | `YES` | `NULL` | `-` | `-` | 发货地（如 "上海"） |
 | 16 | `delivery_days` | `varchar(32)` | `YES` | `NULL` | `-` | `-` | 发货时效文案（如 "24h内发货"） |
-| 17 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
-| 18 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 19 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED on update CURRENT_TIMESTAMP(3)` | 更新时间 |
+| 17 | `tags` | `json` | `YES` | `NULL` | `-` | `-` | 商品标签 JSON 数组（如 ["新品","限定","联名"]） |
+| 18 | `collab` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 联名信息（如 "LISA × CELINE"） |
+| 19 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
+| 20 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 21 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED on update CURRENT_TIMESTAMP(3)` | 更新时间 |
 
 ## cart_item
 
@@ -971,23 +973,19 @@
 | 1 | `id` | `bigint` | `NO` | `NULL` | `PRI` | `auto_increment` | 商品 ID |
 | 2 | `shop_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 所属店铺 ID |
 | 3 | `brand_product_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 关联平台品牌商品 ID |
-| 4 | `name` | `varchar(191)` | `NO` | `NULL` | `-` | `-` | 商品名称 |
+| 4 | `name` | `varchar(191)` | `NO` | `NULL` | `-` | `-` | 商品名称（NOT NULL 副本，写入时按 brand_product.name 同步；所有 SELECT 走 bp.name） |
 | 5 | `price` | `bigint` | `NO` | `NULL` | `-` | `-` | 销售价格，单位分 |
-| 6 | `original_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 原价，单位分 |
-| 7 | `image_url` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 商品主图 |
-| 8 | `images` | `json` | `NO` | `NULL` | `-` | `-` | - |
 | 9 | `sales` | `int` | `NO` | `0` | `-` | `-` | 销量 |
 | 10 | `rating` | `double` | `NO` | `0` | `-` | `-` | 评分 |
 | 11 | `stock` | `int` | `NO` | `0` | `-` | `-` | 库存 |
 | 12 | `frozen_stock` | `int` | `NO` | `0` | `-` | `-` | 冻结库存 |
-| 13 | `description` | `text` | `YES` | `NULL` | `-` | `-` | 商品描述 |
-| 14 | `tags` | `json` | `NO` | `NULL` | `-` | `-` | - |
 | 15 | `guess_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 竞猜价格，单位分 |
-| 16 | `collab` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 联名信息 |
 | 17 | `source_url` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 来源链接 |
 | 18 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
 | 19 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
 | 20 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+
+> 注：`original_price / image_url / images / description / tags / collab` 列已通过 `drop_product_original_price.sql` 删除，统一从 `brand_product` 取（`guide_price / default_img / images / description / tags / collab`）。`brand_product` 同步新增了 `tags` / `collab` 两列。
 
 ## product_review
 

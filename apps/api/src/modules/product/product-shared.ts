@@ -293,13 +293,13 @@ export async function getProductById(productId: string) {
     `
       SELECT
         p.id,
-        p.name,
+        bp.name AS name,
         p.price,
-        p.original_price,
+        bp.guide_price AS original_price,
         p.guess_price,
-        p.image_url,
-        p.images,
-        p.tags,
+        bp.default_img AS image_url,
+        bp.images AS images,
+        bp.tags AS tags,
         p.sales,
         p.rating,
         p.stock,

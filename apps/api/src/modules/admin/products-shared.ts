@@ -455,7 +455,7 @@ export function buildAdminProductFilters(
 
   if (keyword) {
     const like = `%${keyword}%`;
-    whereClauses.push('(p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ? OR s.name LIKE ?)');
+    whereClauses.push('(bp.name LIKE ? OR b.name LIKE ? OR c.name LIKE ? OR s.name LIKE ?)');
     params.push(like, like, like, like);
   }
 

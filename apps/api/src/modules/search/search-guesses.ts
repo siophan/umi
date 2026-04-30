@@ -85,7 +85,7 @@ export async function searchGuesses(query: string, limit: number): Promise<Searc
         LEFT JOIN category c ON c.id = bp.category_id
         WHERE g.review_status = ?
           AND g.status IN (?, ?, ?)
-          AND (g.title LIKE ? OR p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)
+          AND (g.title LIKE ? OR bp.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)
       `,
       params,
     ),
@@ -100,9 +100,9 @@ export async function searchGuesses(query: string, limit: number): Promise<Searc
           g.creator_id,
           c.name AS category,
           p.id AS product_id,
-          p.name AS product_name,
+          bp.name AS product_name,
           b.name AS brand_name,
-          COALESCE(p.image_url, bp.default_img) AS product_img,
+          bp.default_img AS product_img,
           p.price AS product_price,
           p.guess_price AS product_guess_price,
           COUNT(gb.id) AS vote_total
@@ -115,7 +115,7 @@ export async function searchGuesses(query: string, limit: number): Promise<Searc
         LEFT JOIN guess_bet gb ON gb.guess_id = g.id
         WHERE g.review_status = ?
           AND g.status IN (?, ?, ?)
-          AND (g.title LIKE ? OR p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)
+          AND (g.title LIKE ? OR bp.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)
         GROUP BY
           g.id,
           g.title,
@@ -125,9 +125,9 @@ export async function searchGuesses(query: string, limit: number): Promise<Searc
           g.creator_id,
           c.name,
           p.id,
-          p.name,
+          bp.name,
           b.name,
-          COALESCE(p.image_url, bp.default_img),
+          bp.default_img,
           p.price,
           p.guess_price
         ORDER BY vote_total DESC, g.created_at DESC, g.id DESC

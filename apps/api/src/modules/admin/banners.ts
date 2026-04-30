@@ -278,12 +278,13 @@ async function fetchBannerById(connection: mysql.PoolConnection, bannerId: strin
         b.updated_at,
         g.title AS guess_title,
         LEFT(pst.content, 30) AS post_content,
-        p.name AS product_name,
+        bp.name AS product_name,
         s.name AS shop_name
       FROM banner b
       LEFT JOIN guess g ON b.target_type = ${TARGET_GUESS} AND g.id = b.target_id
       LEFT JOIN post pst ON b.target_type = ${TARGET_POST} AND pst.id = b.target_id
       LEFT JOIN product p ON b.target_type = ${TARGET_PRODUCT} AND p.id = b.target_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       LEFT JOIN shop s ON b.target_type = ${TARGET_SHOP} AND s.id = b.target_id
       WHERE b.id = ?
       LIMIT 1
@@ -370,12 +371,13 @@ export async function getAdminBanners(params: BannerListParams): Promise<AdminBa
         b.updated_at,
         g.title AS guess_title,
         LEFT(pst.content, 30) AS post_content,
-        p.name AS product_name,
+        bp.name AS product_name,
         s.name AS shop_name
       FROM banner b
       LEFT JOIN guess g ON b.target_type = ${TARGET_GUESS} AND g.id = b.target_id
       LEFT JOIN post pst ON b.target_type = ${TARGET_POST} AND pst.id = b.target_id
       LEFT JOIN product p ON b.target_type = ${TARGET_PRODUCT} AND p.id = b.target_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       LEFT JOIN shop s ON b.target_type = ${TARGET_SHOP} AND s.id = b.target_id
       ${whereSql}
       ORDER BY b.sort DESC, b.created_at DESC, b.id DESC

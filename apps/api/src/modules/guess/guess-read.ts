@@ -69,7 +69,7 @@ export async function getGuessList(query: {
 
   if (keyword) {
     const like = `%${keyword}%`;
-    whereClauses.push('(g.title LIKE ? OR p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)');
+    whereClauses.push('(g.title LIKE ? OR bp.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)');
     params.push(like, like, like, like);
   }
 

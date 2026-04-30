@@ -121,8 +121,8 @@ async function getWarehouseItems(userId: string, productId: string) {
         CONCAT('vw-', vw.id) AS id,
         vw.user_id,
         vw.product_id,
-        COALESCE(p.name, bp.name) AS product_name,
-        COALESCE(p.image_url, bp.default_img) AS product_img,
+        bp.name AS product_name,
+        bp.default_img AS product_img,
         vw.quantity,
         vw.price,
         CASE WHEN vw.status = ? THEN 'stored' ELSE 'locked' END AS status,
@@ -153,8 +153,8 @@ async function getWarehouseItems(userId: string, productId: string) {
         CONCAT('pw-', pw.id) AS id,
         pw.user_id,
         pw.product_id,
-        COALESCE(p.name, bp.name) AS product_name,
-        COALESCE(p.image_url, bp.default_img) AS product_img,
+        bp.name AS product_name,
+        bp.default_img AS product_img,
         pw.quantity,
         pw.price,
         CASE
@@ -184,8 +184,8 @@ async function getWarehouseItems(userId: string, productId: string) {
         CONCAT('fo-', fo.id, '-', oi.id) AS id,
         fo.user_id,
         oi.product_id,
-        COALESCE(p.name, bp.name) AS product_name,
-        COALESCE(p.image_url, bp.default_img) AS product_img,
+        bp.name AS product_name,
+        bp.default_img AS product_img,
         oi.quantity,
         oi.item_amount AS price,
         'shipping' AS status,
@@ -252,10 +252,10 @@ async function getSameShopProducts(product: ProductRow) {
     `
       SELECT
         p.id,
-        p.name,
+        bp.name AS name,
         p.price,
         p.guess_price,
-        p.image_url,
+        bp.default_img AS image_url,
         p.status,
         c.name AS category,
         b.name AS brand_name
@@ -281,10 +281,10 @@ async function getRecommendations(product: ProductRow) {
     `
       SELECT
         p.id,
-        p.name,
+        bp.name AS name,
         p.price,
         p.guess_price,
-        p.image_url,
+        bp.default_img AS image_url,
         p.status,
         c.name AS category,
         b.name AS brand_name

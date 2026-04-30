@@ -258,6 +258,48 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
+## 22. 商品共享属性归 brand_product（已完成 2026-04-29）
+
+**决策**：`product` 表只是店铺铺货层，所有"商品本身的属性"（名称、价格锚、主图、相册、描述、tag、联名）都归 `brand_product`，product 不再独立存。
+
+**字段映射**：
+| product 旧字段 | 新读取来源 | 处理 |
+|---|---|---|
+| `name` | `bp.name AS name` | 列保留 NOT NULL（INSERT 仍按 `brand_product.name` 同步写），但 SELECT 全部走 bp |
+| `original_price` | `bp.guide_price AS original_price` | 列 DROP |
+| `image_url` | `bp.default_img AS image_url` | 列 DROP |
+| `images` | `bp.images AS images` | 列 DROP |
+| `description` | `bp.description` | 列 DROP（之前没读路径） |
+| `tags` | `bp.tags AS tags` | 列 DROP；brand_product 新增 `tags` 列 |
+| `collab` | `bp.collab AS collab` | 列 DROP；brand_product 新增 `collab` 列 |
+
+**为什么用 `guide_price`（吊牌价）而不是 `supply_price`**：`original_price` 在前端是划线展示的"原价"，语义=厂商建议零售价 (MSRP) = `brand_product.guide_price`。`supply_price` 是商家进货成本，对消费者不展示。
+
+**SQL 改造范围**（每处都 JOIN brand_product bp 后用 bp.* 别名）：
+- 商品流：`product/product-feed.ts`、`product/product-shared.ts (getProductById)`、`product/product-detail.ts`
+- 搜索：`search/search-products.ts`、`search/search-discovery.ts`、`search/search-guesses.ts`
+- 购物车：`cart/store.ts`
+- 订单：`order/order-write.ts`、`order/order-pay.ts`、`order/order-shared.ts`
+- 店铺：`shop/shop-public.ts`、`shop/shop-my.ts`、`shop/shop-brand-auth.ts (INSERT 收口)`
+- 仓库：`warehouse/warehouse-user.ts`、`warehouse/warehouse-admin.ts`
+- 竞猜：`guess/guess-shared.ts`、`guess/guess-read.ts`、`guess/guess-create.ts`、`guess/guess-pay.ts`
+- Admin：`admin/merchant-shops.ts`、`admin/products-inventory.ts`、`admin/products-shared.ts`、`admin/guesses-shared.ts`、`admin/guess-management.ts`、`admin/order-consign.ts`、`admin/order-logistics.ts`、`admin/orders-shared.ts`、`admin/users.ts`、`admin/dashboard.ts`、`admin/banners.ts`、`admin/pk-matches.ts`、`admin/friend-guesses.ts`
+- Banner：`banner/router.ts`
+
+**简化的 COALESCE**：之前有 ~15 处 `COALESCE(p.image_url, bp.default_img)` / `COALESCE(p.name, bp.name)`，现在 p.* 列要么 DROP 要么不再读，统一收成 `bp.default_img` / `bp.name`。
+
+**写入点**：`shop/shop-brand-auth.ts` 创建铺货 INSERT 只剩 `shop_id, brand_product_id, name, price, stock, frozen_stock, status` 七列。`name` 仍写 `brand_product.name`（保 NOT NULL 约束）。
+
+**待运维执行**：`packages/db/sql/drop_product_original_price.sql`（同时 ALTER brand_product 加 tags/collab + ALTER product DROP 6 列）。
+
+⚠️ **部署顺序**：必须先跑 SQL 再发布新版后端。否则 `shop-brand-auth.ts` INSERT product 会因为 `images / tags` 列仍是 NOT NULL 无默认值而报错。
+
+**遗留 / 二期**：
+- admin 端 brand_product 编辑表单还没有 tags / collab 输入控件，需要在品牌商品库 page 补上（默认空数组/空字符串能跑，但运营暂时无法配置）。
+- product.name 长期可以彻底干掉（同步改一些 admin/老查询里裸 p.name 习惯），本期没做。
+
+---
+
 ## 21. 用户端商品详情未消费 brand_product 的图（P2）
 
 **文件**：`apps/api/src/modules/product/product-shared.ts:294`（getProductById SELECT）+ `apps/api/src/modules/product/product-detail.ts:337`（images 数组拼装）

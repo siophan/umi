@@ -101,9 +101,10 @@ async function getProductPurchaseRows(
   const quantity = Math.max(1, Math.trunc(Number(payload.quantity ?? 1) || 1));
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
     `
-      SELECT id AS product_id, shop_id, price, original_price, stock, status AS product_status
-      FROM product
-      WHERE id = ?
+      SELECT p.id AS product_id, p.shop_id, p.price, bp.guide_price AS original_price, p.stock, p.status AS product_status
+      FROM product p
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      WHERE p.id = ?
       LIMIT 1
     `,
     [payload.productId],
@@ -140,11 +141,12 @@ async function getCartPurchaseRows(
         ci.specs,
         p.shop_id,
         p.price,
-        p.original_price,
+        bp.guide_price AS original_price,
         p.stock,
         p.status AS product_status
       FROM cart_item ci
       INNER JOIN product p ON p.id = ci.product_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE ci.user_id = ?
         AND ci.id IN (${placeholders})
       ORDER BY ci.id ASC

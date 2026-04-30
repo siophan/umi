@@ -46,7 +46,7 @@ export async function getProductFeed(options: {
   const params: Array<string | number> = [];
 
   if (keyword) {
-    whereClauses.push('(p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)');
+    whereClauses.push('(bp.name LIKE ? OR b.name LIKE ? OR c.name LIKE ?)');
     const like = `%${keyword}%`;
     params.push(like, like, like);
   }
@@ -69,21 +69,20 @@ export async function getProductFeed(options: {
       `
         SELECT
           p.id,
-          p.name,
+          bp.name AS name,
           p.price,
-          p.original_price,
+          bp.guide_price AS original_price,
           p.guess_price,
-          p.image_url,
-          p.images,
-          p.tags,
+          bp.default_img AS image_url,
+          bp.images AS images,
+          bp.tags AS tags,
           p.sales,
           p.rating,
           p.stock,
-          p.collab,
+          bp.collab AS collab,
           p.status,
           p.created_at,
           s.name AS shop_name,
-          bp.default_img,
           bp.category_id,
           b.name AS brand_name,
           c.name AS category

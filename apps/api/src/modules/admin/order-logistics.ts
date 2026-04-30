@@ -36,7 +36,7 @@ export async function getAdminLogistics(): Promise<AdminLogisticsRow[]> {
         fo.created_at,
         fo.shipped_at,
         fo.completed_at,
-        GROUP_CONCAT(DISTINCT COALESCE(p.name, bp.name) ORDER BY foi.id SEPARATOR ' / ') AS product_summary
+        GROUP_CONCAT(DISTINCT bp.name ORDER BY foi.id SEPARATOR ' / ') AS product_summary
       FROM fulfillment_order fo
       LEFT JOIN \`order\` o ON o.id = fo.order_id
       LEFT JOIN fulfillment_order_item foi ON foi.fulfillment_order_id = fo.id

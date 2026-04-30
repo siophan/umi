@@ -241,14 +241,15 @@ export async function getAdminDashboardStats() {
       `
         SELECT
           p.id,
-          p.name,
-          p.image_url,
+          bp.name AS name,
+          bp.default_img AS image_url,
           p.price,
           p.status,
           p.stock,
           MAX(p.sales) AS p_sales,
           COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS sales_count
         FROM product p
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
         LEFT JOIN order_item oi ON oi.product_id = p.id
         LEFT JOIN \`order\` o
           ON o.id = oi.order_id

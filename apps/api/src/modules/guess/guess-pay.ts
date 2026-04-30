@@ -50,7 +50,7 @@ async function loadGuessForBet(guessId: string): Promise<GuessForBetRow> {
         g.end_time,
         gp.product_id,
         COALESCE(p.guess_price, p.price) AS product_price,
-        p.name AS product_name
+        bp.name AS product_name
       FROM guess g
       LEFT JOIN (
         SELECT guess_id, MIN(product_id) AS product_id
@@ -58,6 +58,7 @@ async function loadGuessForBet(guessId: string): Promise<GuessForBetRow> {
         GROUP BY guess_id
       ) gp ON gp.guess_id = g.id
       LEFT JOIN product p ON p.id = gp.product_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE g.id = ?
       LIMIT 1
     `,

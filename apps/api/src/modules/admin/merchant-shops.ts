@@ -91,7 +91,7 @@ function buildAdminShopProductFilters(
     params.push(`%${shopName}%`);
   }
   if (productName) {
-    clauses.push('p.name LIKE ?');
+    clauses.push('bp.name LIKE ?');
     params.push(`%${productName}%`);
   }
   if (brandName) {
@@ -247,10 +247,10 @@ export async function getAdminShopDetail(shopId: string): Promise<AdminShopDetai
       `
         SELECT
           p.id,
-          p.name,
+          bp.name AS name,
           b.name AS brand_name,
           p.price,
-          p.original_price,
+          bp.guide_price AS original_price,
           p.sales,
           p.stock,
           p.frozen_stock,
@@ -677,11 +677,11 @@ export async function getAdminShopProducts(query: AdminShopProductQuery = {}) {
           p.brand_product_id,
           bp.brand_id,
           b.name AS brand_name,
-          p.name AS product_name,
+          bp.name AS product_name,
           p.price,
-          p.original_price,
+          bp.guide_price AS original_price,
           p.guess_price,
-          p.image_url,
+          bp.default_img AS image_url,
           p.sales,
           p.stock,
           p.frozen_stock,

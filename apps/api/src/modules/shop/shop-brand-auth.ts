@@ -323,18 +323,14 @@ export async function addShopProducts(
           brand_product_id,
           name,
           price,
-          original_price,
-          image_url,
-          images,
           stock,
           frozen_stock,
-          tags,
           status,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, JSON_ARRAY(), 0, 0, JSON_ARRAY(), ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+        ) VALUES (?, ?, ?, ?, 0, 0, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       `,
-      [shop.id, product.id, product.name, product.guide_price, product.guide_price, product.default_img, STATUS_ACTIVE],
+      [shop.id, product.id, product.name, product.guide_price, STATUS_ACTIVE],
     );
   }
 

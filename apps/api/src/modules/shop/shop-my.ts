@@ -70,9 +70,9 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
     const [productRows] = await db.execute<mysql.RowDataPacket[]>(
       `
         SELECT p.id,
-               p.name,
+               bp.name AS name,
                p.price,
-               p.image_url,
+               bp.default_img AS image_url,
                p.status,
                b.name AS brand_name
         FROM product p

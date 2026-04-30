@@ -42,7 +42,7 @@ export async function searchProducts(
   const like = `%${query}%`;
   const whereClauses = [
     'p.status = 10',
-    '(p.name LIKE ? OR b.name LIKE ? OR c.name LIKE ? OR s.name LIKE ?)',
+    '(bp.name LIKE ? OR b.name LIKE ? OR c.name LIKE ? OR s.name LIKE ?)',
   ];
   const countParams: Array<string | number> = [like, like, like, like];
   const orderBy =
@@ -71,21 +71,20 @@ export async function searchProducts(
       `
         SELECT
           p.id,
-          p.name,
+          bp.name AS name,
           p.price,
-          p.original_price,
+          bp.guide_price AS original_price,
           p.guess_price,
-          p.image_url,
-          p.images,
-          p.tags,
+          bp.default_img AS image_url,
+          bp.images AS images,
+          bp.tags AS tags,
           p.sales,
           p.rating,
           p.stock,
-          p.collab,
+          bp.collab AS collab,
           p.status,
           p.created_at,
           s.name AS shop_name,
-          bp.default_img,
           bp.category_id,
           b.name AS brand_name,
           c.name AS category

@@ -12,8 +12,9 @@ export async function getHotSearches(limit: number): Promise<SearchHotResult> {
   const [productRows, guessRows] = await Promise.all([
     db.query<mysql.RowDataPacket[]>(
       `
-        SELECT p.name AS keyword, COALESCE(p.sales, 0) AS score
+        SELECT bp.name AS keyword, COALESCE(p.sales, 0) AS score
         FROM product p
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
         WHERE p.status = 10
         ORDER BY COALESCE(p.sales, 0) DESC, p.created_at DESC, p.id DESC
         LIMIT 6
@@ -76,12 +77,13 @@ export async function getSearchSuggestions(query: string, limit: number): Promis
   const [productRows, brandRows, guessRows] = await Promise.all([
     db.query<mysql.RowDataPacket[]>(
       `
-        SELECT p.name AS text
+        SELECT bp.name AS text
         FROM product p
+        LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
         WHERE p.status = 10
-          AND p.name LIKE ?
+          AND bp.name LIKE ?
         ORDER BY
-          CASE WHEN p.name LIKE ? THEN 0 ELSE 1 END ASC,
+          CASE WHEN bp.name LIKE ? THEN 0 ELSE 1 END ASC,
           COALESCE(p.sales, 0) DESC,
           p.created_at DESC,
           p.id DESC

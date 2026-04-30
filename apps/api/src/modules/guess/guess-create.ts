@@ -145,7 +145,7 @@ async function requireProductForGuessCreate(productId: string, creatorShopId: st
       SELECT
         p.id,
         p.shop_id,
-        p.image_url,
+        bp.default_img AS image_url,
         p.status,
         p.stock,
         p.frozen_stock,

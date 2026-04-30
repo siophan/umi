@@ -57,10 +57,11 @@ async function loadOrderForPay(orderId: string, userId: string): Promise<OrderFo
         o.pay_no,
         o.address_id,
         o.coupon_id,
-        p.name AS product_name
+        bp.name AS product_name
       FROM \`order\` o
       LEFT JOIN order_item oi ON oi.order_id = o.id
       LEFT JOIN product p ON p.id = oi.product_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE o.id = ?
       ORDER BY oi.id ASC
       LIMIT 1
