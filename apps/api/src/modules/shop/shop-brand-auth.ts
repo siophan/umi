@@ -3,6 +3,7 @@ import type {
   AddShopProductsResult,
   BrandAuthOverviewResult,
   BrandProductListResult,
+  RemoveShopProductResult,
   SubmitBrandAuthApplicationResult,
 } from '@umi/shared';
 import { toEntityId } from '@umi/shared';
@@ -15,6 +16,7 @@ import {
   createNo,
   getCurrentShop,
   mapBrandAuthStatus,
+  PRODUCT_STATUS_OFF_SHELF,
   STATUS_ACTIVE,
   STATUS_PENDING,
 } from './shop-shared';
@@ -39,6 +41,7 @@ export async function getBrandAuthOverview(userId: string): Promise<BrandAuthOve
                  INNER JOIN brand_product bp2 ON bp2.id = p2.brand_product_id
                  WHERE bp2.brand_id = sbaa.brand_id
                    AND p2.shop_id = sbaa.shop_id
+                   AND p2.status = 10
                ) AS product_count,
                (
                  SELECT COUNT(*)
@@ -333,20 +336,31 @@ export async function addShopProducts(
 
   const [existingRows] = await db.query<mysql.RowDataPacket[]>(
     `
-      SELECT brand_product_id
+      SELECT id, brand_product_id, status
       FROM product
       WHERE shop_id = ?
         AND brand_product_id IN (?)
     `,
     [shop.id, products.map((product) => product.id)],
   );
-  const existing = new Set(
-    (existingRows as Array<{ brand_product_id: number | string }>).map((row) => String(row.brand_product_id)),
+  const existing = new Map(
+    (existingRows as Array<{ id: number | string; brand_product_id: number | string; status: number | string }>).map(
+      (row) => [String(row.brand_product_id), { id: String(row.id), status: Number(row.status) }],
+    ),
   );
 
   let inserted = 0;
   for (const product of products) {
-    if (existing.has(String(product.id))) {
+    const existingRow = existing.get(String(product.id));
+    if (existingRow) {
+      if (existingRow.status === STATUS_ACTIVE) {
+        continue;
+      }
+      await db.execute(
+        `UPDATE product SET status = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?`,
+        [STATUS_ACTIVE, existingRow.id],
+      );
+      inserted += 1;
       continue;
     }
     await db.execute(
@@ -369,5 +383,43 @@ export async function addShopProducts(
   }
 
   return { count: inserted };
+}
+
+export async function removeShopProduct(
+  userId: string,
+  productId: string,
+): Promise<RemoveShopProductResult> {
+  const id = (productId || '').trim();
+  if (!id) {
+    throw new HttpError(400, 'SHOP_PRODUCT_ID_REQUIRED', '缺少商品 ID');
+  }
+
+  const shop = await getCurrentShop(userId);
+  if (!shop) {
+    throw new HttpError(400, 'SHOP_REQUIRED', '请先创建店铺');
+  }
+
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `SELECT shop_id, status FROM product WHERE id = ? LIMIT 1`,
+    [id],
+  );
+  const row = rows[0] as { shop_id: number | string; status: number | string } | undefined;
+  if (!row) {
+    throw new HttpError(404, 'SHOP_PRODUCT_NOT_FOUND', '商品不存在');
+  }
+  if (String(row.shop_id) !== String(shop.id)) {
+    throw new HttpError(403, 'SHOP_PRODUCT_FORBIDDEN', '无权操作此商品');
+  }
+  if (Number(row.status) === PRODUCT_STATUS_OFF_SHELF) {
+    return { id: toEntityId(id), status: 'off_shelf' };
+  }
+
+  await db.execute(
+    `UPDATE product SET status = ?, updated_at = CURRENT_TIMESTAMP(3) WHERE id = ?`,
+    [PRODUCT_STATUS_OFF_SHELF, id],
+  );
+
+  return { id: toEntityId(id), status: 'off_shelf' };
 }
 

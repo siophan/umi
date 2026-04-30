@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { fetchMyShop, fetchMyShopStats, fetchShopStatus, submitShopApplication } from '../../lib/api/shops';
+import {
+  fetchMyShop,
+  fetchMyShopStats,
+  fetchShopStatus,
+  removeShopProduct,
+  submitShopApplication,
+} from '../../lib/api/shops';
 import { hasAuthToken } from '../../lib/api/shared';
 import { ActiveShopContent } from './active-shop-content';
 import {
@@ -281,7 +287,17 @@ export default function MyShopPage() {
         onCloseStats={() => setStatsOpen(false)}
         onManageBrands={() => router.push('/brand-auth')}
         onAddProduct={() => router.push('/add-product')}
-        onRemoveProduct={() => showToast('下架功能即将上线')}
+        onRemoveProduct={(productId) => {
+          void (async () => {
+            try {
+              await removeShopProduct(productId);
+              showToast('已下架');
+              await refreshStatusAndShop();
+            } catch (removeError) {
+              showToast(removeError instanceof Error ? removeError.message : '下架失败，请重试');
+            }
+          })();
+        }}
       />
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}

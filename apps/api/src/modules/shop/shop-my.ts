@@ -46,6 +46,7 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
                  INNER JOIN brand_product bp2 ON bp2.id = p2.brand_product_id
                  WHERE bp2.brand_id = sbaa.brand_id
                    AND p2.shop_id = sbaa.shop_id
+                   AND p2.status = 10
                ) AS product_count,
                (
                  SELECT COUNT(*)
@@ -85,15 +86,16 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
         LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
         LEFT JOIN brand b ON b.id = bp.brand_id
         WHERE p.shop_id = ?
+          AND p.status = ?
         ORDER BY p.created_at DESC
       `,
-      [shop.id],
+      [shop.id, STATUS_ACTIVE],
     );
 
     const [statsRows] = await db.execute<mysql.RowDataPacket[]>(
       `
         SELECT
-          (SELECT COUNT(*) FROM product p WHERE p.shop_id = ?) AS product_count,
+          (SELECT COUNT(*) FROM product p WHERE p.shop_id = ? AND p.status = 10) AS product_count,
           (SELECT COUNT(*) FROM fulfillment_order fo WHERE fo.shop_id = ?) AS order_count,
           (SELECT COALESCE(SUM(fo.total_amount), 0) FROM fulfillment_order fo WHERE fo.shop_id = ?) AS revenue,
           (

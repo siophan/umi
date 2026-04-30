@@ -743,3 +743,8 @@ export interface AddShopProductsResult {
   count: number;
 }
 
+export interface RemoveShopProductResult {
+  id: ProductId;
+  status: 'off_shelf';
+}
+

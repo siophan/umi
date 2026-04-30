@@ -208,6 +208,36 @@ export const shopPaths = {
       },
     },
   },
+  '/api/shops/products/{id}': {
+    delete: {
+      tags: ['Shop'],
+      summary: '下架店铺商品（status → off_shelf 软删，订单/评价历史保留）',
+      security: bearerSecurity,
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string' },
+          description: '商品 ID',
+        },
+      ],
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: '1001' },
+            status: { type: 'string', example: 'off_shelf' },
+          },
+        }),
+        400: errorResponse(400, '缺少商品 ID'),
+        401: errorResponse(401, '请先登录'),
+        403: errorResponse(403, '无权操作此商品'),
+        404: errorResponse(404, '商品不存在'),
+        500: errorResponse(500, '下架商品失败'),
+      },
+    },
+  },
   '/api/shops/{id}': {
     get: {
       tags: ['Shop'],

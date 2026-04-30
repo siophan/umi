@@ -15,7 +15,13 @@ import {
 import { getRequestUser, requireUser } from '../../lib/auth';
 import { HttpError, sendError, toHttpError } from '../../lib/errors';
 import { ok } from '../../lib/http';
-import { addShopProducts, getBrandAuthOverview, getBrandProducts, submitBrandAuthApplication } from './shop-brand-auth';
+import {
+  addShopProducts,
+  getBrandAuthOverview,
+  getBrandProducts,
+  removeShopProduct,
+  submitBrandAuthApplication,
+} from './shop-brand-auth';
 import { getMyShopResult, getMyShopStats, getMyShopStatus, submitShopApplication } from './shop-my';
 import { getPublicShopDetail } from './shop-public';
 
@@ -162,6 +168,24 @@ shopRouter.post('/products', requireUser, async (request, response) => {
         status: 500,
         code: 'SHOP_PRODUCTS_ADD_FAILED',
         message: '上架商品失败',
+      }),
+    );
+  }
+});
+
+shopRouter.delete('/products/:id(\\d+)', requireUser, async (request, response) => {
+  try {
+    const user = getRequestUser(request);
+    const routeParams = request.params as Record<string, string | undefined>;
+    const productId = String(routeParams['id(\\d+)'] ?? routeParams.id ?? '').trim();
+    ok(response, await removeShopProduct(user.id, productId));
+  } catch (error) {
+    sendError(
+      response,
+      toHttpError(error, {
+        status: 500,
+        code: 'SHOP_PRODUCT_REMOVE_FAILED',
+        message: '下架商品失败',
       }),
     );
   }

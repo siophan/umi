@@ -9,6 +9,7 @@ export const STATUS_ACTIVE = 10;
 export const STATUS_PENDING = 10;
 export const STATUS_APPROVED = 30;
 export const STATUS_REJECTED = 40;
+export const PRODUCT_STATUS_OFF_SHELF = 20;
 // shop_brand_auth.status：实际授权关系的真实状态
 export const AUTH_STATUS_ACTIVE = 10;
 export const AUTH_STATUS_EXPIRED = 90;

@@ -6,6 +6,7 @@ import type {
   MyShopResult,
   MyShopStatsResult,
   PublicShopDetailResult,
+  RemoveShopProductResult,
   ShopStatusResult,
   SubmitBrandAuthApplicationPayload,
   SubmitBrandAuthApplicationResult,
@@ -13,7 +14,7 @@ import type {
   SubmitShopApplicationResult,
 } from '@umi/shared';
 
-import { getJson, postJson } from './shared';
+import { deleteJson, getJson, postJson } from './shared';
 
 export function fetchMyShop() {
   return getJson<MyShopResult>('/api/shops/me');
@@ -52,4 +53,10 @@ export function fetchBrandProducts(brandId: string) {
 
 export function addShopProducts(payload: AddShopProductsPayload) {
   return postJson<AddShopProductsResult, AddShopProductsPayload>('/api/shops/products', payload);
+}
+
+export function removeShopProduct(productId: string) {
+  return deleteJson<RemoveShopProductResult>(
+    `/api/shops/products/${encodeURIComponent(productId)}`,
+  );
 }
