@@ -224,12 +224,13 @@ type RecommendationRow = {
 };
 
 function mapRecommendationRow(row: RecommendationRow): ProductSummary {
+  const price = Number(row.price ?? 0) / 100;
   return {
     id: toEntityId(row.id),
     name: row.name,
     brand: row.brand_name || '未知品牌',
     img: row.image_url || '',
-    price: Number(row.price ?? 0) / 100,
+    price,
     guessPrice: Number(row.guess_price ?? row.price ?? 0) / 100,
     category: row.category || '未分类',
     status: Number(row.status ?? 0) === 10 ? 'active' : String(row.status),
@@ -253,8 +254,8 @@ async function getSameShopProducts(product: ProductRow) {
       SELECT
         p.id,
         bp.name AS name,
-        p.price,
-        p.guess_price,
+        bp.guide_price AS price,
+        bp.guess_price,
         bp.default_img AS image_url,
         p.status,
         c.name AS category,
@@ -282,8 +283,8 @@ async function getRecommendations(product: ProductRow) {
       SELECT
         p.id,
         bp.name AS name,
-        p.price,
-        p.guess_price,
+        bp.guide_price AS price,
+        bp.guess_price,
         bp.default_img AS image_url,
         p.status,
         c.name AS category,
@@ -352,7 +353,7 @@ export async function getProductDetail(productId: string, userId?: string | null
       brand: product.brand_name || '未知品牌',
       img: images[0] || '',
       price: Number(product.price ?? 0) / 100,
-      guessPrice: Number(product.guess_price ?? product.price ?? 0) / 100,
+      guessPrice: Number(product.price ?? 0) / 100,
       category: product.category || '未分类',
       status: Number(product.status ?? 0) === 10 ? 'active' : String(product.status),
       shopId: toOptionalEntityId(product.shop_id),
@@ -363,7 +364,7 @@ export async function getProductDetail(productId: string, userId?: string | null
       images,
       videoUrl: product.bp_video_url ?? null,
       originalPrice: Number(product.original_price ?? product.price ?? 0) / 100,
-      stock: Number(product.stock ?? 0),
+      stock: Math.max(0, Number(product.stock ?? 0) - Number(product.frozen_stock ?? 0)),
       sales: Number(product.sales ?? 0),
       rating: Number(product.rating ?? 0),
       tags: safeJsonArray(product.tags),

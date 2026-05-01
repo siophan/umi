@@ -292,8 +292,8 @@ export async function requireGuessProductForCreate(productId: string) {
         p.shop_id,
         bp.default_img AS image_url,
         p.status,
-        p.stock,
-        p.frozen_stock,
+        bp.stock,
+        bp.frozen_stock,
         s.status AS shop_status,
         b.status AS brand_status,
         bp.status AS brand_product_status
@@ -451,8 +451,8 @@ export async function getGuessRows() {
         bp.name AS product_name,
         b.name AS brand_name,
         bp.default_img AS product_img,
-        p.price AS product_price,
-        p.guess_price AS product_guess_price
+        bp.guide_price AS product_price,
+        bp.guide_price AS product_guess_price
       FROM guess g
       LEFT JOIN admin_user au ON au.id = g.creator_id
       LEFT JOIN user u ON u.id = g.creator_id

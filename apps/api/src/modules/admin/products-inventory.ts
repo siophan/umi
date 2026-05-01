@@ -58,7 +58,7 @@ export async function getAdminProducts(
                 AND COALESCE(s.status, ${SHOP_STATUS_ACTIVE}) <> ${SHOP_STATUS_PAUSED}
                 AND COALESCE(b.status, ${BRAND_STATUS_ACTIVE}) <> ${BRAND_STATUS_DISABLED}
                 AND COALESCE(bp.status, ${BRAND_PRODUCT_STATUS_ACTIVE}) <> ${BRAND_PRODUCT_STATUS_DISABLED}
-                AND (p.stock - COALESCE(p.frozen_stock, 0)) > ${LOW_STOCK_THRESHOLD}
+                AND (COALESCE(bp.stock, 0) - COALESCE(bp.frozen_stock, 0)) > ${LOW_STOCK_THRESHOLD}
               THEN 1
               ELSE 0
             END
@@ -69,7 +69,7 @@ export async function getAdminProducts(
                 AND COALESCE(s.status, ${SHOP_STATUS_ACTIVE}) <> ${SHOP_STATUS_PAUSED}
                 AND COALESCE(b.status, ${BRAND_STATUS_ACTIVE}) <> ${BRAND_STATUS_DISABLED}
                 AND COALESCE(bp.status, ${BRAND_PRODUCT_STATUS_ACTIVE}) <> ${BRAND_PRODUCT_STATUS_DISABLED}
-                AND (p.stock - COALESCE(p.frozen_stock, 0)) <= ${LOW_STOCK_THRESHOLD}
+                AND (COALESCE(bp.stock, 0) - COALESCE(bp.frozen_stock, 0)) <= ${LOW_STOCK_THRESHOLD}
               THEN 1
               ELSE 0
             END
@@ -101,9 +101,9 @@ export async function getAdminProducts(
           p.brand_product_id,
           p.shop_id,
           bp.name AS name,
-          p.price,
-          p.stock,
-          p.frozen_stock,
+          bp.guide_price AS guide_price,
+          bp.stock,
+          bp.frozen_stock,
           p.status,
           p.updated_at,
           bp.tags AS tags,

@@ -49,7 +49,7 @@ async function loadGuessForBet(guessId: string): Promise<GuessForBetRow> {
         g.status,
         g.end_time,
         gp.product_id,
-        COALESCE(p.guess_price, p.price) AS product_price,
+        COALESCE(bp.guess_price, bp.guide_price) AS product_price,
         bp.name AS product_name
       FROM guess g
       LEFT JOIN (

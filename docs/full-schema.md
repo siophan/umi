@@ -258,7 +258,10 @@
 | 4 | `category_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 商品分类 ID |
 | 5 | `guide_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 吊牌价，单位分 |
 | 6 | `supply_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 供货价，单位分 |
-| 7 | `default_img` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 默认主图 |
+| 7 | `guess_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 竞猜价格，单位分 |
+| 8 | `stock` | `int` | `NO` | `0` | `-` | `-` | 平台总库存（跨店共享） |
+| 9 | `frozen_stock` | `int` | `NO` | `0` | `-` | `-` | 冻结库存（订单占用） |
+| 10 | `default_img` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 默认主图 |
 | 8 | `images` | `json` | `NO` | `NULL` | `-` | `-` | - |
 | 9 | `video_url` | `varchar(255)` | `YES` | `NULL` | `-` | `-` | 主图视频 URL（mp4 / m3u8） |
 | 10 | `description` | `text` | `YES` | `NULL` | `-` | `-` | 商品描述 |
@@ -980,7 +983,7 @@
 | 7 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
 | 8 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
 
-> 注：`product` 已彻底退化成"店铺铺货关联表"——`name / price / stock / frozen_stock / guess_price / source_url / original_price / image_url / images / description / tags / collab` 全部删除。所有商品本身的属性走 `brand_product`：`name / guide_price / supply_price / default_img / images / description / tags / collab / video_url / detail_html / spec_table / package_list / freight / ship_from / delivery_days`。库存概念整体移除（系统目前无库存约束，所有 active 行视为可售）。竞猜价由 admin 创建竞猜时单独配置，不再随店铺存储。
+> 注：`product` 已彻底退化成"店铺铺货关联表"——`name / price / stock / frozen_stock / guess_price / source_url / original_price / image_url / images / description / tags / collab` 全部删除。所有商品本身的属性 + 库存 + 竞猜价都归 `brand_product`：`name / guide_price / supply_price / guess_price / stock / frozen_stock / default_img / images / description / tags / collab / video_url / detail_html / spec_table / package_list / freight / ship_from / delivery_days`。库存为跨店共享池：`stock` admin 维护，`frozen_stock` 由下单/支付/超时事务自动维护——createPendingOrder `frozen_stock += n`、markOrderPaid `stock -= n, frozen_stock -= n`、超时关单 `frozen_stock -= n`；可用库存 = `stock - frozen_stock`。
 
 ## product_review
 

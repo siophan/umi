@@ -31,6 +31,10 @@ export interface AdminBrandLibraryItem {
   category: string;
   guidePrice: number;
   supplyPrice: number;
+  guessPrice: number;
+  stock: number;
+  frozenStock: number;
+  availableStock: number;
   status: 'active' | 'disabled';
   description: string | null;
   createdAt: string;

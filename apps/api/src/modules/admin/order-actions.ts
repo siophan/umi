@@ -308,6 +308,20 @@ export async function completeAdminOrderRefund(
       [ORDER_REFUNDED, order.id],
     );
 
+    // 退款完成 → 全单退货入库；按 order_item.quantity 把 brand_product.stock 加回去。
+    // 注意：markOrderPaid 时 frozen_stock 已经清掉了，这里只动 stock。
+    await connection.execute(
+      `
+        UPDATE brand_product bp
+          INNER JOIN product p ON p.brand_product_id = bp.id
+          INNER JOIN order_item oi ON oi.product_id = p.id
+          SET bp.stock = bp.stock + oi.quantity,
+              bp.updated_at = CURRENT_TIMESTAMP(3)
+        WHERE oi.order_id = ?
+      `,
+      [order.id],
+    );
+
     await connection.execute(
       `
         INSERT INTO order_status_log (

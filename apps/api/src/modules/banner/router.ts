@@ -207,8 +207,8 @@ async function getGuessSummaries(guessIds: string[]) {
         bp.name AS product_name,
         b.name AS brand_name,
         COALESCE(bp.default_img, g.image_url) AS product_img,
-        p.price AS product_price,
-        p.guess_price AS product_guess_price
+        bp.guide_price AS product_price,
+        bp.guess_price AS product_guess_price
       FROM guess g
       LEFT JOIN (
         SELECT guess_id, MIN(product_id) AS product_id

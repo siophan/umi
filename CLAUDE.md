@@ -380,62 +380,49 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
-## 25. product schema 减字段后，下游模块未跟进列举（P0）
+## 25. product schema 减字段 + brand_product 库存占用模式（已完成 2026-05-01）
 
-**背景**：`product` 表 `name / price / stock / frozen_stock / guess_price / source_url` 列已 DROP（详见 #24）。除了 `apps/api/src/modules/shop/*` 已修，其他模块仍按旧 schema 读这些列，**当前都会 SQL 报错或返回脏数据**。需要逐个 sweep。
+**背景**：`product` 表 `name / price / stock / frozen_stock / guess_price / source_url / image_url / images / tags / collab / original_price` 列已 DROP（详见 #24）。商品共享属性 + 库存 + 竞猜价都搬到 `brand_product`。
 
-**待 sweep 模块（grep 自 `apps/api/src` 截至 2026-04-30）**：
+**最终决策（最后一稿）**：
+- `brand_product` 已加三列：`guess_price`（竞猜价，单位分，NULL=用 guide_price 兜底）、`stock`（平台总库存，admin 维护）、`frozen_stock`（系统占用，自动维护）
+- **库存占用模式（freeze-on-pending）**：可用库存 = `stock - frozen_stock`
+  - createPendingOrder：`UPDATE brand_product SET frozen_stock = frozen_stock + n WHERE id=? AND (stock - frozen_stock) >= n`，affectedRows=0 抛 PRODUCT_STOCK_NOT_ENOUGH（条件 UPDATE 防超卖，不需要 FOR UPDATE）
+  - markOrderPaid：`UPDATE brand_product bp INNER JOIN product p ... INNER JOIN order_item oi ... SET bp.stock = stock - oi.quantity, bp.frozen_stock = frozen_stock - oi.quantity WHERE oi.order_id = ?`
+  - 超时关单 / gateway closed：`releaseOrderFrozenStock` helper 调 `UPDATE brand_product ... SET frozen_stock = frozen_stock - oi.quantity`，仅在 PENDING→CLOSED 切换 affectedRows>0 时调用，幂等
+- guess_price：所有 SELECT 走 `bp.guess_price`，sanitize 层 `Number(row.guess_price ?? row.price ?? 0)` 兜底；guess-pay 用 `COALESCE(bp.guess_price, bp.guide_price) AS product_price`
 
-| 模块 | 文件 | 引用的旧列 | 修法 |
-| --- | --- | --- | --- |
-| 商品流 | `product/product-feed.ts:18,73,75,81` | p.price/p.guess_price/p.stock | bp.guide_price / bp.guess_price / bp.stock |
-| 商品流 | `product/product-shared.ts:297,299,305` | p.price/p.guess_price/p.stock | 同上 |
-| 商品详情 | `product/product-detail.ts:97,100,101,256-257,285-286,351,354-355,365-366,370` | p.name/p.price/p.guess_price/p.stock/p.original_price | name→bp.name / price/original_price→bp.guide_price / guessPrice→bp.guess_price / stock→bp.stock |
-| 搜索 | `search/search-products.ts:50,52,75,77,83` | p.price/p.guess_price/p.stock | bp.guide_price / bp.guess_price / bp.stock |
-| 搜索 | `search/search-guesses.ts:106-107,131-132` | p.price/p.guess_price | bp.guide_price / bp.guess_price |
-| 购物车 | `cart/store.ts:99,170,174,220,232` | p.price/p.stock | bp.guide_price / bp.stock |
-| Banner | `banner/router.ts:210-211` | p.price/p.guess_price | bp.guide_price / bp.guess_price |
-| Admin 库存监控 | `admin/products-inventory.ts:61,72,104-106` | p.price/p.stock/p.frozen_stock | 改成基于 brand_product 维度的库存监控（跨店共享池）；frozen_stock 看决策 |
-| Admin 竞猜 | `admin/guesses-shared.ts:295-296,331` | p.stock/p.frozen_stock | bp.stock；frozen_stock 看决策 |
-
-**已决策（2026-04-30）**：
-- **`guess_price` 移到 `brand_product.guess_price`**：admin 在品牌商品库维护，所有读 `p.guess_price` 的地方改 `bp.guess_price`
-- **`stock` 移到 `brand_product.stock`**：admin 在品牌商品库维护"平台总库存"，所有读 `p.stock` 的地方改 `bp.stock`
-- **`frozen_stock` 命运待定**：原本 `product.frozen_stock` 是订单占用库存（下单 +N，支付/取消 ±N），如果 `brand_product.stock` 是跨店共享的平台总库存，那 `frozen_stock` 也得挂在 `brand_product` 维度（多店并发占用同一池子）。开新线程时一并拍板，候选两种：
-  - 加 `brand_product.frozen_stock`（保留占用模式，多店共享）
-  - 不加 frozen，下单直接 stock-=N，支付失败 stock+=N（接受瞬时不一致，回滚成本低）
-
-**待新线程 sweep（开线程时按这套规则做）**：
-
-DDL（先跑）：
-```sql
-ALTER TABLE brand_product
-  ADD COLUMN guess_price BIGINT NULL COMMENT '竞猜价格，单位分' AFTER supply_price,
-  ADD COLUMN stock INT NOT NULL DEFAULT 0 COMMENT '平台总库存（跨店共享）' AFTER guess_price;
--- frozen_stock 看决策再加
-```
-
-代码 sweep（按上面的表逐个处理）：
-- `p.price` → `bp.guide_price`
-- `p.guess_price` → `bp.guess_price`
-- `p.stock` → `bp.stock`
-- `p.frozen_stock` → 待决（先用常量 0，或者去掉相关检查）
+**Sweep 规则**：
+- `p.price` / `p.original_price` → `bp.guide_price`
 - `p.name` → `bp.name`
-- `p.original_price` → `bp.guide_price`（同 #22 的语义）
+- `p.image_url` → `bp.default_img`，`p.images` → `bp.images`，`p.tags` → `bp.tags`，`p.collab` → `bp.collab`
+- `p.guess_price` → `bp.guess_price`
+- `p.stock` → `bp.stock`，`p.frozen_stock` → `bp.frozen_stock`，可用库存现场算 `stock - frozen_stock`
 
-Admin 端 brand_product 编辑界面要补：
-- `apps/admin/src/lib/admin-products-shared.ts` Row/Item/sanitize/normalize 加 guessPrice / stock
-- `apps/admin/src/pages/products-brand-library-page.tsx` 编辑/新增弹层加两个 input
-- `apps/api/src/modules/admin/products-brand-library.ts` SELECT/INSERT/UPDATE 加字段
-- `packages/shared/src/admin-...` Payload/Result 加字段
-- OpenAPI schema
+**已改文件（22 个 + admin frontend 4 个 + shared 1 个 + OpenAPI 1 个）**：
+- 商品流：`product/{product-feed, product-shared, product-detail}.ts`
+- 搜索：`search/{search-products, search-shared, search-guesses}.ts`
+- 购物车：`cart/store.ts`（addCartItem/updateCartItem 库存 cap 用 `bp.stock - bp.frozen_stock`）
+- Banner：`banner/router.ts`
+- 订单写入：`order/order-write.ts`（getProductPurchaseRows / getCartPurchaseRows 库存校验 + 条件 UPDATE bp 冻结）+ `order/order-shared.ts`（ProductPurchaseRow 加 brand_product_id/stock/frozen_stock）
+- 订单支付：`order/order-pay.ts`（markOrderPaid 加扣减+解冻 UPDATE；queryOrderPayStatus 超时/closed 路径调 `releaseOrderFrozenStock`）
+- 竞猜：`guess/{guess-shared, guess-pay, guess-create}.ts`、`admin/{guesses-shared, guess-management}.ts`
+- Admin 商品：`admin/products-inventory.ts`、`admin/products-shared.ts`（resolveProductStatus / buildProductTags / sanitizeAdminProduct / buildAdminProductFilters 全部恢复 low_stock 语义；AdminBrandLibraryRow + sanitizeAdminBrandLibrary + AdminBrandLibraryItem 加 guessPrice/stock/frozenStock/availableStock；normalizeAdminBrandProductPayload 加 guessPrice/stock 校验）
+- Admin 品牌库：`admin/products-brand-library.ts`（SELECT/GROUP BY/INSERT/UPDATE 加 guess_price/stock/frozen_stock）
+- Admin 商家：`admin/merchant-shops.ts` + `admin/merchant-shared.ts`（ShopProductListRow / ShopDetailProductRow 加字段；items map 用真实 bp 值）
+- Admin 用户/dashboard：`admin/users.ts`、`admin/dashboard.ts`
+- 店铺：`shop/shop-public.ts`
+- Shared：`packages/shared/src/api-admin-merchant.ts`（CreateAdminBrandProductPayload + UpdateAdminBrandProductPayload 加 guessPrice/stock）
+- OpenAPI：`apps/api/src/routes/openapi/schemas/admin.ts`
+- Admin 前端：`apps/admin/src/lib/admin-brand-library.tsx`（FormValues + buildEdit/Create + columns）、`apps/admin/src/components/admin-brand-library-form-modal.tsx`（加竞猜价/库存输入）、`apps/admin/src/components/admin-brand-library-detail-drawer.tsx`（详情加竞猜价/库存）、`apps/admin/src/lib/api/catalog-shared.ts`（AdminBrandLibraryItem 加字段）、`apps/admin/src/pages/brand-library-page.tsx`（payload map 加 guessPrice/stock）
 
-`docs/full-schema.md` brand_product 表加两行（guess_price + stock）。
+**退款链路库存归还（2026-05-01 补）**：`completeAdminOrderRefund` 在 PAID → REFUNDED 切换的同事务里执行 `UPDATE bp INNER JOIN p INNER JOIN oi SET bp.stock = bp.stock + oi.quantity WHERE oi.order_id = ?`，按 order_item.quantity 全单退货入库（markOrderPaid 时 frozen_stock 已清，此处只动 stock）。整个仓库只有这一处 PAID→REFUNDED 切换，其他都是 read-only 检查，所以全覆盖。
 
-**部署影响**：
-- 老版后端 + 新 schema → 任何读上述列的接口直接 SQL 报错（unknown column）
-- 已 push 的 `apps/api/src/modules/shop/*`（commit 6463716 + 后续 hotfix）已适配
-- 未 sweep 的模块（cart/search/product-feed/product-detail/banner/admin）当前**不可用**，需要紧急 sweep
+**遗留**：
+- **markOrderPaid 没用 SELECT FOR UPDATE 锁 brand_product**：UPDATE 用 `GREATEST(stock - n, 0)` 兜底防瞬时负数；如果需要严格防超扣，加 `AND stock >= oi.quantity` 条件判断。
+- **createPendingOrder 多 item 失败回滚**：item 1 冻结成功后 item 2 失败抛错，事务 rollback 自动归还 item 1 冻结的部分（已验证）。
+- **admin 退款 / 取消订单 UI**：当前 admin 没有"主动取消未支付订单"按钮，只能等用户支付/超时。如要补 admin 主动 close pending 订单，记得调 `releaseOrderFrozenStock` 解冻。
+- **部分退款不支持**：`completeAdminOrderRefund` 当前是"全单退款 + 全量入库"语义，没有按 order_item 部分退款的 payload。如要支持，得让 admin 在审核时选哪几个 item 退、各退多少件，然后这里按选中数量入库——本期不做。
 
 ---
 
@@ -457,6 +444,6 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
-| P0     | 3    | Server Component 硬编码 URL / 仓库寄售无写接口 / product schema 减字段后 cart-search-product-detail-banner-admin 模块仍读旧列（见 #25）|
-| P1     | 4    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 支付超时库存归还 + 商城退款 API（竞猜流标退款已完成 2026-04-29，好友 PK 空选项 admin 兜底作废已完成 2026-04-30）|
+| P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口（#25 schema sweep + 库存占用模式已完成 2026-05-01）|
+| P1     | 4    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（含 #25 PAID→REFUNDED 库存归还，留 #15 P1 待办）|
 | P2     | 13   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 |

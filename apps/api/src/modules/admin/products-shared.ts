@@ -69,7 +69,7 @@ export type AdminProductRow = {
   brand_product_id: number | string | null;
   shop_id: number | string | null;
   name: string;
-  price: number | string | null;
+  guide_price: number | string | null;
   stock: number | string | null;
   frozen_stock: number | string | null;
   status: number | string;
@@ -93,6 +93,9 @@ export type AdminBrandLibraryRow = {
   category_id: number | string | null;
   guide_price: number | string | null;
   supply_price: number | string | null;
+  guess_price: number | string | null;
+  stock: number | string | null;
+  frozen_stock: number | string | null;
   description: string | null;
   status: number | string;
   created_at: Date | string;
@@ -160,6 +163,10 @@ export interface AdminBrandLibraryItem {
   category: string;
   guidePrice: number;
   supplyPrice: number;
+  guessPrice: number;
+  stock: number;
+  frozenStock: number;
+  availableStock: number;
   status: AdminBrandLibraryStatus;
   description: string | null;
   createdAt: string;
@@ -351,7 +358,7 @@ export function sanitizeAdminProduct(row: AdminProductRow): AdminProductListItem
     category: row.category_name || '未分类',
     shopId: row.shop_id == null ? null : String(row.shop_id),
     shopName: row.shop_name || '未归属店铺',
-    price: toNumber(row.price),
+    price: toNumber(row.guide_price),
     stock,
     availableStock,
     frozenStock,
@@ -371,6 +378,8 @@ export function sanitizeAdminBrandLibrary(
   row: AdminBrandLibraryRow,
 ): AdminBrandLibraryItem {
   const freightCents = row.freight == null ? null : Number(row.freight);
+  const stock = Math.max(0, toNumber(row.stock));
+  const frozenStock = Math.max(0, toNumber(row.frozen_stock));
   return {
     id: String(row.id),
     brandId: row.brand_id == null ? null : String(row.brand_id),
@@ -380,6 +389,10 @@ export function sanitizeAdminBrandLibrary(
     category: row.category_name || '未分类',
     guidePrice: toNumber(row.guide_price),
     supplyPrice: toNumber(row.supply_price),
+    guessPrice: toNumber(row.guess_price),
+    stock,
+    frozenStock,
+    availableStock: Math.max(0, stock - frozenStock),
     status: resolveBrandLibraryStatus(row),
     description: row.description ?? null,
     createdAt: formatDateTime(row.created_at),
@@ -477,7 +490,7 @@ export function buildAdminProductFilters(
 
   if (options.includeStatus && status === 'active') {
     whereClauses.push(
-      'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (p.stock - COALESCE(p.frozen_stock, 0)) > ?',
+      'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (COALESCE(bp.stock, 0) - COALESCE(bp.frozen_stock, 0)) > ?',
     );
     params.push(
       PRODUCT_STATUS_ACTIVE,
@@ -491,7 +504,7 @@ export function buildAdminProductFilters(
     );
   } else if (options.includeStatus && status === 'low_stock') {
     whereClauses.push(
-      'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (p.stock - COALESCE(p.frozen_stock, 0)) <= ?',
+      'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (COALESCE(bp.stock, 0) - COALESCE(bp.frozen_stock, 0)) <= ?',
     );
     params.push(
       PRODUCT_STATUS_ACTIVE,
@@ -577,6 +590,9 @@ export function normalizeAdminBrandProductPayload(
   const guidePrice = Math.round(Number(payload.guidePrice ?? 0));
   const supplyPrice =
     payload.supplyPrice == null ? null : Math.round(Number(payload.supplyPrice));
+  const guessPrice =
+    payload.guessPrice == null ? null : Math.round(Number(payload.guessPrice));
+  const stock = payload.stock == null ? 0 : Math.max(0, Math.trunc(Number(payload.stock)));
   const defaultImg = payload.defaultImg?.trim() || null;
   const description = payload.description?.trim() || null;
   const videoUrl = payload.videoUrl?.trim() || null;
@@ -607,6 +623,12 @@ export function normalizeAdminBrandProductPayload(
   }
   if (supplyPrice != null && (!Number.isInteger(supplyPrice) || supplyPrice < 0)) {
     throw new Error('供货价不合法');
+  }
+  if (guessPrice != null && (!Number.isInteger(guessPrice) || guessPrice < 0)) {
+    throw new Error('竞猜价不合法');
+  }
+  if (!Number.isInteger(stock) || stock < 0) {
+    throw new Error('库存不合法');
   }
   if (freight != null && (!Number.isInteger(freight) || freight < 0)) {
     throw new Error('运费不合法');
@@ -664,6 +686,8 @@ export function normalizeAdminBrandProductPayload(
     categoryId,
     guidePrice,
     supplyPrice,
+    guessPrice,
+    stock,
     defaultImg,
     description,
     videoUrl,

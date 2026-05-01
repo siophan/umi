@@ -15,7 +15,7 @@ export type ProductFeedSort = 'default' | 'sales' | 'price_asc' | 'rating';
 const SORT_CLAUSES: Record<ProductFeedSort, string> = {
   default: 'COALESCE(p.sales, 0) DESC, p.created_at DESC, p.id DESC',
   sales: 'COALESCE(p.sales, 0) DESC, p.id DESC',
-  price_asc: 'p.price ASC, p.id DESC',
+  price_asc: 'bp.guide_price ASC, p.id DESC',
   rating: 'COALESCE(p.rating, 0) DESC, p.id DESC',
 };
 
@@ -70,15 +70,16 @@ export async function getProductFeed(options: {
         SELECT
           p.id,
           bp.name AS name,
-          p.price,
+          bp.guide_price AS price,
           bp.guide_price AS original_price,
-          p.guess_price,
+          bp.guess_price,
           bp.default_img AS image_url,
           bp.images AS images,
           bp.tags AS tags,
           p.sales,
           p.rating,
-          p.stock,
+          bp.stock,
+          bp.frozen_stock,
           bp.collab AS collab,
           p.status,
           p.created_at,

@@ -72,6 +72,17 @@ export function AdminBrandLibraryFormModal({
           <Form.Item label="供货价（元）" name="supplyPriceYuan">
             <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="供货价（元）" />
           </Form.Item>
+          <Form.Item label="竞猜价（元）" name="guessPriceYuan" extra="留空时按指导价兜底">
+            <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="竞猜价（元）" />
+          </Form.Item>
+          <Form.Item
+            label="平台总库存"
+            name="stock"
+            rules={[{ required: true, message: '请输入库存' }]}
+            extra="跨店共享池；下单冻结、支付扣减"
+          >
+            <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="平台总库存" />
+          </Form.Item>
           <Form.Item label="封面图" name="defaultImg" valuePropName="value">
             <AdminOssImageUploader usage="brand_product" placeholder="上传封面" />
           </Form.Item>

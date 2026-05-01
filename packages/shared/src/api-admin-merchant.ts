@@ -49,6 +49,8 @@ export interface CreateAdminBrandProductPayload {
   categoryId: EntityId;
   guidePrice: number;
   supplyPrice?: number | null;
+  guessPrice?: number | null;
+  stock?: number | null;
   defaultImg?: string | null;
   imageList?: string[] | null;
   description?: string | null;
@@ -74,6 +76,8 @@ export interface UpdateAdminBrandProductPayload {
   categoryId: EntityId;
   guidePrice: number;
   supplyPrice?: number | null;
+  guessPrice?: number | null;
+  stock?: number | null;
   defaultImg?: string | null;
   imageList?: string[] | null;
   description?: string | null;

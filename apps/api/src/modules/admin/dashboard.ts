@@ -71,6 +71,7 @@ type HotProductRow = {
   price: number | string | null;
   status: number | string;
   stock: number | string | null;
+  frozen_stock: number | string | null;
   sales_count: number | string | null;
 };
 
@@ -243,9 +244,10 @@ export async function getAdminDashboardStats() {
           p.id,
           bp.name AS name,
           bp.default_img AS image_url,
-          p.price,
+          bp.guide_price AS price,
           p.status,
-          p.stock,
+          bp.stock,
+          bp.frozen_stock,
           MAX(p.sales) AS p_sales,
           COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS sales_count
         FROM product p
@@ -432,7 +434,7 @@ export async function getAdminDashboardStats() {
       name: row.name,
       imageUrl: row.image_url,
       price: toNumber(row.price),
-      stock: toNumber(row.stock),
+      stock: Math.max(0, toNumber(row.stock) - toNumber(row.frozen_stock)),
       sales: toNumber(row.sales_count),
       status: mapProductStatus(toNumber(row.status)),
     })),

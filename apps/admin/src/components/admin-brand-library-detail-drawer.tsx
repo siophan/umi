@@ -30,6 +30,12 @@ export function AdminBrandLibraryDetailDrawer({
             <Descriptions.Item label="分类">{selected.category || '-'}</Descriptions.Item>
             <Descriptions.Item label="指导价">{formatAmount(selected.guidePrice)}</Descriptions.Item>
             <Descriptions.Item label="供货价">{formatAmount(selected.supplyPrice)}</Descriptions.Item>
+            <Descriptions.Item label="竞猜价">
+              {selected.guessPrice > 0 ? formatAmount(selected.guessPrice) : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="平台库存">
+              {`${formatNumber(selected.availableStock)} 可售 / ${formatNumber(selected.stock)} 总 / ${formatNumber(selected.frozenStock)} 占用`}
+            </Descriptions.Item>
             <Descriptions.Item label="挂载商品">{formatNumber(selected.productCount)}</Descriptions.Item>
             <Descriptions.Item label="在售商品">{formatNumber(selected.activeProductCount)}</Descriptions.Item>
             <Descriptions.Item label="状态">

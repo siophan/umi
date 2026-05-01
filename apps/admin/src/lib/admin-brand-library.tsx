@@ -25,6 +25,8 @@ export type BrandProductFormValues = {
   categoryId: EntityId;
   guidePriceYuan: number;
   supplyPriceYuan?: number;
+  guessPriceYuan?: number;
+  stock: number;
   defaultImg?: string;
   imageList?: string[];
   description?: string;
@@ -207,7 +209,7 @@ export function buildCategoryIdOptions(
 }
 
 export function buildCreateBrandProductFormValues(): Partial<BrandProductFormValues> {
-  return { status: 'active' };
+  return { status: 'active', stock: 0 };
 }
 
 export function buildEditBrandProductFormValues(
@@ -219,6 +221,8 @@ export function buildEditBrandProductFormValues(
     categoryId: record.categoryId as EntityId,
     guidePriceYuan: centsToYuan(record.guidePrice),
     supplyPriceYuan: centsToYuan(record.supplyPrice),
+    guessPriceYuan: record.guessPrice > 0 ? centsToYuan(record.guessPrice) : undefined,
+    stock: record.stock,
     defaultImg: record.imageUrl || undefined,
     imageList: record.imageList.length ? record.imageList : undefined,
     description: record.description || undefined,
@@ -257,6 +261,19 @@ export function buildBrandLibraryColumns(args: {
     { title: '分类', dataIndex: 'category', width: 160, render: (_, record) => record.category || '-' },
     { title: '指导价', dataIndex: 'guidePrice', width: 120, render: (_, record) => formatAmount(record.guidePrice) },
     { title: '供货价', dataIndex: 'supplyPrice', width: 120, render: (_, record) => formatAmount(record.supplyPrice) },
+    {
+      title: '竞猜价',
+      dataIndex: 'guessPrice',
+      width: 120,
+      render: (_, record) => (record.guessPrice > 0 ? formatAmount(record.guessPrice) : '-'),
+    },
+    {
+      title: '可用库存',
+      dataIndex: 'availableStock',
+      width: 120,
+      tooltip: 'stock - frozen_stock；下单冻结、支付扣减',
+      render: (_, record) => `${formatNumber(record.availableStock)} / ${formatNumber(record.stock)}`,
+    },
     {
       title: '挂载商品',
       tooltip: '已经挂在某个店铺铺货过的店铺商品总数（含暂停/下架）',

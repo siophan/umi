@@ -281,6 +281,8 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         categoryId: values.categoryId,
         guidePrice: yuanToCents(values.guidePriceYuan) ?? 0,
         supplyPrice: yuanToCents(values.supplyPriceYuan),
+        guessPrice: yuanToCents(values.guessPriceYuan),
+        stock: Math.max(0, Math.trunc(Number(values.stock ?? 0))),
         defaultImg: values.defaultImg || null,
         imageList: imageList.length ? imageList : null,
         description: values.description || null,

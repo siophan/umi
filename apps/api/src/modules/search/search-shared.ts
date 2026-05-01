@@ -27,6 +27,7 @@ export type ProductRow = {
   sales?: number | string | null;
   rating?: number | string | null;
   stock: number | string | null;
+  frozen_stock?: number | string | null;
   collab?: string | null;
   status: number | string;
   shop_name: string | null;
@@ -136,6 +137,7 @@ export function sanitizeProductFeedItem(row: ProductRow, index: number): Product
   const originalPrice = Number(row.original_price ?? row.price ?? 0) / 100;
   const guessPrice = Number(row.guess_price ?? row.price ?? 0) / 100;
   const discountAmount = Math.max(0, originalPrice - price);
+  const stock = Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0));
   const tags = safeJsonArray(row.tags);
   const isNew = isRecentProduct(row.created_at);
   const sales = Math.max(0, Number(row.sales ?? 0));
@@ -158,7 +160,7 @@ export function sanitizeProductFeedItem(row: ProductRow, index: number): Product
     discountAmount,
     sales,
     rating: Number(row.rating ?? 0),
-    stock: Math.max(0, Number(row.stock ?? 0)),
+    stock,
     img: row.image_url || safeJsonArray(row.images)[0] || row.default_img || '',
     tag,
     miniTag: buildFeedMiniTag(tag, discountAmount, guessPrice, price, isNew, row.collab),

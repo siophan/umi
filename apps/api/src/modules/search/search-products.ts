@@ -47,9 +47,9 @@ export async function searchProducts(
   const countParams: Array<string | number> = [like, like, like, like];
   const orderBy =
     sort === 'price-asc'
-      ? 'COALESCE(p.price, 0) ASC, p.created_at DESC, p.id DESC'
+      ? 'COALESCE(bp.guide_price, 0) ASC, p.created_at DESC, p.id DESC'
       : sort === 'price-desc'
-        ? 'COALESCE(p.price, 0) DESC, p.created_at DESC, p.id DESC'
+        ? 'COALESCE(bp.guide_price, 0) DESC, p.created_at DESC, p.id DESC'
         : sort === 'rating'
           ? 'COALESCE(p.rating, 0) DESC, COALESCE(p.sales, 0) DESC, p.id DESC'
           : 'COALESCE(p.sales, 0) DESC, p.created_at DESC, p.id DESC';
@@ -72,15 +72,16 @@ export async function searchProducts(
         SELECT
           p.id,
           bp.name AS name,
-          p.price,
+          bp.guide_price AS price,
           bp.guide_price AS original_price,
-          p.guess_price,
+          bp.guess_price,
           bp.default_img AS image_url,
           bp.images AS images,
           bp.tags AS tags,
           p.sales,
           p.rating,
-          p.stock,
+          bp.stock,
+          bp.frozen_stock,
           bp.collab AS collab,
           p.status,
           p.created_at,

@@ -147,8 +147,8 @@ async function requireProductForGuessCreate(productId: string, creatorShopId: st
         p.shop_id,
         bp.default_img AS image_url,
         p.status,
-        p.stock,
-        p.frozen_stock,
+        bp.stock,
+        bp.frozen_stock,
         s.status AS shop_status,
         b.status AS brand_status,
         bp.status AS brand_product_status

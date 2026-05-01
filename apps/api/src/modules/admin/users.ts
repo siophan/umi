@@ -355,8 +355,8 @@ export async function getAdminUserGuesses(
         bp.name AS product_name,
         b.name AS brand_name,
         bp.default_img AS product_img,
-        p.price AS product_price,
-        p.guess_price AS product_guess_price
+        bp.guide_price AS product_price,
+        bp.guess_price AS product_guess_price
       FROM guess_bet gb
       INNER JOIN guess g ON g.id = gb.guess_id
       LEFT JOIN guess_product gp ON gp.guess_id = g.id
@@ -377,8 +377,8 @@ export async function getAdminUserGuesses(
         bp.name,
         b.name,
         bp.default_img,
-        p.price,
-        p.guess_price
+        bp.guide_price,
+        bp.guess_price
     `,
     [guessIds],
   );

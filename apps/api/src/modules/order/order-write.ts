@@ -101,7 +101,7 @@ async function getProductPurchaseRows(
   const quantity = Math.max(1, Math.trunc(Number(payload.quantity ?? 1) || 1));
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
     `
-      SELECT p.id AS product_id, p.shop_id, p.price, bp.guide_price AS original_price, p.stock, p.status AS product_status
+      SELECT p.id AS product_id, p.shop_id, p.brand_product_id, bp.guide_price AS price, bp.guide_price AS original_price, bp.stock, bp.frozen_stock, p.status AS product_status
       FROM product p
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE p.id = ?
@@ -114,7 +114,8 @@ async function getProductPurchaseRows(
   if (!row || Number(row.product_status ?? 0) !== 10) {
     throw new HttpError(404, 'PRODUCT_NOT_FOUND', '商品不存在');
   }
-  if (Number(row.stock ?? 0) < quantity) {
+  const available = Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0));
+  if (available < quantity) {
     throw new HttpError(400, 'PRODUCT_STOCK_NOT_ENOUGH', '商品库存不足');
   }
 
@@ -140,9 +141,11 @@ async function getCartPurchaseRows(
         ci.quantity,
         ci.specs,
         p.shop_id,
-        p.price,
+        p.brand_product_id,
+        bp.guide_price AS price,
         bp.guide_price AS original_price,
-        p.stock,
+        bp.stock,
+        bp.frozen_stock,
         p.status AS product_status
       FROM cart_item ci
       INNER JOIN product p ON p.id = ci.product_id
@@ -164,7 +167,8 @@ async function getCartPurchaseRows(
     if (Number(row.product_status ?? 0) !== 10) {
       throw new HttpError(400, 'PRODUCT_NOT_AVAILABLE', '购物车中存在不可下单商品');
     }
-    if (Number(row.stock ?? 0) < quantity) {
+    const available = Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0));
+    if (available < quantity) {
       throw new HttpError(400, 'PRODUCT_STOCK_NOT_ENOUGH', '购物车中存在库存不足商品');
     }
     return {
@@ -238,16 +242,28 @@ export async function createPendingOrder(
         [orderId, item.productId, item.specs || '', item.quantity, unitPrice, originalUnitPrice, itemAmount, itemDiscount],
       );
 
+      const brandProductId = item.row.brand_product_id;
+      if (brandProductId == null) {
+        throw new HttpError(400, 'PRODUCT_BRAND_MISSING', '商品未关联品牌库');
+      }
+      const [freezeResult] = await connection.execute<mysql.ResultSetHeader>(
+        `
+          UPDATE brand_product
+          SET frozen_stock = frozen_stock + ?, updated_at = CURRENT_TIMESTAMP(3)
+          WHERE id = ? AND (stock - frozen_stock) >= ?
+        `,
+        [item.quantity, brandProductId, item.quantity],
+      );
+      if (freezeResult.affectedRows === 0) {
+        throw new HttpError(400, 'PRODUCT_STOCK_NOT_ENOUGH', '商品库存不足');
+      }
       await connection.execute(
         `
           UPDATE product
-          SET
-            stock = GREATEST(stock - ?, 0),
-            sales = sales + ?,
-            updated_at = CURRENT_TIMESTAMP(3)
+          SET sales = sales + ?, updated_at = CURRENT_TIMESTAMP(3)
           WHERE id = ?
         `,
-        [item.quantity, item.quantity, item.productId],
+        [item.quantity, item.productId],
       );
     }
 

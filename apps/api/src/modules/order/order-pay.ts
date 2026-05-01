@@ -29,6 +29,23 @@ import {
 
 const PAY_EXPIRES_SEC = 5 * 60;
 
+/**
+ * 订单关闭/取消时把占用的 brand_product.frozen_stock 释放回去。
+ * 仅在 PENDING → CLOSED 切换的事务里幂等执行；其他状态来源（已 PAID 后退款）不调用。
+ */
+async function releaseOrderFrozenStock(orderId: number | string): Promise<void> {
+  const db = getDbPool();
+  await db.execute(
+    `UPDATE brand_product bp
+       INNER JOIN product p ON p.brand_product_id = bp.id
+       INNER JOIN order_item oi ON oi.product_id = p.id
+       SET bp.frozen_stock = GREATEST(bp.frozen_stock - oi.quantity, 0),
+           bp.updated_at = CURRENT_TIMESTAMP(3)
+     WHERE oi.order_id = ?`,
+    [orderId],
+  );
+}
+
 type OrderForPayRow = {
   id: number | string;
   user_id: number | string;
@@ -233,6 +250,18 @@ export async function markOrderPaid(payNo: string, tradeNo: string, paidAt: Date
       [order.id, ORDER_PENDING, ORDER_PAID, order.user_id, OPERATOR_ROLE_SYSTEM, '支付成功'],
     );
 
+    // 库存：占用转扣减——同时减 stock 与 frozen_stock
+    await connection.execute(
+      `UPDATE brand_product bp
+         INNER JOIN product p ON p.brand_product_id = bp.id
+         INNER JOIN order_item oi ON oi.product_id = p.id
+         SET bp.stock = GREATEST(bp.stock - oi.quantity, 0),
+             bp.frozen_stock = GREATEST(bp.frozen_stock - oi.quantity, 0),
+             bp.updated_at = CURRENT_TIMESTAMP(3)
+       WHERE oi.order_id = ?`,
+      [order.id],
+    );
+
     if (order.coupon_id) {
       await connection.execute(
         `UPDATE coupon SET status = ?, used_at = CURRENT_TIMESTAMP(3), updated_at = CURRENT_TIMESTAMP(3)
@@ -360,13 +389,16 @@ export async function queryOrderPayStatus(
     };
   }
 
-  // 过期 → close
+  // 过期 → close + 解冻 brand_product.frozen_stock
   if (order.pay_expires_at && new Date(order.pay_expires_at).getTime() < Date.now()) {
-    await db.execute(
+    const [closeResult] = await db.execute<mysql.ResultSetHeader>(
       `UPDATE \`order\` SET pay_status = ?, status = ?, updated_at = CURRENT_TIMESTAMP(3)
          WHERE id = ? AND pay_status = ?`,
       [PAY_STATUS_CLOSED, ORDER_CLOSED, order.id, PAY_STATUS_WAITING],
     );
+    if (closeResult.affectedRows > 0) {
+      await releaseOrderFrozenStock(order.id);
+    }
     return { orderId: toEntityId(order.id), payStatus: 'closed', paidAt: null };
   }
 
@@ -386,11 +418,14 @@ export async function queryOrderPayStatus(
       };
     }
     if (queryResult.status === 'closed') {
-      await db.execute(
+      const [closeResult] = await db.execute<mysql.ResultSetHeader>(
         `UPDATE \`order\` SET pay_status = ?, status = ?, updated_at = CURRENT_TIMESTAMP(3)
            WHERE id = ? AND pay_status = ?`,
         [PAY_STATUS_CLOSED, ORDER_CLOSED, order.id, PAY_STATUS_WAITING],
       );
+      if (closeResult.affectedRows > 0) {
+        await releaseOrderFrozenStock(order.id);
+      }
       return { orderId: toEntityId(order.id), payStatus: 'closed', paidAt: null };
     }
     if (queryResult.status === 'failed') {

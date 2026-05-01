@@ -47,11 +47,14 @@ export async function getPublicShopDetail(shopId: string): Promise<PublicShopDet
       SELECT
         p.id,
         bp.name AS name,
-        p.price,
+        bp.guide_price AS price,
         bp.guide_price AS original_price,
+        bp.guess_price,
         bp.default_img AS image_url,
         p.sales,
         p.rating,
+        bp.stock,
+        bp.frozen_stock,
         p.status,
         p.created_at,
         b.name AS brand_name

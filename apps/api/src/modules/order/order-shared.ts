@@ -93,9 +93,11 @@ export type OrderLogRow = {
 export type ProductPurchaseRow = {
   product_id: number | string;
   shop_id: number | string | null;
+  brand_product_id: number | string | null;
   price: number | string | null;
   original_price: number | string | null;
   stock: number | string | null;
+  frozen_stock: number | string | null;
   product_status: number | string | null;
 };
 

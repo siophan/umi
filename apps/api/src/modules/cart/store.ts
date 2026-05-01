@@ -29,6 +29,7 @@ type CartRow = {
   images: string | null;
   default_img: string | null;
   stock: number | string | null;
+  frozen_stock: number | string | null;
   product_status: number | string | null;
 };
 
@@ -39,6 +40,7 @@ type OwnedCartItemRow = {
   checked: number | string | boolean | null;
   specs: string | null;
   stock: number | string | null;
+  frozen_stock: number | string | null;
   product_status: number | string | null;
 };
 
@@ -77,7 +79,7 @@ function sanitizeCartItem(row: CartRow): CartItem {
     originalPrice: Number(row.original_price ?? row.price ?? 0) / 100,
     quantity: Math.max(1, Number(row.quantity ?? 1)),
     checked: Boolean(row.checked),
-    stock: Math.max(0, Number(row.stock ?? 0)),
+    stock: Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0)),
     status: Number(row.product_status ?? 0) === 10 ? 'active' : 'unavailable',
   };
 }
@@ -96,10 +98,12 @@ async function getOwnedCartItem(userId: string, cartItemId: string) {
         ci.quantity,
         ci.checked,
         ci.specs,
-        p.stock,
+        bp.stock,
+        bp.frozen_stock,
         p.status AS product_status
       FROM cart_item ci
       INNER JOIN product p ON p.id = ci.product_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE ci.id = ?
         AND ci.user_id = ?
       LIMIT 1
@@ -124,27 +128,28 @@ async function ensureOwnedCartItem(userId: string, cartItemId: string) {
 
 /**
  * 确认目标商品仍可加入购物车。
- * 只允许上架商品进入购物车，并返回实时库存用于数量校验。
+ * 只允许上架商品进入购物车，并返回品牌侧可用库存（stock - frozen_stock）用于数量校验。
  */
 async function ensureProductAvailable(productId: string) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
-      SELECT id, stock, status
-      FROM product
-      WHERE id = ?
+      SELECT p.id, p.status, bp.stock, bp.frozen_stock
+      FROM product p
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      WHERE p.id = ?
       LIMIT 1
     `,
     [productId],
   );
 
-  const row = (rows[0] as { id: number | string; stock: number | string | null; status: number | string | null } | undefined) ?? null;
+  const row = (rows[0] as { id: number | string; status: number | string | null; stock: number | string | null; frozen_stock: number | string | null } | undefined) ?? null;
   if (!row || Number(row.status ?? 0) !== 10) {
     throw new HttpError(404, 'PRODUCT_NOT_FOUND', '商品不存在');
   }
   return {
     id: toEntityId(row.id),
-    stock: Math.max(0, Number(row.stock ?? 0)),
+    stock: Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0)),
   };
 }
 
@@ -167,11 +172,12 @@ export async function getCart(userId: string): Promise<CartListResult> {
         COALESCE(s.logo_url, bp.default_img) AS shop_logo,
         b.name AS brand_name,
         bp.name AS product_name,
-        p.price,
+        bp.guide_price AS price,
         bp.guide_price AS original_price,
         bp.default_img AS image_url,
         bp.images AS images,
-        p.stock,
+        bp.stock,
+        bp.frozen_stock,
         p.status AS product_status
       FROM cart_item ci
       INNER JOIN product p ON p.id = ci.product_id
@@ -243,7 +249,7 @@ export async function addCartItem(userId: string, payload: AddCartItemPayload): 
 
 /**
  * 更新购物车商品数量或勾选状态。
- * 这里只允许改数量和 checked，库存上限在这里统一截断。
+ * 这里只允许改数量和 checked，库存上限按 brand_product.stock - frozen_stock 截断。
  */
 export async function updateCartItem(userId: string, cartItemId: string, payload: UpdateCartItemPayload): Promise<CartMutationResult> {
   if (payload.quantity === undefined && payload.checked === undefined) {
@@ -257,7 +263,8 @@ export async function updateCartItem(userId: string, cartItemId: string, payload
   }
 
   const normalizedQuantity = Math.min(99, Math.max(1, Math.trunc(nextQuantityRaw)));
-  const cappedQuantity = Number(item.stock ?? 0) > 0 ? Math.min(Number(item.stock ?? 0), normalizedQuantity) : normalizedQuantity;
+  const availableStock = Math.max(0, Number(item.stock ?? 0) - Number(item.frozen_stock ?? 0));
+  const cappedQuantity = availableStock > 0 ? Math.min(availableStock, normalizedQuantity) : normalizedQuantity;
   const nextChecked = payload.checked === undefined ? (item.checked ? 1 : 0) : payload.checked ? 1 : 0;
   const db = getDbPool();
 
