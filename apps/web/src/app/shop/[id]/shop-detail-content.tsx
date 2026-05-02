@@ -1,5 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { followUser, unfollowUser } from '../../../lib/api/users';
+import { hasAuthToken } from '../../../lib/api/shared';
 import styles from './page.module.css';
 
 type ShopProduct = {
@@ -25,6 +29,10 @@ type ShopMeta = {
   desc: string;
   city: string;
   fans: string;
+  logo: string;
+  avgRating: number;
+  ownerUserId: string;
+  viewerFollowed: boolean;
   grade: string;
 };
 
@@ -35,7 +43,6 @@ type ShopDetailContentProps = {
   shopGuess: ShopGuess[];
   totalSales: string;
   heroAvatarSrc: string;
-  shopFacts: Array<{ value: string; name: string; desc: string }>;
   tab: 'all' | 'hot' | 'guess' | 'new';
   filter: 'default' | 'sales' | 'price' | 'rating';
   priceAsc: boolean;
@@ -51,6 +58,7 @@ type ShopDetailContentProps = {
   onOpenProduct: (id: string) => void;
   onOpenGuess: (id: string) => void;
   onJumpToMain: (tab: 'all' | 'hot' | 'guess' | 'new') => void;
+  onToast: (message: string) => void;
 };
 
 function formatNum(value: number) {
@@ -58,6 +66,19 @@ function formatNum(value: number) {
   if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
   return `${value}`;
 }
+
+const STATIC_COUPONS: Array<{ amount: number; name: string; cond: string }> = [
+  { amount: 5, name: '新人专享', cond: '满 29 可用' },
+  { amount: 10, name: '店铺满减', cond: '满 59 可用' },
+  { amount: 20, name: '品牌大额', cond: '满 99 可用' },
+  { amount: 50, name: '限时特惠', cond: '满 199 可用' },
+];
+
+const SCORE_LABELS: Array<{ key: 'quality' | 'logistics' | 'service'; label: string; color: string }> = [
+  { key: 'quality', label: '商品质量', color: '#00a66e' },
+  { key: 'logistics', label: '物流速度', color: '#4a6cf7' },
+  { key: 'service', label: '服务态度', color: '#ff6b00' },
+];
 
 export function ShopDetailContent(props: ShopDetailContentProps) {
   const {
@@ -67,7 +88,6 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
     shopGuess,
     totalSales,
     heroAvatarSrc,
-    shopFacts,
     tab,
     filter,
     priceAsc,
@@ -83,12 +103,84 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
     onOpenProduct,
     onOpenGuess,
     onJumpToMain,
+    onToast,
   } = props;
+
+  const router = useRouter();
+  const [following, setFollowing] = useState(meta.viewerFollowed);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [favored, setFavored] = useState(false);
+  const [claimed, setClaimed] = useState<Record<number, boolean>>({});
+  const [cardFav, setCardFav] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setFollowing(meta.viewerFollowed);
+  }, [meta.viewerFollowed]);
 
   const showGuess = tab === 'guess';
   const showHot = tab === 'hot';
   const showNew = tab === 'new';
   const activeProducts = showHot ? hotProducts : showNew ? newProducts : sortedProducts;
+  const heroBgImg = shopProducts[0]?.img || meta.logo || '';
+
+  const ringRadius = 22;
+  const ringCircum = 2 * Math.PI * ringRadius;
+  const ringPct = meta.avgRating > 0 ? meta.avgRating / 5 : 0;
+
+  async function toggleFollow() {
+    if (followBusy) return;
+    if (!hasAuthToken()) {
+      onToast('请先登录');
+      router.push('/login');
+      return;
+    }
+    const next = !following;
+    setFollowBusy(true);
+    setFollowing(next);
+    try {
+      if (next) {
+        await followUser(meta.ownerUserId);
+        onToast('✅ 关注成功');
+      } else {
+        await unfollowUser(meta.ownerUserId);
+        onToast('已取消关注');
+      }
+    } catch (error) {
+      setFollowing(!next);
+      onToast(error instanceof Error ? error.message : '操作失败，请稍后重试');
+    } finally {
+      setFollowBusy(false);
+    }
+  }
+
+  function toggleFav() {
+    const next = !favored;
+    setFavored(next);
+    onToast(next ? '⭐ 收藏成功' : '取消收藏');
+  }
+
+  function toggleCardFav(productId: string) {
+    setCardFav((prev) => {
+      const next = !prev[productId];
+      onToast(next ? '❤️ 已收藏' : '取消收藏');
+      return { ...prev, [productId]: next };
+    });
+  }
+
+  function claim(idx: number, amount: number) {
+    if (claimed[idx]) return;
+    setClaimed((prev) => ({ ...prev, [idx]: true }));
+    onToast(`🎫 ¥${amount} 优惠券已领取`);
+  }
+
+  function openChat() {
+    if (!hasAuthToken()) {
+      onToast('请先登录');
+      router.push('/login');
+      return;
+    }
+    router.push(`/chat/${meta.ownerUserId}`);
+  }
 
   return (
     <div className={styles.page}>
@@ -109,7 +201,7 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
 
       <section className={styles.hero}>
         <div className={styles.heroBg}>
-          <img alt={meta.full} src={shopProducts[0]?.img || '/legacy/images/products/p001-lays.jpg'} />
+          {heroBgImg ? <img alt={meta.full} src={heroBgImg} /> : null}
           <div className={styles.heroOverlay} />
         </div>
         <div className={styles.heroContent}>
@@ -124,6 +216,14 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
               </div>
               <div className={styles.heroDesc}>{meta.desc}</div>
             </div>
+            <button
+              type="button"
+              className={`${styles.heroFollow} ${following ? styles.heroFollowOn : ''}`}
+              onClick={toggleFollow}
+              disabled={followBusy}
+            >
+              {following ? '已关注' : '+ 关注'}
+            </button>
           </div>
 
           <div className={styles.heroStats}>
@@ -136,6 +236,10 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
               <div className={styles.heroLbl}>总销量</div>
             </div>
             <div className={styles.heroStat}>
+              <div className={styles.heroVal}>{meta.avgRating > 0 ? meta.avgRating.toFixed(1) : '—'}</div>
+              <div className={styles.heroLbl}>店铺评分</div>
+            </div>
+            <div className={styles.heroStat}>
               <div className={styles.heroVal}>{meta.fans}</div>
               <div className={styles.heroLbl}>粉丝</div>
             </div>
@@ -143,21 +247,67 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
 
           <div className={styles.heroTags}>
             <span className={styles.heroTag}><i className="fa-solid fa-crown" style={{ fontSize: 9, color: '#FFD700' }} /> 品牌授权</span>
-            <span className={styles.heroTag}><i className="fa-solid fa-cubes-stacked" style={{ fontSize: 9 }} /> 在售商品 {shopProducts.length}</span>
-            <span className={styles.heroTag}><i className="fa-solid fa-location-dot" style={{ fontSize: 9 }} /> {meta.city}</span>
+            <span className={styles.heroTag}><i className="fa-solid fa-truck-fast" style={{ fontSize: 9 }} /> 顺丰包邮</span>
+            {meta.city ? (
+              <span className={styles.heroTag}><i className="fa-solid fa-location-dot" style={{ fontSize: 9 }} /> {meta.city}</span>
+            ) : null}
             {shopGuess.length ? <span className={styles.heroTag}><i className="fa-solid fa-bullseye" style={{ fontSize: 9, color: '#FF6B00' }} /> 竞猜活动</span> : null}
           </div>
         </div>
       </section>
 
+      <section className={styles.scoreCard}>
+        <div className={styles.scoreRing}>
+          <svg viewBox="0 0 52 52">
+            <circle className={styles.scoreRingBg} cx="26" cy="26" r={ringRadius} />
+            <circle
+              className={styles.scoreRingFill}
+              cx="26"
+              cy="26"
+              r={ringRadius}
+              strokeDasharray={ringCircum}
+              strokeDashoffset={ringCircum * (1 - ringPct)}
+            />
+          </svg>
+          <div className={styles.scoreVal}>{meta.avgRating > 0 ? meta.avgRating.toFixed(1) : '—'}</div>
+        </div>
+        <div className={styles.scoreItems}>
+          {SCORE_LABELS.map((item) => {
+            const value = meta.avgRating;
+            const pct = value > 0 ? (value / 5) * 100 : 0;
+            return (
+              <div key={item.key} className={styles.scoreItem}>
+                <div className={`${styles.scoreItemVal} ${value >= 4.5 ? styles.scoreItemValHigh : ''}`}>
+                  {value > 0 ? value.toFixed(1) : '—'}
+                </div>
+                <div className={styles.scoreItemLbl}>{item.label}</div>
+                <div className={styles.scoreItemBar}>
+                  <div className={styles.scoreItemFill} style={{ width: `${pct}%`, background: item.color }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <section className={styles.couponBar}>
-        {shopFacts.map((item) => (
-          <div key={item.name} className={styles.coupon}>
-            <div className={styles.couponAmt}>{item.value}</div>
+        {STATIC_COUPONS.map((coupon, idx) => (
+          <div key={coupon.amount} className={styles.coupon} onClick={() => claim(idx, coupon.amount)}>
+            <div className={styles.couponAmt}><small>¥</small>{coupon.amount}</div>
             <div>
-              <div className={styles.couponName}>{item.name}</div>
-              <div className={styles.couponCond}>{item.desc}</div>
+              <div className={styles.couponName}>{coupon.name}</div>
+              <div className={styles.couponCond}>{coupon.cond}</div>
             </div>
+            <button
+              type="button"
+              className={`${styles.couponBtn} ${claimed[idx] ? styles.couponBtnClaimed : ''}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                claim(idx, coupon.amount);
+              }}
+            >
+              {claimed[idx] ? '已领取' : '领取'}
+            </button>
           </div>
         ))}
       </section>
@@ -173,11 +323,15 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
             <div className={`${styles.activityArrow} ${styles.activityArrowOrange}`}><i className="fa-solid fa-chevron-right" /></div>
           </button>
         ) : null}
-        <button type="button" className={`${styles.activityCard} ${styles.activityPurple}`} onClick={() => onJumpToMain('new')}>
+        <button
+          type="button"
+          className={`${styles.activityCard} ${styles.activityPurple}`}
+          onClick={() => onToast('🎁 会员福利即将开启')}
+        >
           <div className={styles.activityIcon}>🎁</div>
           <div className={styles.activityBody}>
-            <div className={`${styles.activityTitle} ${styles.activityTitlePurple}`}>店铺经营概览</div>
-            <div className={`${styles.activityDesc} ${styles.activityDescPurple}`}>{shopFacts[0]?.value ?? 0} 个授权品牌 · {shopProducts.length} 件在售商品</div>
+            <div className={`${styles.activityTitle} ${styles.activityTitlePurple}`}>会员专属福利</div>
+            <div className={`${styles.activityDesc} ${styles.activityDescPurple}`}>关注店铺享额外折扣 · 新品优先体验</div>
           </div>
           <div className={`${styles.activityArrow} ${styles.activityArrowPurple}`}><i className="fa-solid fa-chevron-right" /></div>
         </button>
@@ -231,24 +385,36 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
             <div className={styles.grid}>
               {activeProducts.map((item) => {
                 const hasGuess = shopGuess.some((guess) => guess.relatedProductId === item.id);
+                const liked = !!cardFav[item.id];
                 return (
                   <button className={styles.productCard} key={item.id} type="button" onClick={() => onOpenProduct(item.id)}>
                     <div className={styles.productImg}>
-                      <img alt={item.name} src={item.img || '/legacy/images/products/p001-lays.jpg'} />
+                      {item.img ? <img alt={item.name} src={item.img} /> : null}
                       <span className={`${styles.productBadge} ${hasGuess ? styles.badgeGuess : item.sales > 3000 ? styles.badgeHot : styles.badgeBrand}`}>
                         {hasGuess ? '🎯 竞猜' : item.sales > 3000 ? '🔥 热销' : '品牌'}
                       </span>
+                      <button
+                        type="button"
+                        className={`${styles.productFav} ${liked ? styles.productFavOn : ''}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          toggleCardFav(item.id);
+                        }}
+                      >
+                        <i className={liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
+                      </button>
                     </div>
                     <div className={styles.productBody}>
                       <div className={styles.productName}>{item.name}</div>
                       <div className={styles.productPrice}>
                         <span>¥</span>
                         <strong>{item.price}</strong>
-                        <em>¥{item.originalPrice}</em>
+                        {item.originalPrice > item.price ? <em>¥{item.originalPrice}</em> : null}
                       </div>
                       <div className={styles.productMeta}>
                         <span>{formatNum(item.sales)}人付款</span>
-                        <span>⭐ {item.rating}</span>
+                        <span className={styles.productRating}>⭐ {item.rating > 0 ? item.rating.toFixed(1) : '—'}</span>
                       </div>
                     </div>
                   </button>
@@ -267,10 +433,11 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
             {shopGuess.length ? (
               shopGuess.map((guess) => {
                 const totalVotes = guess.votes.reduce((sum, value) => sum + value, 0);
+                const guessImg = shopProducts.find((item) => item.id === guess.relatedProductId)?.img || shopProducts[0]?.img || '';
                 return (
                   <button className={styles.guessCard} key={guess.id} type="button" onClick={() => onOpenGuess(guess.id)}>
                     <div className={styles.guessTop}>
-                      <img alt={guess.title} src={shopProducts.find((item) => item.id === guess.relatedProductId)?.img || shopProducts[0]?.img || '/legacy/images/products/p001-lays.jpg'} />
+                      {guessImg ? <img alt={guess.title} src={guessImg} /> : <div className={styles.guessImgPlaceholder} />}
                       <div className={styles.guessInfo}>
                         <div className={styles.guessTitle}>{guess.title}</div>
                         <div className={styles.guessMeta}>{formatNum(totalVotes)}人参与 · 店铺竞猜</div>
@@ -307,7 +474,22 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
       </main>
 
       <footer className={styles.bottomBar}>
+        <button
+          type="button"
+          className={`${styles.botIcon} ${favored ? styles.botIconOn : ''}`}
+          onClick={toggleFav}
+        >
+          <i className={favored ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
+          <span>收藏</span>
+        </button>
+        <button type="button" className={styles.botIcon} onClick={openChat}>
+          <i className="fa-regular fa-comment-dots" />
+          <span>客服</span>
+        </button>
         <div className={styles.bottomButtons}>
+          <button className={styles.chatBtn} type="button" onClick={openChat}>
+            <i className="fa-regular fa-comment-dots" /> 聊一聊
+          </button>
           <button className={styles.primaryBtn} type="button" onClick={() => onJumpToMain(shopGuess.length ? 'guess' : 'all')}>
             {shopGuess.length ? '🎯 参与竞猜' : '🛒 全部商品'}
           </button>

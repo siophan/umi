@@ -103,8 +103,12 @@ function ShopDetailPageInner() {
     ? {
         full: shopData.shop.name,
         desc: shopData.shop.description || '品质保证 · 正品行货',
-        city: shopData.shop.city || '中国',
+        city: shopData.shop.city || '',
         fans: formatNum(shopData.shop.fans),
+        logo: shopData.shop.logo || '',
+        avgRating: shopData.shop.avgRating || 0,
+        ownerUserId: shopData.shop.ownerUserId,
+        viewerFollowed: shopData.shop.viewerFollowed,
         grade:
           shopData.shop.brandAuthCount > 8
             ? '至尊商家'
@@ -128,11 +132,6 @@ function ShopDetailPageInner() {
     [shopProducts],
   );
 
-  const showAll = tab === 'all';
-  const showHot = tab === 'hot';
-  const showGuess = tab === 'guess';
-  const showNew = tab === 'new';
-
   const sortedProducts = useMemo(() => {
     const list = [...shopProducts];
     if (filter === 'sales') return list.sort((a, b) => b.sales - a.sales);
@@ -147,16 +146,10 @@ function ShopDetailPageInner() {
     .slice(0, 8);
   const newProducts = [...shopProducts].reverse().slice(0, 6);
 
-  const heroAvatarSrc = useMemo(() => createInitialsAvatar(meta?.full || shopId || '店铺'), [meta?.full, shopId]);
-  const shopFacts = useMemo(
-    () => [
-      { value: `${shopData?.shop?.brandAuthCount ?? 0}`, name: '品牌授权', desc: '已通过审核品牌数' },
-      { value: `${shopProducts.length}`, name: '在售商品', desc: '当前店铺商品数量' },
-      { value: formatNum(totalSales), name: '累计销量', desc: '按当前商品销量聚合' },
-      { value: `${shopGuess.length}`, name: '竞猜活动', desc: '当前关联竞猜数量' },
-    ],
-    [shopData?.shop?.brandAuthCount, shopGuess.length, shopProducts.length, totalSales],
-  );
+  const heroAvatarSrc = useMemo(() => {
+    if (meta?.logo) return meta.logo;
+    return createInitialsAvatar(meta?.full || shopId || '店铺');
+  }, [meta?.full, meta?.logo, shopId]);
 
   useEffect(() => {
     const onScroll = () => setNavSolid(window.scrollY > 80);
@@ -223,38 +216,41 @@ function ShopDetailPageInner() {
   }
 
   return (
-    <ShopDetailContent
-      navSolid={navSolid}
-      meta={meta}
-      shopProducts={shopProducts}
-      shopGuess={shopGuess}
-      totalSales={formatNum(totalSales)}
-      heroAvatarSrc={heroAvatarSrc}
-      shopFacts={shopFacts}
-      tab={tab}
-      filter={filter}
-      priceAsc={priceAsc}
-      sortedProducts={sortedProducts}
-      hotProducts={hotProducts}
-      newProducts={newProducts}
-      onBack={() => router.back()}
-      onShare={() => showToast('分享店铺 📤')}
-      onHome={() => router.push('/')}
-      onTabChange={setTab}
-      onFilterChange={(nextFilter) => {
-        if (nextFilter !== 'price') {
-          setPriceAsc(true);
-        }
-        setFilter(nextFilter);
-      }}
-      onTogglePrice={() => {
-        setPriceAsc((current) => !current);
-        setFilter('price');
-      }}
-      onOpenProduct={(id) => router.push(`/product/${id}`)}
-      onOpenGuess={(id) => router.push(`/guess/${id}`)}
-      onJumpToMain={jumpToMainContent}
-    />
+    <>
+      <ShopDetailContent
+        navSolid={navSolid}
+        meta={meta}
+        shopProducts={shopProducts}
+        shopGuess={shopGuess}
+        totalSales={formatNum(totalSales)}
+        heroAvatarSrc={heroAvatarSrc}
+        tab={tab}
+        filter={filter}
+        priceAsc={priceAsc}
+        sortedProducts={sortedProducts}
+        hotProducts={hotProducts}
+        newProducts={newProducts}
+        onBack={() => router.back()}
+        onShare={() => showToast('分享店铺 📤')}
+        onHome={() => router.push('/')}
+        onTabChange={setTab}
+        onFilterChange={(nextFilter) => {
+          if (nextFilter !== 'price') {
+            setPriceAsc(true);
+          }
+          setFilter(nextFilter);
+        }}
+        onTogglePrice={() => {
+          setPriceAsc((current) => !current);
+          setFilter('price');
+        }}
+        onOpenProduct={(id) => router.push(`/product/${id}`)}
+        onOpenGuess={(id) => router.push(`/guess/${id}`)}
+        onJumpToMain={jumpToMainContent}
+        onToast={showToast}
+      />
+      {toast ? <div className={styles.toast}>{toast}</div> : null}
+    </>
   );
 }
 

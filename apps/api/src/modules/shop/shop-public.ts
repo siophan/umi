@@ -6,36 +6,54 @@ import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
 import { PublicShopGuessRow, ShopProductRow, ShopRow, STATUS_ACTIVE } from './shop-shared';
 
-export async function getPublicShopDetail(shopId: string): Promise<PublicShopDetailResult> {
+export async function getPublicShopDetail(
+  shopId: string,
+  viewerId: string | null = null,
+): Promise<PublicShopDetailResult> {
   const db = getDbPool();
   const [shopRows] = await db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
         s.id,
+        s.user_id AS owner_user_id,
         s.name,
         c.name AS category,
         s.description,
         s.logo_url,
         s.status,
-        NULL AS city,
         COALESCE((SELECT COUNT(*) FROM user_follow uf WHERE uf.following_id = s.user_id), 0) AS fans,
-        COALESCE((SELECT COUNT(*) FROM product p WHERE p.shop_id = s.id), 0) AS product_count,
+        COALESCE((SELECT COUNT(*) FROM product p WHERE p.shop_id = s.id AND p.status = ?), 0) AS product_count,
         COALESCE((SELECT COUNT(*) FROM fulfillment_order fo WHERE fo.shop_id = s.id), 0) AS total_sales,
-        COALESCE((SELECT COUNT(*) FROM shop_brand_auth sba WHERE sba.shop_id = s.id AND sba.status = ?), 0) AS brand_auth_count
+        COALESCE((SELECT COUNT(*) FROM shop_brand_auth sba WHERE sba.shop_id = s.id AND sba.status = ?), 0) AS brand_auth_count,
+        COALESCE((
+          SELECT AVG(pr.rating)
+          FROM product_review pr
+          INNER JOIN product p2 ON p2.id = pr.product_id
+          WHERE p2.shop_id = s.id AND pr.status = 10
+        ), 0) AS avg_rating,
+        CASE
+          WHEN ? IS NULL THEN 0
+          ELSE (
+            SELECT COUNT(*) FROM user_follow uf
+            WHERE uf.follower_id = ? AND uf.following_id = s.user_id
+          )
+        END AS viewer_followed
       FROM shop s
       LEFT JOIN category c ON c.id = s.category_id
       WHERE s.id = ?
       LIMIT 1
     `,
-    [STATUS_ACTIVE, shopId],
+    [STATUS_ACTIVE, STATUS_ACTIVE, viewerId, viewerId, shopId],
   );
 
   const shop = (shopRows[0] as (ShopRow & {
-    city?: string | null;
+    owner_user_id?: number | string;
     fans?: number | string;
     product_count?: number | string;
     total_sales?: number | string;
     brand_auth_count?: number | string;
+    avg_rating?: number | string | null;
+    viewer_followed?: number | string | null;
   }) | undefined) ?? null;
 
   if (!shop) {
@@ -49,22 +67,19 @@ export async function getPublicShopDetail(shopId: string): Promise<PublicShopDet
         bp.name AS name,
         bp.guide_price AS price,
         bp.guide_price AS original_price,
-        bp.guess_price,
         bp.default_img AS image_url,
         p.sales,
         p.rating,
-        bp.stock,
-        bp.frozen_stock,
         p.status,
         p.created_at,
         b.name AS brand_name
       FROM product p
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       LEFT JOIN brand b ON b.id = bp.brand_id
-      WHERE p.shop_id = ?
+      WHERE p.shop_id = ? AND p.status = ?
       ORDER BY p.created_at DESC, p.id DESC
     `,
-    [shop.id],
+    [shop.id, STATUS_ACTIVE],
   );
 
   const [guessRows] = await db.execute<mysql.RowDataPacket[]>(
@@ -126,26 +141,24 @@ export async function getPublicShopDetail(shopId: string): Promise<PublicShopDet
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
   }));
 
-  const ratedProducts = productItems.filter((item) => item.rating > 0);
-  const avgRating =
-    ratedProducts.length > 0
-      ? Number((ratedProducts.reduce((sum, item) => sum + item.rating, 0) / ratedProducts.length).toFixed(1))
-      : 0;
+  const avgRating = shop.avg_rating != null ? Number(Number(shop.avg_rating).toFixed(1)) : 0;
 
   return {
     shop: {
       id: toEntityId(shop.id),
+      ownerUserId: toEntityId(shop.owner_user_id ?? 0),
       name: shop.name,
       category: shop.category,
       description: shop.description,
       logo: shop.logo_url,
       status: Number(shop.status) === STATUS_ACTIVE ? 'active' : String(shop.status),
-      city: shop.city ?? null,
+      city: null,
       fans: Number(shop.fans ?? 0),
       productCount: Number(shop.product_count ?? 0),
       totalSales: Number(shop.total_sales ?? 0),
       avgRating,
       brandAuthCount: Number(shop.brand_auth_count ?? 0),
+      viewerFollowed: Number(shop.viewer_followed ?? 0) > 0,
     },
     products: productItems,
     guesses: (guessRows as PublicShopGuessRow[]).map((row) => {

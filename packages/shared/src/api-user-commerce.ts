@@ -664,6 +664,7 @@ export interface PublicShopGuessItem {
 export interface PublicShopDetailResult {
   shop: {
     id: ShopId;
+    ownerUserId: UserId;
     name: string;
     category: string | null;
     description: string | null;
@@ -675,6 +676,7 @@ export interface PublicShopDetailResult {
     totalSales: number;
     avgRating: number;
     brandAuthCount: number;
+    viewerFollowed: boolean;
   } | null;
   products: Array<{
     id: ProductId;

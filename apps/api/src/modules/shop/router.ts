@@ -12,7 +12,7 @@ import {
   SubmitShopApplicationResult,
 } from '@umi/shared';
 
-import { getRequestUser, requireUser } from '../../lib/auth';
+import { getRequestUser, optionalUser, requireUser } from '../../lib/auth';
 import { HttpError, sendError, toHttpError } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import {
@@ -91,11 +91,12 @@ shopRouter.post('/apply', requireUser, async (request, response) => {
   }
 });
 
-shopRouter.get('/:id(\\d+)', async (request, response) => {
+shopRouter.get('/:id(\\d+)', optionalUser, async (request, response) => {
   try {
     const routeParams = request.params as Record<string, string | undefined>;
     const shopId = String(routeParams['id(\\d+)'] ?? routeParams.id ?? '').trim();
-    ok(response, await getPublicShopDetail(shopId));
+    const viewerId = request.user?.id ?? null;
+    ok(response, await getPublicShopDetail(shopId, viewerId));
   } catch (error) {
     sendError(
       response,
