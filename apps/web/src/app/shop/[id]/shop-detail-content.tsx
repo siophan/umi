@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { followUser, unfollowUser } from '../../../lib/api/users';
+import { favoriteProduct, unfavoriteProduct } from '../../../lib/api/products';
 import { hasAuthToken } from '../../../lib/api/shared';
 import styles from './page.module.css';
 
@@ -14,6 +15,7 @@ type ShopProduct = {
   originalPrice: number;
   sales: number;
   rating: number;
+  viewerFavorited: boolean;
 };
 
 type ShopGuess = {
@@ -67,18 +69,26 @@ function formatNum(value: number) {
   return `${value}`;
 }
 
-const STATIC_COUPONS: Array<{ amount: number; name: string; cond: string }> = [
-  { amount: 5, name: '新人专享', cond: '满 29 可用' },
-  { amount: 10, name: '店铺满减', cond: '满 59 可用' },
-  { amount: 20, name: '品牌大额', cond: '满 99 可用' },
-  { amount: 50, name: '限时特惠', cond: '满 199 可用' },
-];
-
 const SCORE_LABELS: Array<{ key: 'quality' | 'logistics' | 'service'; label: string; color: string }> = [
   { key: 'quality', label: '商品质量', color: '#00a66e' },
   { key: 'logistics', label: '物流速度', color: '#4a6cf7' },
   { key: 'service', label: '服务态度', color: '#ff6b00' },
 ];
+
+// scoreCard 三档评分卡：三档都用同一 avgRating，分维度数据未对接，先整体隐藏
+const SHOW_SCORE_CARD = false;
+
+// 紫色"会员专属福利"banner：toast 假入口，无会员业务，先整体隐藏
+const SHOW_MEMBER_BANNER = false;
+
+// hero "顺丰包邮" tag：写死，无物流字段支撑，先整体隐藏
+const SHOW_SHIPPING_TAG = false;
+
+// 底栏"收藏"icon：与 hero "+ 关注"语义重叠，无独立店铺收藏表，先整体隐藏
+const SHOW_BOT_FAV = false;
+
+// 店铺评级 grade（至尊/皇冠/金牌）：阈值前端写死、无业务依据，先整体隐藏
+const SHOW_GRADE_BADGE = false;
 
 export function ShopDetailContent(props: ShopDetailContentProps) {
   const {
@@ -110,12 +120,23 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
   const [following, setFollowing] = useState(meta.viewerFollowed);
   const [followBusy, setFollowBusy] = useState(false);
   const [favored, setFavored] = useState(false);
-  const [claimed, setClaimed] = useState<Record<number, boolean>>({});
-  const [cardFav, setCardFav] = useState<Record<string, boolean>>({});
+  const initialCardFav = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    shopProducts.forEach((item) => {
+      map[item.id] = item.viewerFavorited;
+    });
+    return map;
+  }, [shopProducts]);
+  const [cardFav, setCardFav] = useState<Record<string, boolean>>(initialCardFav);
+  const [cardFavBusy, setCardFavBusy] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setFollowing(meta.viewerFollowed);
   }, [meta.viewerFollowed]);
+
+  useEffect(() => {
+    setCardFav(initialCardFav);
+  }, [initialCardFav]);
 
   const showGuess = tab === 'guess';
   const showHot = tab === 'hot';
@@ -159,18 +180,30 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
     onToast(next ? '⭐ 收藏成功' : '取消收藏');
   }
 
-  function toggleCardFav(productId: string) {
-    setCardFav((prev) => {
-      const next = !prev[productId];
-      onToast(next ? '❤️ 已收藏' : '取消收藏');
-      return { ...prev, [productId]: next };
-    });
-  }
-
-  function claim(idx: number, amount: number) {
-    if (claimed[idx]) return;
-    setClaimed((prev) => ({ ...prev, [idx]: true }));
-    onToast(`🎫 ¥${amount} 优惠券已领取`);
+  async function toggleCardFav(productId: string) {
+    if (cardFavBusy[productId]) return;
+    if (!hasAuthToken()) {
+      onToast('请先登录');
+      router.push('/login');
+      return;
+    }
+    const next = !cardFav[productId];
+    setCardFavBusy((prev) => ({ ...prev, [productId]: true }));
+    setCardFav((prev) => ({ ...prev, [productId]: next }));
+    try {
+      if (next) {
+        await favoriteProduct(productId);
+        onToast('❤️ 已收藏');
+      } else {
+        await unfavoriteProduct(productId);
+        onToast('取消收藏');
+      }
+    } catch (error) {
+      setCardFav((prev) => ({ ...prev, [productId]: !next }));
+      onToast(error instanceof Error ? error.message : '操作失败，请稍后重试');
+    } finally {
+      setCardFavBusy((prev) => ({ ...prev, [productId]: false }));
+    }
   }
 
   function openChat() {
@@ -210,9 +243,11 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
             <div className={styles.heroInfo}>
               <div className={styles.heroName}>
                 {meta.full}
-                <span className={`${styles.heroVerified} ${meta.grade === '至尊商家' ? styles.gradeSupreme : meta.grade === '皇冠商家' ? styles.gradeCrown : styles.gradeGold}`}>
-                  <i className="fa-solid fa-shield-check" /> {meta.grade}
-                </span>
+                {SHOW_GRADE_BADGE ? (
+                  <span className={`${styles.heroVerified} ${meta.grade === '至尊商家' ? styles.gradeSupreme : meta.grade === '皇冠商家' ? styles.gradeCrown : styles.gradeGold}`}>
+                    <i className="fa-solid fa-shield-check" /> {meta.grade}
+                  </span>
+                ) : null}
               </div>
               <div className={styles.heroDesc}>{meta.desc}</div>
             </div>
@@ -247,7 +282,9 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
 
           <div className={styles.heroTags}>
             <span className={styles.heroTag}><i className="fa-solid fa-crown" style={{ fontSize: 9, color: '#FFD700' }} /> 品牌授权</span>
-            <span className={styles.heroTag}><i className="fa-solid fa-truck-fast" style={{ fontSize: 9 }} /> 顺丰包邮</span>
+            {SHOW_SHIPPING_TAG ? (
+              <span className={styles.heroTag}><i className="fa-solid fa-truck-fast" style={{ fontSize: 9 }} /> 顺丰包邮</span>
+            ) : null}
             {meta.city ? (
               <span className={styles.heroTag}><i className="fa-solid fa-location-dot" style={{ fontSize: 9 }} /> {meta.city}</span>
             ) : null}
@@ -256,6 +293,7 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
         </div>
       </section>
 
+      {SHOW_SCORE_CARD ? (
       <section className={styles.scoreCard}>
         <div className={styles.scoreRing}>
           <svg viewBox="0 0 52 52">
@@ -289,29 +327,9 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
           })}
         </div>
       </section>
+      ) : null}
 
-      <section className={styles.couponBar}>
-        {STATIC_COUPONS.map((coupon, idx) => (
-          <div key={coupon.amount} className={styles.coupon} onClick={() => claim(idx, coupon.amount)}>
-            <div className={styles.couponAmt}><small>¥</small>{coupon.amount}</div>
-            <div>
-              <div className={styles.couponName}>{coupon.name}</div>
-              <div className={styles.couponCond}>{coupon.cond}</div>
-            </div>
-            <button
-              type="button"
-              className={`${styles.couponBtn} ${claimed[idx] ? styles.couponBtnClaimed : ''}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                claim(idx, coupon.amount);
-              }}
-            >
-              {claimed[idx] ? '已领取' : '领取'}
-            </button>
-          </div>
-        ))}
-      </section>
-
+      {shopGuess.length || SHOW_MEMBER_BANNER ? (
       <section className={styles.activityBanner}>
         {shopGuess.length ? (
           <button type="button" className={styles.activityCard} onClick={() => onTabChange('guess')}>
@@ -323,6 +341,7 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
             <div className={`${styles.activityArrow} ${styles.activityArrowOrange}`}><i className="fa-solid fa-chevron-right" /></div>
           </button>
         ) : null}
+        {SHOW_MEMBER_BANNER ? (
         <button
           type="button"
           className={`${styles.activityCard} ${styles.activityPurple}`}
@@ -335,7 +354,9 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
           </div>
           <div className={`${styles.activityArrow} ${styles.activityArrowPurple}`}><i className="fa-solid fa-chevron-right" /></div>
         </button>
+        ) : null}
       </section>
+      ) : null}
 
       <nav className={styles.tabs}>
         <button type="button" className={`${styles.tab} ${tab === 'all' ? styles.tabOn : ''}`} onClick={() => onTabChange('all')}>
@@ -396,10 +417,11 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
                       <button
                         type="button"
                         className={`${styles.productFav} ${liked ? styles.productFavOn : ''}`}
+                        disabled={!!cardFavBusy[item.id]}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          toggleCardFav(item.id);
+                          void toggleCardFav(item.id);
                         }}
                       >
                         <i className={liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
@@ -474,6 +496,7 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
       </main>
 
       <footer className={styles.bottomBar}>
+        {SHOW_BOT_FAV ? (
         <button
           type="button"
           className={`${styles.botIcon} ${favored ? styles.botIconOn : ''}`}
@@ -482,14 +505,12 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
           <i className={favored ? 'fa-solid fa-heart' : 'fa-regular fa-heart'} />
           <span>收藏</span>
         </button>
+        ) : null}
         <button type="button" className={styles.botIcon} onClick={openChat}>
           <i className="fa-regular fa-comment-dots" />
           <span>客服</span>
         </button>
         <div className={styles.bottomButtons}>
-          <button className={styles.chatBtn} type="button" onClick={openChat}>
-            <i className="fa-regular fa-comment-dots" /> 聊一聊
-          </button>
           <button className={styles.primaryBtn} type="button" onClick={() => onJumpToMain(shopGuess.length ? 'guess' : 'all')}>
             {shopGuess.length ? '🎯 参与竞猜' : '🛒 全部商品'}
           </button>

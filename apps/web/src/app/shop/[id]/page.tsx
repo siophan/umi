@@ -231,7 +231,28 @@ function ShopDetailPageInner() {
         hotProducts={hotProducts}
         newProducts={newProducts}
         onBack={() => router.back()}
-        onShare={() => showToast('分享店铺 📤')}
+        onShare={async () => {
+          const url = typeof window !== 'undefined' ? window.location.href : '';
+          const title = meta?.full ?? '店铺';
+          if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+            try {
+              await navigator.share({ title, url });
+              return;
+            } catch (error) {
+              if ((error as { name?: string })?.name === 'AbortError') return;
+            }
+          }
+          if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+            try {
+              await navigator.clipboard.writeText(url);
+              showToast('链接已复制');
+              return;
+            } catch {
+              // fallthrough
+            }
+          }
+          showToast('当前环境不支持分享');
+        }}
         onHome={() => router.push('/')}
         onTabChange={setTab}
         onFilterChange={(nextFilter) => {

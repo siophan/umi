@@ -689,6 +689,7 @@ export interface PublicShopDetailResult {
     img: string | null;
     badge: string;
     createdAt: string;
+    viewerFavorited: boolean;
   }>;
   guesses: PublicShopGuessItem[];
 }

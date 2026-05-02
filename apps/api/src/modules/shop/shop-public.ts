@@ -4,6 +4,7 @@ import { toEntityId, toOptionalEntityId } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
+import { getFavoritedProductIdSet } from '../product/product-shared';
 import { PublicShopGuessRow, ShopProductRow, ShopRow, STATUS_ACTIVE } from './shop-shared';
 
 export async function getPublicShopDetail(
@@ -128,18 +129,25 @@ export async function getPublicShopDetail(
     optionRows = options as Array<{ guess_id: number | string; option_index: number | string; option_text: string }>;
   }
 
-  const productItems = (productRows as ShopProductRow[]).map((row) => ({
-    id: toEntityId(row.id),
-    name: row.name,
-    price: Number(row.price ?? 0) / 100,
-    originalPrice: Number(row.original_price ?? row.price ?? 0) / 100,
-    sales: Number(row.sales ?? 0),
-    rating: Number(row.rating ?? 0),
-    brand: row.brand_name ?? null,
-    img: row.image_url ?? null,
-    badge: '',
-    createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
-  }));
+  const productIds = (productRows as ShopProductRow[]).map((row) => toEntityId(row.id));
+  const favoritedSet = viewerId ? await getFavoritedProductIdSet(viewerId, productIds) : new Set<string>();
+
+  const productItems = (productRows as ShopProductRow[]).map((row) => {
+    const id = toEntityId(row.id);
+    return {
+      id,
+      name: row.name,
+      price: Number(row.price ?? 0) / 100,
+      originalPrice: Number(row.original_price ?? row.price ?? 0) / 100,
+      sales: Number(row.sales ?? 0),
+      rating: Number(row.rating ?? 0),
+      brand: row.brand_name ?? null,
+      img: row.image_url ?? null,
+      badge: '',
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      viewerFavorited: favoritedSet.has(id),
+    };
+  });
 
   const avgRating = shop.avg_rating != null ? Number(Number(shop.avg_rating).toFixed(1)) : 0;
 

@@ -425,75 +425,6 @@
   transition: width 0.6s ease;
 }
 
-.couponBar {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 12px;
-  scrollbar-width: none;
-}
-
-.couponBar::-webkit-scrollbar {
-  display: none;
-}
-
-.coupon {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-  padding: 10px 14px;
-  border: 0.5px solid rgba(255, 36, 66, 0.08);
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fff5f5, #fff0f0);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.coupon:active {
-  transform: scale(0.97);
-}
-
-.couponAmt {
-  color: #ff2442;
-  font-size: 20px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.couponAmt small {
-  font-size: 10px;
-}
-
-.couponName {
-  color: #0f0f0f;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.couponCond {
-  margin-top: 1px;
-  color: #999;
-  font-size: 9px;
-}
-
-.couponBtn {
-  flex-shrink: 0;
-  padding: 4px 12px;
-  border: 1px solid #ff2442;
-  border-radius: 12px;
-  background: transparent;
-  color: #ff2442;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.couponBtnClaimed {
-  background: #ff2442;
-  color: #fff;
-  border-color: #ff2442;
-}
-
 .activityBanner {
   margin-bottom: 2px;
 }
@@ -998,7 +929,6 @@
   gap: 8px;
 }
 
-.chatBtn,
 .primaryBtn {
   flex: 1;
   display: flex;
@@ -1008,30 +938,17 @@
   height: 42px;
   border: 0;
   border-radius: 21px;
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+  color: #fff;
   font-size: 13px;
   font-weight: 700;
+  box-shadow: 0 4px 14px rgba(255, 36, 66, 0.25);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.chatBtn:active,
 .primaryBtn:active {
   transform: scale(0.97);
-}
-
-.chatBtn {
-  background: #f0f0f2;
-  color: #0f0f0f;
-}
-
-.chatBtn i {
-  font-size: 14px;
-}
-
-.primaryBtn {
-  background: linear-gradient(135deg, #ff6b35, #ff2442);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(255, 36, 66, 0.25);
 }
 
 .toast {
