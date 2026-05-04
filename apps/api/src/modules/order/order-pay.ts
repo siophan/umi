@@ -249,16 +249,44 @@ export async function markOrderPaid(payNo: string, tradeNo: string, paidAt: Date
       [order.id, ORDER_PENDING, ORDER_PAID, order.user_id, OPERATOR_ROLE_SYSTEM, '支付成功'],
     );
 
-    // 库存：占用转扣减——同时减 stock 与 frozen_stock（按 SKU 维度）
-    await connection.execute(
-      `UPDATE brand_product_sku bps
+    // 库存：占用转扣减——按 SKU 聚合后一次扣减，先 SELECT FOR UPDATE 锁住 SKU 严格防超扣
+    const [skuLockRows] = await connection.execute<mysql.RowDataPacket[]>(
+      `SELECT bps.id AS sku_id, bps.stock AS stock, SUM(oi.quantity) AS qty
+         FROM brand_product_sku bps
          INNER JOIN order_item oi ON oi.brand_product_sku_id = bps.id
-         SET bps.stock = GREATEST(bps.stock - oi.quantity, 0),
-             bps.frozen_stock = GREATEST(bps.frozen_stock - oi.quantity, 0),
-             bps.updated_at = CURRENT_TIMESTAMP(3)
-       WHERE oi.order_id = ?`,
+         WHERE oi.order_id = ?
+         GROUP BY bps.id
+         FOR UPDATE`,
       [order.id],
     );
+    for (const row of skuLockRows as Array<{ sku_id: number | string; stock: number | string; qty: number | string }>) {
+      const stock = Number(row.stock);
+      const qty = Number(row.qty);
+      if (stock < qty) {
+        throw new Error(
+          `[markOrderPaid] sku ${row.sku_id} stock=${stock} < required=${qty} (order=${order.id})`,
+        );
+      }
+    }
+    const [stockUpdate] = await connection.execute<mysql.ResultSetHeader>(
+      `UPDATE brand_product_sku bps
+         INNER JOIN (
+           SELECT brand_product_sku_id, SUM(quantity) AS qty
+             FROM order_item
+            WHERE order_id = ?
+            GROUP BY brand_product_sku_id
+         ) agg ON agg.brand_product_sku_id = bps.id
+         SET bps.stock = bps.stock - agg.qty,
+             bps.frozen_stock = GREATEST(bps.frozen_stock - agg.qty, 0),
+             bps.updated_at = CURRENT_TIMESTAMP(3)
+       WHERE bps.stock >= agg.qty`,
+      [order.id],
+    );
+    if (Number(stockUpdate.affectedRows) !== skuLockRows.length) {
+      throw new Error(
+        `[markOrderPaid] stock update affectedRows=${stockUpdate.affectedRows} expected=${skuLockRows.length} (order=${order.id})`,
+      );
+    }
 
     if (order.coupon_id) {
       await connection.execute(

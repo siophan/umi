@@ -97,7 +97,7 @@ ALTER TABLE `guess_product`
   ADD COLUMN `brand_product_sku_id` BIGINT NOT NULL COMMENT '关联奖品的具体 SKU' AFTER `product_id`,
   ADD KEY `idx_brand_product_sku_id` (`brand_product_sku_id`);
 
--- guess_product UNIQUE：(guess_id, option_idx, product_id, brand_product_sku_id)
--- 一个选项下同一店铺同一 SKU 只能挂一条
+-- guess_product UNIQUE：(guess_id)
+-- 一个竞猜只能关联一个商品 + 一个 SKU；option_idx 仍存在但不参与唯一约束（恒为 0）
 ALTER TABLE `guess_product`
-  ADD UNIQUE KEY `uk_guess_option_product_sku` (`guess_id`, `option_idx`, `product_id`, `brand_product_sku_id`);
+  ADD UNIQUE KEY `uk_guess_product_guess_id` (`guess_id`);

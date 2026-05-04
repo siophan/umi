@@ -439,15 +439,18 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 **已敲定决策**：SKU 价格 NOT NULL（仅 `guess_price` NULL fallback `guide_price`）；不考虑历史数据；切换单/多规格 toggle 二次确认 + 清空重填；SKU 删除软删 `status=90`、`frozen_stock>0` 拒绝；中奖入仓不扣 `bps.stock`（备货池独立）；价格区间仅算 active SKU；详情画廊选满 SKU 后首图替换为 `sku.image` fallback `default_img`；创建竞猜两步选（商品 → SKU bottom sheet，多规格强制选满）
 
+**2026-05-04 二期决策收口**：
+
+- ① 店铺铺货层无 SKU 维度上下架 — **不做**。整商品上架就全 SKU 上架。
+- ② markOrderPaid 严格防超扣 — **已处理**：事务内 `SELECT brand_product_sku ... GROUP BY id FOR UPDATE` 锁 SKU + 应用层 stock>=qty 校验 + UPDATE 加 `WHERE bps.stock >= agg.qty` + affectedRows 不等抛错回滚。改 `apps/api/src/modules/order/order-pay.ts:252`。同时顺手修了原 `UPDATE ... INNER JOIN order_item` 在同 SKU 多行时只扣一次的潜在 bug——改成 GROUP BY 子查询聚合后 join。
+- ③ 同选项挂多 SKU — **已处理**：`guess_product` UNIQUE 改 `(guess_id)`——一个竞猜只能关联一个商品 + 一个 SKU，`option_idx` 列保留但恒为 0 不参与唯一键。SQL `packages/db/sql/multi_spec_schema.sql:100`、spec、`docs/full-schema.md` 已同步。admin / 用户端创建竞猜入口本来就只 INSERT option_idx=0 一行 + 强制 brandProductSkuId 必填，无代码改动。
+- ④ 部分退款 — **不做**。`completeAdminOrderRefund` 保持"全单退款 + 全量入库"语义。
+
 **遗留（开新线程跟进）**：
 
-1. **店铺铺货层无 SKU 维度上下架**（P2）：当前店铺不能"只上架部分 SKU"，整商品上架就全 SKU 上架。如运营反馈需要再加 `shop_product_sku_status` 表
-2. **markOrderPaid 没 SELECT FOR UPDATE 锁 SKU**（P2）：UPDATE 用 `GREATEST(stock - n, 0)` 兜底防瞬时负数；如要严格防超扣再加 `AND stock >= oi.quantity` 条件判断
-3. **同选项挂多 SKU 的语义**（P2）：`guess_product` UNIQUE 含 `(guess_id, option_idx, product_id, brand_product_sku_id)`，允许"一个 option 关联多个奖品"。如运营反馈"同选项只能一个奖品"再加约束（改为 `(guess_id, option_idx)` UNIQUE）
-4. **部分退款不支持**（P1）：`completeAdminOrderRefund` 当前是"全单退款 + 全量入库到对应 SKU"语义。如要支持按 order_item 部分退款，需要 admin 审核时选哪几个 item 退 + 各退多少件，按选中数量入库
-5. **二期 UX**：购物车换规格按钮（点开规格选择器换 sku_id 重新合并）、店铺端 SKU 调价（store 维度自定价）、SKU 维度的促销 / 满减、按规格搜索过滤、商品详情评价 tab "按规格筛选"下拉
-6. **migration 无回填**：跟运维确认按"清空相关业务表"切换；不允许带历史数据迁移上线
-7. **brand_product_extended 字段后续仍归 SPU**：`description / detail_html / spec_table / package_list / freight / ship_from / delivery_days / tags / collab / images` 仍是商品共享属性，不下沉到 SKU；如二期需要按 SKU 分图相册再调整
+1. **二期 UX**：购物车换规格按钮（点开规格选择器换 sku_id 重新合并）、店铺端 SKU 调价（store 维度自定价）、SKU 维度的促销 / 满减、按规格搜索过滤、商品详情评价 tab "按规格筛选"下拉
+2. **migration 无回填**：跟运维确认按"清空相关业务表"切换；不允许带历史数据迁移上线
+3. **brand_product_extended 字段后续仍归 SPU**：`description / detail_html / spec_table / package_list / freight / ship_from / delivery_days / tags / collab / images` 仍是商品共享属性，不下沉到 SKU；如二期需要按 SKU 分图相册再调整
 
 **部署顺序**（spec 第 11 节）：DB schema 一次性执行 → 同窗口部署代码 PR；不分两段切换。
 
@@ -472,5 +475,5 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口 |
-| P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1 + #26 部分退款）|
-| P2     | 16   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / #26 SKU 二期（店铺 SKU 上下架 / FOR UPDATE 锁 / 同选项多 SKU 语义 / 购物车换规格 / SKU 维度促销） |
+| P1     | 4    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）|
+| P2     | 14   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选） |

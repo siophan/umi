@@ -74,7 +74,7 @@ UNIQUE KEY uk_bp_spec (brand_product_id, spec_signature)
 
 **购物车合并键**：现在是 `(user_id, product_id)`，改为 `(user_id, product_id, brand_product_sku_id)` UNIQUE。
 
-**guess_product 唯一约束**：`(guess_id, option_idx, product_id, brand_product_sku_id)` UNIQUE。
+**guess_product 唯一约束**：`(guess_id)` UNIQUE——一个竞猜只能关联一个商品 + 一个 SKU。`option_idx` 列保留但恒为 0，不参与唯一键。
 
 ### 3. 库存占用模式（freeze-on-pending）从 brand_product 改到 sku 层
 
@@ -209,7 +209,7 @@ UNIQUE KEY uk_bp_spec (brand_product_id, spec_signature)
    - `cart_item / order_item / fulfillment_order_item / product_review / consign_trade / virtual_warehouse / physical_warehouse / guess_bet / guess_product` 列 NOT NULL
    - `warehouse_item_log` 列 NULL
 4. `cart_item` UNIQUE `(user_id, product_id, brand_product_sku_id)`（如老 `(user_id, product_id)` 唯一在则先 DROP）。
-5. `guess_product` UNIQUE `(guess_id, option_idx, product_id, brand_product_sku_id)`（如老唯一在则先 DROP）。
+5. `guess_product` UNIQUE `(guess_id)`（如老唯一在则先 DROP）。语义：一个竞猜只能关联一个商品 + 一个 SKU。
 
 由运维手工执行（与 `drop_pk_record.sql` / `drop_coin_ledger.sql` 同流程）。代码 + schema 一起发布即可，没有"先 nullable 再 NOT NULL"的两段切换。
 
@@ -320,7 +320,7 @@ Banner：
 ## 风险 / 遗留
 
 - **店铺铺货层无 SKU 维度上下架**：当前店铺不能"只上架部分 SKU"，整商品上架就全 SKU 上架。如运营反馈需要再加 `shop_product_sku_status` 表。
-- **markOrderPaid 没有 SELECT FOR UPDATE 锁 sku**：与 #25 同；UPDATE 用 `GREATEST(stock - n, 0)` 兜底防瞬时负数；如要严格防超扣再加 `AND stock >= oi.quantity`。
+- **markOrderPaid 严格防超扣（2026-05-04 已收紧）**：事务内 SELECT brand_product_sku FOR UPDATE 锁住相关 SKU；UPDATE 加 `AND bps.stock >= oi.quantity` 双保险；affectedRows < 期望值则抛错回滚。
 - **product 表 sales / rating 仍是店铺铺货维度**：不下沉到 SKU。SKU 维度销量统计在评价 / 订单 join 时聚合。
 - **二期**：购物车换规格按钮、店铺端 SKU 调价、SKU 维度促销 / 满减、按规格搜索过滤。
-- **同一选项下挂多 SKU**：`guess_product` 设计允许"一个 option 关联多个奖品"（不同 SKU 各算一条）。如运营反馈"同选项只能一个奖品"再加约束。
+- **一竞猜一商品一 SKU（2026-05-04 已收紧）**：`guess_product` UNIQUE `(guess_id)`，`option_idx` 恒为 0。要支持"每个选项挂不同奖品"需重做 UNIQUE + 创建竞猜 UI。

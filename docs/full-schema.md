@@ -68,7 +68,7 @@
 - [virtual_warehouse](#virtual_warehouse)
 - [warehouse_item_log](#warehouse_item_log)
 
-> 2026-05-04 多规格改造：以下 9 张子表新增 `brand_product_sku_id` 列（位置在 `product_id` 之后；`warehouse_item_log` 可空，其余 NOT NULL）：`cart_item / order_item / fulfillment_order_item / product_review / consign_trade / virtual_warehouse / physical_warehouse / warehouse_item_log / guess_bet / guess_product`。`guess_product` UNIQUE: `(guess_id, option_idx, product_id, brand_product_sku_id)`。详见设计：`docs/superpowers/specs/2026-05-04-multi-spec-brand-product-design.md`。
+> 2026-05-04 多规格改造：以下 9 张子表新增 `brand_product_sku_id` 列（位置在 `product_id` 之后；`warehouse_item_log` 可空，其余 NOT NULL）：`cart_item / order_item / fulfillment_order_item / product_review / consign_trade / virtual_warehouse / physical_warehouse / warehouse_item_log / guess_bet / guess_product`。`guess_product` UNIQUE: `(guess_id)`——一个竞猜只能关联一个商品 + 一个 SKU。详见设计：`docs/superpowers/specs/2026-05-04-multi-spec-brand-product-design.md`。
 
 ## achievement_config
 
