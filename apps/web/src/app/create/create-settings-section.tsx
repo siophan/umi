@@ -132,9 +132,9 @@ export function CreateSettingsSection({
                 {getDiscountPercent(selectedProduct) >= 10 ? <div className={styles.spdPriceTag}>省{getDiscountPercent(selectedProduct)}%</div> : null}
                 <div className={styles.spdPrice}>
                   <small>¥</small>
-                  {selectedProduct.price}
+                  {selectedProduct.guessPrice}
                 </div>
-                {selectedProduct.originalPrice > selectedProduct.price ? <span className={styles.spdOrigPrice}>¥{selectedProduct.originalPrice}</span> : null}
+                {selectedProduct.originalPrice > selectedProduct.guessPrice ? <span className={styles.spdOrigPrice}>¥{selectedProduct.originalPrice}</span> : null}
               </div>
               <div className={styles.spdMetaRow}>
                 <div className={styles.spdMetaItem}>

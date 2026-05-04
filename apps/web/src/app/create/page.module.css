@@ -1037,7 +1037,7 @@
   color: #fa5723;
   font-size: 18px;
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .spdPrice small {
@@ -1639,7 +1639,7 @@
   color: #fa5723;
   font-size: 22px;
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .ppSelPrice small {
@@ -1897,7 +1897,7 @@
   color: #fa5723;
   font-size: 16px;
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .ppPrice small {

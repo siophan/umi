@@ -126,7 +126,7 @@ export function CreateOverlays({
                   <img src={selectedProduct.img} alt={selectedProduct.name} />
                   <div className={styles.previewProductInfo}>
                     <div className={styles.previewProductName}>{selectedProduct.name}</div>
-                    <div className={styles.previewProductPrice}>¥{selectedProduct.price}</div>
+                    <div className={styles.previewProductPrice}>¥{selectedProduct.guessPrice}</div>
                   </div>
                 </div>
               ) : null}
@@ -255,9 +255,9 @@ export function CreateOverlays({
                     <div className={styles.ppSelPriceRow}>
                       <span className={styles.ppSelPrice}>
                         <small>¥</small>
-                        {tempProduct.price}
+                        {tempProduct.guessPrice}
                       </span>
-                      {tempProduct.originalPrice > tempProduct.price ? <span className={styles.ppSelOrig}>¥{tempProduct.originalPrice}</span> : null}
+                      {tempProduct.originalPrice > tempProduct.guessPrice ? <span className={styles.ppSelOrig}>¥{tempProduct.originalPrice}</span> : null}
                       {getDiscountPercent(tempProduct) >= 10 ? <span className={styles.ppSelDiscount}>省{getDiscountPercent(tempProduct)}%</span> : null}
                     </div>
                     <div className={styles.ppSelMeta}>
@@ -315,9 +315,9 @@ export function CreateOverlays({
                       <div className={styles.ppPriceRow}>
                         <span className={styles.ppPrice}>
                           <small>¥</small>
-                          {item.price}
+                          {item.guessPrice}
                         </span>
-                        {item.originalPrice > item.price ? <span className={styles.ppOrigPrice}>¥{item.originalPrice}</span> : null}
+                        {item.originalPrice > item.guessPrice ? <span className={styles.ppOrigPrice}>¥{item.originalPrice}</span> : null}
                       </div>
                       <div className={styles.ppMetaRow}>
                         <span className={`${styles.ppSales} ${item.sales >= 5000 ? styles.ppSalesHot : ''}`}>{formatSalesLabel(item.sales)}已售</span>
@@ -346,7 +346,7 @@ export function CreateOverlays({
               <div className={styles.ppFooterInfo}>
                 {tempProduct ? (
                   <>
-                    已选 <span className={styles.ppfCount}>1</span> 件 · <span className={styles.ppfLabel}>¥{tempProduct.price}</span>
+                    已选 <span className={styles.ppfCount}>1</span> 件 · <span className={styles.ppfLabel}>¥{tempProduct.guessPrice}</span>
                   </>
                 ) : (
                   <span className={styles.ppfLabel}>请选择一件关联商品</span>

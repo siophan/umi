@@ -15,6 +15,7 @@ export type ProductItem = {
   shopName: string | null;
   category: string;
   price: number;
+  guessPrice: number;
   originalPrice: number;
   sales: number;
   rating: number;
@@ -53,6 +54,7 @@ export function mapProductFeedToCreateProduct(item: ProductFeedItem): ProductIte
     shopName: item.shopName,
     category: item.category,
     price: item.price,
+    guessPrice: item.guessPrice,
     originalPrice: item.originalPrice,
     sales: item.sales,
     rating: item.rating,
@@ -93,8 +95,8 @@ export function formatSalesLabel(value: number) {
 }
 
 export function getDiscountPercent(item: ProductItem) {
-  if (!item.originalPrice || item.originalPrice <= item.price) {
+  if (!item.originalPrice || item.originalPrice <= item.guessPrice) {
     return 0;
   }
-  return Math.round((1 - item.price / item.originalPrice) * 100);
+  return Math.round((1 - item.guessPrice / item.originalPrice) * 100);
 }
