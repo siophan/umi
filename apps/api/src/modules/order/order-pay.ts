@@ -30,17 +30,16 @@ import {
 const PAY_EXPIRES_SEC = 5 * 60;
 
 /**
- * 订单关闭/取消时把占用的 brand_product.frozen_stock 释放回去。
+ * 订单关闭/取消时把占用的 brand_product_sku.frozen_stock 释放回去。
  * 仅在 PENDING → CLOSED 切换的事务里幂等执行；其他状态来源（已 PAID 后退款）不调用。
  */
 async function releaseOrderFrozenStock(orderId: number | string): Promise<void> {
   const db = getDbPool();
   await db.execute(
-    `UPDATE brand_product bp
-       INNER JOIN product p ON p.brand_product_id = bp.id
-       INNER JOIN order_item oi ON oi.product_id = p.id
-       SET bp.frozen_stock = GREATEST(bp.frozen_stock - oi.quantity, 0),
-           bp.updated_at = CURRENT_TIMESTAMP(3)
+    `UPDATE brand_product_sku bps
+       INNER JOIN order_item oi ON oi.brand_product_sku_id = bps.id
+       SET bps.frozen_stock = GREATEST(bps.frozen_stock - oi.quantity, 0),
+           bps.updated_at = CURRENT_TIMESTAMP(3)
      WHERE oi.order_id = ?`,
     [orderId],
   );
@@ -250,14 +249,13 @@ export async function markOrderPaid(payNo: string, tradeNo: string, paidAt: Date
       [order.id, ORDER_PENDING, ORDER_PAID, order.user_id, OPERATOR_ROLE_SYSTEM, '支付成功'],
     );
 
-    // 库存：占用转扣减——同时减 stock 与 frozen_stock
+    // 库存：占用转扣减——同时减 stock 与 frozen_stock（按 SKU 维度）
     await connection.execute(
-      `UPDATE brand_product bp
-         INNER JOIN product p ON p.brand_product_id = bp.id
-         INNER JOIN order_item oi ON oi.product_id = p.id
-         SET bp.stock = GREATEST(bp.stock - oi.quantity, 0),
-             bp.frozen_stock = GREATEST(bp.frozen_stock - oi.quantity, 0),
-             bp.updated_at = CURRENT_TIMESTAMP(3)
+      `UPDATE brand_product_sku bps
+         INNER JOIN order_item oi ON oi.brand_product_sku_id = bps.id
+         SET bps.stock = GREATEST(bps.stock - oi.quantity, 0),
+             bps.frozen_stock = GREATEST(bps.frozen_stock - oi.quantity, 0),
+             bps.updated_at = CURRENT_TIMESTAMP(3)
        WHERE oi.order_id = ?`,
       [order.id],
     );
@@ -325,10 +323,12 @@ export async function markOrderPaid(payNo: string, tradeNo: string, paidAt: Date
       appLogger.warn({ orderId: order.id }, '[markOrderPaid] address missing, skip fulfillment');
     }
 
-    // 删除购物车里被该订单消费的项
+    // 删除购物车里被该订单消费的项（按 product + sku 精准匹配）
     await connection.execute(
       `DELETE ci FROM cart_item ci
-         INNER JOIN order_item oi ON oi.product_id = ci.product_id
+         INNER JOIN order_item oi
+           ON oi.product_id = ci.product_id
+          AND oi.brand_product_sku_id = ci.brand_product_sku_id
          WHERE oi.order_id = ? AND ci.user_id = ?`,
       [order.id, order.user_id],
     );

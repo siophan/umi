@@ -117,8 +117,10 @@ export async function getAdminVirtualWarehouseItems(
         vw.user_id,
         up.name AS user_name,
         vw.product_id,
+        vw.brand_product_sku_id,
         bp.name AS product_name,
-        bp.default_img AS product_img,
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        bps.spec_signature AS sku_text,
         vw.quantity,
         vw.price,
         vw.source_type,
@@ -128,6 +130,7 @@ export async function getAdminVirtualWarehouseItems(
       LEFT JOIN user_profile up ON up.user_id = vw.user_id
       LEFT JOIN product p ON p.id = vw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = vw.brand_product_sku_id
       ${fullWhere}
       ORDER BY vw.created_at DESC, vw.id DESC
       LIMIT ? OFFSET ?
@@ -142,6 +145,7 @@ export async function getAdminVirtualWarehouseItems(
       LEFT JOIN user_profile up ON up.user_id = vw.user_id
       LEFT JOIN product p ON p.id = vw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = vw.brand_product_sku_id
       ${fullWhere}
     `,
     statusValues,
@@ -154,6 +158,7 @@ export async function getAdminVirtualWarehouseItems(
       LEFT JOIN user_profile up ON up.user_id = vw.user_id
       LEFT JOIN product p ON p.id = vw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = vw.brand_product_sku_id
       ${filterWhere}
       GROUP BY vw.status
     `,
@@ -190,8 +195,10 @@ export async function getAdminVirtualWarehouseItemDetail(itemId: string) {
         vw.user_id,
         up.name AS user_name,
         vw.product_id,
+        vw.brand_product_sku_id,
         bp.name AS product_name,
-        bp.default_img AS product_img,
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        bps.spec_signature AS sku_text,
         vw.quantity,
         vw.price,
         vw.source_type,
@@ -201,6 +208,7 @@ export async function getAdminVirtualWarehouseItemDetail(itemId: string) {
       LEFT JOIN user_profile up ON up.user_id = vw.user_id
       LEFT JOIN product p ON p.id = vw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = vw.brand_product_sku_id
       WHERE vw.id = ?
       LIMIT 1
     `,
@@ -268,8 +276,10 @@ export async function getAdminPhysicalWarehouseItems(
         pw.user_id,
         up.name AS user_name,
         pw.product_id,
+        pw.brand_product_sku_id,
         bp.name AS product_name,
-        bp.default_img AS product_img,
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        bps.spec_signature AS sku_text,
         pw.quantity,
         pw.price,
         CASE
@@ -286,6 +296,7 @@ export async function getAdminPhysicalWarehouseItems(
       LEFT JOIN user_profile up ON up.user_id = pw.user_id
       LEFT JOIN product p ON p.id = pw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = pw.brand_product_sku_id
       ${fullWhere}
       ORDER BY pw.created_at DESC, pw.id DESC
       LIMIT ? OFFSET ?
@@ -307,6 +318,7 @@ export async function getAdminPhysicalWarehouseItems(
       LEFT JOIN user_profile up ON up.user_id = pw.user_id
       LEFT JOIN product p ON p.id = pw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = pw.brand_product_sku_id
       ${fullWhere}
     `,
     fullValues,
@@ -319,6 +331,7 @@ export async function getAdminPhysicalWarehouseItems(
       LEFT JOIN user_profile up ON up.user_id = pw.user_id
       LEFT JOIN product p ON p.id = pw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = pw.brand_product_sku_id
       ${filterWhere} AND pw.status <> ?
       GROUP BY pw.status
     `,
@@ -354,8 +367,10 @@ export async function getAdminPhysicalWarehouseItemDetail(itemId: string) {
         pw.user_id,
         up.name AS user_name,
         pw.product_id,
+        pw.brand_product_sku_id,
         bp.name AS product_name,
-        bp.default_img AS product_img,
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        bps.spec_signature AS sku_text,
         pw.quantity,
         pw.price,
         CASE
@@ -372,6 +387,7 @@ export async function getAdminPhysicalWarehouseItemDetail(itemId: string) {
       LEFT JOIN user_profile up ON up.user_id = pw.user_id
       LEFT JOIN product p ON p.id = pw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = pw.brand_product_sku_id
       WHERE pw.id = ?
       LIMIT 1
     `,

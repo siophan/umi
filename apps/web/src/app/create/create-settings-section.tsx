@@ -127,7 +127,12 @@ export function CreateSettingsSection({
             </div>
             <div className={styles.spdInfo}>
               <div className={styles.spdName}>{selectedProduct.name}</div>
-              <div className={styles.spdBrand}>{selectedProduct.shopName ?? selectedProduct.brand}</div>
+              <div className={styles.spdBrand}>
+                {selectedProduct.shopName ?? selectedProduct.brand}
+                {selectedProduct.selectedSkuText && selectedProduct.selectedSkuText !== '默认规格' ? (
+                  <> · {selectedProduct.selectedSkuText}</>
+                ) : null}
+              </div>
               <div className={styles.spdPriceRow}>
                 {getDiscountPercent(selectedProduct) >= 10 ? <div className={styles.spdPriceTag}>省{getDiscountPercent(selectedProduct)}%</div> : null}
                 <div className={styles.spdPrice}>

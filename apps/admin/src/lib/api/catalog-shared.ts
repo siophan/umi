@@ -22,6 +22,28 @@ export interface AdminBrandProductSpecRow {
   value: string;
 }
 
+export interface AdminBrandProductSpecDefinition {
+  name: string;
+  values: string[];
+}
+
+export interface AdminBrandLibrarySkuItem {
+  id: string;
+  skuCode: string | null;
+  spec: Record<string, string>;
+  specSummary: string;
+  specSignature: string;
+  guidePrice: number;
+  supplyPrice: number | null;
+  guessPrice: number | null;
+  stock: number;
+  frozenStock: number;
+  availableStock: number;
+  image: string | null;
+  status: 'active' | 'disabled';
+  sort: number;
+}
+
 export interface AdminBrandLibraryItem {
   id: string;
   brandId: string | null;
@@ -29,12 +51,10 @@ export interface AdminBrandLibraryItem {
   productName: string;
   categoryId: string | null;
   category: string;
-  guidePrice: number;
-  supplyPrice: number;
-  guessPrice: number;
-  stock: number;
-  frozenStock: number;
-  availableStock: number;
+  guidePriceMin: number;
+  guidePriceMax: number;
+  stockTotal: number;
+  availableTotal: number;
   status: 'active' | 'disabled';
   description: string | null;
   createdAt: string;
@@ -50,6 +70,8 @@ export interface AdminBrandLibraryItem {
   deliveryDays: string | null;
   tags: string[];
   collab: string | null;
+  specDefinitions: AdminBrandProductSpecDefinition[] | null;
+  skus: AdminBrandLibrarySkuItem[];
   productCount: number;
   activeProductCount: number;
 }

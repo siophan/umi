@@ -18,8 +18,10 @@ export type VirtualWarehouseRow = {
   user_id: number | string;
   user_name: string | null;
   product_id: number | string | null;
+  brand_product_sku_id: number | string | null;
   product_name: string | null;
   product_img: string | null;
+  sku_text?: string | null;
   quantity: number | string;
   price: number | string;
   source_type: number | string | null;
@@ -32,8 +34,10 @@ export type PhysicalWarehouseRow = {
   user_id: number | string;
   user_name: string | null;
   product_id: number | string | null;
+  brand_product_sku_id: number | string | null;
   product_name: string | null;
   product_img: string | null;
+  sku_text?: string | null;
   quantity: number | string;
   price: number | string;
   status: number | string;
@@ -98,8 +102,10 @@ export function sanitizeVirtualRow(row: VirtualWarehouseRow): WarehouseItem {
     userId: toEntityId(row.user_id),
     userName: row.user_name || null,
     productId: toEntityId(row.product_id ?? 0),
+    brandProductSkuId: toEntityId(row.brand_product_sku_id ?? 0),
     productName: row.product_name || '未命名商品',
     productImg: row.product_img || null,
+    skuText: row.sku_text?.trim() || null,
     quantity: Number(row.quantity ?? 0),
     price: Number(row.price ?? 0) / 100,
     status: mapVirtualStatus(Number(row.status ?? 0)),
@@ -115,8 +121,10 @@ export function sanitizePhysicalRow(row: PhysicalWarehouseRow): WarehouseItem {
     userId: toEntityId(row.user_id),
     userName: row.user_name || null,
     productId: toEntityId(row.product_id ?? 0),
+    brandProductSkuId: toEntityId(row.brand_product_sku_id ?? 0),
     productName: row.product_name || '未命名商品',
     productImg: row.product_img || null,
+    skuText: row.sku_text?.trim() || null,
     quantity: Number(row.quantity ?? 0),
     price: Number(row.price ?? 0) / 100,
     status: row.status as WarehouseItem['status'],

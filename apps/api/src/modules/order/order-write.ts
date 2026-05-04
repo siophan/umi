@@ -93,40 +93,65 @@ async function getAvailableCoupon(
 async function getProductPurchaseRows(
   connection: mysql.Connection | mysql.PoolConnection,
   payload: CreateOrderPayload,
-): Promise<Array<{ productId: string; quantity: number; specs: string | null; row: ProductPurchaseRow }>> {
+): Promise<Array<{ productId: string; skuId: string; quantity: number; specs: string | null; row: ProductPurchaseRow }>> {
   if (!payload.productId) {
     throw new HttpError(400, 'ORDER_PRODUCT_REQUIRED', '缺少商品信息');
+  }
+  if (!payload.brandProductSkuId) {
+    throw new HttpError(400, 'ORDER_SKU_REQUIRED', '请选择商品规格');
   }
 
   const quantity = Math.max(1, Math.trunc(Number(payload.quantity ?? 1) || 1));
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
     `
-      SELECT p.id AS product_id, p.shop_id, p.brand_product_id, bp.guide_price AS price, bp.guide_price AS original_price, bp.stock, bp.frozen_stock, p.status AS product_status
+      SELECT
+        p.id AS product_id,
+        p.shop_id,
+        p.brand_product_id,
+        bps.id AS brand_product_sku_id,
+        bps.guide_price AS price,
+        bps.guide_price AS original_price,
+        bps.stock,
+        bps.frozen_stock,
+        bps.status AS sku_status,
+        bps.spec_signature,
+        p.status AS product_status
       FROM product p
-      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      INNER JOIN brand_product_sku bps ON bps.id = ? AND bps.brand_product_id = p.brand_product_id
       WHERE p.id = ?
       LIMIT 1
     `,
-    [payload.productId],
+    [payload.brandProductSkuId, payload.productId],
   );
 
   const row = (rows[0] as ProductPurchaseRow | undefined) ?? null;
   if (!row || Number(row.product_status ?? 0) !== 10) {
     throw new HttpError(404, 'PRODUCT_NOT_FOUND', '商品不存在');
   }
+  if (Number(row.sku_status ?? 0) !== 10) {
+    throw new HttpError(404, 'PRODUCT_SKU_NOT_FOUND', '商品规格不可用');
+  }
   const available = Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0));
   if (available < quantity) {
     throw new HttpError(400, 'PRODUCT_STOCK_NOT_ENOUGH', '商品库存不足');
   }
 
-  return [{ productId: toEntityId(row.product_id), quantity, specs: null, row }];
+  return [
+    {
+      productId: toEntityId(row.product_id),
+      skuId: toEntityId(row.brand_product_sku_id),
+      quantity,
+      specs: null,
+      row,
+    },
+  ];
 }
 
 async function getCartPurchaseRows(
   connection: mysql.Connection | mysql.PoolConnection,
   userId: string,
   payload: CreateOrderPayload,
-): Promise<Array<{ cartItemId: string; productId: string; quantity: number; specs: string | null; row: CartPurchaseRow }>> {
+): Promise<Array<{ cartItemId: string; productId: string; skuId: string; quantity: number; specs: string | null; row: CartPurchaseRow }>> {
   const cartItemIds = Array.isArray(payload.cartItemIds) ? payload.cartItemIds.filter(Boolean) : [];
   if (!cartItemIds.length) {
     throw new HttpError(400, 'ORDER_CART_ITEMS_REQUIRED', '请选择购物车商品');
@@ -138,18 +163,21 @@ async function getCartPurchaseRows(
       SELECT
         ci.id AS cart_item_id,
         ci.product_id,
+        ci.brand_product_sku_id,
         ci.quantity,
         ci.specs,
         p.shop_id,
         p.brand_product_id,
-        bp.guide_price AS price,
-        bp.guide_price AS original_price,
-        bp.stock,
-        bp.frozen_stock,
+        bps.guide_price AS price,
+        bps.guide_price AS original_price,
+        bps.stock,
+        bps.frozen_stock,
+        bps.status AS sku_status,
+        bps.spec_signature,
         p.status AS product_status
       FROM cart_item ci
       INNER JOIN product p ON p.id = ci.product_id
-      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      INNER JOIN brand_product_sku bps ON bps.id = ci.brand_product_sku_id
       WHERE ci.user_id = ?
         AND ci.id IN (${placeholders})
       ORDER BY ci.id ASC
@@ -167,6 +195,9 @@ async function getCartPurchaseRows(
     if (Number(row.product_status ?? 0) !== 10) {
       throw new HttpError(400, 'PRODUCT_NOT_AVAILABLE', '购物车中存在不可下单商品');
     }
+    if (Number(row.sku_status ?? 0) !== 10) {
+      throw new HttpError(400, 'PRODUCT_SKU_NOT_AVAILABLE', '购物车中存在已下架的规格');
+    }
     const available = Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0));
     if (available < quantity) {
       throw new HttpError(400, 'PRODUCT_STOCK_NOT_ENOUGH', '购物车中存在库存不足商品');
@@ -174,6 +205,7 @@ async function getCartPurchaseRows(
     return {
       cartItemId: toEntityId(row.cart_item_id),
       productId: toEntityId(row.product_id),
+      skuId: toEntityId(row.brand_product_sku_id),
       quantity,
       specs: row.specs?.trim() || null,
       row,
@@ -235,24 +267,20 @@ export async function createPendingOrder(
       await connection.execute(
         `
           INSERT INTO order_item (
-            order_id, product_id, specs, quantity, unit_price, original_unit_price, item_amount, coupon_discount, created_at, updated_at
+            order_id, product_id, brand_product_sku_id, specs, quantity, unit_price, original_unit_price, item_amount, coupon_discount, created_at, updated_at
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
         `,
-        [orderId, item.productId, item.specs || '', item.quantity, unitPrice, originalUnitPrice, itemAmount, itemDiscount],
+        [orderId, item.productId, item.skuId, item.specs || '', item.quantity, unitPrice, originalUnitPrice, itemAmount, itemDiscount],
       );
 
-      const brandProductId = item.row.brand_product_id;
-      if (brandProductId == null) {
-        throw new HttpError(400, 'PRODUCT_BRAND_MISSING', '商品未关联品牌库');
-      }
       const [freezeResult] = await connection.execute<mysql.ResultSetHeader>(
         `
-          UPDATE brand_product
+          UPDATE brand_product_sku
           SET frozen_stock = frozen_stock + ?, updated_at = CURRENT_TIMESTAMP(3)
           WHERE id = ? AND (stock - frozen_stock) >= ?
         `,
-        [item.quantity, brandProductId, item.quantity],
+        [item.quantity, item.skuId, item.quantity],
       );
       if (freezeResult.affectedRows === 0) {
         throw new HttpError(400, 'PRODUCT_STOCK_NOT_ENOUGH', '商品库存不足');
@@ -397,22 +425,28 @@ export async function reviewOrder(userId: string, orderId: string, productId: st
   const ratingNum = Math.max(1, Math.min(5, Math.trunc(Number(rating) || 5)));
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
-    `SELECT o.id FROM \`order\` o
+    `SELECT oi.brand_product_sku_id FROM \`order\` o
      INNER JOIN order_item oi ON oi.order_id = o.id AND oi.product_id = ?
      WHERE o.id = ? AND o.user_id = ? AND o.status = ?
      LIMIT 1`,
     [productId, orderId, userId, ORDER_FULFILLED],
   );
 
-  if (!(rows as mysql.RowDataPacket[]).length) {
+  const reviewRow = (rows as mysql.RowDataPacket[])[0] as
+    | { brand_product_sku_id: number | string | null }
+    | undefined;
+  if (!reviewRow) {
     throw new HttpError(403, 'REVIEW_NOT_ALLOWED', '只能评价已完成订单中的商品');
+  }
+  if (!reviewRow.brand_product_sku_id) {
+    throw new HttpError(400, 'REVIEW_SKU_MISSING', '订单项缺少 SKU 关联，无法写入评价');
   }
 
   await db.execute(
-    `INSERT INTO product_review (order_id, user_id, product_id, rating, content, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+    `INSERT INTO product_review (order_id, user_id, product_id, brand_product_sku_id, rating, content, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
      ON DUPLICATE KEY UPDATE rating = VALUES(rating), content = VALUES(content), updated_at = CURRENT_TIMESTAMP(3)`,
-    [orderId, userId, productId, ratingNum, content?.trim() || null],
+    [orderId, userId, productId, reviewRow.brand_product_sku_id, ratingNum, content?.trim() || null],
   );
 
   return { success: true as const };

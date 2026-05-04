@@ -105,8 +105,11 @@ export type ShopProductListRow = {
   brand_id: number | string | null;
   brand_name: string | null;
   product_name: string;
+  /** SKU MIN(guide_price)，单位分 */
   price: number | string;
   original_price: number | string | null;
+  /** SKU MAX(guide_price)，单位分；用于价格区间显示 */
+  price_max: number | string | null;
   guess_price: number | string | null;
   image_url: string | null;
   sales: number | string | null;
@@ -144,8 +147,11 @@ export type ShopDetailProductRow = {
   id: number | string;
   name: string;
   brand_name: string | null;
+  /** SKU MIN(guide_price)，单位分 */
   price: number | string | null;
   original_price: number | string | null;
+  /** SKU MAX(guide_price)，单位分；用于价格区间显示 */
+  price_max?: number | string | null;
   sales: number | string | null;
   stock: number | string | null;
   frozen_stock: number | string | null;

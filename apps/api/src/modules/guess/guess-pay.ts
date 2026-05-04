@@ -36,6 +36,7 @@ type GuessForBetRow = {
   status: number | string;
   end_time: Date | string;
   product_id: number | string | null;
+  brand_product_sku_id: number | string | null;
   product_price: number | string | null;
   product_name: string | null;
 };
@@ -49,16 +50,19 @@ async function loadGuessForBet(guessId: string): Promise<GuessForBetRow> {
         g.status,
         g.end_time,
         gp.product_id,
-        COALESCE(bp.guess_price, bp.guide_price) AS product_price,
+        gp.brand_product_sku_id,
+        COALESCE(bps.guess_price, bps.guide_price) AS product_price,
         bp.name AS product_name
       FROM guess g
       LEFT JOIN (
-        SELECT guess_id, MIN(product_id) AS product_id
+        SELECT guess_id, MIN(id) AS gp_id
         FROM guess_product
         GROUP BY guess_id
-      ) gp ON gp.guess_id = g.id
+      ) latest_gp ON latest_gp.guess_id = g.id
+      LEFT JOIN guess_product gp ON gp.id = latest_gp.gp_id
       LEFT JOIN product p ON p.id = gp.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = gp.brand_product_sku_id
       WHERE g.id = ?
       LIMIT 1
     `,
@@ -125,22 +129,27 @@ export async function createGuessBetPayment(
 
   const expiresAt = new Date(Date.now() + PAY_EXPIRES_SEC * 1000);
 
+  if (!guess.product_id || !guess.brand_product_sku_id) {
+    throw new HttpError(400, 'GUESS_PRODUCT_MISSING', '竞猜未关联奖品 SKU');
+  }
+
   const db = getDbPool();
   // INSERT bet (waiting). pay_no 暂用 NULL, 拿 id 后立刻 UPDATE 写入。
   const [insertResult] = await db.execute<mysql.ResultSetHeader>(
     `
       INSERT INTO guess_bet (
-        user_id, guess_id, choice_idx, amount, product_id, coupon_id,
+        user_id, guess_id, choice_idx, amount, product_id, brand_product_sku_id, coupon_id,
         status, pay_status, pay_channel, pay_expires_at,
         reward_type, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
     `,
     [
       userId,
       guessId,
       choiceIdx,
       amountCents,
-      guess.product_id ?? null,
+      guess.product_id,
+      guess.brand_product_sku_id,
       BET_WAITING_PAY,
       PAY_STATUS_WAITING,
       payChannelKeyToCode(payload.payChannel),

@@ -43,6 +43,7 @@ export type OrderRow = {
   created_at: Date | string;
   item_id: number | string | null;
   product_id: number | string | null;
+  brand_product_sku_id?: number | string | null;
   product_name: string | null;
   product_img: string | null;
   quantity: number | string | null;
@@ -94,11 +95,14 @@ export type ProductPurchaseRow = {
   product_id: number | string;
   shop_id: number | string | null;
   brand_product_id: number | string | null;
+  brand_product_sku_id: number | string;
   price: number | string | null;
   original_price: number | string | null;
   stock: number | string | null;
   frozen_stock: number | string | null;
   product_status: number | string | null;
+  sku_status: number | string | null;
+  spec_signature: string | null;
 };
 
 export type CartPurchaseRow = ProductPurchaseRow & {
@@ -291,6 +295,7 @@ function sanitizeOrderItem(row: OrderRow): OrderItem | null {
   return {
     id: toEntityId(row.item_id),
     productId: toEntityId(row.product_id),
+    brandProductSkuId: toEntityId(row.brand_product_sku_id ?? 0),
     productName: row.product_name,
     productImg: row.product_img || '',
     skuText: row.item_specs?.trim() || null,
@@ -421,8 +426,9 @@ export const orderListSql = `
     o.created_at,
     oi.id AS item_id,
     oi.product_id,
+    oi.brand_product_sku_id,
     bp.name AS product_name,
-    bp.default_img AS product_img,
+    COALESCE(bps.image, bp.default_img) AS product_img,
     oi.quantity,
     oi.unit_price,
     oi.item_amount,
@@ -463,6 +469,7 @@ export const orderListSql = `
   LEFT JOIN order_item oi ON oi.order_id = o.id
   LEFT JOIN product p ON p.id = oi.product_id
   LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+  LEFT JOIN brand_product_sku bps ON bps.id = oi.brand_product_sku_id
   LEFT JOIN address a ON a.id = o.address_id
   LEFT JOIN coupon c ON c.id = o.coupon_id
   LEFT JOIN (

@@ -244,10 +244,10 @@ export async function getAdminDashboardStats() {
           p.id,
           bp.name AS name,
           bp.default_img AS image_url,
-          bp.guide_price AS price,
+          (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price,
           p.status,
-          bp.stock,
-          bp.frozen_stock,
+          (SELECT COALESCE(SUM(bps.stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS stock,
+          (SELECT COALESCE(SUM(bps.frozen_stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS frozen_stock,
           MAX(p.sales) AS p_sales,
           COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS sales_count
         FROM product p

@@ -3,8 +3,13 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { toEntityId, type CouponListItem, type ProductDetailResult, type WarehouseItem } from '@umi/shared';
+import { toEntityId, type CouponListItem, type ProductDetailResult, type ProductSku, type WarehouseItem } from '@umi/shared';
 
+import {
+  findSkuBySelection,
+  pickDefaultSku,
+  type SkuSelection,
+} from '../../../components/sku-selector/sku-selector';
 import { addCartItem } from '../../../lib/api/cart';
 import { fetchCoupons } from '../../../lib/api/coupons';
 import {
@@ -64,6 +69,7 @@ function ProductDetailPageInner() {
   const [shopStats, setShopStats] = useState<PublicShopDetailResult['shop'] | null>(null);
   const [selectedGuessOpt, setSelectedGuessOpt] = useState(0);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string[]>([]);
+  const [skuSelection, setSkuSelection] = useState<SkuSelection>({});
   const [toast, setToast] = useState('');
   const heroSliderRef = useRef<HTMLDivElement | null>(null);
   const productId = typeof params?.id === 'string' ? params.id : '';
@@ -149,16 +155,48 @@ function ProductDetailPageInner() {
     };
   }, [productId]);
 
+  const skus = useMemo<ProductSku[]>(() => product?.skus ?? [], [product]);
+  const specDefinitions = useMemo(() => product?.specDefinitions ?? null, [product]);
+  const hasSpecDefs = Array.isArray(specDefinitions) && specDefinitions.length > 0;
+
+  // 单规格商品自动落 default sku；多规格商品仅在选满 spec 后命中具体 sku。
+  const matchedSku = useMemo<ProductSku | null>(() => {
+    if (!product) return null;
+    if (!hasSpecDefs) return pickDefaultSku(skus);
+    return findSkuBySelection(skus, specDefinitions ?? [], skuSelection);
+  }, [product, hasSpecDefs, skus, specDefinitions, skuSelection]);
+
   const heroImages = useMemo(() => {
     if (!product) {
       return [];
     }
-    const images = product.images.length ? product.images : [product.img];
-    return images.filter(Boolean);
-  }, [product]);
+    const base = product.images.length ? product.images : [product.img];
+    const baseFiltered = base.filter(Boolean);
+    if (matchedSku?.image) {
+      // 选中 sku 后首图替换为 sku.image，其它相册图保留
+      const others = baseFiltered.filter((src) => src !== matchedSku.image);
+      return [matchedSku.image, ...others];
+    }
+    return baseFiltered;
+  }, [product, matchedSku]);
 
-  const guessPrice = useMemo(() => product?.guessPrice ?? 0, [product]);
-  const directPrice = useMemo(() => product?.price ?? 0, [product]);
+  const guessPrice = useMemo(() => {
+    if (matchedSku) return matchedSku.guessPrice || matchedSku.guidePrice;
+    return product?.guessPrice ?? 0;
+  }, [matchedSku, product]);
+  const directPrice = useMemo(() => {
+    if (matchedSku) return matchedSku.guidePrice;
+    return product?.price ?? 0;
+  }, [matchedSku, product]);
+  const displayStock = useMemo(() => {
+    if (matchedSku) return matchedSku.available;
+    if (!product) return 0;
+    // 多规格未选满时，库存按所有 active SKU 之和兜底
+    if (hasSpecDefs && skus.length) {
+      return skus.filter((s) => s.status === 'active').reduce((sum, s) => sum + (s.available || 0), 0);
+    }
+    return product.stock ?? 0;
+  }, [matchedSku, product, hasSpecDefs, skus]);
   const selectedDeduct = selectedWarehouse.reduce((sum, id) => {
     const item = warehouseItems.find((entry: WarehouseItem) => entry.id === id);
     return sum + (item ? Number(item.price ?? 0) : 0);
@@ -272,6 +310,10 @@ function ProductDetailPageInner() {
         directPrice={directPrice}
         guessPrice={guessPrice}
         discountPercent={discountPercent}
+        selectedSku={matchedSku}
+        skuSelection={skuSelection}
+        onSkuSelectionChange={setSkuSelection}
+        displayStock={displayStock}
         onOpenCoupons={() =>
           router.push(
             product.shopId
@@ -430,11 +472,23 @@ function ProductDetailPageInner() {
                   router.push('/login');
                   return;
                 }
-                if (product.stock <= 0) {
+                if (hasSpecDefs && !matchedSku) {
+                  setToast('请先选择规格');
+                  return;
+                }
+                if (!matchedSku) {
+                  setToast('商品规格不可用');
+                  return;
+                }
+                if ((matchedSku.available ?? 0) <= 0) {
                   setToast('商品已售罄');
                   return;
                 }
-                void addCartItem({ productId: toEntityId(product.id), quantity: 1 })
+                void addCartItem({
+                  productId: toEntityId(product.id),
+                  brandProductSkuId: toEntityId(matchedSku.id),
+                  quantity: 1,
+                })
                   .then(() => setToast('已加入购物车 🛒'))
                   .catch(() => setToast('加入购物车失败'));
               }
@@ -470,12 +524,20 @@ function ProductDetailPageInner() {
                 }
                 router.push(`/guess/${encodeURIComponent(activeGuess.id)}`);
               } else if (currentTab === 'direct') {
-                if (product.stock <= 0) {
+                if (hasSpecDefs && !matchedSku) {
+                  setToast('请先选择规格');
+                  return;
+                }
+                if (!matchedSku) {
+                  setToast('商品规格不可用');
+                  return;
+                }
+                if ((matchedSku.available ?? 0) <= 0) {
                   setToast('商品已售罄');
                   return;
                 }
                 router.push(
-                  `/payment?from=product&pid=${encodeURIComponent(product.id)}&qty=1`,
+                  `/payment?from=product&pid=${encodeURIComponent(product.id)}&skuId=${encodeURIComponent(matchedSku.id)}&qty=1`,
                 );
               }
               else setExchangeOpen(true);
@@ -512,7 +574,8 @@ function ProductDetailPageInner() {
         onConfirmExchange={() => {
           setExchangeConfirmOpen(false);
           setExchangeOpen(false);
-          router.push(`/payment?from=exchange&pid=${encodeURIComponent(product.id)}&qty=1`);
+          const skuQuery = matchedSku ? `&skuId=${encodeURIComponent(matchedSku.id)}` : '';
+          router.push(`/payment?from=exchange&pid=${encodeURIComponent(product.id)}${skuQuery}&qty=1`);
         }}
       />
 

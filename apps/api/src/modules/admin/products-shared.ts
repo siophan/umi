@@ -1,5 +1,7 @@
 import sanitizeHtml from 'sanitize-html';
 import type {
+  AdminBrandProductSkuPayload,
+  AdminBrandProductSpecDefinition,
   AdminBrandProductSpecRow,
   CreateAdminBrandProductPayload,
   UpdateAdminBrandProductPayload,
@@ -86,16 +88,27 @@ export type AdminProductRow = {
   brand_product_status: number | string | null;
 };
 
+export type AdminBrandLibrarySkuRow = {
+  id: number | string;
+  sku_code: string | null;
+  spec_json: unknown;
+  spec_signature: string;
+  guide_price: number | string;
+  supply_price: number | string | null;
+  guess_price: number | string | null;
+  stock: number | string;
+  frozen_stock: number | string;
+  image: string | null;
+  status: number | string;
+  sort: number | string;
+};
+
 export type AdminBrandLibraryRow = {
   id: number | string;
   brand_id: number | string | null;
   name: string;
   category_id: number | string | null;
-  guide_price: number | string | null;
-  supply_price: number | string | null;
-  guess_price: number | string | null;
-  stock: number | string | null;
-  frozen_stock: number | string | null;
+  spec_definitions: unknown;
   description: string | null;
   status: number | string;
   created_at: Date | string;
@@ -116,6 +129,11 @@ export type AdminBrandLibraryRow = {
   category_name: string | null;
   product_count: number | string | null;
   active_product_count: number | string | null;
+  guide_price_min: number | string | null;
+  guide_price_max: number | string | null;
+  stock_total: number | string | null;
+  available_total: number | string | null;
+  skus_json: unknown;
 };
 
 export type CountRow = {
@@ -154,6 +172,23 @@ export interface AdminProductListItem {
   brandProductStatusCode: number | null;
 }
 
+export interface AdminBrandLibrarySkuItem {
+  id: string;
+  skuCode: string | null;
+  spec: Record<string, string>;
+  specSummary: string;
+  specSignature: string;
+  guidePrice: number;
+  supplyPrice: number | null;
+  guessPrice: number | null;
+  stock: number;
+  frozenStock: number;
+  availableStock: number;
+  image: string | null;
+  status: 'active' | 'disabled';
+  sort: number;
+}
+
 export interface AdminBrandLibraryItem {
   id: string;
   brandId: string | null;
@@ -161,12 +196,10 @@ export interface AdminBrandLibraryItem {
   productName: string;
   categoryId: string | null;
   category: string;
-  guidePrice: number;
-  supplyPrice: number;
-  guessPrice: number;
-  stock: number;
-  frozenStock: number;
-  availableStock: number;
+  guidePriceMin: number;
+  guidePriceMax: number;
+  stockTotal: number;
+  availableTotal: number;
   status: AdminBrandLibraryStatus;
   description: string | null;
   createdAt: string;
@@ -182,6 +215,8 @@ export interface AdminBrandLibraryItem {
   deliveryDays: string | null;
   tags: string[];
   collab: string | null;
+  specDefinitions: AdminBrandProductSpecDefinition[] | null;
+  skus: AdminBrandLibrarySkuItem[];
   productCount: number;
   activeProductCount: number;
   rawStatusCode: number;
@@ -378,8 +413,9 @@ export function sanitizeAdminBrandLibrary(
   row: AdminBrandLibraryRow,
 ): AdminBrandLibraryItem {
   const freightCents = row.freight == null ? null : Number(row.freight);
-  const stock = Math.max(0, toNumber(row.stock));
-  const frozenStock = Math.max(0, toNumber(row.frozen_stock));
+  const skus = parseBrandLibrarySkus(row.skus_json);
+  const guidePriceMin = Math.max(0, toNumber(row.guide_price_min));
+  const guidePriceMax = Math.max(guidePriceMin, toNumber(row.guide_price_max));
   return {
     id: String(row.id),
     brandId: row.brand_id == null ? null : String(row.brand_id),
@@ -387,12 +423,10 @@ export function sanitizeAdminBrandLibrary(
     productName: row.name,
     categoryId: row.category_id == null ? null : String(row.category_id),
     category: row.category_name || '未分类',
-    guidePrice: toNumber(row.guide_price),
-    supplyPrice: toNumber(row.supply_price),
-    guessPrice: toNumber(row.guess_price),
-    stock,
-    frozenStock,
-    availableStock: Math.max(0, stock - frozenStock),
+    guidePriceMin,
+    guidePriceMax,
+    stockTotal: Math.max(0, toNumber(row.stock_total)),
+    availableTotal: Math.max(0, toNumber(row.available_total)),
     status: resolveBrandLibraryStatus(row),
     description: row.description ?? null,
     createdAt: formatDateTime(row.created_at),
@@ -408,10 +442,129 @@ export function sanitizeAdminBrandLibrary(
     deliveryDays: row.delivery_days ?? null,
     tags: parseBrandProductStringList(row.tags),
     collab: row.collab?.trim() || null,
+    specDefinitions: parseSpecDefinitions(row.spec_definitions),
+    skus,
     productCount: Math.max(0, toNumber(row.product_count)),
     activeProductCount: Math.max(0, toNumber(row.active_product_count)),
     rawStatusCode: toNumber(row.status),
     brandStatusCode: toNullableNumber(row.brand_status),
+  };
+}
+
+export function parseSpecDefinitions(
+  value: unknown,
+): AdminBrandProductSpecDefinition[] | null {
+  if (value == null) {
+    return null;
+  }
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+    const list: AdminBrandProductSpecDefinition[] = [];
+    for (const item of parsed) {
+      if (!item || typeof item !== 'object') continue;
+      const name =
+        typeof (item as { name?: unknown }).name === 'string'
+          ? (item as { name: string }).name.trim()
+          : '';
+      const valuesRaw = (item as { values?: unknown }).values;
+      const values = Array.isArray(valuesRaw)
+        ? valuesRaw
+            .filter((v): v is string => typeof v === 'string')
+            .map((v) => v.trim())
+            .filter(Boolean)
+        : [];
+      if (name && values.length) {
+        list.push({ name, values });
+      }
+    }
+    return list.length ? list : null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseSpecJson(value: unknown): Record<string, string> {
+  if (value == null) {
+    return {};
+  }
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {};
+    }
+    const out: Record<string, string> = {};
+    for (const [key, val] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof val === 'string' && val.trim()) {
+        out[key.trim()] = val.trim();
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function buildSpecSummary(spec: Record<string, string>): string {
+  const keys = Object.keys(spec).sort();
+  if (!keys.length) {
+    return '';
+  }
+  return keys.map((k) => spec[k]).join(' / ');
+}
+
+export function buildSpecSignature(spec: Record<string, string>): string {
+  const keys = Object.keys(spec).sort();
+  if (!keys.length) {
+    return '';
+  }
+  return keys.map((k) => `${k}=${spec[k]}`).join(';');
+}
+
+export function parseBrandLibrarySkus(value: unknown): AdminBrandLibrarySkuItem[] {
+  if (value == null) {
+    return [];
+  }
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .map((row) => sanitizeBrandLibrarySku(row))
+      .filter((row): row is AdminBrandLibrarySkuItem => row !== null);
+  } catch {
+    return [];
+  }
+}
+
+function sanitizeBrandLibrarySku(row: unknown): AdminBrandLibrarySkuItem | null {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+  const r = row as Partial<AdminBrandLibrarySkuRow>;
+  const id = r.id == null ? null : String(r.id);
+  if (!id) return null;
+  const spec = parseSpecJson(r.spec_json);
+  const stock = Math.max(0, Number(r.stock ?? 0));
+  const frozen = Math.max(0, Number(r.frozen_stock ?? 0));
+  return {
+    id,
+    skuCode: typeof r.sku_code === 'string' && r.sku_code.trim() ? r.sku_code.trim() : null,
+    spec,
+    specSummary: buildSpecSummary(spec),
+    specSignature: typeof r.spec_signature === 'string' ? r.spec_signature : '',
+    guidePrice: Math.max(0, Number(r.guide_price ?? 0)),
+    supplyPrice: r.supply_price == null ? null : Number(r.supply_price),
+    guessPrice: r.guess_price == null ? null : Number(r.guess_price),
+    stock,
+    frozenStock: frozen,
+    availableStock: Math.max(0, stock - frozen),
+    image: typeof r.image === 'string' && r.image.trim() ? r.image.trim() : null,
+    status: Number(r.status ?? 10) === BRAND_PRODUCT_STATUS_DISABLED ? 'disabled' : 'active',
+    sort: Number(r.sort ?? 0),
   };
 }
 
@@ -490,7 +643,7 @@ export function buildAdminProductFilters(
 
   if (options.includeStatus && status === 'active') {
     whereClauses.push(
-      'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (COALESCE(bp.stock, 0) - COALESCE(bp.frozen_stock, 0)) > ?',
+      'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (SELECT COALESCE(SUM(GREATEST(bps.stock - bps.frozen_stock, 0)), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) > ?',
     );
     params.push(
       PRODUCT_STATUS_ACTIVE,
@@ -504,7 +657,7 @@ export function buildAdminProductFilters(
     );
   } else if (options.includeStatus && status === 'low_stock') {
     whereClauses.push(
-      'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (COALESCE(bp.stock, 0) - COALESCE(bp.frozen_stock, 0)) <= ?',
+      'p.status = ? AND COALESCE(s.status, ?) <> ? AND COALESCE(b.status, ?) <> ? AND COALESCE(bp.status, ?) <> ? AND (SELECT COALESCE(SUM(GREATEST(bps.stock - bps.frozen_stock, 0)), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) <= ?',
     );
     params.push(
       PRODUCT_STATUS_ACTIVE,
@@ -581,18 +734,27 @@ export function normalizeBrandProductStatus(status: string | null | undefined) {
   return BRAND_PRODUCT_STATUS_ACTIVE;
 }
 
+export interface NormalizedSku {
+  id: string | null;
+  skuCode: string | null;
+  spec: Record<string, string>;
+  specJson: string;
+  specSignature: string;
+  guidePrice: number;
+  supplyPrice: number | null;
+  guessPrice: number | null;
+  stock: number;
+  image: string | null;
+  status: number;
+  sort: number;
+}
+
 export function normalizeAdminBrandProductPayload(
   payload: CreateAdminBrandProductPayload | UpdateAdminBrandProductPayload,
 ) {
   const name = payload.name.trim();
   const brandId = payload.brandId;
   const categoryId = payload.categoryId;
-  const guidePrice = Math.round(Number(payload.guidePrice ?? 0));
-  const supplyPrice =
-    payload.supplyPrice == null ? null : Math.round(Number(payload.supplyPrice));
-  const guessPrice =
-    payload.guessPrice == null ? null : Math.round(Number(payload.guessPrice));
-  const stock = payload.stock == null ? 0 : Math.max(0, Math.trunc(Number(payload.stock)));
   const defaultImg = payload.defaultImg?.trim() || null;
   const description = payload.description?.trim() || null;
   const videoUrl = payload.videoUrl?.trim() || null;
@@ -617,18 +779,6 @@ export function normalizeAdminBrandProductPayload(
   }
   if (!categoryId) {
     throw new Error('请选择类目');
-  }
-  if (!Number.isInteger(guidePrice) || guidePrice < 0) {
-    throw new Error('指导价不合法');
-  }
-  if (supplyPrice != null && (!Number.isInteger(supplyPrice) || supplyPrice < 0)) {
-    throw new Error('供货价不合法');
-  }
-  if (guessPrice != null && (!Number.isInteger(guessPrice) || guessPrice < 0)) {
-    throw new Error('竞猜价不合法');
-  }
-  if (!Number.isInteger(stock) || stock < 0) {
-    throw new Error('库存不合法');
   }
   if (freight != null && (!Number.isInteger(freight) || freight < 0)) {
     throw new Error('运费不合法');
@@ -680,14 +830,13 @@ export function normalizeAdminBrandProductPayload(
 
   const collab = payload.collab?.trim() || null;
 
+  const specDefinitions = normalizeSpecDefinitions(payload.specDefinitions);
+  const skus = normalizeSkuPayloads(payload.skus, specDefinitions);
+
   return {
     name,
     brandId,
     categoryId,
-    guidePrice,
-    supplyPrice,
-    guessPrice,
-    stock,
     defaultImg,
     description,
     videoUrl,
@@ -700,5 +849,118 @@ export function normalizeAdminBrandProductPayload(
     deliveryDays,
     tagsJson: JSON.stringify(tags),
     collab,
+    specDefinitionsJson: specDefinitions == null ? null : JSON.stringify(specDefinitions),
+    skus,
   };
+}
+
+export function normalizeSpecDefinitions(
+  value: AdminBrandProductSpecDefinition[] | null | undefined,
+): AdminBrandProductSpecDefinition[] | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+  const list: AdminBrandProductSpecDefinition[] = [];
+  for (const item of value) {
+    if (!item) continue;
+    const name = typeof item.name === 'string' ? item.name.trim() : '';
+    const valuesRaw = Array.isArray(item.values) ? item.values : [];
+    const values = uniqueStrings(
+      valuesRaw
+        .filter((v): v is string => typeof v === 'string')
+        .map((v) => v.trim())
+        .filter(Boolean),
+    );
+    if (name && values.length) {
+      list.push({ name, values });
+    }
+  }
+  return list.length ? list : null;
+}
+
+function normalizeSkuPayloads(
+  value: AdminBrandProductSkuPayload[] | undefined,
+  specDefinitions: AdminBrandProductSpecDefinition[] | null,
+): NormalizedSku[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error('至少需要 1 个 SKU');
+  }
+
+  const seen = new Set<string>();
+  const list: NormalizedSku[] = [];
+  for (const raw of value) {
+    if (!raw) continue;
+    const spec = normalizeSpecMap(raw.spec, specDefinitions);
+    const signature = buildSpecSignature(spec);
+    if (seen.has(signature)) {
+      throw new Error(`SKU 规格组合重复：${signature || '(默认)'}`);
+    }
+    seen.add(signature);
+
+    const guidePrice = Math.round(Number(raw.guidePrice ?? 0));
+    if (!Number.isInteger(guidePrice) || guidePrice <= 0) {
+      throw new Error('SKU 吊牌价必须 > 0');
+    }
+    const supplyPrice =
+      raw.supplyPrice == null ? null : Math.round(Number(raw.supplyPrice));
+    if (supplyPrice != null && (!Number.isInteger(supplyPrice) || supplyPrice < 0)) {
+      throw new Error('SKU 供货价不合法');
+    }
+    const guessPrice =
+      raw.guessPrice == null ? null : Math.round(Number(raw.guessPrice));
+    if (guessPrice != null && (!Number.isInteger(guessPrice) || guessPrice < 0)) {
+      throw new Error('SKU 竞猜价不合法');
+    }
+    const stock = Math.max(0, Math.trunc(Number(raw.stock ?? 0)));
+    if (!Number.isInteger(stock) || stock < 0) {
+      throw new Error('SKU 库存不合法');
+    }
+    const sort = Number.isFinite(Number(raw.sort)) ? Math.trunc(Number(raw.sort)) : 0;
+
+    list.push({
+      id: raw.id == null ? null : String(raw.id),
+      skuCode: typeof raw.skuCode === 'string' && raw.skuCode.trim() ? raw.skuCode.trim() : null,
+      spec,
+      specJson: JSON.stringify(spec),
+      specSignature: signature,
+      guidePrice,
+      supplyPrice,
+      guessPrice,
+      stock,
+      image: typeof raw.image === 'string' && raw.image.trim() ? raw.image.trim() : null,
+      status: raw.status === 'disabled' ? BRAND_PRODUCT_STATUS_DISABLED : BRAND_PRODUCT_STATUS_ACTIVE,
+      sort,
+    });
+  }
+
+  if (list.length === 0) {
+    throw new Error('至少需要 1 个 SKU');
+  }
+  return list;
+}
+
+function normalizeSpecMap(
+  raw: Record<string, string> | undefined,
+  specDefinitions: AdminBrandProductSpecDefinition[] | null,
+): Record<string, string> {
+  if (!raw || typeof raw !== 'object') {
+    return {};
+  }
+  const out: Record<string, string> = {};
+  if (specDefinitions == null) {
+    // 单规格商品：ignore any keys
+    return out;
+  }
+  for (const def of specDefinitions) {
+    const value = raw[def.name];
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new Error(`SKU 缺少规格 "${def.name}" 的值`);
+    }
+    const trimmed = value.trim();
+    if (!def.values.includes(trimmed)) {
+      throw new Error(`SKU 规格 "${def.name}" 的值 "${trimmed}" 不在声明范围内`);
+    }
+    out[def.name] = trimmed;
+  }
+  return out;
 }

@@ -221,6 +221,12 @@ export const commercePaths = {
                 description: { type: 'string', nullable: true },
                 imageUrl: { type: 'string', example: 'https://bucket.oss-cn-beijing.aliyuncs.com/uploads/guess_cover/cover.png' },
                 productId: { type: 'string', example: '502', description: '关联商品 ID（必填，竞猜的赌注/转化商品）' },
+                brandProductSkuId: {
+                  type: 'string',
+                  nullable: true,
+                  example: '301',
+                  description: '关联商品的具体 SKU；多规格商品必填，单规格商品可省略（自动落 default sku）',
+                },
                 invitedFriendIds: {
                   type: 'array',
                   items: { type: 'string' },
@@ -305,6 +311,7 @@ export const commercePaths = {
                 properties: {
                   id: { type: 'string', example: '1' },
                   productId: { type: 'string', example: '101' },
+                  brandProductSkuId: { type: 'string', example: '301' },
                   shopId: { type: 'string', nullable: true, example: '12' },
                   brand: { type: 'string', example: '乐事' },
                   shop: { type: 'string', example: '乐事官方旗舰店' },
@@ -347,11 +354,12 @@ export const commercePaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['productId'],
+              required: ['productId', 'brandProductSkuId'],
               properties: {
                 productId: { type: 'string', example: '101' },
+                brandProductSkuId: { type: 'string', example: '301' },
                 quantity: { type: 'integer', example: 1 },
-                specs: { type: 'string', nullable: true, example: '默认规格' },
+                specs: { type: 'string', nullable: true, example: '红色 / M 码' },
                 checked: { type: 'boolean', example: true },
               },
             },
@@ -786,6 +794,7 @@ export const commercePaths = {
                 paymentMethod: { type: 'string', enum: ['wechat', 'alipay'] },
                 note: { type: 'string', nullable: true, example: '请尽快发货' },
                 productId: { type: 'string', nullable: true, example: '101' },
+                brandProductSkuId: { type: 'string', nullable: true, example: '301' },
                 quantity: { type: 'integer', nullable: true, example: 1 },
                 cartItemIds: {
                   type: 'array',

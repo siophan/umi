@@ -93,9 +93,29 @@ export interface ProductSummary {
   brand: string;
   img: string;
   price: number;
+  priceMax?: number;
   guessPrice: number;
   category: string;
   status: string;
+}
+
+export interface SpecDefinition {
+  name: string;
+  values: string[];
+}
+
+export interface ProductSku {
+  id: EntityId;
+  skuCode: string | null;
+  spec: Record<string, string>;
+  specSummary: string;
+  guidePrice: number;
+  guessPrice: number;
+  stock: number;
+  available: number;
+  image: string | null;
+  status: 'active' | 'disabled';
+  sort: number;
 }
 
 export interface GuessOption {
@@ -135,6 +155,7 @@ export interface GuessSummary {
 export interface OrderItem {
   id: EntityId;
   productId: ProductId;
+  brandProductSkuId: EntityId;
   productName: string;
   productImg: string;
   skuText?: string | null;
@@ -160,8 +181,10 @@ export interface WarehouseItem {
   userId: UserId;
   userName?: string | null;
   productId: ProductId;
+  brandProductSkuId: EntityId;
   productName: string;
   productImg?: string | null;
+  skuText?: string | null;
   quantity: number;
   price?: number;
   status: WarehouseStatus;

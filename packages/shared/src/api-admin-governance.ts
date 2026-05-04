@@ -252,6 +252,7 @@ export interface CreateAdminGuessPayload {
   title: string;
   categoryId: CategoryId;
   productId: ProductId;
+  brandProductSkuId: EntityId;
   endTime: string;
   description?: string | null;
   imageUrl?: string | null;

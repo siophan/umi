@@ -1,4 +1,10 @@
-import type { ProductFeedItem, SearchHotKeywordItem, SocialUserItem } from '@umi/shared';
+import type {
+  ProductFeedItem,
+  ProductSku,
+  SearchHotKeywordItem,
+  SocialUserItem,
+  SpecDefinition,
+} from '@umi/shared';
 
 export type TemplateId = 'pk_friend' | 'duel' | 'multi' | 'number';
 
@@ -21,6 +27,10 @@ export type ProductItem = {
   rating: number;
   stock: number;
   img: string;
+  specDefinitions?: SpecDefinition[] | null;
+  skus?: ProductSku[];
+  selectedSkuId?: string | null;
+  selectedSkuText?: string | null;
 };
 
 export type FriendItem = {

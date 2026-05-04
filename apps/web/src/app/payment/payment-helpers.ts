@@ -4,6 +4,7 @@ import type { CouponListItem } from '@umi/shared';
 
 export type PaymentProduct = {
   productId: string;
+  brandProductSkuId?: string;
   cartItemId?: string;
   name: string;
   price: number;

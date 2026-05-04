@@ -15,6 +15,7 @@
 - [banner](#banner)
 - [brand](#brand)
 - [brand_product](#brand_product)
+- [brand_product_sku](#brand_product_sku)
 - [cart_item](#cart_item)
 - [category](#category)
 - [chat_conversation](#chat_conversation)
@@ -66,6 +67,8 @@
 - [user_profile](#user_profile)
 - [virtual_warehouse](#virtual_warehouse)
 - [warehouse_item_log](#warehouse_item_log)
+
+> 2026-05-04 多规格改造：以下 9 张子表新增 `brand_product_sku_id` 列（位置在 `product_id` 之后；`warehouse_item_log` 可空，其余 NOT NULL）：`cart_item / order_item / fulfillment_order_item / product_review / consign_trade / virtual_warehouse / physical_warehouse / warehouse_item_log / guess_bet / guess_product`。`guess_product` UNIQUE: `(guess_id, option_idx, product_id, brand_product_sku_id)`。详见设计：`docs/superpowers/specs/2026-05-04-multi-spec-brand-product-design.md`。
 
 ## achievement_config
 
@@ -248,34 +251,57 @@
 
 ## brand_product
 
-- 表注释：平台品牌商品库
+- 表注释：平台品牌商品库（SPU）
 
 | 字段顺序 | 字段名 | 列类型 | 是否可空 | 默认值 | 键标记 | Extra | 字段注释 |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
 | 1 | `id` | `bigint` | `NO` | `NULL` | `PRI` | `auto_increment` | 品牌商品主键 |
 | 2 | `brand_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 品牌 ID |
-| 3 | `name` | `varchar(191)` | `NO` | `NULL` | `-` | `-` | 标准商品名称 |
-| 4 | `category_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 商品分类 ID |
-| 5 | `guide_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 吊牌价，单位分 |
-| 6 | `supply_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 供货价，单位分 |
-| 7 | `guess_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 竞猜价格，单位分 |
-| 8 | `stock` | `int` | `NO` | `0` | `-` | `-` | 平台总库存（跨店共享） |
-| 9 | `frozen_stock` | `int` | `NO` | `0` | `-` | `-` | 冻结库存（订单占用） |
-| 10 | `default_img` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 默认主图 |
-| 8 | `images` | `json` | `NO` | `NULL` | `-` | `-` | - |
-| 9 | `video_url` | `varchar(255)` | `YES` | `NULL` | `-` | `-` | 主图视频 URL（mp4 / m3u8） |
-| 10 | `description` | `text` | `YES` | `NULL` | `-` | `-` | 商品描述 |
-| 11 | `detail_html` | `mediumtext` | `YES` | `NULL` | `-` | `-` | 商品详情 HTML（详情 tab 渲染） |
-| 12 | `spec_table` | `json` | `YES` | `NULL` | `-` | `-` | 参数表 JSON：[{"key":"产地","value":"法国"},...] |
-| 13 | `package_list` | `json` | `YES` | `NULL` | `-` | `-` | 包装清单 JSON：["商品 ×1","保修卡 ×1",...] |
-| 14 | `freight` | `bigint` | `YES` | `NULL` | `-` | `-` | 运费，单位分；NULL=包邮 |
-| 15 | `ship_from` | `varchar(64)` | `YES` | `NULL` | `-` | `-` | 发货地（如 "上海"） |
-| 16 | `delivery_days` | `varchar(32)` | `YES` | `NULL` | `-` | `-` | 发货时效文案（如 "24h内发货"） |
-| 17 | `tags` | `json` | `YES` | `NULL` | `-` | `-` | 商品标签 JSON 数组（如 ["新品","限定","联名"]） |
-| 18 | `collab` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 联名信息（如 "LISA × CELINE"） |
-| 19 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
-| 20 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 21 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED on update CURRENT_TIMESTAMP(3)` | 更新时间 |
+| 3 | `spec_definitions` | `json` | `YES` | `NULL` | `-` | `-` | 规格维度定义：[{"name":"颜色","values":[...]}]；NULL=单规格商品 |
+| 4 | `name` | `varchar(191)` | `NO` | `NULL` | `-` | `-` | 标准商品名称 |
+| 5 | `category_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 商品分类 ID |
+| 6 | `default_img` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 默认主图 |
+| 7 | `images` | `json` | `NO` | `NULL` | `-` | `-` | - |
+| 8 | `video_url` | `varchar(255)` | `YES` | `NULL` | `-` | `-` | 主图视频 URL（mp4 / m3u8） |
+| 9 | `description` | `text` | `YES` | `NULL` | `-` | `-` | 商品描述 |
+| 10 | `detail_html` | `mediumtext` | `YES` | `NULL` | `-` | `-` | 商品详情 HTML（详情 tab 渲染） |
+| 11 | `spec_table` | `json` | `YES` | `NULL` | `-` | `-` | 参数表 JSON |
+| 12 | `package_list` | `json` | `YES` | `NULL` | `-` | `-` | 包装清单 JSON |
+| 13 | `freight` | `bigint` | `YES` | `NULL` | `-` | `-` | 运费，单位分；NULL=包邮 |
+| 14 | `ship_from` | `varchar(64)` | `YES` | `NULL` | `-` | `-` | 发货地 |
+| 15 | `delivery_days` | `varchar(32)` | `YES` | `NULL` | `-` | `-` | 发货时效文案 |
+| 16 | `tags` | `json` | `YES` | `NULL` | `-` | `-` | 商品标签 JSON 数组 |
+| 17 | `collab` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 联名信息 |
+| 18 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
+| 19 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 20 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED on update CURRENT_TIMESTAMP(3)` | 更新时间 |
+
+> 注：2026-05-04 多规格改造后，`brand_product` 仅保留 SPU 共享属性。原 `guide_price / supply_price / guess_price / stock / frozen_stock` 五列 DROP，迁移到子表 `brand_product_sku`。`spec_definitions` 新增列声明 SKU 规格维度；NULL=单规格商品（仍需对应一条 `spec_json={}` 的 default sku）。
+
+## brand_product_sku
+
+- 表注释：品牌商品 SKU 表（多规格）
+
+| 字段顺序 | 字段名 | 列类型 | 是否可空 | 默认值 | 键标记 | Extra | 字段注释 |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `id` | `bigint` | `NO` | `NULL` | `PRI` | `auto_increment` | SKU 主键 |
+| 2 | `brand_product_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 关联 SPU brand_product.id |
+| 3 | `sku_code` | `varchar(64)` | `YES` | `NULL` | `-` | `-` | 运营自填的对外 SKU 码 |
+| 4 | `spec_json` | `json` | `NO` | `NULL` | `-` | `-` | 规格 JSON：{"颜色":"红"...}；单规格写 {} |
+| 5 | `spec_signature` | `varchar(255)` | `NO` | `NULL` | `-` | `-` | 应用层算的 spec_json key 排序拼接，UNIQUE 用 |
+| 6 | `guide_price` | `bigint` | `NO` | `NULL` | `-` | `-` | 吊牌价，单位分；运营每个 SKU 必填 |
+| 7 | `supply_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 供货价，单位分；不参与展示 |
+| 8 | `guess_price` | `bigint` | `YES` | `NULL` | `-` | `-` | 竞猜价；NULL fallback 到 guide_price |
+| 9 | `stock` | `int` | `NO` | `0` | `-` | `-` | SKU 库存 |
+| 10 | `frozen_stock` | `int` | `NO` | `0` | `-` | `-` | SKU 冻结库存（pending 订单占用） |
+| 11 | `image` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | SKU 主图，留空取 SPU default_img |
+| 12 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 10=active 90=disabled |
+| 13 | `sort` | `int` | `NO` | `0` | `-` | `-` | 排序 |
+| 14 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 15 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED on update CURRENT_TIMESTAMP(3)` | 更新时间 |
+
+> UNIQUE: `(brand_product_id, spec_signature)` —— 同 SPU 下规格组合唯一。
+> 库存 freeze-on-pending：可用库存 = `stock - frozen_stock`；createPendingOrder 占用、markOrderPaid 扣减+解冻、超时关单 / 退款入库归还。中奖入虚拟仓不动 stock（中奖物品由备货池出货）。
 
 ## cart_item
 
@@ -286,11 +312,14 @@
 | 1 | `id` | `int` | `NO` | `NULL` | `PRI` | `auto_increment` | 购物车项 ID |
 | 2 | `user_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 用户 ID |
 | 3 | `product_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 商品 ID |
-| 4 | `quantity` | `int` | `NO` | `1` | `-` | `-` | 数量 |
-| 5 | `specs` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 规格说明 |
-| 6 | `checked` | `tinyint(1)` | `NO` | `1` | `-` | `-` | 是否选中 |
-| 7 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 8 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+| 4 | `brand_product_sku_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | SKU ID（合并键的一部分） |
+| 5 | `quantity` | `int` | `NO` | `1` | `-` | `-` | 数量 |
+| 6 | `specs` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 规格说明（UI 缓存，真实判断走 sku_id） |
+| 7 | `checked` | `tinyint(1)` | `NO` | `1` | `-` | `-` | 是否选中 |
+| 8 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 9 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+
+> UNIQUE: `(user_id, product_id, brand_product_sku_id)` 合并键。
 
 ## category
 

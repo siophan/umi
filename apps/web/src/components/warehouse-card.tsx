@@ -7,6 +7,7 @@ export function WarehouseCard({ item }: { item: WarehouseItem }) {
       <div className="warehouse-card__info">
         <h3>{item.productName}</h3>
         <p>
+          {item.skuText ? <>{item.skuText} · </> : null}
           {item.warehouseType} · {item.sourceType} · x{item.quantity}
         </p>
         <span className={`warehouse-card__status status-${item.status}`}>{item.status}</span>

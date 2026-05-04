@@ -15,7 +15,7 @@ export type ProductFeedSort = 'default' | 'sales' | 'price_asc' | 'rating';
 const SORT_CLAUSES: Record<ProductFeedSort, string> = {
   default: 'COALESCE(p.sales, 0) DESC, p.created_at DESC, p.id DESC',
   sales: 'COALESCE(p.sales, 0) DESC, p.id DESC',
-  price_asc: 'bp.guide_price ASC, p.id DESC',
+  price_asc: '(SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) ASC, p.id DESC',
   rating: 'COALESCE(p.rating, 0) DESC, p.id DESC',
 };
 
@@ -70,16 +70,17 @@ export async function getProductFeed(options: {
         SELECT
           p.id,
           bp.name AS name,
-          bp.guide_price AS price,
-          bp.guide_price AS original_price,
-          bp.guess_price,
+          (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price,
+          (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS original_price,
+          (SELECT MAX(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price_max,
+          (SELECT MIN(COALESCE(bps.guess_price, bps.guide_price)) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS guess_price,
           bp.default_img AS image_url,
           bp.images AS images,
           bp.tags AS tags,
           p.sales,
           p.rating,
-          bp.stock,
-          bp.frozen_stock,
+          (SELECT COALESCE(SUM(bps.stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS stock,
+          (SELECT COALESCE(SUM(bps.frozen_stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS frozen_stock,
           bp.collab AS collab,
           p.status,
           p.created_at,

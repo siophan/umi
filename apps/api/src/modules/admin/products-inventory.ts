@@ -58,7 +58,7 @@ export async function getAdminProducts(
                 AND COALESCE(s.status, ${SHOP_STATUS_ACTIVE}) <> ${SHOP_STATUS_PAUSED}
                 AND COALESCE(b.status, ${BRAND_STATUS_ACTIVE}) <> ${BRAND_STATUS_DISABLED}
                 AND COALESCE(bp.status, ${BRAND_PRODUCT_STATUS_ACTIVE}) <> ${BRAND_PRODUCT_STATUS_DISABLED}
-                AND (COALESCE(bp.stock, 0) - COALESCE(bp.frozen_stock, 0)) > ${LOW_STOCK_THRESHOLD}
+                AND (SELECT COALESCE(SUM(GREATEST(bps.stock - bps.frozen_stock, 0)), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) > ${LOW_STOCK_THRESHOLD}
               THEN 1
               ELSE 0
             END
@@ -69,7 +69,7 @@ export async function getAdminProducts(
                 AND COALESCE(s.status, ${SHOP_STATUS_ACTIVE}) <> ${SHOP_STATUS_PAUSED}
                 AND COALESCE(b.status, ${BRAND_STATUS_ACTIVE}) <> ${BRAND_STATUS_DISABLED}
                 AND COALESCE(bp.status, ${BRAND_PRODUCT_STATUS_ACTIVE}) <> ${BRAND_PRODUCT_STATUS_DISABLED}
-                AND (COALESCE(bp.stock, 0) - COALESCE(bp.frozen_stock, 0)) <= ${LOW_STOCK_THRESHOLD}
+                AND (SELECT COALESCE(SUM(GREATEST(bps.stock - bps.frozen_stock, 0)), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) <= ${LOW_STOCK_THRESHOLD}
               THEN 1
               ELSE 0
             END
@@ -101,9 +101,9 @@ export async function getAdminProducts(
           p.brand_product_id,
           p.shop_id,
           bp.name AS name,
-          bp.guide_price AS guide_price,
-          bp.stock,
-          bp.frozen_stock,
+          (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS guide_price,
+          (SELECT COALESCE(SUM(bps.stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS stock,
+          (SELECT COALESCE(SUM(bps.frozen_stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS frozen_stock,
           p.status,
           p.updated_at,
           bp.tags AS tags,

@@ -250,8 +250,8 @@ export async function getBrandProducts(userId: string, brandId: string): Promise
         b.name AS brand_name,
         bp.name,
         c.name AS category,
-        bp.guide_price,
-        bp.supply_price,
+        (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS guide_price,
+        (SELECT MIN(bps.supply_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS supply_price,
         bp.default_img,
         bp.status,
         EXISTS(

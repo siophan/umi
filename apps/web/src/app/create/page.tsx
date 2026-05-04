@@ -90,6 +90,13 @@ export default function CreatePage() {
     toggleFriend,
     showToast,
     confirmProductPick,
+    skuPickerOpen,
+    skuPickerProduct,
+    skuSelection,
+    setSkuSelection,
+    skuPickerLoading,
+    confirmSkuPick,
+    closeSkuPicker,
     refreshTopics,
     pickTopic,
     copyInviteLink,
@@ -293,6 +300,13 @@ export default function CreatePage() {
         tempProductId={tempProductId}
         setTempProductId={setTempProductId}
         confirmProductPick={confirmProductPick}
+        skuPickerOpen={skuPickerOpen}
+        skuPickerProduct={skuPickerProduct}
+        skuSelection={skuSelection}
+        setSkuSelection={setSkuSelection}
+        skuPickerLoading={skuPickerLoading}
+        confirmSkuPick={confirmSkuPick}
+        closeSkuPicker={closeSkuPicker}
         copyInviteLink={copyInviteLink}
         shareVia={shareVia}
         publishing={publishing}

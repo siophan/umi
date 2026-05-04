@@ -43,14 +43,28 @@ export interface AdminBrandProductSpecRow {
   value: string;
 }
 
+export interface AdminBrandProductSpecDefinition {
+  name: string;
+  values: string[];
+}
+
+export interface AdminBrandProductSkuPayload {
+  id?: EntityId | null;
+  skuCode?: string | null;
+  spec: Record<string, string>;
+  guidePrice: number;
+  supplyPrice?: number | null;
+  guessPrice?: number | null;
+  stock: number;
+  image?: string | null;
+  status?: 'active' | 'disabled';
+  sort?: number | null;
+}
+
 export interface CreateAdminBrandProductPayload {
   brandId: EntityId;
   name: string;
   categoryId: EntityId;
-  guidePrice: number;
-  supplyPrice?: number | null;
-  guessPrice?: number | null;
-  stock?: number | null;
   defaultImg?: string | null;
   imageList?: string[] | null;
   description?: string | null;
@@ -64,6 +78,8 @@ export interface CreateAdminBrandProductPayload {
   deliveryDays?: string | null;
   tags?: string[] | null;
   collab?: string | null;
+  specDefinitions?: AdminBrandProductSpecDefinition[] | null;
+  skus: AdminBrandProductSkuPayload[];
 }
 
 export interface CreateAdminBrandProductResult {
@@ -74,10 +90,6 @@ export interface UpdateAdminBrandProductPayload {
   brandId: EntityId;
   name: string;
   categoryId: EntityId;
-  guidePrice: number;
-  supplyPrice?: number | null;
-  guessPrice?: number | null;
-  stock?: number | null;
   defaultImg?: string | null;
   imageList?: string[] | null;
   description?: string | null;
@@ -91,6 +103,8 @@ export interface UpdateAdminBrandProductPayload {
   deliveryDays?: string | null;
   tags?: string[] | null;
   collab?: string | null;
+  specDefinitions?: AdminBrandProductSpecDefinition[] | null;
+  skus: AdminBrandProductSkuPayload[];
 }
 
 export interface UpdateAdminBrandProductResult {

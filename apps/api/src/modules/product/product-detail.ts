@@ -1,9 +1,21 @@
 import type mysql from 'mysql2/promise';
 
-import { toEntityId, toOptionalEntityId, type GuessSummary, type ProductDetailResult, type ProductSummary } from '@umi/shared';
+import {
+  toEntityId,
+  toOptionalEntityId,
+  type GuessSummary,
+  type ProductDetailResult,
+  type ProductSku,
+  type ProductSummary,
+  type SpecDefinition,
+} from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 import { getRecentProductReviewsWithStats } from './product-review';
+import {
+  parseBrandLibrarySkus,
+  parseSpecDefinitions,
+} from '../admin/products-shared';
 import {
   CATEGORY_STATUS_ACTIVE,
   FULFILLMENT_PENDING,
@@ -254,8 +266,8 @@ async function getSameShopProducts(product: ProductRow) {
       SELECT
         p.id,
         bp.name AS name,
-        bp.guide_price AS price,
-        bp.guess_price,
+        (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price,
+        (SELECT MIN(COALESCE(bps.guess_price, bps.guide_price)) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS guess_price,
         bp.default_img AS image_url,
         p.status,
         c.name AS category,
@@ -283,8 +295,8 @@ async function getRecommendations(product: ProductRow) {
       SELECT
         p.id,
         bp.name AS name,
-        bp.guide_price AS price,
-        bp.guess_price,
+        (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price,
+        (SELECT MIN(COALESCE(bps.guess_price, bps.guide_price)) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS guess_price,
         bp.default_img AS image_url,
         p.status,
         c.name AS category,
@@ -345,6 +357,24 @@ export async function getProductDetail(productId: string, userId?: string | null
   const freightCents = product.bp_freight == null ? null : Number(product.bp_freight);
   const specTable = parseProductSpecTable(product.bp_spec_table);
   const packageList = parseProductStringArray(product.bp_package_list);
+  const specDefinitions: SpecDefinition[] | null = parseSpecDefinitions(
+    product.bp_spec_definitions,
+  );
+  const skus: ProductSku[] = parseBrandLibrarySkus(product.bp_skus_json).map(
+    (sku) => ({
+      id: sku.id,
+      skuCode: sku.skuCode,
+      spec: sku.spec,
+      specSummary: sku.specSummary,
+      guidePrice: sku.guidePrice,
+      guessPrice: sku.guessPrice ?? sku.guidePrice,
+      stock: sku.stock,
+      available: sku.availableStock,
+      image: sku.image,
+      status: sku.status,
+      sort: sku.sort,
+    }),
+  );
 
   return {
     product: {
@@ -377,6 +407,8 @@ export async function getProductDetail(productId: string, userId?: string | null
       shipFrom: product.bp_ship_from ?? null,
       deliveryDays: product.bp_delivery_days ?? null,
       favorited: favoritedProductIds.has(productId),
+      specDefinitions,
+      skus,
     },
     activeGuess,
     warehouseItems,

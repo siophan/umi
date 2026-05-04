@@ -90,7 +90,7 @@ export function CartShopGroups({
                   />
                   <div className={styles.itemBody}>
                     <div className={styles.itemName}>{item.name}</div>
-                    <div className={styles.itemSpecs}>{item.specs}</div>
+                    <div className={styles.itemSpecs}>{item.specs?.trim() || '默认规格'}</div>
                     <div className={styles.itemBottom}>
                       <div>
                         <span className={styles.itemPrice}>

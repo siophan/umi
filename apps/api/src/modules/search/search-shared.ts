@@ -18,8 +18,11 @@ export const SEARCH_LIMIT_MAX = 50;
 export type ProductRow = {
   id: number | string;
   name: string;
+  /** SKU MIN(guide_price)，单位分 */
   price: number | string;
   original_price: number | string | null;
+  /** SKU MAX(guide_price)，单位分；用于价格区间 ¥MIN - ¥MAX 显示 */
+  price_max?: number | string | null;
   guess_price: number | string | null;
   image_url: string | null;
   images: string | null;
@@ -134,6 +137,7 @@ export function buildFeedMiniTag(
  */
 export function sanitizeProductFeedItem(row: ProductRow, index: number): ProductFeedItem {
   const price = Number(row.price ?? 0) / 100;
+  const priceMax = Number(row.price_max ?? row.price ?? 0) / 100;
   const originalPrice = Number(row.original_price ?? row.price ?? 0) / 100;
   const guessPrice = Number(row.guess_price ?? row.price ?? 0) / 100;
   const discountAmount = Math.max(0, originalPrice - price);
@@ -156,6 +160,7 @@ export function sanitizeProductFeedItem(row: ProductRow, index: number): Product
     categoryId: toOptionalEntityId(row.category_id),
     category: row.category || '未分类',
     price,
+    priceMax: priceMax > price ? priceMax : undefined,
     originalPrice,
     discountAmount,
     sales,

@@ -15,6 +15,7 @@ import { HttpError } from '../../lib/errors';
 type CartRow = {
   id: number | string;
   product_id: number | string;
+  brand_product_sku_id: number | string;
   quantity: number | string;
   specs: string | null;
   checked: number | string | boolean | null;
@@ -31,22 +32,24 @@ type CartRow = {
   stock: number | string | null;
   frozen_stock: number | string | null;
   product_status: number | string | null;
+  sku_status: number | string | null;
 };
 
 type OwnedCartItemRow = {
   id: number | string;
   product_id: number | string;
+  brand_product_sku_id: number | string;
   quantity: number | string;
   checked: number | string | boolean | null;
   specs: string | null;
   stock: number | string | null;
   frozen_stock: number | string | null;
   product_status: number | string | null;
+  sku_status: number | string | null;
 };
 
 /**
  * 安全解析商品图片数组。
- * 购物车页可能同时遇到 image_url、images、default_img 三种来源，这里统一兜底。
  */
 function safeJsonArray(value: unknown): string[] {
   if (!value) {
@@ -60,14 +63,12 @@ function safeJsonArray(value: unknown): string[] {
   }
 }
 
-/**
- * 把购物车查询结果收口成前端契约。
- * 这里统一做金额、图片、状态和规格兜底，避免页面层自己重复判断。
- */
 function sanitizeCartItem(row: CartRow): CartItem {
+  const skuActive = Number(row.sku_status ?? 0) === 10;
   return {
     id: toEntityId(row.id),
     productId: toEntityId(row.product_id),
+    brandProductSkuId: toEntityId(row.brand_product_sku_id),
     shopId: toOptionalEntityId(row.shop_id),
     brand: row.brand_name || '未知品牌',
     shop: row.shop_name || '未知店铺',
@@ -80,14 +81,10 @@ function sanitizeCartItem(row: CartRow): CartItem {
     quantity: Math.max(1, Number(row.quantity ?? 1)),
     checked: Boolean(row.checked),
     stock: Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0)),
-    status: Number(row.product_status ?? 0) === 10 ? 'active' : 'unavailable',
+    status: Number(row.product_status ?? 0) === 10 && skuActive ? 'active' : 'unavailable',
   };
 }
 
-/**
- * 读取当前用户拥有的单条购物车记录。
- * 后续修改数量、勾选、删除都先走这条链路确认归属。
- */
 async function getOwnedCartItem(userId: string, cartItemId: string) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -95,15 +92,17 @@ async function getOwnedCartItem(userId: string, cartItemId: string) {
       SELECT
         ci.id,
         ci.product_id,
+        ci.brand_product_sku_id,
         ci.quantity,
         ci.checked,
         ci.specs,
-        bp.stock,
-        bp.frozen_stock,
+        bps.stock,
+        bps.frozen_stock,
+        bps.status AS sku_status,
         p.status AS product_status
       FROM cart_item ci
       INNER JOIN product p ON p.id = ci.product_id
-      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      INNER JOIN brand_product_sku bps ON bps.id = ci.brand_product_sku_id
       WHERE ci.id = ?
         AND ci.user_id = ?
       LIMIT 1
@@ -114,10 +113,6 @@ async function getOwnedCartItem(userId: string, cartItemId: string) {
   return (rows[0] as OwnedCartItemRow | undefined) ?? null;
 }
 
-/**
- * 确认购物车项归属当前用户。
- * 找不到时统一抛购物车商品不存在，避免越权修改。
- */
 async function ensureOwnedCartItem(userId: string, cartItemId: string) {
   const row = await getOwnedCartItem(userId, cartItemId);
   if (!row) {
@@ -127,36 +122,52 @@ async function ensureOwnedCartItem(userId: string, cartItemId: string) {
 }
 
 /**
- * 确认目标商品仍可加入购物车。
- * 只允许上架商品进入购物车，并返回品牌侧可用库存（stock - frozen_stock）用于数量校验。
+ * 校验目标 SKU 可加入购物车，返回可用库存（stock - frozen_stock）。
  */
-async function ensureProductAvailable(productId: string) {
+async function ensureProductAvailable(productId: string, skuId: string) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
-      SELECT p.id, p.status, bp.stock, bp.frozen_stock
+      SELECT
+        p.id,
+        p.status AS product_status,
+        bps.id AS sku_id,
+        bps.status AS sku_status,
+        bps.stock,
+        bps.frozen_stock
       FROM product p
-      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      INNER JOIN brand_product_sku bps ON bps.id = ?
       WHERE p.id = ?
+        AND bps.brand_product_id = p.brand_product_id
       LIMIT 1
     `,
-    [productId],
+    [skuId, productId],
   );
 
-  const row = (rows[0] as { id: number | string; status: number | string | null; stock: number | string | null; frozen_stock: number | string | null } | undefined) ?? null;
-  if (!row || Number(row.status ?? 0) !== 10) {
+  const row = rows[0] as
+    | {
+        id: number | string;
+        product_status: number | string | null;
+        sku_id: number | string;
+        sku_status: number | string | null;
+        stock: number | string | null;
+        frozen_stock: number | string | null;
+      }
+    | undefined;
+
+  if (!row || Number(row.product_status ?? 0) !== 10) {
     throw new HttpError(404, 'PRODUCT_NOT_FOUND', '商品不存在');
+  }
+  if (Number(row.sku_status ?? 0) !== 10) {
+    throw new HttpError(404, 'PRODUCT_SKU_NOT_FOUND', '商品规格不可用');
   }
   return {
     id: toEntityId(row.id),
+    skuId: toEntityId(row.sku_id),
     stock: Math.max(0, Number(row.stock ?? 0) - Number(row.frozen_stock ?? 0)),
   };
 }
 
-/**
- * 读取当前用户购物车列表。
- * 购物车页、角标和支付页购物车入口都复用这条主查询。
- */
 export async function getCart(userId: string): Promise<CartListResult> {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -164,6 +175,7 @@ export async function getCart(userId: string): Promise<CartListResult> {
       SELECT
         ci.id,
         ci.product_id,
+        ci.brand_product_sku_id,
         ci.quantity,
         ci.specs,
         ci.checked,
@@ -172,15 +184,17 @@ export async function getCart(userId: string): Promise<CartListResult> {
         COALESCE(s.logo_url, bp.default_img) AS shop_logo,
         b.name AS brand_name,
         bp.name AS product_name,
-        bp.guide_price AS price,
-        bp.guide_price AS original_price,
-        bp.default_img AS image_url,
+        bps.guide_price AS price,
+        bps.guide_price AS original_price,
+        COALESCE(bps.image, bp.default_img) AS image_url,
         bp.images AS images,
-        bp.stock,
-        bp.frozen_stock,
+        bps.stock,
+        bps.frozen_stock,
+        bps.status AS sku_status,
         p.status AS product_status
       FROM cart_item ci
       INNER JOIN product p ON p.id = ci.product_id
+      INNER JOIN brand_product_sku bps ON bps.id = ci.brand_product_sku_id
       LEFT JOIN shop s ON s.id = p.shop_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       LEFT JOIN brand b ON b.id = bp.brand_id
@@ -198,10 +212,13 @@ export async function getCart(userId: string): Promise<CartListResult> {
 
 /**
  * 新增购物车商品。
- * 同商品同规格会合并数量，不额外拆出复杂 SKU 体系。
+ * 合并键：(user_id, product_id, brand_product_sku_id)。
  */
 export async function addCartItem(userId: string, payload: AddCartItemPayload): Promise<CartMutationResult> {
-  const product = await ensureProductAvailable(payload.productId);
+  if (!payload.brandProductSkuId) {
+    throw new HttpError(400, 'CART_SKU_REQUIRED', '请选择商品规格');
+  }
+  const product = await ensureProductAvailable(payload.productId, payload.brandProductSkuId);
   const nextQuantity = Math.min(99, Math.max(1, Number(payload.quantity ?? 1) || 1));
   const checked = payload.checked === undefined ? 1 : payload.checked ? 1 : 0;
   const specs = payload.specs?.trim() || '';
@@ -213,10 +230,10 @@ export async function addCartItem(userId: string, payload: AddCartItemPayload): 
       FROM cart_item
       WHERE user_id = ?
         AND product_id = ?
-        AND specs = ?
+        AND brand_product_sku_id = ?
       LIMIT 1
     `,
-    [userId, payload.productId, specs],
+    [userId, payload.productId, payload.brandProductSkuId],
   );
 
   const existing = (existingRows[0] as { id: number | string; quantity: number | string } | undefined) ?? null;
@@ -227,10 +244,10 @@ export async function addCartItem(userId: string, payload: AddCartItemPayload): 
     await db.execute(
       `
         UPDATE cart_item
-        SET quantity = ?, checked = ?, updated_at = CURRENT_TIMESTAMP(3)
+        SET quantity = ?, specs = ?, checked = ?, updated_at = CURRENT_TIMESTAMP(3)
         WHERE id = ?
       `,
-      [finalQuantity, checked, existing.id],
+      [finalQuantity, specs, checked, existing.id],
     );
     return { success: true, id: toEntityId(existing.id) };
   }
@@ -238,19 +255,15 @@ export async function addCartItem(userId: string, payload: AddCartItemPayload): 
   const finalQuantity = product.stock > 0 ? Math.min(product.stock, nextQuantity) : nextQuantity;
   const [result] = await db.execute<mysql.ResultSetHeader>(
     `
-      INSERT INTO cart_item (user_id, product_id, quantity, specs, checked, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      INSERT INTO cart_item (user_id, product_id, brand_product_sku_id, quantity, specs, checked, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
     `,
-    [userId, payload.productId, finalQuantity, specs, checked],
+    [userId, payload.productId, payload.brandProductSkuId, finalQuantity, specs, checked],
   );
 
   return { success: true, id: toEntityId(result.insertId) };
 }
 
-/**
- * 更新购物车商品数量或勾选状态。
- * 这里只允许改数量和 checked，库存上限按 brand_product.stock - frozen_stock 截断。
- */
 export async function updateCartItem(userId: string, cartItemId: string, payload: UpdateCartItemPayload): Promise<CartMutationResult> {
   if (payload.quantity === undefined && payload.checked === undefined) {
     throw new HttpError(400, 'CART_UPDATE_INVALID', '至少提供一个更新字段');
@@ -281,10 +294,6 @@ export async function updateCartItem(userId: string, cartItemId: string, payload
   return { success: true, id: toEntityId(cartItemId) };
 }
 
-/**
- * 删除购物车商品。
- * 删除前先校验归属，避免跨用户删除别人的 cart_item。
- */
 export async function removeCartItem(userId: string, cartItemId: string): Promise<CartMutationResult> {
   await ensureOwnedCartItem(userId, cartItemId);
   const db = getDbPool();

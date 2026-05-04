@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction, UIEvent } from 'react';
 
 import type { CategoryId, ProductCategoryItem } from '@umi/shared';
 
+import { SkuSelector, type SkuSelection } from '../../components/sku-selector/sku-selector';
 import {
   formatSalesLabel,
   getDiscountPercent,
@@ -45,6 +46,13 @@ type Props = {
   tempProductId: string | null;
   setTempProductId: Dispatch<SetStateAction<string | null>>;
   confirmProductPick: () => void;
+  skuPickerOpen: boolean;
+  skuPickerProduct: ProductItem | null;
+  skuSelection: SkuSelection;
+  setSkuSelection: Dispatch<SetStateAction<SkuSelection>>;
+  skuPickerLoading: boolean;
+  confirmSkuPick: () => void;
+  closeSkuPicker: () => void;
   copyInviteLink: () => void;
   shareVia: () => void | Promise<void>;
   publishing: boolean;
@@ -86,6 +94,13 @@ export function CreateOverlays({
   tempProductId,
   setTempProductId,
   confirmProductPick,
+  skuPickerOpen,
+  skuPickerProduct,
+  skuSelection,
+  setSkuSelection,
+  skuPickerLoading,
+  confirmSkuPick,
+  closeSkuPicker,
   copyInviteLink,
   shareVia,
   publishing,
@@ -126,6 +141,9 @@ export function CreateOverlays({
                   <img src={selectedProduct.img} alt={selectedProduct.name} />
                   <div className={styles.previewProductInfo}>
                     <div className={styles.previewProductName}>{selectedProduct.name}</div>
+                    {selectedProduct.selectedSkuText && selectedProduct.selectedSkuText !== '默认规格' ? (
+                      <div className={styles.previewProductPrice}>规格：{selectedProduct.selectedSkuText}</div>
+                    ) : null}
                     <div className={styles.previewProductPrice}>¥{selectedProduct.guessPrice}</div>
                   </div>
                 </div>
@@ -356,7 +374,52 @@ export function CreateOverlays({
                 取消
               </button>
               <button className={styles.ppFooterBtnPrimary} type="button" onClick={confirmProductPick}>
-                确认选择
+                {skuPickerLoading ? '加载中...' : '确认选择'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {skuPickerOpen && skuPickerProduct ? (
+        <div className={styles.productPickerOverlay} onClick={closeSkuPicker}>
+          <div className={styles.productPicker} onClick={(event) => event.stopPropagation()}>
+            <div className={styles.ppDragBar} />
+            <div className={styles.ppHeader}>
+              <div className={styles.ppTitle}>
+                <div className={styles.ppTitleIcon}>
+                  <i className="fa-solid fa-list-check" />
+                </div>
+                选择商品规格
+              </div>
+              <button className={styles.ppClose} type="button" onClick={closeSkuPicker}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div className={`${styles.ppSelected} ${styles.ppSelectedShow}`}>
+              <div className={styles.ppSelectedCard}>
+                <img src={skuPickerProduct.img} alt={skuPickerProduct.name} />
+                <div className={styles.ppSelInfo}>
+                  <div className={styles.ppSelName}>{skuPickerProduct.name}</div>
+                  <div className={styles.ppSelBrand}>{skuPickerProduct.shopName ?? skuPickerProduct.brand}</div>
+                </div>
+              </div>
+            </div>
+            {skuPickerProduct.specDefinitions && skuPickerProduct.skus ? (
+              <SkuSelector
+                specDefinitions={skuPickerProduct.specDefinitions}
+                skus={skuPickerProduct.skus}
+                selection={skuSelection}
+                onChange={setSkuSelection}
+                showSummary
+              />
+            ) : null}
+            <div className={styles.ppFooter}>
+              <button className={styles.ppFooterBtnOutline} type="button" onClick={closeSkuPicker}>
+                取消
+              </button>
+              <button className={styles.ppFooterBtnPrimary} type="button" onClick={confirmSkuPick}>
+                确认规格
               </button>
             </div>
           </div>

@@ -6,8 +6,10 @@ import type {
   GuessSummary,
   OrderSummary,
   ProductId,
+  ProductSku,
   ProductSummary,
   ShopId,
+  SpecDefinition,
   UserId,
   WarehouseItem,
 } from './domain';
@@ -28,6 +30,7 @@ export interface CreateGuessPayload {
   description?: string | null;
   imageUrl: string;
   productId?: ProductId | null;
+  brandProductSkuId?: EntityId | null;
   invitedFriendIds?: UserId[];
   /** 揭晓时间，仅店铺竞猜传；不传时与 endTime 同义。 */
   revealAt?: string | null;
@@ -142,6 +145,8 @@ export interface ProductFeedItem {
   categoryId: CategoryId | null;
   category: string;
   price: number;
+  /** 价格区间上限；多 SKU 价格不一致时存在 */
+  priceMax?: number;
   originalPrice: number;
   discountAmount: number;
   sales: number;
@@ -221,6 +226,7 @@ export interface SearchResult {
 export interface CartItem {
   id: EntityId;
   productId: ProductId;
+  brandProductSkuId: EntityId;
   shopId: ShopId | null;
   brand: string;
   shop: string;
@@ -243,6 +249,7 @@ export interface CartListResult {
 
 export interface AddCartItemPayload {
   productId: ProductId;
+  brandProductSkuId: EntityId;
   quantity?: number;
   specs?: string | null;
   checked?: boolean;
@@ -422,6 +429,7 @@ export interface CreateOrderPayload {
   payChannel: GuessPayChannel;
   note?: string | null;
   productId?: ProductId;
+  brandProductSkuId?: EntityId;
   quantity?: number;
   cartItemIds?: EntityId[];
 }
@@ -509,6 +517,8 @@ export interface ProductDetailResult {
     shipFrom: string | null;
     deliveryDays: string | null;
     favorited: boolean;
+    specDefinitions: SpecDefinition[] | null;
+    skus: ProductSku[];
   };
   activeGuess: GuessSummary | null;
   warehouseItems: WarehouseItem[];

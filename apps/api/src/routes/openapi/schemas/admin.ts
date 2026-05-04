@@ -2466,17 +2466,41 @@ export const adminSchemas = {
       id: { type: 'string', example: '22' },
     },
   },
+  AdminBrandProductSpecDefinition: {
+    type: 'object',
+    required: ['name', 'values'],
+    properties: {
+      name: { type: 'string', example: '颜色' },
+      values: { type: 'array', items: { type: 'string' }, example: ['红', '黑'] },
+    },
+  },
+  AdminBrandProductSkuPayload: {
+    type: 'object',
+    required: ['spec', 'guidePrice', 'stock'],
+    properties: {
+      id: { type: 'string', nullable: true, example: '301' },
+      skuCode: { type: 'string', nullable: true, example: 'AM270-RED-M' },
+      spec: {
+        type: 'object',
+        additionalProperties: { type: 'string' },
+        example: { 颜色: '红', 尺寸: 'M' },
+      },
+      guidePrice: { type: 'integer', example: 69900 },
+      supplyPrice: { type: 'integer', nullable: true, example: 42000 },
+      guessPrice: { type: 'integer', nullable: true, example: 9900 },
+      stock: { type: 'integer', example: 100 },
+      image: { type: 'string', nullable: true },
+      status: { type: 'string', enum: ['active', 'disabled'], example: 'active' },
+      sort: { type: 'integer', nullable: true, example: 0 },
+    },
+  },
   CreateAdminBrandProductPayload: {
     type: 'object',
-    required: ['brandId', 'name', 'categoryId', 'guidePrice'],
+    required: ['brandId', 'name', 'categoryId', 'skus'],
     properties: {
       brandId: { type: 'string', example: '22' },
       name: { type: 'string', example: 'Air Max 270' },
       categoryId: { type: 'string', example: '31' },
-      guidePrice: { type: 'integer', example: 69900 },
-      supplyPrice: { type: 'integer', nullable: true, example: 42000 },
-      guessPrice: { type: 'integer', nullable: true, example: 9900 },
-      stock: { type: 'integer', nullable: true, example: 100 },
       defaultImg: { type: 'string', nullable: true, example: 'https://example.com/shoe.png' },
       description: { type: 'string', nullable: true, example: '品牌标准商品' },
       status: { type: 'string', enum: ['active', 'disabled'], example: 'active' },
@@ -2487,6 +2511,15 @@ export const adminSchemas = {
         example: ['新品', '限定', '联名'],
       },
       collab: { type: 'string', nullable: true, example: 'LISA × CELINE' },
+      specDefinitions: {
+        type: 'array',
+        nullable: true,
+        items: { $ref: '#/components/schemas/AdminBrandProductSpecDefinition' },
+      },
+      skus: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/AdminBrandProductSkuPayload' },
+      },
     },
   },
   CreateAdminBrandProductResult: {
@@ -2498,15 +2531,11 @@ export const adminSchemas = {
   },
   UpdateAdminBrandProductPayload: {
     type: 'object',
-    required: ['brandId', 'name', 'categoryId', 'guidePrice', 'status'],
+    required: ['brandId', 'name', 'categoryId', 'status', 'skus'],
     properties: {
       brandId: { type: 'string', example: '22' },
       name: { type: 'string', example: 'Air Max 270' },
       categoryId: { type: 'string', example: '31' },
-      guidePrice: { type: 'integer', example: 69900 },
-      supplyPrice: { type: 'integer', nullable: true, example: 42000 },
-      guessPrice: { type: 'integer', nullable: true, example: 9900 },
-      stock: { type: 'integer', nullable: true, example: 100 },
       defaultImg: { type: 'string', nullable: true, example: 'https://example.com/shoe.png' },
       description: { type: 'string', nullable: true, example: '品牌标准商品' },
       status: { type: 'string', enum: ['active', 'disabled'], example: 'active' },
@@ -2517,6 +2546,15 @@ export const adminSchemas = {
         example: ['新品', '限定', '联名'],
       },
       collab: { type: 'string', nullable: true, example: 'LISA × CELINE' },
+      specDefinitions: {
+        type: 'array',
+        nullable: true,
+        items: { $ref: '#/components/schemas/AdminBrandProductSpecDefinition' },
+      },
+      skus: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/AdminBrandProductSkuPayload' },
+      },
     },
   },
   UpdateAdminBrandProductResult: {

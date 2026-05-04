@@ -78,7 +78,8 @@ export async function getMyShopResult(userId: string): Promise<MyShopResult> {
       `
         SELECT p.id,
                bp.name AS name,
-               bp.guide_price AS price,
+               (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price,
+               (SELECT MAX(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price_max,
                bp.default_img AS image_url,
                p.status,
                b.name AS brand_name

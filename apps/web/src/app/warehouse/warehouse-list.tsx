@@ -70,6 +70,12 @@ export function WarehouseList({
               <div className={styles.body}>
                 <div className={styles.name}>{item.productName}</div>
                 <div className={styles.meta}>
+                  {item.skuText ? (
+                    <>
+                      <span>{item.skuText}</span>
+                      <span className={styles.sep}>|</span>
+                    </>
+                  ) : null}
                   <span>×{item.quantity}</span>
                   <span className={styles.sep}>|</span>
                   <span>{item.sourceType || item.warehouseType}</span>

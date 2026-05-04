@@ -71,8 +71,11 @@ export type BrandAuthRow = {
 export type ShopProductRow = {
   id: number | string;
   name: string;
+  /** SKU MIN(guide_price)，单位分 */
   price: number | string;
   original_price?: number | string | null;
+  /** SKU MAX(guide_price)，单位分；用于价格区间显示 */
+  price_max?: number | string | null;
   image_url: string | null;
   sales?: number | string | null;
   rating?: number | string | null;

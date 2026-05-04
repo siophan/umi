@@ -264,17 +264,19 @@ export async function getGuessRows(
         p.id AS product_id,
         bp.name AS product_name,
         b.name AS brand_name,
-        bp.default_img AS product_img,
-        bp.guide_price AS product_price,
-        bp.guess_price AS product_guess_price
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        bps.guide_price AS product_price,
+        bps.guess_price AS product_guess_price
       FROM guess g
       LEFT JOIN (
-        SELECT guess_id, MIN(product_id) AS product_id
+        SELECT guess_id, MIN(id) AS gp_id
         FROM guess_product
         GROUP BY guess_id
-      ) gp ON gp.guess_id = g.id
+      ) latest_gp ON latest_gp.guess_id = g.id
+      LEFT JOIN guess_product gp ON gp.id = latest_gp.gp_id
       LEFT JOIN product p ON p.id = gp.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = gp.brand_product_sku_id
       LEFT JOIN brand b ON b.id = bp.brand_id
       LEFT JOIN category c ON c.id = g.category_id
       ${whereSql}

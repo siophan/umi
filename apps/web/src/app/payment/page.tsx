@@ -106,6 +106,7 @@ function PaymentPageInner() {
               .filter((item) => selectedIds.has(item.id))
               .map((item) => ({
                 productId: item.productId,
+                brandProductSkuId: item.brandProductSkuId,
                 cartItemId: item.id,
                 name: item.name,
                 price: item.price,
@@ -127,14 +128,25 @@ function PaymentPageInner() {
         if (ignore) {
           return;
         }
+        // 解析 skuId：URL 显式传入优先；多规格商品没传则报错；单规格商品自动落 default sku。
+        const skuIdParam = searchParams.get('skuId');
+        const skus = detail.product.skus ?? [];
+        const specDefs = detail.product.specDefinitions ?? null;
+        let resolvedSku = skuIdParam ? skus.find((s) => s.id === skuIdParam) ?? null : null;
+        if (!resolvedSku && (!specDefs || specDefs.length === 0)) {
+          resolvedSku = skus.find((s) => s.status === 'active') ?? skus[0] ?? null;
+        }
+        const resolvedPrice = resolvedSku ? resolvedSku.guidePrice : detail.product.price;
+        const resolvedImg = resolvedSku?.image || detail.product.img;
         setProducts([
           {
             productId: detail.product.id,
+            brandProductSkuId: resolvedSku?.id,
             name: detail.product.name,
-            price: detail.product.price,
+            price: resolvedPrice,
             qty: Math.max(1, Number(searchParams.get('qty') || 1) || 1),
             orig: detail.product.originalPrice,
-            img: detail.product.img,
+            img: resolvedImg,
           },
         ]);
       } catch (error) {
@@ -211,6 +223,11 @@ function PaymentPageInner() {
       return;
     }
 
+    if (source === 'product' && !products[0]?.brandProductSkuId) {
+      setToast('请先选择商品规格');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await createOrder({
@@ -222,6 +239,10 @@ function PaymentPageInner() {
         productId:
           source === 'product' && products[0]?.productId
             ? toEntityId(products[0].productId)
+            : undefined,
+        brandProductSkuId:
+          source === 'product' && products[0]?.brandProductSkuId
+            ? toEntityId(products[0].brandProductSkuId)
             : undefined,
         quantity: source === 'product' ? products[0]?.qty : undefined,
         cartItemIds: source === 'cart' ? cartItemIds : undefined,

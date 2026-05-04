@@ -426,6 +426,33 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
+## 26. 多规格品牌商品（SKU）（核心改造完成 2026-05-04，二期遗留）
+
+**设计文档**：`docs/superpowers/specs/2026-05-04-multi-spec-brand-product-design.md`
+**SQL（运维待执行）**：`packages/db/sql/multi_spec_schema.sql`
+
+**改造范围**：59 个文件 + 3 个新建（含 `apps/web/src/components/sku-selector/`）
+- DB：新增 `brand_product_sku` 表；`brand_product` DROP `guide_price/supply_price/guess_price/stock/frozen_stock` 五列、加 `spec_definitions json` 列；9 张子表（cart_item / order_item / fulfillment_order_item / product_review / consign_trade / virtual_warehouse / physical_warehouse / warehouse_item_log / guess_bet / guess_product）加 `brand_product_sku_id` 列；cart_item 唯一键改 `(user_id, product_id, brand_product_sku_id)`；guess_product 加 `(guess_id, option_idx, product_id, brand_product_sku_id)` UNIQUE
+- 后端：所有 SPU 列表 / 卡片场景改用 `brand_product_sku` 聚合子查询（MIN/MAX guide_price + SUM(stock-frozen_stock)）；订单 / 购物车 / 仓库 / 竞猜走 SKU 维度；createPendingOrder / markOrderPaid / 超时关单 / 退款入库 / 退款全部对 `brand_product_sku` 操作
+- Admin 前端：「品牌商品库」表单新增多规格 toggle + 规格定义动态行 + SKU 表单网格；详情抽屉加 SKU 列表
+- 用户端：商品详情新增 `<SkuSelector>` 组件；购物车 / 订单 / 仓库展示 sku 文案；payment 透传 skuId；create 创建竞猜流程加 SKU bottom sheet picker
+
+**已敲定决策**：SKU 价格 NOT NULL（仅 `guess_price` NULL fallback `guide_price`）；不考虑历史数据；切换单/多规格 toggle 二次确认 + 清空重填；SKU 删除软删 `status=90`、`frozen_stock>0` 拒绝；中奖入仓不扣 `bps.stock`（备货池独立）；价格区间仅算 active SKU；详情画廊选满 SKU 后首图替换为 `sku.image` fallback `default_img`；创建竞猜两步选（商品 → SKU bottom sheet，多规格强制选满）
+
+**遗留（开新线程跟进）**：
+
+1. **店铺铺货层无 SKU 维度上下架**（P2）：当前店铺不能"只上架部分 SKU"，整商品上架就全 SKU 上架。如运营反馈需要再加 `shop_product_sku_status` 表
+2. **markOrderPaid 没 SELECT FOR UPDATE 锁 SKU**（P2）：UPDATE 用 `GREATEST(stock - n, 0)` 兜底防瞬时负数；如要严格防超扣再加 `AND stock >= oi.quantity` 条件判断
+3. **同选项挂多 SKU 的语义**（P2）：`guess_product` UNIQUE 含 `(guess_id, option_idx, product_id, brand_product_sku_id)`，允许"一个 option 关联多个奖品"。如运营反馈"同选项只能一个奖品"再加约束（改为 `(guess_id, option_idx)` UNIQUE）
+4. **部分退款不支持**（P1）：`completeAdminOrderRefund` 当前是"全单退款 + 全量入库到对应 SKU"语义。如要支持按 order_item 部分退款，需要 admin 审核时选哪几个 item 退 + 各退多少件，按选中数量入库
+5. **二期 UX**：购物车换规格按钮（点开规格选择器换 sku_id 重新合并）、店铺端 SKU 调价（store 维度自定价）、SKU 维度的促销 / 满减、按规格搜索过滤、商品详情评价 tab "按规格筛选"下拉
+6. **migration 无回填**：跟运维确认按"清空相关业务表"切换；不允许带历史数据迁移上线
+7. **brand_product_extended 字段后续仍归 SPU**：`description / detail_html / spec_table / package_list / freight / ship_from / delivery_days / tags / collab / images` 仍是商品共享属性，不下沉到 SKU；如二期需要按 SKU 分图相册再调整
+
+**部署顺序**（spec 第 11 节）：DB schema 一次性执行 → 同窗口部署代码 PR；不分两段切换。
+
+---
+
 ## 21. 用户端商品详情未消费 brand_product 的图（P2）
 
 **文件**：`apps/api/src/modules/product/product-shared.ts:294`（getProductById SELECT）+ `apps/api/src/modules/product/product-detail.ts:337`（images 数组拼装）
@@ -444,6 +471,6 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
-| P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口（#25 schema sweep + 库存占用模式已完成 2026-05-01）|
-| P1     | 4    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（含 #25 PAID→REFUNDED 库存归还，留 #15 P1 待办）|
-| P2     | 13   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 |
+| P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口 |
+| P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1 + #26 部分退款）|
+| P2     | 16   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / #26 SKU 二期（店铺 SKU 上下架 / FOR UPDATE 锁 / 同选项多 SKU 语义 / 购物车换规格 / SKU 维度促销） |

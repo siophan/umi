@@ -572,6 +572,9 @@ export function MallHome() {
             <span className="m-card-price">
               <small>¥</small>
               {formatPrice(item.price)}
+              {typeof item.priceMax === 'number' && item.priceMax > item.price ? (
+                <> - {formatPrice(item.priceMax)}</>
+              ) : null}
             </span>
             {item.originalPrice > item.price ? <span className="m-card-orig">¥{formatPrice(item.originalPrice)}</span> : null}
           </div>

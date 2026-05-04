@@ -13,7 +13,17 @@ import type {
 import { fetchMe } from '../../lib/api/auth';
 import { fetchSocialFriends } from '../../lib/api/friends';
 import { createGuess, fetchGuessCategories } from '../../lib/api/guesses';
-import { fetchProductCategories, fetchProductList, type ProductListSort } from '../../lib/api/products';
+import {
+  fetchProductCategories,
+  fetchProductDetail,
+  fetchProductList,
+  type ProductListSort,
+} from '../../lib/api/products';
+import {
+  findSkuBySelection,
+  pickDefaultSku,
+  type SkuSelection,
+} from '../../components/sku-selector/sku-selector';
 import { fetchSearchHotKeywords } from '../../lib/api/search';
 import { clearAuthToken, hasAuthToken } from '../../lib/api/shared';
 import { fetchShopStatus } from '../../lib/api/shops';
@@ -66,6 +76,10 @@ export function useCreatePageState() {
   const [productCategoryItems, setProductCategoryItems] = useState<ProductCategoryItem[]>([]);
   const [productSort, setProductSort] = useState<ProductListSort>('default');
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const [skuPickerOpen, setSkuPickerOpen] = useState(false);
+  const [skuPickerProduct, setSkuPickerProduct] = useState<ProductItem | null>(null);
+  const [skuSelection, setSkuSelection] = useState<SkuSelection>({});
+  const [skuPickerLoading, setSkuPickerLoading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState(0);
@@ -431,13 +445,85 @@ export function useCreatePageState() {
     window.setTimeout(() => setToast(''), 1800);
   }
 
-  function confirmProductPick() {
-    setSelectedProduct(tempProduct);
-    setProductPickerOpen(false);
-    setSortDropdownOpen(false);
-    if (tempProduct) {
-      showToast(`✅ 已选择: ${tempProduct.name}`);
+  async function confirmProductPick() {
+    if (!tempProduct) {
+      setSelectedProduct(null);
+      setProductPickerOpen(false);
+      setSortDropdownOpen(false);
+      return;
     }
+    setSortDropdownOpen(false);
+    // 选完商品后拉详情拿 specDefinitions / skus，决定单/多规格分支。
+    setSkuPickerLoading(true);
+    try {
+      const detail = await fetchProductDetail(tempProduct.id);
+      const specDefs = detail.product.specDefinitions ?? null;
+      const skus = detail.product.skus ?? [];
+      const enrichedProduct: ProductItem = {
+        ...tempProduct,
+        specDefinitions: specDefs,
+        skus,
+      };
+      const hasMultiSpec = Array.isArray(specDefs) && specDefs.length > 0;
+      if (hasMultiSpec) {
+        // 多规格商品：进 SKU 选择层，等用户选满再确认
+        setSkuPickerProduct(enrichedProduct);
+        setSkuSelection({});
+        setProductPickerOpen(false);
+        setSkuPickerOpen(true);
+      } else {
+        // 单规格商品：自动落 default sku
+        const defaultSku = pickDefaultSku(skus);
+        if (!defaultSku) {
+          showToast('该商品暂无可用规格，请换一件');
+          return;
+        }
+        setSelectedProduct({
+          ...enrichedProduct,
+          selectedSkuId: defaultSku.id,
+          selectedSkuText: defaultSku.specSummary || '默认规格',
+        });
+        setProductPickerOpen(false);
+        showToast(`✅ 已选择: ${tempProduct.name}`);
+      }
+    } catch {
+      showToast('商品详情加载失败');
+    } finally {
+      setSkuPickerLoading(false);
+    }
+  }
+
+  /**
+   * SKU 选择层确认。多规格商品必须选满才能落 selectedProduct。
+   */
+  function confirmSkuPick() {
+    if (!skuPickerProduct || !skuPickerProduct.specDefinitions || !skuPickerProduct.skus) {
+      return;
+    }
+    const matched = findSkuBySelection(
+      skuPickerProduct.skus,
+      skuPickerProduct.specDefinitions,
+      skuSelection,
+    );
+    if (!matched) {
+      showToast('请选择完整规格');
+      return;
+    }
+    setSelectedProduct({
+      ...skuPickerProduct,
+      selectedSkuId: matched.id,
+      selectedSkuText: matched.specSummary || '默认规格',
+    });
+    setSkuPickerOpen(false);
+    setSkuPickerProduct(null);
+    setSkuSelection({});
+    showToast(`✅ 已选择: ${skuPickerProduct.name} ${matched.specSummary || ''}`.trim());
+  }
+
+  function closeSkuPicker() {
+    setSkuPickerOpen(false);
+    setSkuPickerProduct(null);
+    setSkuSelection({});
   }
 
   async function refreshTopics() {
@@ -594,6 +680,9 @@ export function useCreatePageState() {
     setTitleInputError(false);
     setSelectedGuessCategoryId(null);
     setCreatedGuessId('');
+    setSkuPickerOpen(false);
+    setSkuPickerProduct(null);
+    setSkuSelection({});
     resetCoverInput();
   }
 
@@ -765,6 +854,8 @@ export function useCreatePageState() {
       : [];
     const productId: CreateGuessPayload['productId'] =
       (selectedProduct?.id as CreateGuessPayload['productId']) ?? null;
+    const brandProductSkuId: CreateGuessPayload['brandProductSkuId'] =
+      (selectedProduct?.selectedSkuId as CreateGuessPayload['brandProductSkuId']) ?? null;
 
     void (async () => {
       try {
@@ -786,6 +877,7 @@ export function useCreatePageState() {
           description: desc.trim() || null,
           imageUrl: coverUploadedUrl,
           productId,
+          brandProductSkuId,
           invitedFriendIds: inviteeIds,
           categoryId: selectedGuessCategoryId,
           revealAt: isMerchantMode && revealAt ? new Date(revealAt).toISOString() : null,
@@ -879,6 +971,13 @@ export function useCreatePageState() {
     toggleFriend,
     showToast,
     confirmProductPick,
+    skuPickerOpen,
+    skuPickerProduct,
+    skuSelection,
+    setSkuSelection,
+    skuPickerLoading,
+    confirmSkuPick,
+    closeSkuPicker,
     refreshTopics,
     pickTopic,
     copyInviteLink,

@@ -1,7 +1,8 @@
 'use client';
 
-import type { CouponListItem } from '@umi/shared';
+import type { CouponListItem, ProductSku } from '@umi/shared';
 
+import { SkuSelector, type SkuSelection } from '../../../components/sku-selector/sku-selector';
 import type { ActiveGuessDetail, ProductDetailData, ProductMode } from './product-detail-helpers';
 import styles from './page.module.css';
 
@@ -31,6 +32,10 @@ type ProductDetailSummaryProps = {
   directPrice: number;
   guessPrice: number;
   discountPercent: number;
+  selectedSku: ProductSku | null;
+  skuSelection: SkuSelection;
+  onSkuSelectionChange: (next: SkuSelection) => void;
+  displayStock: number;
   onOpenCoupons: () => void;
   onOpenServiceTip: () => void;
   onChangeTab: (tab: ProductMode) => void;
@@ -45,10 +50,15 @@ export function ProductDetailSummary({
   directPrice,
   guessPrice,
   discountPercent,
+  selectedSku,
+  skuSelection,
+  onSkuSelectionChange,
+  displayStock,
   onOpenCoupons,
   onOpenServiceTip,
   onChangeTab,
 }: ProductDetailSummaryProps) {
+  const hasSpecDefs = Array.isArray(product.specDefinitions) && product.specDefinitions.length > 0;
   return (
     <>
       <section className={styles.priceCard}>
@@ -137,12 +147,21 @@ export function ProductDetailSummary({
             )) : <span className={styles.specChip}>暂无标签</span>}
           </div>
         </div>
+        {hasSpecDefs && product.specDefinitions ? (
+          <SkuSelector
+            specDefinitions={product.specDefinitions}
+            skus={product.skus ?? []}
+            selection={skuSelection}
+            onChange={onSkuSelectionChange}
+            showSummary
+          />
+        ) : null}
         <div className={styles.specRow}>
           <div className={styles.specLabel}>库存</div>
           <div className={styles.specScroll}>
             <span className={styles.specChipOn}>
-              现货库存 {product.stock}
-              <span className={styles.specDp}>{product.stock > 0 ? '可下单' : '缺货'}</span>
+              现货库存 {displayStock}
+              <span className={styles.specDp}>{displayStock > 0 ? '可下单' : '缺货'}</span>
             </span>
             {product.shopName ? <span className={styles.specChip}>店铺：{product.shopName}</span> : null}
           </div>
@@ -150,9 +169,10 @@ export function ProductDetailSummary({
         <div className={styles.specFoot}>
           <span className={styles.specFootSel}>
             当前商品 <b>{product.brand}</b> / <b>{product.category}</b>
+            {selectedSku?.specSummary ? <> / <b>{selectedSku.specSummary}</b></> : null}
           </span>
           <span className={styles.specFootPrice}>
-            ¥{activePrice} <small>{product.stock > 0 ? '现价' : '暂不可下单'}</small>
+            ¥{activePrice} <small>{displayStock > 0 ? '现价' : '暂不可下单'}</small>
           </span>
         </div>
       </section>

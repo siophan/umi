@@ -283,31 +283,36 @@ export async function requireActiveGuessCategory(categoryId: string) {
   return category;
 }
 
-export async function requireGuessProductForCreate(productId: string) {
+export async function requireGuessProductForCreate(productId: string, brandProductSkuId: string) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
         p.shop_id,
-        bp.default_img AS image_url,
+        p.brand_product_id,
+        COALESCE(bps.image, bp.default_img) AS image_url,
         p.status,
-        bp.stock,
-        bp.frozen_stock,
+        (SELECT COALESCE(SUM(bps2.stock), 0) FROM brand_product_sku bps2 WHERE bps2.brand_product_id = bp.id AND bps2.status = 10) AS stock,
+        (SELECT COALESCE(SUM(bps2.frozen_stock), 0) FROM brand_product_sku bps2 WHERE bps2.brand_product_id = bp.id AND bps2.status = 10) AS frozen_stock,
         s.status AS shop_status,
         b.status AS brand_status,
-        bp.status AS brand_product_status
+        bp.status AS brand_product_status,
+        bps.status AS sku_status,
+        bps.brand_product_id AS sku_brand_product_id
       FROM product p
       LEFT JOIN shop s ON s.id = p.shop_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       LEFT JOIN brand b ON b.id = bp.brand_id
+      LEFT JOIN brand_product_sku bps ON bps.id = ?
       WHERE p.id = ?
       LIMIT 1
     `,
-    [productId],
+    [brandProductSkuId, productId],
   );
 
-  const product = (rows[0] as CreateGuessProductRow | undefined) ?? null;
+  const product = (rows[0] as CreateGuessProductRow & { sku_status: number | string | null; sku_brand_product_id: number | string | null }
+    | undefined) ?? null;
   if (!product) {
     throw new Error('关联商品不存在');
   }
@@ -330,6 +335,16 @@ export async function requireGuessProductForCreate(productId: string) {
 
   if (toNumber(product.stock) - toNumber(product.frozen_stock) <= 0) {
     throw new Error('关联商品可用库存不足');
+  }
+
+  if (product.sku_brand_product_id == null) {
+    throw new Error('关联商品规格不存在');
+  }
+  if (String(product.sku_brand_product_id) !== String((product as unknown as { brand_product_id: number | string | null }).brand_product_id ?? '')) {
+    throw new Error('SKU 与关联商品不匹配');
+  }
+  if (toNumber(product.sku_status) !== 10) {
+    throw new Error('关联商品规格已下架');
   }
 
   return product;
@@ -450,9 +465,9 @@ export async function getGuessRows() {
         p.id AS product_id,
         bp.name AS product_name,
         b.name AS brand_name,
-        bp.default_img AS product_img,
-        bp.guide_price AS product_price,
-        bp.guide_price AS product_guess_price
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        bps.guide_price AS product_price,
+        COALESCE(bps.guess_price, bps.guide_price) AS product_guess_price
       FROM guess g
       LEFT JOIN admin_user au ON au.id = g.creator_id
       LEFT JOIN user u ON u.id = g.creator_id
@@ -465,6 +480,7 @@ export async function getGuessRows() {
       LEFT JOIN guess_product gp ON gp.id = first_gp.first_guess_product_id
       LEFT JOIN product p ON p.id = gp.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = gp.brand_product_sku_id
       LEFT JOIN brand b ON b.id = bp.brand_id
       LEFT JOIN category gc ON gc.id = g.category_id
       LEFT JOIN category pc ON pc.id = bp.category_id

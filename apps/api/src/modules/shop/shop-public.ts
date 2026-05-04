@@ -66,8 +66,9 @@ export async function getPublicShopDetail(
       SELECT
         p.id,
         bp.name AS name,
-        bp.guide_price AS price,
-        bp.guide_price AS original_price,
+        (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price,
+        (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS original_price,
+        (SELECT MAX(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price_max,
         bp.default_img AS image_url,
         p.sales,
         p.rating,

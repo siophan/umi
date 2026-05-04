@@ -227,9 +227,9 @@ export async function getAdminGuessDetail(guessId: string) {
         p.id AS product_id,
         bp.name AS product_name,
         b.name AS brand_name,
-        COALESCE(bp.default_img, g.image_url) AS product_image_url,
-        bp.guide_price AS product_price,
-        bp.guess_price AS product_guess_price
+        COALESCE(bps.image, bp.default_img, g.image_url) AS product_image_url,
+        bps.guide_price AS product_price,
+        bps.guess_price AS product_guess_price
       FROM guess g
       LEFT JOIN admin_user au ON au.id = g.creator_id
       LEFT JOIN user u ON u.id = g.creator_id
@@ -243,6 +243,7 @@ export async function getAdminGuessDetail(guessId: string) {
       LEFT JOIN guess_product gp ON gp.id = first_gp.first_guess_product_id
       LEFT JOIN product p ON p.id = gp.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = gp.brand_product_sku_id
       LEFT JOIN brand b ON b.id = bp.brand_id
       WHERE g.id = ?
       LIMIT 1
@@ -463,10 +464,16 @@ export async function createAdminGuess(
   if (!payload.productId) {
     throw new Error('请选择关联商品');
   }
+  if (!payload.brandProductSkuId) {
+    throw new Error('请选择关联商品的具体规格');
+  }
 
   const endTime = normalizeCreateGuessEndTime(payload.endTime);
   const optionTexts = normalizeGuessOptionTexts(payload.optionTexts);
-  const product = await requireGuessProductForCreate(String(payload.productId));
+  const product = await requireGuessProductForCreate(
+    String(payload.productId),
+    String(payload.brandProductSkuId),
+  );
   await requireActiveGuessCategory(String(payload.categoryId));
 
   const description = payload.description?.trim() || null;
@@ -520,13 +527,14 @@ export async function createAdminGuess(
         INSERT INTO guess_product (
           guess_id,
           product_id,
+          brand_product_sku_id,
           option_idx,
           source_type,
           shop_id,
           quantity
-        ) VALUES (?, ?, 0, ?, ?, 1)
+        ) VALUES (?, ?, ?, 0, ?, ?, 1)
       `,
-      [guessId, payload.productId, guessProductSourceType, product.shop_id],
+      [guessId, payload.productId, payload.brandProductSkuId, guessProductSourceType, product.shop_id],
     );
 
     for (const [index, optionText] of optionTexts.entries()) {

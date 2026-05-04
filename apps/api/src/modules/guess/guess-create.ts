@@ -26,6 +26,7 @@ type GuessCategoryRow = {
 type CreateGuessProductRow = {
   id: number | string;
   shop_id: number | string | null;
+  brand_product_id: number | string | null;
   image_url: string | null;
   status: number | string;
   stock: number | string | null;
@@ -33,6 +34,14 @@ type CreateGuessProductRow = {
   shop_status: number | string | null;
   brand_status: number | string | null;
   brand_product_status: number | string | null;
+};
+
+type CreateGuessSkuRow = {
+  id: number | string;
+  brand_product_id: number | string;
+  status: number | string;
+  stock: number | string;
+  frozen_stock: number | string;
 };
 
 function normalizeOptionTexts(optionTexts: string[]) {
@@ -138,17 +147,22 @@ async function resolveGuessCategoryId(categoryId: string | null | undefined, isM
   return '0';
 }
 
-async function requireProductForGuessCreate(productId: string, creatorShopId: string | null) {
+async function requireProductForGuessCreate(
+  productId: string,
+  brandProductSkuId: string,
+  creatorShopId: string | null,
+) {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
         p.shop_id,
-        bp.default_img AS image_url,
+        p.brand_product_id,
+        COALESCE(bps.image, bp.default_img) AS image_url,
         p.status,
-        bp.stock,
-        bp.frozen_stock,
+        (SELECT COALESCE(SUM(bps2.stock), 0) FROM brand_product_sku bps2 WHERE bps2.brand_product_id = bp.id AND bps2.status = 10) AS stock,
+        (SELECT COALESCE(SUM(bps2.frozen_stock), 0) FROM brand_product_sku bps2 WHERE bps2.brand_product_id = bp.id AND bps2.status = 10) AS frozen_stock,
         s.status AS shop_status,
         b.status AS brand_status,
         bp.status AS brand_product_status
@@ -156,10 +170,11 @@ async function requireProductForGuessCreate(productId: string, creatorShopId: st
       LEFT JOIN shop s ON s.id = p.shop_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       LEFT JOIN brand b ON b.id = bp.brand_id
+      LEFT JOIN brand_product_sku bps ON bps.id = ?
       WHERE p.id = ?
       LIMIT 1
     `,
-    [productId],
+    [brandProductSkuId, productId],
   );
 
   const product = (rows[0] as CreateGuessProductRow | undefined) ?? null;
@@ -192,6 +207,22 @@ async function requireProductForGuessCreate(productId: string, creatorShopId: st
     if (product.shop_id == null || String(product.shop_id) !== String(creatorShopId)) {
       throw new Error('店铺模式只能选自家店铺商品');
     }
+  }
+
+  // 校验 SKU 归属与状态
+  const [skuRows] = await db.execute<mysql.RowDataPacket[]>(
+    `SELECT id, brand_product_id, status, stock, frozen_stock FROM brand_product_sku WHERE id = ? LIMIT 1`,
+    [brandProductSkuId],
+  );
+  const sku = (skuRows[0] as CreateGuessSkuRow | undefined) ?? null;
+  if (!sku) {
+    throw new Error('关联商品规格不存在');
+  }
+  if (String(sku.brand_product_id) !== String(product.brand_product_id ?? '')) {
+    throw new Error('SKU 与关联商品不匹配');
+  }
+  if (Number(sku.status) !== 10) {
+    throw new Error('关联商品规格已下架');
   }
 
   return product;
@@ -244,7 +275,14 @@ export async function createUserGuess(
   if (!payload.productId) {
     throw new Error('竞猜必须关联商品');
   }
-  const product = await requireProductForGuessCreate(String(payload.productId), enforceShopId);
+  if (!payload.brandProductSkuId) {
+    throw new Error('竞猜必须选择关联商品的具体规格');
+  }
+  const product = await requireProductForGuessCreate(
+    String(payload.productId),
+    String(payload.brandProductSkuId),
+    enforceShopId,
+  );
   const inviteeIds = await resolveInviteeIds(payload.invitedFriendIds, creatorId);
   if (scope === 'friends' && inviteeIds.length === 0) {
     throw new Error('好友PK必须选择参战好友');
@@ -312,13 +350,14 @@ export async function createUserGuess(
           INSERT INTO guess_product (
             guess_id,
             product_id,
+            brand_product_sku_id,
             option_idx,
             source_type,
             shop_id,
             quantity
-          ) VALUES (?, ?, 0, ?, ?, 1)
+          ) VALUES (?, ?, ?, 0, ?, ?, 1)
         `,
-        [guessId, payload.productId, guessProductSourceType, product.shop_id],
+        [guessId, payload.productId, payload.brandProductSkuId, guessProductSourceType, product.shop_id],
       );
     }
 

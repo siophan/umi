@@ -1,6 +1,7 @@
-import { Descriptions, Drawer, Image, Tag, Typography } from 'antd';
+import { Descriptions, Drawer, Image, Table, Tag, Typography } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 
-import type { AdminBrandLibraryItem } from '../lib/api/catalog';
+import type { AdminBrandLibraryItem, AdminBrandLibrarySkuItem } from '../lib/api/catalog';
 import { formatAmount, formatDate, formatDateTime, formatNumber } from '../lib/format';
 
 interface AdminBrandLibraryDetailDrawerProps {
@@ -15,6 +16,49 @@ function formatFreight(freight: number | null) {
   return formatAmount(freight);
 }
 
+function formatPriceRange(min: number, max: number) {
+  if (min === max) {
+    return formatAmount(min);
+  }
+  return `${formatAmount(min)} - ${formatAmount(max)}`;
+}
+
+function summarizeSpec(spec: Record<string, string>) {
+  const entries = Object.entries(spec ?? {});
+  if (entries.length === 0) return '默认规格';
+  return entries.map(([k, v]) => `${k}：${v}`).join(' / ');
+}
+
+const SKU_COLUMNS: ColumnsType<AdminBrandLibrarySkuItem> = [
+  {
+    title: '规格',
+    key: 'spec',
+    render: (_, sku) => sku.specSummary || summarizeSpec(sku.spec),
+  },
+  { title: 'SKU 编码', dataIndex: 'skuCode', render: (value) => value || '-' },
+  { title: '指导价', dataIndex: 'guidePrice', render: (value) => formatAmount(value) },
+  {
+    title: '竞猜价',
+    dataIndex: 'guessPrice',
+    render: (value) => (value && value > 0 ? formatAmount(value) : '-'),
+  },
+  { title: '库存', dataIndex: 'stock', render: (value) => formatNumber(value) },
+  {
+    title: '可售',
+    dataIndex: 'availableStock',
+    render: (value) => formatNumber(value),
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    render: (value: AdminBrandLibrarySkuItem['status']) => (
+      <Tag color={value === 'active' ? 'success' : 'default'}>
+        {value === 'active' ? '启用' : '停用'}
+      </Tag>
+    ),
+  },
+];
+
 export function AdminBrandLibraryDetailDrawer({
   onClose,
   open,
@@ -28,13 +72,11 @@ export function AdminBrandLibraryDetailDrawer({
             <Descriptions.Item label="商品">{selected.productName}</Descriptions.Item>
             <Descriptions.Item label="品牌">{selected.brandName}</Descriptions.Item>
             <Descriptions.Item label="分类">{selected.category || '-'}</Descriptions.Item>
-            <Descriptions.Item label="指导价">{formatAmount(selected.guidePrice)}</Descriptions.Item>
-            <Descriptions.Item label="供货价">{formatAmount(selected.supplyPrice)}</Descriptions.Item>
-            <Descriptions.Item label="竞猜价">
-              {selected.guessPrice > 0 ? formatAmount(selected.guessPrice) : '-'}
+            <Descriptions.Item label="指导价">
+              {formatPriceRange(selected.guidePriceMin, selected.guidePriceMax)}
             </Descriptions.Item>
             <Descriptions.Item label="平台库存">
-              {`${formatNumber(selected.availableStock)} 可售 / ${formatNumber(selected.stock)} 总 / ${formatNumber(selected.frozenStock)} 占用`}
+              {`${formatNumber(selected.availableTotal)} 可售 / ${formatNumber(selected.stockTotal)} 总`}
             </Descriptions.Item>
             <Descriptions.Item label="挂载商品">{formatNumber(selected.productCount)}</Descriptions.Item>
             <Descriptions.Item label="在售商品">{formatNumber(selected.activeProductCount)}</Descriptions.Item>
@@ -46,6 +88,30 @@ export function AdminBrandLibraryDetailDrawer({
             <Descriptions.Item label="创建时间">{formatDate(selected.createdAt)}</Descriptions.Item>
             <Descriptions.Item label="更新时间">{formatDateTime(selected.updatedAt)}</Descriptions.Item>
           </Descriptions>
+
+          <div>
+            <Typography.Title level={5} style={{ marginBottom: 8 }}>
+              规格 SKU 列表
+            </Typography.Title>
+            {selected.specDefinitions ? (
+              <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+                {selected.specDefinitions
+                  .map((def) => `${def.name}：${def.values.join(' / ')}`)
+                  .join(' | ')}
+              </Typography.Paragraph>
+            ) : (
+              <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+                单规格商品
+              </Typography.Paragraph>
+            )}
+            <Table<AdminBrandLibrarySkuItem>
+              size="small"
+              rowKey="id"
+              pagination={false}
+              columns={SKU_COLUMNS}
+              dataSource={selected.skus}
+            />
+          </div>
 
           <Descriptions column={1} size="small" bordered title="发货">
             <Descriptions.Item label="运费">{formatFreight(selected.freight)}</Descriptions.Item>

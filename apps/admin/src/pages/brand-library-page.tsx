@@ -275,14 +275,56 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         .map((tag) => (tag ?? '').trim())
         .filter((tag) => tag.length > 0);
 
+      const multiSpec = !!values.multiSpec;
+      const specDefinitions = multiSpec
+        ? (values.specDefinitions ?? [])
+            .map((def) => ({
+              name: (def?.name ?? '').trim(),
+              values: (def?.values ?? [])
+                .map((v) => (typeof v === 'string' ? v.trim() : ''))
+                .filter((v) => v.length > 0),
+            }))
+            .filter((def) => def.name && def.values.length > 0)
+        : null;
+
+      const skusInput = values.skus ?? [];
+      if (skusInput.length === 0) {
+        messageApi.error('请至少配置一个 SKU');
+        setSubmitting(false);
+        return;
+      }
+
+      const skus = skusInput.map((sku) => {
+        const specInput =
+          multiSpec && sku.spec && typeof sku.spec === 'object' ? sku.spec : {};
+        const cleanSpec: Record<string, string> = {};
+        for (const [k, v] of Object.entries(specInput)) {
+          const key = (k ?? '').trim();
+          const value = typeof v === 'string' ? v.trim() : '';
+          if (key && value) {
+            cleanSpec[key] = value;
+          }
+        }
+        return {
+          id: sku.id ?? null,
+          skuCode: sku.skuCode?.trim() || null,
+          spec: multiSpec ? cleanSpec : {},
+          guidePrice: yuanToCents(sku.guidePriceYuan) ?? 0,
+          supplyPrice:
+            sku.supplyPriceYuan == null ? null : yuanToCents(sku.supplyPriceYuan),
+          guessPrice:
+            sku.guessPriceYuan == null ? null : yuanToCents(sku.guessPriceYuan),
+          stock: Math.max(0, Math.trunc(Number(sku.stock ?? 0))),
+          image: sku.image?.trim() || null,
+          status: sku.status ?? 'active',
+          sort: sku.sort ?? null,
+        };
+      });
+
       const payload = {
         brandId: values.brandId,
         name: values.name,
         categoryId: values.categoryId,
-        guidePrice: yuanToCents(values.guidePriceYuan) ?? 0,
-        supplyPrice: yuanToCents(values.supplyPriceYuan),
-        guessPrice: yuanToCents(values.guessPriceYuan),
-        stock: Math.max(0, Math.trunc(Number(values.stock ?? 0))),
         defaultImg: values.defaultImg || null,
         imageList: imageList.length ? imageList : null,
         description: values.description || null,
@@ -296,6 +338,8 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         deliveryDays: values.deliveryDays?.trim() || null,
         tags: tags.length ? tags : null,
         collab: values.collab?.trim() || null,
+        specDefinitions,
+        skus,
       } as const;
 
       if (editingItem) {

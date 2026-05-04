@@ -25,8 +25,10 @@ export async function getUserVirtualWarehouseItems(userId: string) {
         vw.id,
         vw.user_id,
         vw.product_id,
+        vw.brand_product_sku_id,
         bp.name AS product_name,
-        bp.default_img AS product_img,
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        bps.spec_signature AS sku_text,
         vw.quantity,
         vw.price,
         vw.source_type,
@@ -35,6 +37,7 @@ export async function getUserVirtualWarehouseItems(userId: string) {
       FROM virtual_warehouse vw
       LEFT JOIN product p ON p.id = vw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = vw.brand_product_sku_id
       WHERE vw.user_id = ?
         AND vw.status IN (?, ?, ?)
       ORDER BY vw.created_at DESC, vw.id DESC
@@ -53,8 +56,10 @@ export async function getUserPhysicalWarehouseItems(userId: string) {
         CONCAT('fo-', fo.id, '-', oi.id) AS id,
         fo.user_id,
         oi.product_id,
+        oi.brand_product_sku_id,
         bp.name AS product_name,
-        bp.default_img AS product_img,
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        oi.specs AS sku_text,
         oi.quantity,
         oi.item_amount AS price,
         CASE
@@ -72,6 +77,7 @@ export async function getUserPhysicalWarehouseItems(userId: string) {
       INNER JOIN order_item oi ON oi.order_id = o.id
       LEFT JOIN product p ON p.id = oi.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = oi.brand_product_sku_id
       WHERE fo.user_id = ?
         AND fo.status IN (?, ?, ?)
       ORDER BY fo.created_at DESC, fo.id DESC
@@ -93,8 +99,10 @@ export async function getUserPhysicalWarehouseItems(userId: string) {
         CONCAT('pw-', pw.id) AS id,
         pw.user_id,
         pw.product_id,
+        pw.brand_product_sku_id,
         bp.name AS product_name,
-        bp.default_img AS product_img,
+        COALESCE(bps.image, bp.default_img) AS product_img,
+        bps.spec_signature AS sku_text,
         pw.quantity,
         pw.price,
         CASE
@@ -110,6 +118,7 @@ export async function getUserPhysicalWarehouseItems(userId: string) {
       FROM physical_warehouse pw
       LEFT JOIN product p ON p.id = pw.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
+      LEFT JOIN brand_product_sku bps ON bps.id = pw.brand_product_sku_id
       WHERE pw.user_id = ?
         AND pw.status IN (?, ?, ?)
       ORDER BY pw.created_at DESC, pw.id DESC

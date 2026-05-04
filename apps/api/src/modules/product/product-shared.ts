@@ -28,15 +28,22 @@ export const PRODUCT_INTERACTION_FAVORITE = 10;
 export type ProductRow = {
   id: number | string;
   name: string;
+  /** 等于品牌商品 SKU 的 MIN(guide_price)，单位分 */
   price: number | string;
+  /** SPU 维度无独立 MSRP，与 price 取相同值（MIN(guide_price)）；保留字段名兼容前端 */
   original_price: number | string | null;
+  /** 等于品牌商品 SKU 的 MAX(guide_price)，单位分；用于价格区间 ¥MIN - ¥MAX 显示 */
+  price_max?: number | string | null;
+  /** SKU MIN(COALESCE(guess_price, guide_price))，单位分 */
   guess_price: number | string | null;
   image_url: string | null;
   images: string | null;
   tags: string | null;
   sales?: number | string | null;
   rating?: number | string | null;
+  /** SUM(brand_product_sku.stock) 跨该 SPU 的所有 active SKU */
   stock: number | string | null;
+  /** SUM(brand_product_sku.frozen_stock) 跨该 SPU 的所有 active SKU */
   frozen_stock?: number | string | null;
   collab?: string | null;
   status: number | string;
@@ -57,6 +64,8 @@ export type ProductRow = {
   bp_freight?: number | string | null;
   bp_ship_from?: string | null;
   bp_delivery_days?: string | null;
+  bp_spec_definitions?: unknown;
+  bp_skus_json?: unknown;
   created_at?: Date | string;
   favorited?: number | string | boolean | null;
 };
@@ -94,8 +103,10 @@ export type WarehouseRow = {
   id: string;
   user_id: number | string;
   product_id: number | string | null;
+  brand_product_sku_id?: number | string | null;
   product_name: string | null;
   product_img: string | null;
+  sku_text?: string | null;
   quantity: number | string;
   price: number | string;
   status: string;
@@ -202,8 +213,12 @@ function buildFeedMiniTag(
   return 'mt-hot';
 }
 
-export function sanitizeProductFeedItem(row: ProductRow, index: number): ProductFeedItem {
+export function sanitizeProductFeedItem(
+  row: ProductRow & { price_max?: number | string | null },
+  index: number,
+): ProductFeedItem {
   const price = Number(row.price ?? 0) / 100;
+  const priceMax = Number(row.price_max ?? row.price ?? 0) / 100;
   const originalPrice = Number(row.original_price ?? row.price ?? 0) / 100;
   const guessPrice = Number(row.guess_price ?? row.price ?? 0) / 100;
   const discountAmount = Math.max(0, originalPrice - price);
@@ -226,6 +241,7 @@ export function sanitizeProductFeedItem(row: ProductRow, index: number): Product
     categoryId: toOptionalEntityId(row.category_id),
     category: row.category || '未分类',
     price,
+    priceMax: priceMax > price ? priceMax : undefined,
     originalPrice,
     discountAmount,
     sales,
@@ -276,8 +292,10 @@ export function sanitizeWarehouseRow(row: WarehouseRow): WarehouseItem {
     id: toEntityId(row.id),
     userId: toEntityId(row.user_id),
     productId: toEntityId(row.product_id ?? 0),
+    brandProductSkuId: toEntityId(row.brand_product_sku_id ?? 0),
     productName: row.product_name || '未命名商品',
     productImg: row.product_img || null,
+    skuText: row.sku_text || null,
     quantity: Number(row.quantity ?? 0),
     price: Number(row.price ?? 0) / 100,
     status: row.status as WarehouseItem['status'],
@@ -296,16 +314,18 @@ export async function getProductById(productId: string) {
       SELECT
         p.id,
         bp.name AS name,
-        bp.guide_price AS price,
-        bp.guide_price AS original_price,
-        bp.guess_price,
+        (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price,
+        (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS original_price,
+        (SELECT MAX(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price_max,
+        (SELECT MIN(COALESCE(bps.guess_price, bps.guide_price)) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS guess_price,
         bp.default_img AS image_url,
         bp.images AS images,
         bp.tags AS tags,
         p.sales,
         p.rating,
-        bp.stock,
-        bp.frozen_stock,
+        (SELECT COALESCE(SUM(bps.stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS stock,
+        (SELECT COALESCE(SUM(bps.frozen_stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS frozen_stock,
+        bp.collab,
         p.status,
         p.shop_id,
         s.user_id AS shop_user_id,
@@ -316,13 +336,31 @@ export async function getProductById(productId: string) {
         c.name AS category,
         p.brand_product_id,
         bp.brand_id,
-        bp.video_url     AS bp_video_url,
-        bp.detail_html   AS bp_detail_html,
-        bp.spec_table    AS bp_spec_table,
-        bp.package_list  AS bp_package_list,
-        bp.freight       AS bp_freight,
-        bp.ship_from     AS bp_ship_from,
-        bp.delivery_days AS bp_delivery_days
+        bp.video_url        AS bp_video_url,
+        bp.detail_html      AS bp_detail_html,
+        bp.spec_table       AS bp_spec_table,
+        bp.package_list     AS bp_package_list,
+        bp.freight          AS bp_freight,
+        bp.ship_from        AS bp_ship_from,
+        bp.delivery_days    AS bp_delivery_days,
+        bp.spec_definitions AS bp_spec_definitions,
+        (
+          SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(
+            'id', CAST(bps.id AS CHAR),
+            'sku_code', bps.sku_code,
+            'spec_json', bps.spec_json,
+            'spec_signature', bps.spec_signature,
+            'guide_price', bps.guide_price,
+            'guess_price', bps.guess_price,
+            'stock', bps.stock,
+            'frozen_stock', bps.frozen_stock,
+            'image', bps.image,
+            'status', bps.status,
+            'sort', bps.sort
+          )), JSON_ARRAY())
+          FROM brand_product_sku bps
+          WHERE bps.brand_product_id = bp.id
+        ) AS bp_skus_json
       FROM product p
       LEFT JOIN shop s ON s.id = p.shop_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id

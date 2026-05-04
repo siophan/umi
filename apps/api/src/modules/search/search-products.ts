@@ -47,9 +47,9 @@ export async function searchProducts(
   const countParams: Array<string | number> = [like, like, like, like];
   const orderBy =
     sort === 'price-asc'
-      ? 'COALESCE(bp.guide_price, 0) ASC, p.created_at DESC, p.id DESC'
+      ? 'COALESCE((SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10), 0) ASC, p.created_at DESC, p.id DESC'
       : sort === 'price-desc'
-        ? 'COALESCE(bp.guide_price, 0) DESC, p.created_at DESC, p.id DESC'
+        ? 'COALESCE((SELECT MAX(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10), 0) DESC, p.created_at DESC, p.id DESC'
         : sort === 'rating'
           ? 'COALESCE(p.rating, 0) DESC, COALESCE(p.sales, 0) DESC, p.id DESC'
           : 'COALESCE(p.sales, 0) DESC, p.created_at DESC, p.id DESC';
@@ -72,16 +72,17 @@ export async function searchProducts(
         SELECT
           p.id,
           bp.name AS name,
-          bp.guide_price AS price,
-          bp.guide_price AS original_price,
-          bp.guess_price,
+          (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price,
+          (SELECT MIN(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS original_price,
+          (SELECT MAX(bps.guide_price) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS price_max,
+          (SELECT MIN(COALESCE(bps.guess_price, bps.guide_price)) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS guess_price,
           bp.default_img AS image_url,
           bp.images AS images,
           bp.tags AS tags,
           p.sales,
           p.rating,
-          bp.stock,
-          bp.frozen_stock,
+          (SELECT COALESCE(SUM(bps.stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS stock,
+          (SELECT COALESCE(SUM(bps.frozen_stock), 0) FROM brand_product_sku bps WHERE bps.brand_product_id = bp.id AND bps.status = 10) AS frozen_stock,
           bp.collab AS collab,
           p.status,
           p.created_at,

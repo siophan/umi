@@ -2,7 +2,11 @@ import type { ProColumns } from '@ant-design/pro-components';
 import type { EntityId } from '@umi/shared';
 import { Button, Tag, Typography } from 'antd';
 
-import type { AdminBrandLibraryItem, AdminBrandProductSpecRow } from './api/catalog';
+import type {
+  AdminBrandLibraryItem,
+  AdminBrandProductSpecDefinition,
+  AdminBrandProductSpecRow,
+} from './api/catalog';
 import type { AdminCategoryItem } from './api/categories';
 import type { AdminBrandItem } from './api/merchant';
 import { formatAmount, formatDate, formatDateTime, formatNumber } from './format';
@@ -19,14 +23,23 @@ export type BrandLibraryFilters = {
   categoryId?: EntityId;
 };
 
-export type BrandProductFormValues = {
-  brandId: EntityId;
-  name: string;
-  categoryId: EntityId;
+export type BrandProductSkuFormRow = {
+  id?: string;
+  skuCode?: string;
+  spec: Record<string, string>;
   guidePriceYuan: number;
   supplyPriceYuan?: number;
   guessPriceYuan?: number;
   stock: number;
+  image?: string;
+  status?: 'active' | 'disabled';
+  sort?: number;
+};
+
+export type BrandProductFormValues = {
+  brandId: EntityId;
+  name: string;
+  categoryId: EntityId;
   defaultImg?: string;
   imageList?: string[];
   description?: string;
@@ -40,6 +53,9 @@ export type BrandProductFormValues = {
   deliveryDays?: string;
   tags?: string[];
   collab?: string;
+  multiSpec: boolean;
+  specDefinitions: AdminBrandProductSpecDefinition[];
+  skus: BrandProductSkuFormRow[];
 };
 
 export const EMPTY_BRAND_LIBRARY_DATA: BrandLibraryPageData = {
@@ -209,20 +225,52 @@ export function buildCategoryIdOptions(
 }
 
 export function buildCreateBrandProductFormValues(): Partial<BrandProductFormValues> {
-  return { status: 'active', stock: 0 };
+  return {
+    status: 'active',
+    multiSpec: false,
+    specDefinitions: [],
+    skus: [
+      {
+        spec: {},
+        guidePriceYuan: 0,
+        stock: 0,
+        status: 'active',
+      },
+    ],
+  };
 }
 
 export function buildEditBrandProductFormValues(
   record: AdminBrandLibraryItem,
 ): BrandProductFormValues {
+  const multiSpec = record.specDefinitions != null;
+  const specDefinitions = record.specDefinitions ?? [];
+  const skus: BrandProductSkuFormRow[] = record.skus.length
+    ? record.skus.map((sku) => ({
+        id: sku.id,
+        skuCode: sku.skuCode || undefined,
+        spec: sku.spec ?? {},
+        guidePriceYuan: centsToYuan(sku.guidePrice),
+        supplyPriceYuan: sku.supplyPrice == null ? undefined : centsToYuan(sku.supplyPrice),
+        guessPriceYuan: sku.guessPrice == null ? undefined : centsToYuan(sku.guessPrice),
+        stock: sku.stock,
+        image: sku.image || undefined,
+        status: sku.status,
+        sort: sku.sort,
+      }))
+    : [
+        {
+          spec: {},
+          guidePriceYuan: 0,
+          stock: 0,
+          status: 'active',
+        },
+      ];
+
   return {
     brandId: record.brandId as EntityId,
     name: record.productName,
     categoryId: record.categoryId as EntityId,
-    guidePriceYuan: centsToYuan(record.guidePrice),
-    supplyPriceYuan: centsToYuan(record.supplyPrice),
-    guessPriceYuan: record.guessPrice > 0 ? centsToYuan(record.guessPrice) : undefined,
-    stock: record.stock,
     defaultImg: record.imageUrl || undefined,
     imageList: record.imageList.length ? record.imageList : undefined,
     description: record.description || undefined,
@@ -238,7 +286,17 @@ export function buildEditBrandProductFormValues(
     deliveryDays: record.deliveryDays || undefined,
     tags: record.tags.length ? record.tags : undefined,
     collab: record.collab || undefined,
+    multiSpec,
+    specDefinitions,
+    skus,
   };
+}
+
+function formatPriceRange(min: number, max: number) {
+  if (min === max) {
+    return formatAmount(min);
+  }
+  return `${formatAmount(min)} - ${formatAmount(max)}`;
 }
 
 export function buildBrandLibraryColumns(args: {
@@ -259,20 +317,23 @@ export function buildBrandLibraryColumns(args: {
       ),
     },
     { title: '分类', dataIndex: 'category', width: 160, render: (_, record) => record.category || '-' },
-    { title: '指导价', dataIndex: 'guidePrice', width: 120, render: (_, record) => formatAmount(record.guidePrice) },
-    { title: '供货价', dataIndex: 'supplyPrice', width: 120, render: (_, record) => formatAmount(record.supplyPrice) },
     {
-      title: '竞猜价',
-      dataIndex: 'guessPrice',
-      width: 120,
-      render: (_, record) => (record.guessPrice > 0 ? formatAmount(record.guessPrice) : '-'),
+      title: '指导价',
+      dataIndex: 'guidePriceMin',
+      width: 160,
+      render: (_, record) => formatPriceRange(record.guidePriceMin, record.guidePriceMax),
+    },
+    {
+      title: '规格',
+      width: 100,
+      render: (_, record) => (record.specDefinitions ? `${record.skus.length} SKU` : '单规格'),
     },
     {
       title: '可用库存',
-      dataIndex: 'availableStock',
-      width: 120,
-      tooltip: 'stock - frozen_stock；下单冻结、支付扣减',
-      render: (_, record) => `${formatNumber(record.availableStock)} / ${formatNumber(record.stock)}`,
+      dataIndex: 'availableTotal',
+      width: 140,
+      tooltip: 'SUM(sku.stock - sku.frozen_stock)；下单冻结、支付扣减',
+      render: (_, record) => `${formatNumber(record.availableTotal)} / ${formatNumber(record.stockTotal)}`,
     },
     {
       title: '挂载商品',
