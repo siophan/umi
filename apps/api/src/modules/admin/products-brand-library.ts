@@ -14,7 +14,6 @@ import {
   type AdminBrandLibraryRow,
   type CountRow,
   type NormalizedSku,
-  BRAND_PRODUCT_STATUS_ACTIVE,
   BRAND_PRODUCT_STATUS_DISABLED,
   BRAND_STATUS_ACTIVE,
   buildAdminBrandLibraryFilters,
@@ -575,6 +574,4 @@ async function upsertSkus(
       [BRAND_PRODUCT_STATUS_DISABLED, row.id, BRAND_PRODUCT_STATUS_DISABLED],
     );
   }
-  // 静态 import 校验
-  void BRAND_PRODUCT_STATUS_ACTIVE;
 }

@@ -1,7 +1,7 @@
+import { useEffect, useState } from 'react';
 import {
   Button,
   ConfigProvider,
-  Divider,
   Form,
   Input,
   InputNumber,
@@ -9,6 +9,7 @@ import {
   Select,
   Space,
   Switch,
+  Tabs,
   Tag,
   Typography,
 } from 'antd';
@@ -36,6 +37,40 @@ interface AdminBrandLibraryFormModalProps {
   open: boolean;
   submitting: boolean;
 }
+
+type TabKey = 'basic' | 'sku' | 'detail' | 'shipping';
+
+/** antd Form.validateFields reject 时抛出的对象形状（rc-field-form ValidateErrorEntity）；不直接 import 间接依赖 */
+type FormValidateError = {
+  errorFields: Array<{ name: Array<string | number>; errors: string[] }>;
+};
+
+function isFormValidateError(err: unknown): err is FormValidateError {
+  return !!err && typeof err === 'object' && Array.isArray((err as { errorFields?: unknown }).errorFields);
+}
+
+/** 字段名 → 所属 tab；validateFields 失败时按这个把焦点切到出错的 tab */
+const FIELD_TO_TAB: Record<string, TabKey> = {
+  brandId: 'basic',
+  name: 'basic',
+  categoryId: 'basic',
+  defaultImg: 'basic',
+  imageList: 'basic',
+  description: 'basic',
+  collab: 'basic',
+  tags: 'basic',
+  status: 'basic',
+  multiSpec: 'sku',
+  specDefinitions: 'sku',
+  skus: 'sku',
+  videoUrl: 'detail',
+  detailHtml: 'detail',
+  specTable: 'detail',
+  packageList: 'detail',
+  freightYuan: 'shipping',
+  shipFrom: 'shipping',
+  deliveryDays: 'shipping',
+};
 
 function buildSpecSignature(spec: Record<string, string>) {
   const keys = Object.keys(spec).sort();
@@ -110,6 +145,514 @@ export function AdminBrandLibraryFormModal({
   open,
   submitting,
 }: AdminBrandLibraryFormModalProps) {
+  const [activeTab, setActiveTab] = useState<TabKey>('basic');
+
+  // 每次打开 modal 重置回首个 tab，避免上次留在中间 tab 体验割裂
+  useEffect(() => {
+    if (open) {
+      setActiveTab('basic');
+    }
+  }, [open]);
+
+  const handleOk = async () => {
+    try {
+      await form.validateFields();
+      onSubmit();
+    } catch (err: unknown) {
+      if (!isFormValidateError(err)) {
+        throw err;
+      }
+      const firstField = err.errorFields[0]?.name?.[0];
+      const targetTab = typeof firstField === 'string' ? FIELD_TO_TAB[firstField] : undefined;
+      if (targetTab && targetTab !== activeTab) {
+        setActiveTab(targetTab);
+      }
+    }
+  };
+
+  const basicTab = (
+    <>
+      <Form.Item label="品牌" name="brandId" rules={[{ required: true, message: '请选择品牌' }]}>
+        <Select allowClear options={brandIdOptions} placeholder="品牌" />
+      </Form.Item>
+      <Form.Item label="商品名称" name="name" rules={[{ required: true, message: '请输入商品名称' }]}>
+        <Input allowClear placeholder="商品名称" />
+      </Form.Item>
+      <Form.Item label="类目" name="categoryId" rules={[{ required: true, message: '请选择类目' }]}>
+        <Select allowClear options={categoryIdOptions} placeholder="类目" />
+      </Form.Item>
+      <Form.Item label="封面图" name="defaultImg" valuePropName="value">
+        <AdminOssImageUploader usage="brand_product" placeholder="上传封面" />
+      </Form.Item>
+      <Form.Item
+        label="商品相册"
+        name="imageList"
+        valuePropName="value"
+        extra="详情页商品图区轮播展示, 不含封面图; 最多 9 张"
+      >
+        <AdminOssImageGalleryUploader usage="brand_product" placeholder="上传图片" />
+      </Form.Item>
+      <Form.Item label="商品说明" name="description">
+        <Input.TextArea rows={3} placeholder="商品说明（用作店铺铺货时的默认描述）" />
+      </Form.Item>
+      <Form.Item label="联名" name="collab" extra="联名信息文案，用于商品列表/详情页徽标；可留空">
+        <Input allowClear placeholder="如 LISA × CELINE" />
+      </Form.Item>
+      <Form.Item label="标签" name="tags" extra="回车 / 逗号添加；用于商品列表/详情页徽标">
+        <Select
+          mode="tags"
+          allowClear
+          tokenSeparators={[',', '，']}
+          placeholder="如 新品、限定、联名"
+        />
+      </Form.Item>
+      <Form.Item label="状态" name="status" rules={[{ required: true, message: '请选择状态' }]}>
+        <Select
+          options={[
+            { label: '启用', value: 'active' },
+            { label: '停用', value: 'disabled' },
+          ]}
+          placeholder="状态"
+        />
+      </Form.Item>
+    </>
+  );
+
+  const skuTab = (
+    <>
+      <Form.Item
+        label="多规格商品"
+        name="multiSpec"
+        valuePropName="checked"
+        extra="开启后可声明颜色 / 尺寸等规格维度，按笛卡尔积生成 SKU；关闭则只有单一默认 SKU"
+      >
+        <Switch
+          onChange={(checked) => {
+            const current = form.getFieldsValue();
+            const hasData =
+              (current.specDefinitions && current.specDefinitions.length > 0) ||
+              (current.skus && current.skus.length > 0);
+            if (!hasData) {
+              if (checked) {
+                form.setFieldsValue({ specDefinitions: [], skus: [] });
+              } else {
+                form.setFieldsValue({
+                  specDefinitions: [],
+                  skus: [
+                    {
+                      spec: {},
+                      guidePriceYuan: 0,
+                      stock: 0,
+                      status: 'active',
+                    },
+                  ],
+                });
+              }
+              return;
+            }
+            Modal.confirm({
+              title: '切换规格模式',
+              content:
+                '切换会清空当前 SKU 配置。注意：若任一旧 SKU 仍有未支付订单占用（frozen_stock>0），保存时会失败。确认继续？',
+              okText: '确认',
+              cancelText: '取消',
+              onOk: () => {
+                if (checked) {
+                  form.setFieldsValue({ specDefinitions: [], skus: [] });
+                } else {
+                  form.setFieldsValue({
+                    specDefinitions: [],
+                    skus: [
+                      {
+                        spec: {},
+                        guidePriceYuan: 0,
+                        stock: 0,
+                        status: 'active',
+                      },
+                    ],
+                  });
+                }
+              },
+              onCancel: () => {
+                // 撤回 toggle
+                form.setFieldsValue({ multiSpec: !checked });
+              },
+            });
+          }}
+        />
+      </Form.Item>
+
+      <Form.Item shouldUpdate={(prev, next) => prev.multiSpec !== next.multiSpec} noStyle>
+        {({ getFieldValue }) => {
+          const multiSpec: boolean = !!getFieldValue('multiSpec');
+          return (
+            <>
+              {multiSpec ? (
+                <>
+                  <Form.Item
+                    label="规格定义"
+                    extra="例如「颜色」可选「红 / 黑」、「尺寸」可选「S / M / L」；每个维度的值用回车 / 逗号添加"
+                  >
+                    <Form.List name="specDefinitions">
+                      {(fields, { add, remove }) => (
+                        <Space direction="vertical" size={8} style={{ display: 'flex', width: '100%' }}>
+                          {fields.map(({ key, name, ...rest }) => (
+                            <Space key={key} align="baseline" style={{ display: 'flex', width: '100%' }}>
+                              <Form.Item
+                                {...rest}
+                                name={[name, 'name']}
+                                rules={[{ required: true, message: '请输入规格名' }]}
+                                style={{ flex: 1, marginBottom: 0 }}
+                              >
+                                <Input placeholder="规格名（如 颜色）" />
+                              </Form.Item>
+                              <Form.Item
+                                {...rest}
+                                name={[name, 'values']}
+                                rules={[{ required: true, message: '请添加规格值' }]}
+                                style={{ flex: 2, marginBottom: 0 }}
+                              >
+                                <Select
+                                  mode="tags"
+                                  tokenSeparators={[',', '，']}
+                                  placeholder="规格值（如 红、黑）"
+                                />
+                              </Form.Item>
+                              <MinusCircleOutlined onClick={() => remove(name)} />
+                            </Space>
+                          ))}
+                          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                            <Button
+                              type="dashed"
+                              onClick={() => add({ name: '', values: [] })}
+                              icon={<PlusOutlined />}
+                            >
+                              添加规格维度
+                            </Button>
+                            <Button
+                              type="default"
+                              onClick={() => {
+                                const defs: AdminBrandProductSpecDefinition[] =
+                                  form.getFieldValue('specDefinitions') ?? [];
+                                const existing: BrandProductSkuFormRow[] =
+                                  form.getFieldValue('skus') ?? [];
+                                const next = generateSkuRows(defs, existing);
+                                form.setFieldsValue({ skus: next });
+                              }}
+                            >
+                              按规格生成 SKU 表
+                            </Button>
+                          </Space>
+                        </Space>
+                      )}
+                    </Form.List>
+                  </Form.Item>
+
+                  <Form.Item label="SKU 表" required>
+                    <Form.List
+                      name="skus"
+                      rules={[
+                        {
+                          validator: async (_, value) => {
+                            if (!value || value.length === 0) {
+                              throw new Error('请至少配置一个 SKU');
+                            }
+                          },
+                        },
+                      ]}
+                    >
+                      {(fields, _ops, { errors }) => (
+                        <Space
+                          direction="vertical"
+                          size={12}
+                          style={{ display: 'flex', width: '100%' }}
+                        >
+                          {fields.map(({ key, name, ...rest }) => (
+                            <div
+                              key={key}
+                              style={{
+                                border: '1px solid #f0f0f0',
+                                borderRadius: 6,
+                                padding: 12,
+                              }}
+                            >
+                              <Form.Item
+                                shouldUpdate={(prev, next) =>
+                                  prev.skus?.[name]?.spec !== next.skus?.[name]?.spec
+                                }
+                                noStyle
+                              >
+                                {() => {
+                                  const spec: Record<string, string> =
+                                    form.getFieldValue(['skus', name, 'spec']) ?? {};
+                                  return (
+                                    <div style={{ marginBottom: 8 }}>
+                                      <Tag color="blue">{summarizeSpec(spec)}</Tag>
+                                    </div>
+                                  );
+                                }}
+                              </Form.Item>
+                              <Space wrap style={{ width: '100%' }}>
+                                <Form.Item
+                                  {...rest}
+                                  label="SKU 编码"
+                                  name={[name, 'skuCode']}
+                                  style={{ marginBottom: 0, minWidth: 160 }}
+                                >
+                                  <Input placeholder="如 IP15-RED-128G" />
+                                </Form.Item>
+                                <Form.Item
+                                  {...rest}
+                                  label="指导价（元）"
+                                  name={[name, 'guidePriceYuan']}
+                                  rules={[
+                                    { required: true, message: '请输入指导价' },
+                                    {
+                                      type: 'number',
+                                      min: 0.01,
+                                      message: '指导价必须大于 0',
+                                    },
+                                  ]}
+                                  style={{ marginBottom: 0, minWidth: 140 }}
+                                >
+                                  <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                                </Form.Item>
+                                <Form.Item
+                                  {...rest}
+                                  label="供货价（元）"
+                                  name={[name, 'supplyPriceYuan']}
+                                  style={{ marginBottom: 0, minWidth: 140 }}
+                                >
+                                  <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                                </Form.Item>
+                                <Form.Item
+                                  {...rest}
+                                  label="竞猜价（元）"
+                                  name={[name, 'guessPriceYuan']}
+                                  tooltip="留空时按指导价兜底"
+                                  style={{ marginBottom: 0, minWidth: 140 }}
+                                >
+                                  <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                                </Form.Item>
+                                <Form.Item
+                                  {...rest}
+                                  label="库存"
+                                  name={[name, 'stock']}
+                                  rules={[
+                                    { required: true, message: '请输入库存' },
+                                    { type: 'number', min: 0, message: '库存不能为负' },
+                                  ]}
+                                  style={{ marginBottom: 0, minWidth: 120 }}
+                                >
+                                  <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                                </Form.Item>
+                                <Form.Item
+                                  {...rest}
+                                  label="SKU 主图"
+                                  name={[name, 'image']}
+                                  tooltip="留空使用商品封面"
+                                  style={{ marginBottom: 0, minWidth: 200 }}
+                                >
+                                  <Input allowClear placeholder="图片 URL" />
+                                </Form.Item>
+                                <Form.Item
+                                  {...rest}
+                                  label="状态"
+                                  name={[name, 'status']}
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  <Select
+                                    style={{ width: 100 }}
+                                    options={[
+                                      { label: '启用', value: 'active' },
+                                      { label: '停用', value: 'disabled' },
+                                    ]}
+                                  />
+                                </Form.Item>
+                              </Space>
+                            </div>
+                          ))}
+                          <Form.ErrorList errors={errors} />
+                        </Space>
+                      )}
+                    </Form.List>
+                  </Form.Item>
+                </>
+              ) : (
+                <Form.List name="skus">
+                  {(fields) => (
+                    <>
+                      {fields.length === 0 ? (
+                        <Typography.Text type="secondary">默认 SKU 未初始化</Typography.Text>
+                      ) : null}
+                      {fields.map(({ key, name, ...rest }) => (
+                        <div
+                          key={key}
+                          style={{
+                            border: '1px solid #f0f0f0',
+                            borderRadius: 6,
+                            padding: 12,
+                            marginBottom: 8,
+                          }}
+                        >
+                          <Form.Item
+                            {...rest}
+                            label="指导价（元）"
+                            name={[name, 'guidePriceYuan']}
+                            rules={[
+                              { required: true, message: '请输入指导价' },
+                              { type: 'number', min: 0.01, message: '指导价必须大于 0' },
+                            ]}
+                          >
+                            <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                          </Form.Item>
+                          <Form.Item
+                            {...rest}
+                            label="供货价（元）"
+                            name={[name, 'supplyPriceYuan']}
+                          >
+                            <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                          </Form.Item>
+                          <Form.Item
+                            {...rest}
+                            label="竞猜价（元）"
+                            name={[name, 'guessPriceYuan']}
+                            extra="留空时按指导价兜底"
+                          >
+                            <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                          </Form.Item>
+                          <Form.Item
+                            {...rest}
+                            label="平台总库存"
+                            name={[name, 'stock']}
+                            rules={[
+                              { required: true, message: '请输入库存' },
+                              { type: 'number', min: 0, message: '库存不能为负' },
+                            ]}
+                            extra="跨店共享池；下单冻结、支付扣减"
+                          >
+                            <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                          </Form.Item>
+                          <Form.Item {...rest} label="SKU 编码" name={[name, 'skuCode']}>
+                            <Input allowClear placeholder="可留空" />
+                          </Form.Item>
+                          <Form.Item {...rest} label="SKU 主图" name={[name, 'image']}>
+                            <Input allowClear placeholder="留空使用商品封面" />
+                          </Form.Item>
+                          <Form.Item
+                            {...rest}
+                            noStyle
+                            name={[name, 'spec']}
+                            initialValue={{}}
+                          >
+                            <input type="hidden" />
+                          </Form.Item>
+                          <Form.Item
+                            {...rest}
+                            noStyle
+                            name={[name, 'status']}
+                            initialValue="active"
+                          >
+                            <input type="hidden" />
+                          </Form.Item>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </Form.List>
+              )}
+            </>
+          );
+        }}
+      </Form.Item>
+    </>
+  );
+
+  const detailTab = (
+    <>
+      <Form.Item
+        label="主图视频"
+        name="videoUrl"
+        valuePropName="value"
+        extra="可选；mp4 / webm / mov，最大 50MB。上传后商品图区第一帧会自动切换为视频"
+      >
+        <AdminOssVideoUploader usage="brand_product" placeholder="上传视频" />
+      </Form.Item>
+      <Form.Item label="详情 HTML" name="detailHtml" extra="商品详情 tab 的内容；支持 HTML 标签（来源信任范围内）">
+        <Input.TextArea rows={6} placeholder="<p>...</p>" />
+      </Form.Item>
+      <Form.Item label="参数表" extra="参数 tab 显示，按顺序展示">
+        <Form.List name="specTable">
+          {(fields, { add, remove }) => (
+            <Space direction="vertical" size={8} style={{ display: 'flex', width: '100%' }}>
+              {fields.map(({ key, name, ...rest }) => (
+                <Space key={key} align="baseline" style={{ display: 'flex' }}>
+                  <Form.Item
+                    {...rest}
+                    name={[name, 'key']}
+                    rules={[{ required: true, message: '请输入参数名' }]}
+                    style={{ flex: 1, marginBottom: 0 }}
+                  >
+                    <Input placeholder="参数名（如 产地）" />
+                  </Form.Item>
+                  <Form.Item
+                    {...rest}
+                    name={[name, 'value']}
+                    style={{ flex: 1, marginBottom: 0 }}
+                  >
+                    <Input placeholder="参数值（如 法国）" />
+                  </Form.Item>
+                  <MinusCircleOutlined onClick={() => remove(name)} />
+                </Space>
+              ))}
+              <Button type="dashed" onClick={() => add({ key: '', value: '' })} icon={<PlusOutlined />}>
+                添加参数
+              </Button>
+            </Space>
+          )}
+        </Form.List>
+      </Form.Item>
+      <Form.Item label="包装清单" extra="清单 tab 显示，逐行配置">
+        <Form.List name="packageList">
+          {(fields, { add, remove }) => (
+            <Space direction="vertical" size={8} style={{ display: 'flex', width: '100%' }}>
+              {fields.map(({ key, name, ...rest }) => (
+                <Space key={key} align="baseline" style={{ display: 'flex' }}>
+                  <Form.Item
+                    {...rest}
+                    name={[name, 'value']}
+                    rules={[{ required: true, message: '请输入清单项' }]}
+                    style={{ flex: 1, marginBottom: 0 }}
+                  >
+                    <Input placeholder="如 商品 ×1" />
+                  </Form.Item>
+                  <MinusCircleOutlined onClick={() => remove(name)} />
+                </Space>
+              ))}
+              <Button type="dashed" onClick={() => add({ value: '' })} icon={<PlusOutlined />}>
+                添加清单项
+              </Button>
+            </Space>
+          )}
+        </Form.List>
+      </Form.Item>
+    </>
+  );
+
+  const shippingTab = (
+    <>
+      <Form.Item label="运费（元）" name="freightYuan" extra="留空 = 包邮">
+        <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="0 = 包邮" />
+      </Form.Item>
+      <Form.Item label="发货地" name="shipFrom">
+        <Input allowClear placeholder="如 上海" />
+      </Form.Item>
+      <Form.Item label="发货时效" name="deliveryDays">
+        <Input allowClear placeholder="如 24h内发货" />
+      </Form.Item>
+    </>
+  );
+
   return (
     <Modal
       open={open}
@@ -119,7 +662,7 @@ export function AdminBrandLibraryFormModal({
       cancelText="取消"
       confirmLoading={submitting}
       onCancel={onCancel}
-      onOk={onSubmit}
+      onOk={() => void handleOk()}
       destroyOnClose
     >
       <ConfigProvider theme={SEARCH_THEME}>
@@ -129,487 +672,16 @@ export function AdminBrandLibraryFormModal({
           preserve={false}
           initialValues={initialValues}
         >
-          <Divider orientation="left" plain style={{ marginTop: 0 }}>
-            基础信息
-          </Divider>
-          <Form.Item label="品牌" name="brandId" rules={[{ required: true, message: '请选择品牌' }]}>
-            <Select allowClear options={brandIdOptions} placeholder="品牌" />
-          </Form.Item>
-          <Form.Item label="商品名称" name="name" rules={[{ required: true, message: '请输入商品名称' }]}>
-            <Input allowClear placeholder="商品名称" />
-          </Form.Item>
-          <Form.Item label="类目" name="categoryId" rules={[{ required: true, message: '请选择类目' }]}>
-            <Select allowClear options={categoryIdOptions} placeholder="类目" />
-          </Form.Item>
-          <Form.Item label="封面图" name="defaultImg" valuePropName="value">
-            <AdminOssImageUploader usage="brand_product" placeholder="上传封面" />
-          </Form.Item>
-          <Form.Item
-            label="商品相册"
-            name="imageList"
-            valuePropName="value"
-            extra="详情页商品图区轮播展示, 不含封面图; 最多 9 张"
-          >
-            <AdminOssImageGalleryUploader usage="brand_product" placeholder="上传图片" />
-          </Form.Item>
-          <Form.Item label="商品说明" name="description">
-            <Input.TextArea rows={3} placeholder="商品说明（用作店铺铺货时的默认描述）" />
-          </Form.Item>
-          <Form.Item label="联名" name="collab" extra="联名信息文案，用于商品列表/详情页徽标；可留空">
-            <Input allowClear placeholder="如 LISA × CELINE" />
-          </Form.Item>
-          <Form.Item label="标签" name="tags" extra="回车 / 逗号添加；用于商品列表/详情页徽标">
-            <Select
-              mode="tags"
-              allowClear
-              tokenSeparators={[',', '，']}
-              placeholder="如 新品、限定、联名"
-            />
-          </Form.Item>
-
-          <Divider orientation="left" plain>
-            规格 & SKU
-          </Divider>
-          <Form.Item
-            label="多规格商品"
-            name="multiSpec"
-            valuePropName="checked"
-            extra="开启后可声明颜色 / 尺寸等规格维度，按笛卡尔积生成 SKU；关闭则只有单一默认 SKU"
-          >
-            <Switch
-              onChange={(checked) => {
-                const current = form.getFieldsValue();
-                const hasData =
-                  (current.specDefinitions && current.specDefinitions.length > 0) ||
-                  (current.skus && current.skus.length > 0);
-                if (!hasData) {
-                  if (checked) {
-                    form.setFieldsValue({ specDefinitions: [], skus: [] });
-                  } else {
-                    form.setFieldsValue({
-                      specDefinitions: [],
-                      skus: [
-                        {
-                          spec: {},
-                          guidePriceYuan: 0,
-                          stock: 0,
-                          status: 'active',
-                        },
-                      ],
-                    });
-                  }
-                  return;
-                }
-                Modal.confirm({
-                  title: '切换规格模式',
-                  content: '切换会清空当前 SKU 配置，确认继续？',
-                  okText: '确认',
-                  cancelText: '取消',
-                  onOk: () => {
-                    if (checked) {
-                      form.setFieldsValue({ specDefinitions: [], skus: [] });
-                    } else {
-                      form.setFieldsValue({
-                        specDefinitions: [],
-                        skus: [
-                          {
-                            spec: {},
-                            guidePriceYuan: 0,
-                            stock: 0,
-                            status: 'active',
-                          },
-                        ],
-                      });
-                    }
-                  },
-                  onCancel: () => {
-                    // 撤回 toggle
-                    form.setFieldsValue({ multiSpec: !checked });
-                  },
-                });
-              }}
-            />
-          </Form.Item>
-
-          <Form.Item shouldUpdate={(prev, next) => prev.multiSpec !== next.multiSpec} noStyle>
-            {({ getFieldValue }) => {
-              const multiSpec: boolean = !!getFieldValue('multiSpec');
-              return (
-                <>
-                  {multiSpec ? (
-                    <>
-                      <Form.Item
-                        label="规格定义"
-                        extra="例如「颜色」可选「红 / 黑」、「尺寸」可选「S / M / L」；每个维度的值用回车 / 逗号添加"
-                      >
-                        <Form.List name="specDefinitions">
-                          {(fields, { add, remove }) => (
-                            <Space direction="vertical" size={8} style={{ display: 'flex', width: '100%' }}>
-                              {fields.map(({ key, name, ...rest }) => (
-                                <Space key={key} align="baseline" style={{ display: 'flex', width: '100%' }}>
-                                  <Form.Item
-                                    {...rest}
-                                    name={[name, 'name']}
-                                    rules={[{ required: true, message: '请输入规格名' }]}
-                                    style={{ flex: 1, marginBottom: 0 }}
-                                  >
-                                    <Input placeholder="规格名（如 颜色）" />
-                                  </Form.Item>
-                                  <Form.Item
-                                    {...rest}
-                                    name={[name, 'values']}
-                                    rules={[{ required: true, message: '请添加规格值' }]}
-                                    style={{ flex: 2, marginBottom: 0 }}
-                                  >
-                                    <Select
-                                      mode="tags"
-                                      tokenSeparators={[',', '，']}
-                                      placeholder="规格值（如 红、黑）"
-                                    />
-                                  </Form.Item>
-                                  <MinusCircleOutlined onClick={() => remove(name)} />
-                                </Space>
-                              ))}
-                              <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                                <Button
-                                  type="dashed"
-                                  onClick={() => add({ name: '', values: [] })}
-                                  icon={<PlusOutlined />}
-                                >
-                                  添加规格维度
-                                </Button>
-                                <Button
-                                  type="default"
-                                  onClick={() => {
-                                    const defs: AdminBrandProductSpecDefinition[] =
-                                      form.getFieldValue('specDefinitions') ?? [];
-                                    const existing: BrandProductSkuFormRow[] =
-                                      form.getFieldValue('skus') ?? [];
-                                    const next = generateSkuRows(defs, existing);
-                                    form.setFieldsValue({ skus: next });
-                                  }}
-                                >
-                                  按规格生成 SKU 表
-                                </Button>
-                              </Space>
-                            </Space>
-                          )}
-                        </Form.List>
-                      </Form.Item>
-
-                      <Form.Item label="SKU 表" required>
-                        <Form.List
-                          name="skus"
-                          rules={[
-                            {
-                              validator: async (_, value) => {
-                                if (!value || value.length === 0) {
-                                  throw new Error('请至少配置一个 SKU');
-                                }
-                              },
-                            },
-                          ]}
-                        >
-                          {(fields, _ops, { errors }) => (
-                            <Space
-                              direction="vertical"
-                              size={12}
-                              style={{ display: 'flex', width: '100%' }}
-                            >
-                              {fields.map(({ key, name, ...rest }) => (
-                                <div
-                                  key={key}
-                                  style={{
-                                    border: '1px solid #f0f0f0',
-                                    borderRadius: 6,
-                                    padding: 12,
-                                  }}
-                                >
-                                  <Form.Item
-                                    shouldUpdate={(prev, next) =>
-                                      prev.skus?.[name]?.spec !== next.skus?.[name]?.spec
-                                    }
-                                    noStyle
-                                  >
-                                    {() => {
-                                      const spec: Record<string, string> =
-                                        form.getFieldValue(['skus', name, 'spec']) ?? {};
-                                      return (
-                                        <div style={{ marginBottom: 8 }}>
-                                          <Tag color="blue">{summarizeSpec(spec)}</Tag>
-                                        </div>
-                                      );
-                                    }}
-                                  </Form.Item>
-                                  <Space wrap style={{ width: '100%' }}>
-                                    <Form.Item
-                                      {...rest}
-                                      label="SKU 编码"
-                                      name={[name, 'skuCode']}
-                                      style={{ marginBottom: 0, minWidth: 160 }}
-                                    >
-                                      <Input placeholder="如 IP15-RED-128G" />
-                                    </Form.Item>
-                                    <Form.Item
-                                      {...rest}
-                                      label="指导价（元）"
-                                      name={[name, 'guidePriceYuan']}
-                                      rules={[
-                                        { required: true, message: '请输入指导价' },
-                                        {
-                                          type: 'number',
-                                          min: 0.01,
-                                          message: '指导价必须大于 0',
-                                        },
-                                      ]}
-                                      style={{ marginBottom: 0, minWidth: 140 }}
-                                    >
-                                      <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                    <Form.Item
-                                      {...rest}
-                                      label="供货价（元）"
-                                      name={[name, 'supplyPriceYuan']}
-                                      style={{ marginBottom: 0, minWidth: 140 }}
-                                    >
-                                      <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                    <Form.Item
-                                      {...rest}
-                                      label="竞猜价（元）"
-                                      name={[name, 'guessPriceYuan']}
-                                      tooltip="留空时按指导价兜底"
-                                      style={{ marginBottom: 0, minWidth: 140 }}
-                                    >
-                                      <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                    <Form.Item
-                                      {...rest}
-                                      label="库存"
-                                      name={[name, 'stock']}
-                                      rules={[
-                                        { required: true, message: '请输入库存' },
-                                        { type: 'number', min: 0, message: '库存不能为负' },
-                                      ]}
-                                      style={{ marginBottom: 0, minWidth: 120 }}
-                                    >
-                                      <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                    <Form.Item
-                                      {...rest}
-                                      label="SKU 主图"
-                                      name={[name, 'image']}
-                                      tooltip="留空使用商品封面"
-                                      style={{ marginBottom: 0, minWidth: 200 }}
-                                    >
-                                      <Input allowClear placeholder="图片 URL" />
-                                    </Form.Item>
-                                    <Form.Item
-                                      {...rest}
-                                      label="状态"
-                                      name={[name, 'status']}
-                                      style={{ marginBottom: 0 }}
-                                    >
-                                      <Select
-                                        style={{ width: 100 }}
-                                        options={[
-                                          { label: '启用', value: 'active' },
-                                          { label: '停用', value: 'disabled' },
-                                        ]}
-                                      />
-                                    </Form.Item>
-                                  </Space>
-                                </div>
-                              ))}
-                              <Form.ErrorList errors={errors} />
-                            </Space>
-                          )}
-                        </Form.List>
-                      </Form.Item>
-                    </>
-                  ) : (
-                    <Form.List name="skus">
-                      {(fields) => (
-                        <>
-                          {fields.length === 0 ? (
-                            <Typography.Text type="secondary">默认 SKU 未初始化</Typography.Text>
-                          ) : null}
-                          {fields.map(({ key, name, ...rest }) => (
-                            <div
-                              key={key}
-                              style={{
-                                border: '1px solid #f0f0f0',
-                                borderRadius: 6,
-                                padding: 12,
-                                marginBottom: 8,
-                              }}
-                            >
-                              <Form.Item
-                                {...rest}
-                                label="指导价（元）"
-                                name={[name, 'guidePriceYuan']}
-                                rules={[
-                                  { required: true, message: '请输入指导价' },
-                                  { type: 'number', min: 0.01, message: '指导价必须大于 0' },
-                                ]}
-                              >
-                                <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                              </Form.Item>
-                              <Form.Item
-                                {...rest}
-                                label="供货价（元）"
-                                name={[name, 'supplyPriceYuan']}
-                              >
-                                <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                              </Form.Item>
-                              <Form.Item
-                                {...rest}
-                                label="竞猜价（元）"
-                                name={[name, 'guessPriceYuan']}
-                                extra="留空时按指导价兜底"
-                              >
-                                <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                              </Form.Item>
-                              <Form.Item
-                                {...rest}
-                                label="平台总库存"
-                                name={[name, 'stock']}
-                                rules={[
-                                  { required: true, message: '请输入库存' },
-                                  { type: 'number', min: 0, message: '库存不能为负' },
-                                ]}
-                                extra="跨店共享池；下单冻结、支付扣减"
-                              >
-                                <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-                              </Form.Item>
-                              <Form.Item {...rest} label="SKU 编码" name={[name, 'skuCode']}>
-                                <Input allowClear placeholder="可留空" />
-                              </Form.Item>
-                              <Form.Item {...rest} label="SKU 主图" name={[name, 'image']}>
-                                <Input allowClear placeholder="留空使用商品封面" />
-                              </Form.Item>
-                              <Form.Item
-                                {...rest}
-                                noStyle
-                                name={[name, 'spec']}
-                                initialValue={{}}
-                              >
-                                <input type="hidden" />
-                              </Form.Item>
-                              <Form.Item
-                                {...rest}
-                                noStyle
-                                name={[name, 'status']}
-                                initialValue="active"
-                              >
-                                <input type="hidden" />
-                              </Form.Item>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </Form.List>
-                  )}
-                </>
-              );
-            }}
-          </Form.Item>
-
-          <Divider orientation="left" plain>
-            详情页内容
-          </Divider>
-          <Form.Item
-            label="主图视频"
-            name="videoUrl"
-            valuePropName="value"
-            extra="可选；mp4 / webm / mov，最大 50MB。上传后商品图区第一帧会自动切换为视频"
-          >
-            <AdminOssVideoUploader usage="brand_product" placeholder="上传视频" />
-          </Form.Item>
-          <Form.Item label="详情 HTML" name="detailHtml" extra="商品详情 tab 的内容；支持 HTML 标签（来源信任范围内）">
-            <Input.TextArea rows={6} placeholder="<p>...</p>" />
-          </Form.Item>
-          <Form.Item label="参数表" extra="参数 tab 显示，按顺序展示">
-            <Form.List name="specTable">
-              {(fields, { add, remove }) => (
-                <Space direction="vertical" size={8} style={{ display: 'flex', width: '100%' }}>
-                  {fields.map(({ key, name, ...rest }) => (
-                    <Space key={key} align="baseline" style={{ display: 'flex' }}>
-                      <Form.Item
-                        {...rest}
-                        name={[name, 'key']}
-                        rules={[{ required: true, message: '请输入参数名' }]}
-                        style={{ flex: 1, marginBottom: 0 }}
-                      >
-                        <Input placeholder="参数名（如 产地）" />
-                      </Form.Item>
-                      <Form.Item
-                        {...rest}
-                        name={[name, 'value']}
-                        style={{ flex: 1, marginBottom: 0 }}
-                      >
-                        <Input placeholder="参数值（如 法国）" />
-                      </Form.Item>
-                      <MinusCircleOutlined onClick={() => remove(name)} />
-                    </Space>
-                  ))}
-                  <Button type="dashed" onClick={() => add({ key: '', value: '' })} icon={<PlusOutlined />}>
-                    添加参数
-                  </Button>
-                </Space>
-              )}
-            </Form.List>
-          </Form.Item>
-          <Form.Item label="包装清单" extra="清单 tab 显示，逐行配置">
-            <Form.List name="packageList">
-              {(fields, { add, remove }) => (
-                <Space direction="vertical" size={8} style={{ display: 'flex', width: '100%' }}>
-                  {fields.map(({ key, name, ...rest }) => (
-                    <Space key={key} align="baseline" style={{ display: 'flex' }}>
-                      <Form.Item
-                        {...rest}
-                        name={[name, 'value']}
-                        rules={[{ required: true, message: '请输入清单项' }]}
-                        style={{ flex: 1, marginBottom: 0 }}
-                      >
-                        <Input placeholder="如 商品 ×1" />
-                      </Form.Item>
-                      <MinusCircleOutlined onClick={() => remove(name)} />
-                    </Space>
-                  ))}
-                  <Button type="dashed" onClick={() => add({ value: '' })} icon={<PlusOutlined />}>
-                    添加清单项
-                  </Button>
-                </Space>
-              )}
-            </Form.List>
-          </Form.Item>
-
-          <Divider orientation="left" plain>
-            发货
-          </Divider>
-          <Form.Item label="运费（元）" name="freightYuan" extra="留空 = 包邮">
-            <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="0 = 包邮" />
-          </Form.Item>
-          <Form.Item label="发货地" name="shipFrom">
-            <Input allowClear placeholder="如 上海" />
-          </Form.Item>
-          <Form.Item label="发货时效" name="deliveryDays">
-            <Input allowClear placeholder="如 24h内发货" />
-          </Form.Item>
-
-          <Divider orientation="left" plain>
-            状态
-          </Divider>
-          <Form.Item label="状态" name="status" rules={[{ required: true, message: '请选择状态' }]}>
-            <Select
-              options={[
-                { label: '启用', value: 'active' },
-                { label: '停用', value: 'disabled' },
-              ]}
-              placeholder="状态"
-            />
-          </Form.Item>
+          <Tabs
+            activeKey={activeTab}
+            onChange={(key) => setActiveTab(key as TabKey)}
+            items={[
+              { key: 'basic', label: '基础信息', forceRender: true, children: basicTab },
+              { key: 'sku', label: '规格 & SKU', forceRender: true, children: skuTab },
+              { key: 'detail', label: '详情内容', forceRender: true, children: detailTab },
+              { key: 'shipping', label: '发货', forceRender: true, children: shippingTab },
+            ]}
+          />
         </Form>
       </ConfigProvider>
     </Modal>

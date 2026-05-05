@@ -232,8 +232,9 @@ export function buildCreateBrandProductFormValues(): Partial<BrandProductFormVal
     skus: [
       {
         spec: {},
-        guidePriceYuan: 0,
-        stock: 0,
+        // 故意留空，让 InputNumber 显示 placeholder，避免用户把默认 0 误当成已填
+        guidePriceYuan: undefined as unknown as number,
+        stock: undefined as unknown as number,
         status: 'active',
       },
     ],

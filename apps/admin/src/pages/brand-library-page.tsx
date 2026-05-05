@@ -287,6 +287,12 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
             .filter((def) => def.name && def.values.length > 0)
         : null;
 
+      if (multiSpec && (!specDefinitions || specDefinitions.length === 0)) {
+        messageApi.error('多规格商品请至少添加一组规格定义（如「颜色」+「红/黑」）');
+        setSubmitting(false);
+        return;
+      }
+
       const skusInput = values.skus ?? [];
       if (skusInput.length === 0) {
         messageApi.error('请至少配置一个 SKU');
