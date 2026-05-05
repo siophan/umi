@@ -192,5 +192,6 @@ export interface WarehouseItem {
   sourceType: string;
   consignPrice?: number | null;
   estimateDays?: number | null;
+  tracking?: { carrier: string; trackingNo: string } | null;
   createdAt: string;
 }

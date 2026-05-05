@@ -110,23 +110,13 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
-## 10. 仓库寄售提交只更新本地 state，不调写接口（P0）
+## 10. 仓库寄售提交只更新本地 state，不调写接口（已完成）
 
-**文件**：`apps/web/src/app/warehouse/page.tsx:151`
+`submitSell()` 现走 `consignWarehouseItem` → `POST /api/warehouse/physical/:id/consign`（warehouse-consign.ts），事务内切 `physical_warehouse.status=20(consigning)` + `consign_price` + `estimate_days` + `consign_date`。前端 optimistic update 在请求成功后再切 UI，失败 toast。
 
-`submitSell()` 只做 `setItems(...)` 的 optimistic update，显示"已寄售"toast，但从未调用任何 API。刷新页面后寄售状态消失，数据不持久。
+## 11. 仓库批量操作未实现（已隐藏）
 
-**修法**：补 `POST /api/warehouse/physical/:id/consign` 接口，`submitSell` 先调接口成功后再更新 UI；失败时回滚本地 state。
-
----
-
-## 11. 仓库批量操作未实现（P2）
-
-**文件**：`apps/web/src/app/warehouse/page.tsx:186`
-
-右上角批量操作按钮点击只 toast "批量操作"，无实际功能。
-
-**修法**：明确批量操作语义（批量提货 / 批量取消寄售）后补实现，或短期隐藏按钮。
+右上角"批量操作"按钮已删除，header 仅留一个 `<div class={styles.action} />` 占位保布局（见 page.tsx）。批量提货/取消寄售语义未定，等仓库重构批次再做。
 
 ---
 
@@ -458,6 +448,27 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
+## 27. 我的仓库 `/warehouse` 2026-05-05 修复 + 遗留
+
+**已修复**：
+- 物资总值条下加 12px padding 间距、列表客户端无限滚动（PAGE_SIZE=10，tab 切换重置）、移除底部 tab bar
+- 「物流」按钮：从 toast "物流：顺丰 SF1234567890" 假数据改为弹窗（`warehouse-tracking-modal.tsx`）展示 carrier + 运单号 + 复制按钮（`navigator.clipboard` + textarea fallback）；当前后端不返回值，弹窗显示"暂无物流信息"占位
+- 「寄售」弹窗：删除"寄售数量"input（接口本就 1:1 整批寄售，输入框是误导），文案改"本次将整批寄售 ×N"
+- 「提货」按钮：不再 fake state 切换（之前 `setItems` 把 status 改 'shipping' 但不调任何接口），改为 toast "提货功能即将上线"
+- 首屏 loading 4 张 skeleton 占位（之前 loading 时三个分支都不命中是空白）
+- **顺手修一个隐藏 bug**：`apps/api/src/modules/warehouse/warehouse-shared.ts` 的 `sanitizePhysicalRow` 之前 `status: row.status as WarehouseItem['status']` 是把 DB INT(10/20/30) 强转成字符串 union；新增 `mapPhysicalStatus` 做 number→label 映射，否则前端 `mapWarehouseTab` 用 `=== 'consigning'` 比对永远 false，**所有实体仓寄售物品都错落到「待提货」tab**
+
+**遗留 P0 — 提货真闭环**：
+当前提货按钮只是 toast。完整方案见 memory `project_warehouse_redesign.md` 批次 1：`POST /api/warehouse/:id/ship` 派发 virtual/physical，事务里改仓库 status + 写 fulfillment_order(type=10/ship, status=10/pending) + warehouse_item_log；前端弹地址 sheet（无地址引到 /me/addresses 新增）→ 选完才能确认。**强制选地址**是已敲定决策（老系统空 body 提货 → 履约 receiver 全空 → 无法发货）。
+
+**遗留 P1 — 物流号字段后端不返回**：
+`packages/shared/src/domain.ts` 的 `WarehouseItem` 已加 `tracking?: { carrier; trackingNo } | null` 字段，但 `sanitizeVirtualRow` / `sanitizePhysicalRow` 没拼。批次 1 提货闭环时一并：`SELECT` 加 `LEFT JOIN fulfillment_order fo ON fo.warehouse_item_id = pw.id AND fo.status >= 30(shipped)`，把 `fo.carrier / fo.tracking_no` 喂到 sanitize 的 `tracking` 字段；运输中 tab 的判定也按"履约单驱动运输状态"原则改为 `fulfillment_order.status=30` 而不是 `physical_warehouse.status`。
+
+**遗留 P2 — 物资总值口径**：
+`page.tsx:97` 的 `counts.totalValue` 把所有 status（含 consigning）的 `price * quantity` 都加进"物资总值"。寄售中=已挂出去要卖的，是否算"我手里的物资"语义可商榷。老系统 `umi-origin/frontend/inventory.html` 算法待 diff 后跟产品确认，本期保留现状。
+
+---
+
 ## 21. 用户端商品详情未消费 brand_product 的图（P2）
 
 **文件**：`apps/api/src/modules/product/product-shared.ts:294`（getProductById SELECT）+ `apps/api/src/modules/product/product-detail.ts:337`（images 数组拼装）
@@ -476,6 +487,6 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
-| P0     | 2    | Server Component 硬编码 URL / 仓库寄售无写接口 |
-| P1     | 4    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）|
-| P2     | 14   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 仓库批量操作 / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选） |
+| P0     | 2    | Server Component 硬编码 URL / 仓库提货真闭环（#27，批次 1）|
+| P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）/ 仓库 fulfillment_order 物流号未拼到 tracking 字段（#27）|
+| P2     | 14   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选） |

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { WarehouseItem } from '@umi/shared';
 
 import styles from './page.module.css';
@@ -16,10 +17,13 @@ type WarehouseListProps = {
   error: string | null;
   tab: WarehouseTab;
   items: WarehouseItem[];
+  totalCount: number;
+  hasMore: boolean;
+  onLoadMore: () => void;
   onReload: () => void;
   onOpenSell: (item: WarehouseItem) => void;
   onCancelConsign: (item: WarehouseItem) => void;
-  onTrackShipment: () => void;
+  onTrackShipment: (item: WarehouseItem) => void;
   onPickup: (item: WarehouseItem) => void;
 };
 
@@ -28,15 +32,46 @@ export function WarehouseList({
   error,
   tab,
   items,
+  totalCount,
+  hasMore,
+  onLoadMore,
   onReload,
   onOpenSell,
   onCancelConsign,
   onTrackShipment,
   onPickup,
 }: WarehouseListProps) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, onLoadMore]);
+
   return (
     <main className={styles.list}>
-      {!loading && error ? (
+      {loading && items.length === 0 ? (
+        Array.from({ length: 4 }).map((_, idx) => (
+          <div key={`sk-${idx}`} className={styles.skeletonCard}>
+            <div className={styles.skeletonImg} />
+            <div className={styles.skeletonBody}>
+              <div className={`${styles.skeletonLine} ${styles.skeletonLineWide}`} />
+              <div className={`${styles.skeletonLine} ${styles.skeletonLineMid}`} />
+              <div className={`${styles.skeletonLine} ${styles.skeletonLineNarrow}`} />
+            </div>
+          </div>
+        ))
+      ) : !loading && error ? (
         <div className={styles.empty}>
           <div className={styles.emptyIcon}><i className="fa-solid fa-triangle-exclamation" /></div>
           <div className={styles.emptyText}>仓库加载失败</div>
@@ -105,7 +140,7 @@ export function WarehouseList({
                     </button>
                   </>
                 ) : mappedTab === 'shipped' ? (
-                  <button className={`${styles.btn} ${styles.outline}`} type="button" onClick={onTrackShipment}>
+                  <button className={`${styles.btn} ${styles.outline}`} type="button" onClick={() => onTrackShipment(item)}>
                     <i className="fa-solid fa-location-dot" />
                     物流
                   </button>
@@ -131,6 +166,14 @@ export function WarehouseList({
           );
         })
       )}
+      {!loading && !error && items.length > 0 && hasMore ? (
+        <div ref={sentinelRef} className={styles.loadMoreSentinel}>
+          加载中...
+        </div>
+      ) : null}
+      {!loading && !error && items.length > 0 && !hasMore && totalCount > 10 ? (
+        <div className={styles.listEnd}>— 没有更多了 —</div>
+      ) : null}
     </main>
   );
 }

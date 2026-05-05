@@ -7,22 +7,18 @@ import styles from './page.module.css';
 type WarehouseConsignModalProps = {
   item: WarehouseItem;
   sellPrice: string;
-  sellQty: string;
   estimate: { title: string; desc: string; level: number } | null;
   onClose: () => void;
   onPriceChange: (value: string) => void;
-  onQtyChange: (value: string) => void;
   onSubmit: () => void;
 };
 
 export function WarehouseConsignModal({
   item,
   sellPrice,
-  sellQty,
   estimate,
   onClose,
   onPriceChange,
-  onQtyChange,
   onSubmit,
 }: WarehouseConsignModalProps) {
   return (
@@ -87,17 +83,8 @@ export function WarehouseConsignModal({
           <div className={styles.hint}>建议寄售价：¥{Math.round((item.price || 0) * 0.85 * 10) / 10}（市场价 ¥{item.price || 0}）</div>
         </div>
 
-        <div className={styles.field}>
-          <div className={styles.label}>寄售数量</div>
-          <input
-            className={styles.input}
-            type="number"
-            min="1"
-            max={String(item.quantity)}
-            value={sellQty}
-            onChange={(event) => onQtyChange(event.target.value)}
-          />
-          <div className={styles.hint}>可售数量：{item.quantity}</div>
+        <div className={styles.hint} style={{ marginBottom: 14 }}>
+          本次将整批寄售 ×{item.quantity}，售出后一次性结算
         </div>
 
         <button className={styles.submit} type="button" onClick={onSubmit}>

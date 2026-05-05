@@ -96,6 +96,16 @@ function mapVirtualStatus(code: number): WarehouseItem['status'] {
   return 'stored';
 }
 
+function mapPhysicalStatus(code: number): WarehouseItem['status'] {
+  if (code === PHYSICAL_STATUS_CONSIGNING) {
+    return 'consigning';
+  }
+  if (code === PHYSICAL_STATUS_FULFILLED) {
+    return 'completed';
+  }
+  return 'stored';
+}
+
 export function sanitizeVirtualRow(row: VirtualWarehouseRow): WarehouseItem {
   return {
     id: toEntityId(row.id),
@@ -127,7 +137,7 @@ export function sanitizePhysicalRow(row: PhysicalWarehouseRow): WarehouseItem {
     skuText: row.sku_text?.trim() || null,
     quantity: Number(row.quantity ?? 0),
     price: Number(row.price ?? 0) / 100,
-    status: row.status as WarehouseItem['status'],
+    status: mapPhysicalStatus(Number(row.status ?? 0)),
     warehouseType: 'physical',
     sourceType: row.source_type,
     consignPrice: row.consign_price === null ? null : Number(row.consign_price ?? 0) / 100,

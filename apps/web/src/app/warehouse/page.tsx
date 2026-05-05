@@ -8,6 +8,7 @@ import { cancelConsignWarehouseItem, consignWarehouseItem, fetchPhysicalWarehous
 import { hasAuthToken } from '../../lib/api/shared';
 import { MobileShell } from '../../components/mobile-shell';
 import { WarehouseConsignModal } from './warehouse-consign-modal';
+import { WarehouseTrackingModal } from './warehouse-tracking-modal';
 import {
   buildSellEstimate,
   mapWarehouseTab,
@@ -32,7 +33,7 @@ export default function WarehousePage() {
   const [error, setError] = useState<string | null>(null);
   const [sellItem, setSellItem] = useState<WarehouseItem | null>(null);
   const [sellPrice, setSellPrice] = useState('0');
-  const [sellQty, setSellQty] = useState('1');
+  const [trackingItem, setTrackingItem] = useState<WarehouseItem | null>(null);
   const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -102,6 +103,19 @@ export default function WarehousePage() {
 
   const filtered = tab === 'all' ? items : items.filter((item) => mapWarehouseTab(item) === tab);
 
+  const PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [tab]);
+
+  const visibleItems = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+  const loadMore = useCallback(() => {
+    setVisibleCount((current) => current + PAGE_SIZE);
+  }, []);
+
   const triggerToast = (message: string) => {
     setToast(message);
     if (toastTimer.current) {
@@ -113,7 +127,6 @@ export default function WarehousePage() {
   const openSell = (item: WarehouseItem) => {
     setSellItem(item);
     setSellPrice(String(Math.round((item.price || 0) * 0.85 * 10) / 10));
-    setSellQty('1');
   };
 
   const closeSell = () => setSellItem(null);
@@ -122,17 +135,12 @@ export default function WarehousePage() {
   const estimate = buildSellEstimate(sellItem, sellPrice);
 
   /**
-   * 寄售动作先做前端价格和数量校验，再调用真实寄售接口，避免把明显无效请求打到后端。
+   * 寄售动作先做前端价格校验，再调用真实寄售接口（整批寄售，按 warehouse_item 1:1 挂出）。
    */
   const submitSell = async () => {
     if (!sellItem) return;
-    const quantity = Number.parseInt(sellQty, 10);
     if (!priceValue || priceValue <= 0) {
       triggerToast('请输入有效价格');
-      return;
-    }
-    if (!quantity || quantity <= 0 || quantity > sellItem.quantity) {
-      triggerToast('数量无效');
       return;
     }
 
@@ -145,7 +153,7 @@ export default function WarehousePage() {
             : item,
         ),
       );
-      triggerToast(`🏷️ 已寄售 ${sellItem.productName} ×${quantity}，寄售价 ¥${priceValue}`);
+      triggerToast(`🏷️ 已寄售 ${sellItem.productName} ×${sellItem.quantity}，寄售价 ¥${priceValue}`);
       closeSell();
     } catch (error) {
       triggerToast(error instanceof Error ? error.message : '寄售失败，请重试');
@@ -153,7 +161,7 @@ export default function WarehousePage() {
   };
 
   return (
-    <MobileShell tab="warehouse">
+    <MobileShell>
       <div className={styles.page}>
         <header className={styles.header}>
           <button className={styles.back} type="button" onClick={() => router.back()}>
@@ -169,7 +177,10 @@ export default function WarehousePage() {
           loading={loading}
           error={error}
           tab={tab}
-          items={filtered}
+          items={visibleItems}
+          totalCount={filtered.length}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
           onReload={() => void loadWarehouse()}
           onOpenSell={openSell}
           onCancelConsign={(item) => {
@@ -189,32 +200,26 @@ export default function WarehousePage() {
               }
             })();
           }}
-          onTrackShipment={() => triggerToast('物流：顺丰 SF1234567890')}
-          onPickup={(item) => {
-            setItems((current) =>
-              current.map((entry) =>
-                entry.id === item.id
-                  ? {
-                      ...entry,
-                      status: 'shipping',
-                    }
-                  : entry,
-              ),
-            );
-            triggerToast('已申请提货 📦');
-          }}
+          onTrackShipment={(item) => setTrackingItem(item)}
+          onPickup={() => triggerToast('提货功能即将上线，敬请期待')}
         />
 
         {sellItem ? (
           <WarehouseConsignModal
             item={sellItem}
             sellPrice={sellPrice}
-            sellQty={sellQty}
             estimate={estimate}
             onClose={closeSell}
             onPriceChange={setSellPrice}
-            onQtyChange={setSellQty}
             onSubmit={() => void submitSell()}
+          />
+        ) : null}
+
+        {trackingItem ? (
+          <WarehouseTrackingModal
+            item={trackingItem}
+            onClose={() => setTrackingItem(null)}
+            onCopyResult={(success) => triggerToast(success ? '✅ 运单号已复制' : '复制失败，请手动选择')}
           />
         ) : null}
 
