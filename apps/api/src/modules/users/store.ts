@@ -213,7 +213,7 @@ function sliceWithCursor(
 export async function getMeActivity(userId: string): Promise<MeActivityResult> {
   const db = getDbPool();
 
-  const [worksRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [worksRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
@@ -245,7 +245,7 @@ export async function getMeActivity(userId: string): Promise<MeActivityResult> {
     [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, ME_PAGE_SIZE + 1],
   );
 
-  const [bookmarkRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [bookmarkRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
@@ -280,7 +280,7 @@ export async function getMeActivity(userId: string): Promise<MeActivityResult> {
     [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, POST_INTERACTION_BOOKMARK, ME_PAGE_SIZE + 1],
   );
 
-  const [likeRows] = await db.execute<mysql.RowDataPacket[]>(
+  const [likeRows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
@@ -339,7 +339,7 @@ export async function getMeWorksPaged(userId: string, cursor: string): Promise<M
   const db = getDbPool();
   const cursorDate = new Date(cursor);
 
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
@@ -377,7 +377,7 @@ export async function getMeBookmarksPaged(userId: string, cursor: string): Promi
   const db = getDbPool();
   const cursorDate = new Date(cursor);
 
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
@@ -417,7 +417,7 @@ export async function getMeLikesPaged(userId: string, cursor: string): Promise<M
   const db = getDbPool();
   const cursorDate = new Date(cursor);
 
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
