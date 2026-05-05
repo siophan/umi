@@ -243,6 +243,7 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         editing={editingItem != null}
         form={brandProductForm}
         initialValues={formInitialValues}
+        recordKey={editingItem ? `edit-${editingItem.id}` : 'create'}
         open={formOpen}
         submitting={submitting}
         onCancel={() => {

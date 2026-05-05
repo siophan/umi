@@ -32,6 +32,10 @@ interface AdminBrandLibraryFormModalProps {
   form: ReturnType<typeof Form.useForm<BrandProductFormValues>>[0];
   /** 控制每次打开时 Form 用什么初值; 切 record / 新增/编辑 切换都靠它驱动 remount */
   initialValues: Partial<BrandProductFormValues>;
+  /** 用作 Form 的 React key，editingItem 变化时强制 Form 重新 mount 让 initialValues 重新注入。
+   *  page 端 useForm 实例长期复用，不加 key 会出现"切换 record 后 store 残留旧值 / 新值不注入"——
+   *  最直观的表现是编辑回显时 SKU InputNumber（价格 / 库存）显示空 */
+  recordKey: string;
   onCancel: () => void;
   onSubmit: () => void;
   open: boolean;
@@ -140,6 +144,7 @@ export function AdminBrandLibraryFormModal({
   editing,
   form,
   initialValues,
+  recordKey,
   onCancel,
   onSubmit,
   open,
@@ -153,6 +158,11 @@ export function AdminBrandLibraryFormModal({
       setActiveTab('basic');
     }
   }, [open]);
+
+  // 用 useWatch 实时拿 multiSpec，避免 Form.Item shouldUpdate 在 mount 时的
+  // 渲染时序问题——shouldUpdate 在初始化时不一定能让 children 拿到最新 store 值，
+  // 表现就是编辑回显 SKU 卡片但 InputNumber 价格/库存空白
+  const multiSpec = !!Form.useWatch('multiSpec', form);
 
   const handleOk = async () => {
     try {
@@ -282,13 +292,8 @@ export function AdminBrandLibraryFormModal({
         />
       </Form.Item>
 
-      <Form.Item shouldUpdate={(prev, next) => prev.multiSpec !== next.multiSpec} noStyle>
-        {({ getFieldValue }) => {
-          const multiSpec: boolean = !!getFieldValue('multiSpec');
-          return (
-            <>
-              {multiSpec ? (
-                <>
+      {multiSpec ? (
+        <>
                   <Form.Item
                     label="规格定义"
                     extra="例如「颜色」可选「红 / 黑」、「尺寸」可选「S / M / L」；每个维度的值用回车 / 逗号添加"
@@ -559,12 +564,8 @@ export function AdminBrandLibraryFormModal({
                       ))}
                     </>
                   )}
-                </Form.List>
-              )}
-            </>
-          );
-        }}
-      </Form.Item>
+        </Form.List>
+      )}
     </>
   );
 
@@ -667,6 +668,7 @@ export function AdminBrandLibraryFormModal({
     >
       <ConfigProvider theme={SEARCH_THEME}>
         <Form
+          key={recordKey}
           form={form}
           layout="vertical"
           preserve={false}
