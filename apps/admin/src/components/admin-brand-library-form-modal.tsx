@@ -30,12 +30,9 @@ interface AdminBrandLibraryFormModalProps {
   categoryIdOptions: Array<{ label: string; value: string }>;
   editing: boolean;
   form: ReturnType<typeof Form.useForm<BrandProductFormValues>>[0];
-  /** 控制每次打开时 Form 用什么初值; 切 record / 新增/编辑 切换都靠它驱动 remount */
+  /** 每次 modal open 时 useEffect 会按这个值 reset+setFieldsValue 兜底，
+   *  解决 useForm 实例长期复用时 initialValues 不重新注入的问题 */
   initialValues: Partial<BrandProductFormValues>;
-  /** 用作 Form 的 React key，editingItem 变化时强制 Form 重新 mount 让 initialValues 重新注入。
-   *  page 端 useForm 实例长期复用，不加 key 会出现"切换 record 后 store 残留旧值 / 新值不注入"——
-   *  最直观的表现是编辑回显时 SKU InputNumber（价格 / 库存）显示空 */
-  recordKey: string;
   onCancel: () => void;
   onSubmit: () => void;
   open: boolean;
@@ -144,7 +141,6 @@ export function AdminBrandLibraryFormModal({
   editing,
   form,
   initialValues,
-  recordKey,
   onCancel,
   onSubmit,
   open,
@@ -152,16 +148,23 @@ export function AdminBrandLibraryFormModal({
 }: AdminBrandLibraryFormModalProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
 
-  // 每次打开 modal 重置回首个 tab，避免上次留在中间 tab 体验割裂
+  // 每次打开 modal 重置回首个 tab，避免上次留在中间 tab 体验割裂；同时强制把 form
+  // store 重置成最新 initialValues。useForm 实例长期持有 store，antd 内部
+  // setInitialValues 在 Form re-mount 时只 deep-merge 不覆盖 store 已有字段，
+  // 所以单靠 initialValues 切换 record 不会重新注入——表现是编辑回显时
+  // SKU InputNumber 等字段显示空。这里 resetFields+setFieldsValue 双保险：
+  // resetFields 清掉旧字段并按 store.initialValues 重置；setFieldsValue 用最新
+  // 的 props.initialValues 兜底覆盖（防止 store.initialValues 没及时更新）
   useEffect(() => {
     if (open) {
       setActiveTab('basic');
+      form.resetFields();
+      form.setFieldsValue(initialValues as Partial<BrandProductFormValues>);
     }
-  }, [open]);
+  }, [open, initialValues, form]);
 
   // 用 useWatch 实时拿 multiSpec，避免 Form.Item shouldUpdate 在 mount 时的
-  // 渲染时序问题——shouldUpdate 在初始化时不一定能让 children 拿到最新 store 值，
-  // 表现就是编辑回显 SKU 卡片但 InputNumber 价格/库存空白
+  // 渲染时序问题——shouldUpdate 在初始化时不一定能让 children 拿到最新 store 值
   const multiSpec = !!Form.useWatch('multiSpec', form);
 
   const handleOk = async () => {
@@ -668,7 +671,6 @@ export function AdminBrandLibraryFormModal({
     >
       <ConfigProvider theme={SEARCH_THEME}>
         <Form
-          key={recordKey}
           form={form}
           layout="vertical"
           preserve={false}
