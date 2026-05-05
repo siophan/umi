@@ -420,35 +420,6 @@
   white-space: nowrap;
 }
 
-.searchQuick {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.searchChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 14px;
-  border: 0;
-  border-radius: 20px;
-  background: #f5f5f8;
-  color: #555;
-  font-size: 13px;
-}
-
-.searchChip i {
-  font-size: 12px;
-}
-
-.searchChipAdd {
-  background: linear-gradient(135deg, #fff3e0, #ffecb3);
-  color: #e65100;
-  font-weight: 600;
-}
-
 .searchResults {
   flex: 1;
   overflow-y: auto;

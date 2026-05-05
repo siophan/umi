@@ -36,7 +36,6 @@ type MeOverlaysProps = {
   onCloseSearch: () => void;
   onCloseShopModal: () => void;
   onChangeSearchValue: (value: string) => void;
-  onPickSearchQuick: (value: string) => void;
   onOpenUser: (uid: string, id: string) => void;
   onOpenEditProfile: () => void;
   onOpenOrders: () => void;
@@ -61,7 +60,6 @@ export function MeOverlays({
   onCloseSearch,
   onCloseShopModal,
   onChangeSearchValue,
-  onPickSearchQuick,
   onOpenUser,
   onOpenEditProfile,
   onOpenOrders,
@@ -143,26 +141,10 @@ export function MeOverlays({
         <div className={styles.searchOverlay} onClick={onCloseSearch} role="presentation">
           <div className={styles.searchPanel} onClick={(event) => event.stopPropagation()} role="presentation">
             <div className={styles.searchBar}>
-              <input autoFocus placeholder="搜索用户 / 添加好友" value={searchValue} onChange={(event) => onChangeSearchValue(event.target.value)} />
+              <input autoFocus placeholder="搜索用户" value={searchValue} onChange={(event) => onChangeSearchValue(event.target.value)} />
               <button className={styles.searchCancel} type="button" onClick={onCloseSearch}>
                 取消
               </button>
-            </div>
-            <div className={styles.searchQuick}>
-              {[
-                { label: '添加好友', icon: 'fa-solid fa-user-plus' },
-                { label: '零食达人', icon: 'fa-solid fa-fire' },
-                { label: '官方店铺', icon: 'fa-solid fa-store' },
-              ].map((item, index) => (
-                <button
-                  className={index === 0 ? `${styles.searchChip} ${styles.searchChipAdd}` : styles.searchChip}
-                  key={item.label}
-                  type="button"
-                  onClick={() => onPickSearchQuick(item.label)}
-                >
-                  <i className={item.icon} /> {item.label}
-                </button>
-              ))}
             </div>
           </div>
           <div className={styles.searchResults} onClick={(event) => event.stopPropagation()} role="presentation">

@@ -311,7 +311,6 @@ export default function MePage() {
           }}
           onCloseShopModal={() => setShopModalOpen(false)}
           onChangeSearchValue={setSearchValue}
-          onPickSearchQuick={setSearchValue}
           onOpenUser={(uid, id) => {
             setSearchOpen(false);
             setSearchValue('');
