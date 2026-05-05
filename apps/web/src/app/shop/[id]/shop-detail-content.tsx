@@ -408,7 +408,19 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
                 const hasGuess = shopGuess.some((guess) => guess.relatedProductId === item.id);
                 const liked = !!cardFav[item.id];
                 return (
-                  <button className={styles.productCard} key={item.id} type="button" onClick={() => onOpenProduct(item.id)}>
+                  <div
+                    className={styles.productCard}
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onOpenProduct(item.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        onOpenProduct(item.id);
+                      }
+                    }}
+                  >
                     <div className={styles.productImg}>
                       {item.img ? <img alt={item.name} src={item.img} /> : null}
                       <span className={`${styles.productBadge} ${hasGuess ? styles.badgeGuess : item.sales > 3000 ? styles.badgeHot : styles.badgeBrand}`}>
@@ -439,7 +451,7 @@ export function ShopDetailContent(props: ShopDetailContentProps) {
                         <span className={styles.productRating}>⭐ {item.rating > 0 ? item.rating.toFixed(1) : '—'}</span>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
               {!activeProducts.length ? (
