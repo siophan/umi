@@ -7,6 +7,8 @@
 > **DB 全量表结构**：`docs/full-schema.md` 是当前数据库 90+ 张表的字段/类型/注释快照（含 `virtual_warehouse / physical_warehouse / warehouse_item_log / fulfillment_order / order / order_status_log / consign_trade` 等所有仓库与订单相关表）。状态码与 type 编码对照表在 `docs/status-codes.md`。需要查 schema 优先看这两个文件，不要直连 mysql。
 >
 > **不跑 typecheck / 不本地起服务 / 不查日志**：改完代码不要主动跑 `pnpm typecheck` / `tsc`（无论单包还是 turbo 全跑）；也不要 `pnpm dev` 起 api/web/admin 进程；也不要 tail/cat `/tmp/*.log` 或类似日志文件去定位运行时错误。编译、运行、日志排查全由用户在本地 IDE / CI 处理；调试运行时报错只能纯靠读代码。
+>
+> **mysql2 `LIMIT ?` 必须走 `db.query`，不能用 `db.execute`**：`db.execute` 是 prepared statement 二进制协议，LIMIT 占位符会被发成错误整数类型，MySQL 抛 `ER_WRONG_ARGUMENTS` 接口直接 500。代码库统一约定：LIMIT/OFFSET 是 `?` 占位符就用 `db.query<...>(...)`；只有 LIMIT 是字面量（如 `LIMIT 1`）才能用 `db.execute`。`apps/api/src/modules/search/*`、`admin/users.ts`、`admin/products-inventory.ts` 等都是这个写法。曾因 6071a99 把 `getMeActivity` 的 `LIMIT 20` 改成 `LIMIT ?` 但仍用 `db.execute`，导致 `/api/users/me/activity` 500、登录后立刻被踢回 `/login`（4dc8e53 修复）。
 
 ---
 
