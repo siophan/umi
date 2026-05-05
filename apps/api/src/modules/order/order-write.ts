@@ -14,6 +14,7 @@ import {
   type CouponRow,
   FULFILLMENT_COMPLETED,
   OPERATOR_ROLE_USER,
+  ORDER_CLOSED,
   ORDER_FULFILLED,
   ORDER_PAID,
   ORDER_PENDING,
@@ -21,6 +22,10 @@ import {
   parseCouponCondition,
   type ProductPurchaseRow,
 } from './order-shared';
+import { releaseOrderFrozenStock } from './order-pay';
+import { closePayOrder } from '../payment/payment-service';
+import { payChannelCodeToKey, PAY_STATUS_CLOSED } from '../payment/payment-shared';
+import { appLogger } from '../../lib/logger';
 
 async function getAddressForUser(connection: mysql.Connection | mysql.PoolConnection, userId: string, addressId: string) {
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
@@ -415,6 +420,102 @@ export async function urgeOrder(userId: string, orderId: string) {
   );
 
   return { success: true as const };
+}
+
+/**
+ * 用户主动取消订单。
+ * 仅当 status=PENDING && pay_status=WAITING 时可取消（已支付待发货走退款流程，由 admin 或售后处理）。
+ * 事务里：UPDATE order 切 CLOSED → 解冻 SKU 库存 → 写 status_log。
+ * 提交后 best-effort 调网关 close（如果有 pay_no），失败仅记 warn，不阻塞用户。
+ */
+export async function cancelOrder(
+  userId: string,
+  orderId: string,
+): Promise<{ success: true; id: ReturnType<typeof toEntityId>; status: 'cancelled' }> {
+  const db = getDbPool();
+  const connection = await db.getConnection();
+
+  let payNoToClose: { payNo: string; channel: 'wechat' | 'alipay' } | null = null;
+
+  try {
+    await connection.beginTransaction();
+
+    const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+      `SELECT id, user_id, status, pay_status, pay_no, pay_channel
+         FROM \`order\` WHERE id = ? FOR UPDATE`,
+      [orderId],
+    );
+    const row = rows[0] as
+      | {
+          id: number | string;
+          user_id: number | string;
+          status: number | string;
+          pay_status: number | string;
+          pay_no: string | null;
+          pay_channel: number | string | null;
+        }
+      | undefined;
+
+    if (!row) {
+      throw new HttpError(404, 'ORDER_NOT_FOUND', '订单不存在');
+    }
+    if (String(row.user_id) !== String(userId)) {
+      throw new HttpError(403, 'ORDER_FORBIDDEN', '无权操作该订单');
+    }
+
+    const status = Number(row.status);
+    if (status === ORDER_CLOSED) {
+      await connection.commit();
+      return { success: true, id: toEntityId(orderId), status: 'cancelled' };
+    }
+    // 仅允许 PENDING（未支付）取消；PAID/FULFILLED/REFUNDED 走退款流程
+    if (status !== ORDER_PENDING) {
+      throw new HttpError(409, 'ORDER_CANCEL_NOT_ALLOWED', '订单当前状态不支持取消');
+    }
+
+    const [updateResult] = await connection.execute<mysql.ResultSetHeader>(
+      `UPDATE \`order\`
+         SET status = ?, pay_status = ?, updated_at = CURRENT_TIMESTAMP(3)
+       WHERE id = ? AND status = ?`,
+      [ORDER_CLOSED, PAY_STATUS_CLOSED, orderId, ORDER_PENDING],
+    );
+    if (updateResult.affectedRows === 0) {
+      throw new HttpError(409, 'ORDER_CANCEL_RACE', '订单状态已变更，请刷新');
+    }
+
+    await connection.execute(
+      `INSERT INTO order_status_log (order_id, from_status, to_status, operator_id, operator_role, note, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`,
+      [orderId, ORDER_PENDING, ORDER_CLOSED, userId, OPERATOR_ROLE_USER, '用户取消订单'],
+    );
+
+    await connection.commit();
+
+    // 库存解冻在事务外，失败也只是 frozen_stock 略偏高，由后台/超时兜底；不影响用户取消落库。
+    await releaseOrderFrozenStock(orderId);
+
+    if (row.pay_no) {
+      const channelKey = payChannelCodeToKey(row.pay_channel);
+      if (channelKey) {
+        payNoToClose = { payNo: row.pay_no, channel: channelKey };
+      }
+    }
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  if (payNoToClose) {
+    try {
+      await closePayOrder(payNoToClose.channel, payNoToClose.payNo);
+    } catch (error) {
+      appLogger.warn({ err: error, orderId }, '[cancelOrder] gateway close failed');
+    }
+  }
+
+  return { success: true, id: toEntityId(orderId), status: 'cancelled' };
 }
 
 export async function reviewOrder(userId: string, orderId: string, productId: string, rating: number, content?: string) {

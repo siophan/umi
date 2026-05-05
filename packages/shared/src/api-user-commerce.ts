@@ -474,6 +474,8 @@ export interface OrderDetailResult extends OrderSummary {
   orderSn: string;
   originalAmount: number;
   couponDiscount: number;
+  payChannel: GuessPayChannel | null;
+  paidAt: string | null;
   address: UserAddressItem | null;
   coupon: CouponListItem | null;
   fulfillment: {
@@ -489,6 +491,16 @@ export interface OrderDetailResult extends OrderSummary {
     shippingFee: number;
     trackingNo: string | null;
     shippedAt: string | null;
+    completedAt: string | null;
+  } | null;
+  refund: {
+    id: EntityId;
+    refundNo: string;
+    reason: string | null;
+    description: string | null;
+    amount: number;
+    status: 'pending' | 'approved' | 'rejected' | 'completed';
+    requestedAt: string;
     completedAt: string | null;
   } | null;
   logs: Array<{

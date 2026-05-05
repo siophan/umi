@@ -39,6 +39,14 @@ export function confirmOrder(orderId: string) {
   return postJson<ConfirmOrderResult, Record<string, never>>(`/api/orders/${orderId}/confirm`, {});
 }
 
+// 取消订单（仅未支付订单）。
+export function cancelOrder(orderId: string) {
+  return postJson<{ success: true; id: string; status: 'cancelled' }, Record<string, never>>(
+    `/api/orders/${orderId}/cancel`,
+    {},
+  );
+}
+
 // 催发货。
 export function urgeOrder(orderId: string) {
   return postJson<{ success: true }, Record<string, never>>(`/api/orders/${orderId}/urge`, {});

@@ -40,6 +40,9 @@ export type OrderRow = {
   original_amount?: number | string | null;
   coupon_discount?: number | string | null;
   status: number | string;
+  pay_status?: number | string | null;
+  pay_channel?: number | string | null;
+  paid_at?: Date | string | null;
   created_at: Date | string;
   item_id: number | string | null;
   product_id: number | string | null;
@@ -81,6 +84,14 @@ export type OrderRow = {
   fulfillment_tracking_no?: string | null;
   fulfillment_shipped_at?: Date | string | null;
   fulfillment_completed_at?: Date | string | null;
+  refund_id?: number | string | null;
+  refund_no?: string | null;
+  refund_reason?: string | null;
+  refund_description?: string | null;
+  refund_amount?: number | string | null;
+  refund_status?: number | string | null;
+  refund_requested_at?: Date | string | null;
+  refund_completed_at?: Date | string | null;
 };
 
 export type OrderLogRow = {
@@ -399,16 +410,45 @@ export function mapOrderDetail(rows: OrderRow[], logs: OrderLogRow[]): OrderDeta
       }))
     : [{ id: toEntityId('1'), status: '订单创建', note: null, createdAt: summary.createdAt }];
 
+  const payChannelCode = row.pay_channel == null ? null : Number(row.pay_channel);
+  const payChannel = payChannelCode === 10 ? 'wechat' : payChannelCode === 20 ? 'alipay' : null;
+
+  const refund = row.refund_id
+    ? {
+        id: toEntityId(row.refund_id),
+        refundNo: row.refund_no || '',
+        reason: row.refund_reason?.trim() || null,
+        description: row.refund_description?.trim() || null,
+        amount: toMoney(row.refund_amount),
+        status: mapRefundStatus(Number(row.refund_status ?? 0)),
+        requestedAt: row.refund_requested_at
+          ? new Date(row.refund_requested_at).toISOString()
+          : summary.createdAt,
+        completedAt: toIso(row.refund_completed_at),
+      }
+    : null;
+
   return {
     ...summary,
     orderSn: row.order_sn || summary.id,
     originalAmount: toMoney(row.original_amount),
     couponDiscount: toMoney(row.coupon_discount),
+    payChannel,
+    paidAt: toIso(row.paid_at),
     address,
     coupon,
     fulfillment,
+    refund,
     logs: statusLogs,
   };
+}
+
+function mapRefundStatus(value: number): NonNullable<OrderDetailResult['refund']>['status'] {
+  // 10=pending, 20=approved, 30=rejected, 40=completed
+  if (value === 20) return 'approved';
+  if (value === 30) return 'rejected';
+  if (value === 40) return 'completed';
+  return 'pending';
 }
 
 export const orderListSql = `
@@ -463,7 +503,18 @@ export const orderListSql = `
     fo.shipping_fee AS fulfillment_shipping_fee,
     fo.tracking_no AS fulfillment_tracking_no,
     fo.shipped_at AS fulfillment_shipped_at,
-    fo.completed_at AS fulfillment_completed_at
+    fo.completed_at AS fulfillment_completed_at,
+    o.pay_status,
+    o.pay_channel,
+    o.paid_at,
+    rf.id AS refund_id,
+    rf.refund_no,
+    rf.reason AS refund_reason,
+    rf.description AS refund_description,
+    rf.refund_amount,
+    rf.status AS refund_status,
+    rf.requested_at AS refund_requested_at,
+    rf.completed_at AS refund_completed_at
   FROM \`order\` o
   LEFT JOIN guess g ON g.id = o.guess_id
   LEFT JOIN order_item oi ON oi.order_id = o.id
@@ -482,6 +533,15 @@ export const orderListSql = `
       GROUP BY order_id
     ) latest_fo ON latest_fo.max_id = current_fo.id
   ) fo ON fo.order_id = o.id
+  LEFT JOIN (
+    SELECT current_rf.*
+    FROM order_refund current_rf
+    INNER JOIN (
+      SELECT order_id, MAX(id) AS max_id
+      FROM order_refund
+      GROUP BY order_id
+    ) latest_rf ON latest_rf.max_id = current_rf.id
+  ) rf ON rf.order_id = o.id
 `;
 
 export function parseCouponCondition(condition: string | null) {

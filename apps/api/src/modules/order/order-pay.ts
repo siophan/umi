@@ -33,7 +33,7 @@ const PAY_EXPIRES_SEC = 5 * 60;
  * 订单关闭/取消时把占用的 brand_product_sku.frozen_stock 释放回去。
  * 仅在 PENDING → CLOSED 切换的事务里幂等执行；其他状态来源（已 PAID 后退款）不调用。
  */
-async function releaseOrderFrozenStock(orderId: number | string): Promise<void> {
+export async function releaseOrderFrozenStock(orderId: number | string): Promise<void> {
   const db = getDbPool();
   await db.execute(
     `UPDATE brand_product_sku bps

@@ -4,40 +4,137 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { OrderDetailResult } from '@umi/shared';
 
-import { confirmOrder, fetchOrderDetail } from '../../lib/api/orders';
+import { cancelOrder, confirmOrder, fetchOrderDetail } from '../../lib/api/orders';
 import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
-/**
- * 生成订单详情页顶部状态横幅。
- * 这里把真实订单状态收口成用户端固定的文案、说明和配色类。
- */
-function getStatusMeta(order: OrderDetailResult | null) {
-  if (!order) {
-    return { text: '', desc: '', cls: 'shipped' };
-  }
-  if (order.status === 'completed' || order.status === 'delivered') {
-    return { text: '已完成', desc: '交易完成，感谢您的购买', cls: 'done' };
-  }
-  if (order.status === 'refunded') {
-    return { text: '已退款', desc: '订单已退款完成', cls: 'refund' };
-  }
-  if (order.status === 'shipping') {
-    return { text: '已发货', desc: '包裹正在运送中', cls: 'shipped' };
-  }
-  if (order.status === 'paid') {
-    return { text: '待发货', desc: '商家正在准备商品', cls: 'shipped' };
-  }
-  if (order.status === 'cancelled') {
-    return { text: '已取消', desc: '订单已关闭', cls: 'refund' };
-  }
-  return { text: '待支付', desc: '等待支付完成', cls: 'shipped' };
+type StatusBucket = 'pending' | 'shipped' | 'done' | 'refund' | 'cancelled';
+
+function bucketOf(order: OrderDetailResult | null): StatusBucket {
+  if (!order) return 'pending';
+  if (order.status === 'completed' || order.status === 'delivered') return 'done';
+  if (order.status === 'refunded' || order.status === 'refund_pending') return 'refund';
+  if (order.status === 'cancelled') return 'cancelled';
+  if (order.status === 'shipping') return 'shipped';
+  return 'pending';
 }
 
-/**
- * 订单详情页主体。
- * 数据来自真实订单详情接口，物流、地址、商品、日志都围绕同一条订单链展示。
- */
+function getStatusMeta(order: OrderDetailResult | null) {
+  const bucket = bucketOf(order);
+  if (bucket === 'done') {
+    return { text: '已完成', desc: '交易完成，感谢您的购买', cls: 'done', icon: '✅', bgIcon: 'fa-circle-check' };
+  }
+  if (bucket === 'refund') {
+    const text = order?.status === 'refund_pending' ? '退款中' : '退款成功';
+    const desc = order?.status === 'refund_pending' ? '退款申请处理中' : '退款已处理';
+    return { text, desc, cls: 'refund', icon: '💰', bgIcon: 'fa-rotate-left' };
+  }
+  if (bucket === 'cancelled') {
+    return { text: '已取消', desc: '订单已关闭', cls: 'refund', icon: '🚫', bgIcon: 'fa-circle-xmark' };
+  }
+  if (bucket === 'shipped') {
+    return { text: '已发货', desc: '包裹正在运送中', cls: 'shipped', icon: '🚚', bgIcon: 'fa-truck-fast' };
+  }
+  // pending bucket — paid 待发货 / pending 待支付
+  if (order?.status === 'paid') {
+    return { text: '待发货', desc: '商家正在准备发货', cls: 'pending', icon: '📦', bgIcon: 'fa-box' };
+  }
+  return { text: '待支付', desc: '请尽快完成支付', cls: 'pending', icon: '📦', bgIcon: 'fa-box' };
+}
+
+type TimelineStep = { key: string; text: string; time: string; done: boolean; active: boolean };
+
+function fmtTime(value: string | null | undefined) {
+  if (!value) return '';
+  return value.slice(0, 16).replace('T', ' ');
+}
+
+function buildTimeline(order: OrderDetailResult): TimelineStep[] {
+  const bucket = bucketOf(order);
+  const createdAt = fmtTime(order.createdAt);
+  const paidAt = fmtTime(order.paidAt);
+  const shippedAt = fmtTime(order.fulfillment?.shippedAt);
+  const doneAt = fmtTime(order.fulfillment?.completedAt);
+  const refundAt = fmtTime(order.refund?.completedAt) || fmtTime(order.refund?.requestedAt);
+
+  if (bucket === 'refund') {
+    return [
+      { key: 'create', text: '提交订单', time: createdAt, done: true, active: false },
+      { key: 'pay', text: '支付成功', time: paidAt || createdAt, done: true, active: false },
+      { key: 'apply', text: '申请退款', time: fmtTime(order.refund?.requestedAt), done: true, active: false },
+      {
+        key: 'refunded',
+        text: order.status === 'refund_pending' ? '退款处理中' : '退款成功',
+        time: refundAt,
+        done: order.status === 'refunded',
+        active: order.status === 'refund_pending',
+      },
+    ];
+  }
+
+  if (bucket === 'cancelled') {
+    return [
+      { key: 'create', text: '提交订单', time: createdAt, done: true, active: false },
+      { key: 'cancel', text: '订单关闭', time: '', done: true, active: true },
+    ];
+  }
+
+  const paid = bucket === 'pending' ? order.status === 'paid' : true;
+  const shipped = bucket === 'shipped' || bucket === 'done';
+  const done = bucket === 'done';
+
+  return [
+    { key: 'create', text: '提交订单', time: createdAt, done: true, active: false },
+    {
+      key: 'pay',
+      text: '支付成功',
+      time: paidAt,
+      done: paid,
+      active: !paid,
+    },
+    {
+      key: 'ship',
+      text: '商家发货',
+      time: shippedAt,
+      done: shipped,
+      active: paid && !shipped && !done,
+    },
+    {
+      key: 'receive',
+      text: '确认收货',
+      time: done ? doneAt : '',
+      done: done,
+      active: shipped && !done,
+    },
+    { key: 'finish', text: '交易完成', time: done ? doneAt : '', done: done, active: false },
+  ];
+}
+
+function payChannelLabel(channel: OrderDetailResult['payChannel'], orderType?: string | null) {
+  if (orderType === 'guess') return '🎯 竞猜获奖(免费)';
+  if (channel === 'wechat') return '💚 微信支付';
+  if (channel === 'alipay') return '🔵 支付宝';
+  return '—';
+}
+
+function refundStatusText(status: NonNullable<OrderDetailResult['refund']>['status']) {
+  if (status === 'completed') return '已完成';
+  if (status === 'approved') return '已通过';
+  if (status === 'rejected') return '已驳回';
+  return '处理中';
+}
+
+function copyToClipboard(text: string, onDone: (msg: string) => void) {
+  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(
+      () => onDone(`✅ 已复制: ${text}`),
+      () => onDone(`已复制: ${text}`),
+    );
+    return;
+  }
+  onDone(`已复制: ${text}`);
+}
+
 function OrderDetailPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,10 +152,6 @@ function OrderDetailPageInner() {
   useEffect(() => {
     let ignore = false;
 
-    /**
-     * 加载订单详情。
-     * 通过 ignore 避免路由切换后旧请求回写页面状态。
-     */
     async function load() {
       if (!hasAuthToken()) {
         setLoading(false);
@@ -93,9 +186,7 @@ function OrderDetailPageInner() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!toast) {
-      return;
-    }
+    if (!toast) return;
     const timer = window.setTimeout(() => setToast(''), 1800);
     return () => window.clearTimeout(timer);
   }, [toast]);
@@ -105,11 +196,10 @@ function OrderDetailPageInner() {
   const addressText = order?.address
     ? `${order.address.province}${order.address.city}${order.address.district}${order.address.detail}`
     : '';
+  const isFreeOrder = (firstItem?.unitPrice ?? 0) === 0 || order?.orderType === 'guess';
   const total = order ? `¥${order.amount.toFixed(2)}` : '¥0.00';
-  const timeline = useMemo(
-    () => (order?.logs.length ? order.logs : []),
-    [order],
-  );
+  const timeline = useMemo(() => (order ? buildTimeline(order) : []), [order]);
+  const bucket = bucketOf(order);
 
   if (loading) {
     return <div className={styles.page} />;
@@ -132,6 +222,46 @@ function OrderDetailPageInner() {
     );
   }
 
+  async function handleConfirmReceive() {
+    if (!order) return;
+    try {
+      await confirmOrder(order.id);
+      setOrder((current) => (current ? { ...current, status: 'completed' } : current));
+      setToast('✅ 已确认收货');
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : '确认收货失败');
+    }
+  }
+
+  async function handleCancelOrder() {
+    if (!order) return;
+    if (typeof window !== 'undefined' && !window.confirm('确认取消该订单？取消后不可恢复。')) {
+      return;
+    }
+    try {
+      await cancelOrder(order.id);
+      setOrder((current) => (current ? { ...current, status: 'cancelled' } : current));
+      setToast('✅ 订单已取消');
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : '取消订单失败');
+    }
+  }
+
+  function handleReview() {
+    if (!order || !firstItem?.productId) return;
+    router.push(
+      `/review?orderId=${encodeURIComponent(order.id)}&productId=${encodeURIComponent(firstItem.productId)}`,
+    );
+  }
+
+  function handleViewLogistics() {
+    if (!order?.fulfillment) {
+      setToast('暂无物流信息');
+      return;
+    }
+    setLogisticsOpen(true);
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -143,21 +273,22 @@ function OrderDetailPageInner() {
           <button className={styles.headerBtn} type="button" onClick={() => setToast('客服')}>
             <i className="fa-solid fa-headset" />
           </button>
+          <button className={styles.headerBtn} type="button" onClick={() => setToast('更多操作')}>
+            <i className="fa-solid fa-ellipsis" />
+          </button>
         </div>
       </header>
 
       <section className={`${styles.banner} ${styles[meta.cls]}`}>
         <div className={styles.bannerMain}>
-          <div className={styles.bannerIcon}>
-            <i className="fa-solid fa-truck-fast" />
-          </div>
+          <div className={styles.bannerIcon}>{meta.icon}</div>
           <div>
             <div className={styles.bannerTitle}>{meta.text}</div>
-            <div className={styles.bannerDesc}>{meta.desc}</div>
           </div>
         </div>
+        <div className={styles.bannerDesc}>{meta.desc}</div>
         <div className={styles.bannerBg}>
-          <i className="fa-solid fa-truck-fast" />
+          <i className={`fa-solid ${meta.bgIcon}`} />
         </div>
       </section>
 
@@ -167,16 +298,18 @@ function OrderDetailPageInner() {
           订单进度
         </div>
         <div className={styles.timeline}>
-          {timeline.map((item, index) => (
-            <div key={item.id} className={`${styles.timelineItem} ${styles.done} ${index === timeline.length - 1 ? styles.active : ''}`}>
-              <div className={styles.dot}>
-                <span>•</span>
+          {timeline.map((step) => {
+            const cls = step.active ? styles.active : step.done ? styles.done : '';
+            return (
+              <div key={step.key} className={`${styles.timelineItem} ${cls}`}>
+                <div className={styles.dot}>
+                  <i className={`fa-solid ${step.done || step.active ? 'fa-check' : 'fa-circle'}`} />
+                </div>
+                <div className={styles.timelineText}>{step.text}</div>
+                {step.time ? <div className={styles.timelineTime}>{step.time}</div> : null}
               </div>
-              <div className={styles.timelineText}>{item.status}</div>
-              <div className={styles.timelineTime}>{item.createdAt.slice(0, 16).replace('T', ' ')}</div>
-              {item.note ? <div className={styles.timelineDetail}>{item.note}</div> : null}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -186,7 +319,7 @@ function OrderDetailPageInner() {
             <i className="fa-solid fa-truck-fast" />
             物流信息
           </div>
-          <button className={styles.express} type="button" onClick={() => setLogisticsOpen(true)}>
+          <button className={styles.express} type="button" onClick={handleViewLogistics}>
             <div className={styles.expressIcon}>
               <i className="fa-solid fa-truck-fast" />
             </div>
@@ -196,7 +329,11 @@ function OrderDetailPageInner() {
               </div>
               <div className={styles.expressStatus}>
                 <i className="fa-solid fa-circle" />
-                {order.fulfillment.status === 'shipping' ? '物流运输中' : order.fulfillment.status === 'completed' ? '已签收' : '待发货'}
+                {order.fulfillment.status === 'shipping'
+                  ? '物流运输中'
+                  : order.fulfillment.status === 'completed'
+                    ? '已签收'
+                    : '待发货'}
               </div>
               <div className={styles.expressNo}>收件人: {order.fulfillment.receiverName}</div>
             </div>
@@ -244,13 +381,24 @@ function OrderDetailPageInner() {
           <img alt={firstItem.productName} src={firstItem.productImg} />
           <div className={styles.productInfo}>
             <div className={styles.productName}>{firstItem.productName}</div>
-            <div className={styles.productSpec}>{firstItem.skuText || '默认规格'}</div>
+            <div className={styles.productSpec}>
+              {firstItem.skuText || '默认规格'}
+              {firstItem.quantity > 1 ? ` × ${firstItem.quantity}` : ''}
+            </div>
             <div className={styles.productBottom}>
-              <span className={styles.productType}>{order.orderType === 'guess' ? '🎯 竞猜奖励' : '🛒 商城购买'}</span>
-              <span className={styles.productPrice}>
-                <small>¥</small>
-                {firstItem.unitPrice.toFixed(1)}
+              <span
+                className={`${styles.productType} ${order.orderType === 'guess' ? styles.productTypePrize : styles.productTypeBuy}`}
+              >
+                {order.orderType === 'guess' ? '🎯 竞猜奖励' : '🛒 商城购买'}
               </span>
+              {isFreeOrder ? (
+                <span className={`${styles.productPrice} ${styles.free}`}>🎁 免费</span>
+              ) : (
+                <span className={styles.productPrice}>
+                  <small>¥</small>
+                  {firstItem.unitPrice.toFixed(1)}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -268,6 +416,37 @@ function OrderDetailPageInner() {
           </button>
         ) : null}
       </section>
+
+      {order.refund ? (
+        <section className={styles.card}>
+          <div className={styles.cardTitle}>
+            <i className="fa-solid fa-rotate-left" />
+            退款信息
+          </div>
+          <div className={styles.refundInfo}>
+            <div className={styles.refundRow}>
+              <span className={styles.refundLabel}>退款原因</span>
+              <span className={styles.refundValue}>{order.refund.reason || '-'}</span>
+            </div>
+            <div className={styles.refundRow}>
+              <span className={styles.refundLabel}>退款金额</span>
+              <span className={`${styles.refundValue} ${styles.refundAmount}`}>
+                ¥{order.refund.amount.toFixed(2)}
+              </span>
+            </div>
+            <div className={styles.refundRow}>
+              <span className={styles.refundLabel}>退款状态</span>
+              <span className={styles.refundValue}>{refundStatusText(order.refund.status)}</span>
+            </div>
+            {order.refund.completedAt ? (
+              <div className={styles.refundRow}>
+                <span className={styles.refundLabel}>退款时间</span>
+                <span className={styles.refundValue}>{fmtTime(order.refund.completedAt)}</span>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className={styles.card}>
         <div className={styles.cardTitle}>
@@ -294,19 +473,60 @@ function OrderDetailPageInner() {
           <span className={styles.priceLabel}>商品金额</span>
           <span className={styles.priceValue}>¥{order.originalAmount.toFixed(2)}</span>
         </div>
-        <div className={styles.priceRow}>
-          <span className={styles.priceLabel}>优惠金额</span>
-          <span className={`${styles.priceValue} ${styles.discount}`}>-¥{order.couponDiscount.toFixed(2)}</span>
-        </div>
+        {order.couponDiscount > 0 ? (
+          <div className={styles.priceRow}>
+            <span className={styles.priceLabel}>优惠金额</span>
+            <span className={`${styles.priceValue} ${styles.discount}`}>-¥{order.couponDiscount.toFixed(2)}</span>
+          </div>
+        ) : null}
         <div className={styles.priceRow}>
           <span className={styles.priceLabel}>运费</span>
           <span className={`${styles.priceValue} ${styles.freeValue}`}>包邮</span>
         </div>
+        <div className={styles.priceRow}>
+          <span className={styles.priceLabel}>支付方式</span>
+          <span className={styles.priceValue}>{payChannelLabel(order.payChannel, order.orderType)}</span>
+        </div>
         <div className={styles.priceTotal}>
-          <span>实付款：</span>
-          <strong>{total}</strong>
+          {isFreeOrder ? (
+            <>
+              <span>实付款：</span>
+              <strong className={styles.free}>🎁 免费</strong>
+            </>
+          ) : bucket === 'refund' ? (
+            <>
+              <span>实付款：</span>
+              <strong className={styles.priceTotalStrike}>{total}</strong>
+              <strong className={styles.priceTotalRefunded}>已退款</strong>
+            </>
+          ) : (
+            <>
+              <span>实付款：</span>
+              <strong>{total}</strong>
+            </>
+          )}
         </div>
       </section>
+
+      {bucket === 'done' ? (
+        <section className={styles.card}>
+          <div className={styles.cardTitle}>
+            <i className="fa-solid fa-star" />
+            商品评价
+          </div>
+          <button className={styles.rating} type="button" onClick={handleReview}>
+            <div className={styles.ratingStars}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <i key={i} className="fa-regular fa-star" />
+              ))}
+            </div>
+            <div className={styles.ratingText}>去评价，赢积分</div>
+            <div className={styles.ratingArrow}>
+              <i className="fa-solid fa-chevron-right" />
+            </div>
+          </button>
+        </section>
+      ) : null}
 
       <section className={styles.card}>
         <div className={styles.cardTitle}>
@@ -315,19 +535,40 @@ function OrderDetailPageInner() {
         </div>
         <div className={styles.infoRow}>
           <span className={styles.infoLabel}>订单编号</span>
-          <span className={`${styles.infoValue} ${styles.copy}`} onClick={() => setToast(`已复制: ${order.orderSn}`)}>
+          <span
+            className={`${styles.infoValue} ${styles.copy}`}
+            onClick={() => copyToClipboard(order.orderSn, setToast)}
+          >
             {order.orderSn}
             <i className="fa-regular fa-copy" />
           </span>
         </div>
         <div className={styles.infoRow}>
           <span className={styles.infoLabel}>下单时间</span>
-          <span className={styles.infoValue}>{order.createdAt.slice(0, 16).replace('T', ' ')}</span>
+          <span className={styles.infoValue}>{fmtTime(order.createdAt)}</span>
         </div>
+        {order.paidAt ? (
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>支付时间</span>
+            <span className={styles.infoValue}>{fmtTime(order.paidAt)}</span>
+          </div>
+        ) : null}
         {order.fulfillment?.shippedAt ? (
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>发货时间</span>
-            <span className={styles.infoValue}>{order.fulfillment.shippedAt.slice(0, 16).replace('T', ' ')}</span>
+            <span className={styles.infoValue}>{fmtTime(order.fulfillment.shippedAt)}</span>
+          </div>
+        ) : null}
+        {order.fulfillment?.completedAt ? (
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>完成时间</span>
+            <span className={styles.infoValue}>{fmtTime(order.fulfillment.completedAt)}</span>
+          </div>
+        ) : null}
+        {order.refund?.completedAt ? (
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>退款时间</span>
+            <span className={styles.infoValue}>{fmtTime(order.refund.completedAt)}</span>
           </div>
         ) : null}
       </section>
@@ -343,32 +584,35 @@ function OrderDetailPageInner() {
             <span>店铺</span>
           </button>
         </div>
-        <button className={styles.btnOutline} type="button" onClick={() => setToast(order.fulfillment ? '查看物流' : '订单处理中')}>
-          {order.fulfillment ? '查看物流' : '订单处理中'}
-        </button>
-        <button
-          className={styles.btnPrimary}
-          type="button"
-          onClick={async () => {
-            if (order.status === 'shipping' || order.status === 'delivered') {
-              try {
-                await confirmOrder(order.id);
-                setOrder((current) => (current ? { ...current, status: 'completed' } : current));
-                setToast('✅ 已确认收货');
-              } catch (error) {
-                setToast(error instanceof Error ? error.message : '确认收货失败');
-              }
-              return;
-            }
-            if (order.status === 'completed' && firstItem?.productId) {
-              router.push(`/review?orderId=${encodeURIComponent(order.id)}&productId=${encodeURIComponent(firstItem.productId)}`);
-              return;
-            }
-            setToast('订单处理中');
-          }}
-        >
-          {order.status === 'shipping' || order.status === 'delivered' ? '确认收货' : order.status === 'completed' ? '评价' : '提醒发货'}
-        </button>
+        {bucket === 'pending' && order.status === 'pending' ? (
+          <button className={styles.btnPrimary} type="button" onClick={handleCancelOrder}>
+            取消订单
+          </button>
+        ) : null}
+        {bucket === 'pending' && order.status === 'paid' ? (
+          <button
+            className={styles.btnPrimary}
+            type="button"
+            onClick={() => setToast('✅ 已提醒卖家尽快发货')}
+          >
+            催发货
+          </button>
+        ) : null}
+        {bucket === 'shipped' ? (
+          <>
+            <button className={styles.btnOutline} type="button" onClick={handleViewLogistics}>
+              查看物流
+            </button>
+            <button className={styles.btnPrimary} type="button" onClick={handleConfirmReceive}>
+              确认收货
+            </button>
+          </>
+        ) : null}
+        {bucket === 'done' ? (
+          <button className={styles.btnPrimary} type="button" onClick={handleReview}>
+            评价
+          </button>
+        ) : null}
       </footer>
 
       {logisticsOpen && order.fulfillment ? (
@@ -382,20 +626,28 @@ function OrderDetailPageInner() {
                 <div className={styles.logisticsNo}>{order.fulfillment.trackingNo || '待分配运单号'}</div>
               </div>
               {order.fulfillment.trackingNo ? (
-                <button type="button" className={styles.copyBtn} onClick={() => setToast(`已复制: ${order.fulfillment?.trackingNo}`)}>
+                <button
+                  type="button"
+                  className={styles.copyBtn}
+                  onClick={() => copyToClipboard(order.fulfillment?.trackingNo || '', setToast)}
+                >
                   <i className="fa-regular fa-copy" />
                   复制
                 </button>
               ) : null}
             </div>
-            {timeline.map((log, index) => (
+            {order.logs.map((log, index) => (
               <div key={log.id} className={styles.logisticsItem}>
-                <div className={`${styles.logisticsDot} ${index === timeline.length - 1 ? styles.logisticsActive : styles.logisticsDone}`}>
-                  <i className={`fa-solid ${index === timeline.length - 1 ? 'fa-location-dot' : 'fa-check'}`} />
+                <div
+                  className={`${styles.logisticsDot} ${index === order.logs.length - 1 ? styles.logisticsActive : styles.logisticsDone}`}
+                >
+                  <i
+                    className={`fa-solid ${index === order.logs.length - 1 ? 'fa-location-dot' : 'fa-check'}`}
+                  />
                 </div>
                 <div>
                   <div className={styles.logisticsText}>{log.status}</div>
-                  <div className={styles.logisticsTime}>{log.createdAt.slice(0, 16).replace('T', ' ')}</div>
+                  <div className={styles.logisticsTime}>{fmtTime(log.createdAt)}</div>
                 </div>
               </div>
             ))}

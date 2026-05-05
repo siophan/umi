@@ -8,7 +8,7 @@ import { ok } from '../../lib/http';
 import { requireAdmin } from '../admin/auth';
 import { fetchAdminOrderOverview, fetchOrderDetail, fetchUserOrders } from './order-read';
 import { createOrderPayment, queryOrderPayStatus } from './order-pay';
-import { confirmOrder, createPendingOrder, urgeOrder, reviewOrder } from './order-write';
+import { cancelOrder, confirmOrder, createPendingOrder, urgeOrder, reviewOrder } from './order-write';
 
 function getClientIp(request: { ip?: string; socket?: { remoteAddress?: string }; headers: Record<string, unknown> }): string {
   const xff = request.headers['x-forwarded-for'];
@@ -101,6 +101,22 @@ orderRouter.post(
     async (request, response) => {
       const user = getRequestUser(request);
       ok(response, await confirmOrder(user.id, String(request.params.id)));
+    },
+  ),
+);
+
+orderRouter.post(
+  '/:id/cancel',
+  requireUser,
+  withErrorBoundary(
+    {
+      status: 400,
+      code: 'ORDER_CANCEL_FAILED',
+      message: '取消订单失败',
+    },
+    async (request, response) => {
+      const user = getRequestUser(request);
+      ok(response, await cancelOrder(user.id, String(request.params.id)));
     },
   ),
 );
