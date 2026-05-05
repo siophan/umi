@@ -9,11 +9,6 @@ import { clearAuthToken } from '../../lib/api/shared';
 import { fetchMeActivity, fetchMeSummary, searchUsers } from '../../lib/api/users';
 import { MobileShell } from '../../components/mobile-shell';
 import { MeActivitySections } from './me-activity-sections';
-import {
-  buildSearchItemDesc,
-  getSearchRelationLabel,
-  type ActivityPost,
-} from './me-helpers';
 import { MeOverlays } from './me-overlays';
 import { MeProfileSummary } from './me-profile-summary';
 import styles from './page.module.css';
@@ -94,11 +89,19 @@ export default function MePage() {
   );
   const stats = useMemo(
     () => [
-      { value: currentUser.following, label: '关注' },
-      { value: currentUser.followers, label: '粉丝' },
+      {
+        value: currentUser.following,
+        label: '关注',
+        onClick: () => router.push('/friends?tab=following'),
+      },
+      {
+        value: currentUser.followers,
+        label: '粉丝',
+        onClick: () => router.push('/friends?tab=fans'),
+      },
       { value: likeTotal, label: '获赞' },
     ],
-    [currentUser.followers, currentUser.following, likeTotal],
+    [currentUser.followers, currentUser.following, likeTotal, router],
   );
 
   useEffect(() => {
@@ -287,7 +290,7 @@ export default function MePage() {
           currentUser={{ avatar: currentUser.avatar, name: currentUser.name }}
           activity={activity}
           onChangeTab={setTab}
-          onSharePost={() => setToast('分享动态')}
+          onOpenPost={(postId) => router.push(`/post/${encodeURIComponent(postId)}`)}
           onOpenCommunity={() => router.push('/community')}
         />
 
@@ -318,7 +321,7 @@ export default function MePage() {
           onOpenOrders={() => router.push('/orders')}
           onOpenAddress={() => router.push('/address')}
           onOpenCoupons={() => router.push('/coupons')}
-          onShowToast={setToast}
+          onOpenNotifications={() => router.push('/notifications')}
           onLogout={() => void handleLogout()}
           onSubmitShopApply={() => {
             setShopModalOpen(false);

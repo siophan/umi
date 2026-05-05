@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { hasAuthToken } from '../../lib/api/shared';
@@ -14,7 +14,7 @@ import styles from './page.module.css';
  * 好友页主组件。
  * 社交关系、热门竞猜和竞猜历史来自不同接口，这里按板块独立容错，避免一处失败把整页打空。
  */
-export default function FriendsPage() {
+function FriendsPageInner() {
   const router = useRouter();
 
   useEffect(() => {
@@ -125,5 +125,13 @@ export default function FriendsPage() {
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}
     </main>
+  );
+}
+
+export default function FriendsPage() {
+  return (
+    <Suspense fallback={<main className={styles.page} />}>
+      <FriendsPageInner />
+    </Suspense>
   );
 }

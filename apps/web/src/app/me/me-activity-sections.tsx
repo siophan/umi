@@ -16,17 +16,34 @@ type MeActivitySectionsProps = {
     likes: ActivityPost[];
   };
   onChangeTab: (tab: 'works' | 'favs' | 'likes') => void;
-  onSharePost: () => void;
+  onOpenPost: (postId: string) => void;
   onOpenCommunity: () => void;
 };
 
-function renderPostCard(post: ActivityPost, currentUser: { avatar: string; name: string }, onSharePost: () => void, liked = false) {
+function renderPostCard(
+  post: ActivityPost,
+  currentUser: { avatar: string; name: string },
+  onOpenPost: (postId: string) => void,
+  liked = false,
+) {
   const imageClass =
     post.images.length >= 3 ? styles.cols3 : post.images.length === 2 ? styles.cols2 : styles.cols1;
   const tagClass = post.tag ? tagClassMap[post.tag] ?? '' : '';
 
   return (
-    <article className={styles.postCard} key={post.id}>
+    <article
+      className={styles.postCard}
+      key={post.id}
+      onClick={() => onOpenPost(post.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenPost(post.id);
+        }
+      }}
+    >
       <div className={styles.postAuthor}>
         <img src={post.authorAvatar || currentUser.avatar} alt={post.authorName || currentUser.name} />
         <div className={styles.postAuthorInfo}>
@@ -55,10 +72,6 @@ function renderPostCard(post: ActivityPost, currentUser: { avatar: string; name:
           <i className="fa-regular fa-comment" />
           {formatCount(post.comments)}
         </span>
-        <button className={`${styles.postAction} ${styles.postShare}`} type="button" onClick={onSharePost}>
-          <i className="fa-solid fa-share-nodes" />
-          分享
-        </button>
       </div>
     </article>
   );
@@ -69,7 +82,7 @@ export function MeActivitySections({
   currentUser,
   activity,
   onChangeTab,
-  onSharePost,
+  onOpenPost,
   onOpenCommunity,
 }: MeActivitySectionsProps) {
   return (
@@ -89,7 +102,7 @@ export function MeActivitySections({
       <section className={tab === 'works' ? styles.panelActive : styles.panel}>
         <div className={styles.sectionTitle}><i className="fa-solid fa-pen-to-square" /> 我发布的猜友圈</div>
         <div className={styles.postList}>
-          {activity.works.length > 0 ? activity.works.map((post) => renderPostCard(post, currentUser, onSharePost)) : (
+          {activity.works.length > 0 ? activity.works.map((post) => renderPostCard(post, currentUser, onOpenPost)) : (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>✏️</div>
               <div className={styles.emptyTitle}>还没有发布过猜友圈</div>
@@ -106,7 +119,7 @@ export function MeActivitySections({
       <section className={tab === 'favs' ? styles.panelActive : styles.panel}>
         <div className={styles.sectionTitle}><i className="fa-solid fa-bookmark" /> 我收藏的猜友圈</div>
         <div className={styles.postList}>
-          {activity.bookmarks.length > 0 ? activity.bookmarks.map((post) => renderPostCard(post, currentUser, onSharePost)) : (
+          {activity.bookmarks.length > 0 ? activity.bookmarks.map((post) => renderPostCard(post, currentUser, onOpenPost)) : (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>⭐</div>
               <div className={styles.emptyTitle}>还没有收藏过内容</div>
@@ -123,7 +136,7 @@ export function MeActivitySections({
       <section className={tab === 'likes' ? styles.panelActive : styles.panel}>
         <div className={styles.sectionTitle}><i className="fa-solid fa-heart" /> 我点赞的猜友圈</div>
         <div className={styles.postList}>
-          {activity.likes.length > 0 ? activity.likes.map((post) => renderPostCard(post, currentUser, onSharePost, true)) : (
+          {activity.likes.length > 0 ? activity.likes.map((post) => renderPostCard(post, currentUser, onOpenPost, true)) : (
             <div className={styles.empty}>
               <div className={styles.emptyIcon}>❤️</div>
               <div className={styles.emptyTitle}>还没有点赞过帖子</div>

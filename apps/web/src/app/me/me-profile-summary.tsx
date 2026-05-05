@@ -22,7 +22,7 @@ type CurrentUser = {
 
 type MeProfileSummaryProps = {
   currentUser: CurrentUser;
-  stats: Array<{ value: number; label: string }>;
+  stats: Array<{ value: number; label: string; onClick?: () => void }>;
   unreadMessageCount: number;
   warehouseBadge: number;
   orderBadge: number;
@@ -93,7 +93,13 @@ export function MeProfileSummary({
 
         <div className={styles.statsBar}>
           {stats.map((item) => (
-            <button className={styles.statItem} key={item.label} type="button">
+            <button
+              className={styles.statItem}
+              key={item.label}
+              type="button"
+              onClick={item.onClick}
+              disabled={!item.onClick}
+            >
               <strong>{item.value}</strong>
               <span>{item.label}</span>
             </button>

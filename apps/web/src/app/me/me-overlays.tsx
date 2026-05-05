@@ -42,7 +42,7 @@ type MeOverlaysProps = {
   onOpenOrders: () => void;
   onOpenAddress: () => void;
   onOpenCoupons: () => void;
-  onShowToast: (message: string) => void;
+  onOpenNotifications: () => void;
   onLogout: () => void;
   onSubmitShopApply: () => void;
 };
@@ -67,7 +67,7 @@ export function MeOverlays({
   onOpenOrders,
   onOpenAddress,
   onOpenCoupons,
-  onShowToast,
+  onOpenNotifications,
   onLogout,
   onSubmitShopApply,
 }: MeOverlaysProps) {
@@ -83,14 +83,14 @@ export function MeOverlays({
               </button>
             </div>
 
-            <div className={styles.settingsUser}>
+            <button className={styles.settingsUser} type="button" onClick={onOpenEditProfile}>
               <img className={styles.settingsAvatar} src={currentUser.avatar} alt={currentUser.name} />
               <div className={styles.settingsUserInfo}>
                 <div className={styles.settingsUserName}>{currentUser.name}</div>
                 <div className={styles.settingsUserMeta}>{currentUser.phone}</div>
               </div>
               <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
-            </div>
+            </button>
 
             <div className={styles.settingsBody}>
               <div className={styles.settingsGroup}>
@@ -116,44 +116,17 @@ export function MeOverlays({
                   <span className={styles.settingsItemVal}>{summary.availableCouponCount} 张</span>
                   <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                 </button>
-              </div>
-
-              <div className={styles.settingsGroup}>
-                <div className={styles.settingsGroupTitle}>偏好设置</div>
-                <button className={styles.settingsItem} type="button" onClick={() => onShowToast('账号偏好同步尚未接入')}>
-                  <span className={`${styles.settingsItemIcon} ${styles.iconPurple}`}><i className="fa-solid fa-moon" /></span>
-                  <span className={styles.settingsItemText}>深色模式</span>
-                  <span className={styles.settingsItemVal}>未接入</span>
-                  <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
-                </button>
-                <button className={styles.settingsItem} type="button" onClick={() => onShowToast('消息偏好同步尚未接入')}>
+                <button className={styles.settingsItem} type="button" onClick={onOpenNotifications}>
                   <span className={`${styles.settingsItemIcon} ${styles.iconCyan}`}><i className="fa-solid fa-bell" /></span>
                   <span className={styles.settingsItemText}>消息通知</span>
-                  <span className={styles.settingsItemVal}>未接入</span>
                   <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                 </button>
               </div>
 
               <div className={styles.settingsGroup}>
-                <div className={styles.settingsGroupTitle}>支持与帮助</div>
-                <button className={styles.settingsItem} type="button" onClick={() => onShowToast('关于Umi v2.6.0')}>
-                  <span className={`${styles.settingsItemIcon} ${styles.iconSlate}`}><i className="fa-solid fa-circle-info" /></span>
-                  <span className={styles.settingsItemText}>关于Umi</span>
-                  <span className={styles.settingsItemVal}>v2.6.0</span>
-                  <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
-                </button>
                 <button className={styles.settingsItem} type="button" onClick={onLogout} disabled={loggingOut}>
                   <span className={`${styles.settingsItemIcon} ${styles.iconRed}`}><i className="fa-solid fa-right-from-bracket" /></span>
                   <span className={styles.settingsItemText}>{loggingOut ? '退出中...' : '退出登录'}</span>
-                  <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
-                </button>
-              </div>
-
-              <div className={styles.settingsGroup}>
-                <div className={styles.settingsGroupTitle}>其他</div>
-                <button className={styles.settingsItem} type="button" onClick={() => onShowToast('本地缓存清理尚未接入')}>
-                  <span className={`${styles.settingsItemIcon} ${styles.iconDangerSoft}`}><i className="fa-solid fa-broom" /></span>
-                  <span className={styles.settingsItemText}>清除缓存</span>
                   <i className={`fa-solid fa-chevron-right ${styles.settingsArrow}`} />
                 </button>
               </div>

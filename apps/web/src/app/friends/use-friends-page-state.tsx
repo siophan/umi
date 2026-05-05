@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 import {
@@ -28,9 +29,17 @@ import {
 } from './friends-helpers';
 import styles from './page.module.css';
 
+const VALID_FRIENDS_TABS = ['friends', 'following', 'fans', 'requests'] as const;
+
 export function useFriendsPageState(router: AppRouterInstance) {
   const toastTimer = useRef<number | null>(null);
-  const [tab, setTab] = useState<FriendsTab>('friends');
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<FriendsTab>(() => {
+    const initial = searchParams?.get('tab');
+    return (VALID_FRIENDS_TABS as readonly string[]).includes(initial ?? '')
+      ? (initial as FriendsTab)
+      : 'friends';
+  });
   const [sortBy, setSortBy] = useState<FriendSort>('online');
   const [query, setQuery] = useState('');
   const [toast, setToast] = useState('');

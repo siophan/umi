@@ -787,7 +787,12 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
+  width: 100%;
+  background: transparent;
+  border: 0;
   border-bottom: 0.5px solid #f0f0f0;
+  text-align: left;
+  cursor: pointer;
 }
 
 .settingsAvatar {
@@ -990,6 +995,7 @@
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
 }
 
 .postCard:active {
@@ -1120,18 +1126,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.postActions button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-}
-
-.postShare {
-  margin-left: auto;
 }
 
 .liked {
