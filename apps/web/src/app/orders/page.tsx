@@ -2,33 +2,45 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { OrderSummary } from '@umi/shared';
+import type { OrderListSummary, OrderSummary } from '@umi/shared';
 
 import { confirmOrder, fetchOrders, urgeOrder } from '../../lib/api/orders';
 import { hasAuthToken } from '../../lib/api/shared';
 import { MobileShell } from '../../components/mobile-shell';
 import { OrdersList } from './orders-list';
 import {
-  mapOrderToTab,
   type OrderAction,
   type OrderTab,
 } from './order-helpers';
 import { OrdersSummary } from './orders-summary';
 import styles from './page.module.css';
 
+const EMPTY_SUMMARY: OrderListSummary = {
+  total: 0,
+  guessWon: 0,
+  bought: 0,
+  totalSpent: 0,
+  pendingCount: 0,
+  shippedCount: 0,
+};
+
 /**
  * 订单列表页主组件。
- * 订单数据走真实接口，列表结构和交互节奏按老订单页对齐。
+ * 服务端按 tab 过滤 + cursor 分页，前端无限滚动加载更多。
  */
 export default function OrdersPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [tab, setTab] = useState<OrderTab>('all');
   const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [summary, setSummary] = useState<OrderListSummary>(EMPTY_SUMMARY);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!hasAuthToken()) {
@@ -45,53 +57,73 @@ export default function OrdersPage() {
   }, []);
 
   /**
-   * 拉取订单列表。
-   * 通过 shouldIgnore 处理组件卸载后的竞态，避免旧请求覆盖新状态。
+   * 拉取订单首页。tab 切换或路由变化时重置游标。
    */
-  const loadOrders = useCallback(async (shouldIgnore: () => boolean = () => false) => {
-    if (!hasAuthToken()) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchOrders();
-      if (!shouldIgnore()) {
-        setOrders(data.items);
-      }
-    } catch (loadError) {
-      if (shouldIgnore()) {
+  const loadFirstPage = useCallback(
+    async (currentTab: OrderTab, shouldIgnore: () => boolean = () => false) => {
+      if (!hasAuthToken()) {
+        setLoading(false);
         return;
       }
-      setError(loadError instanceof Error ? loadError.message : '订单加载失败，请稍后重试');
-    } finally {
-      if (!shouldIgnore()) {
-        setLoading(false);
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchOrders({ tab: currentTab });
+        if (shouldIgnore()) return;
+        setOrders(data.items);
+        setSummary(data.summary);
+        setCursor(data.nextCursor);
+      } catch (loadError) {
+        if (shouldIgnore()) return;
+        setError(loadError instanceof Error ? loadError.message : '订单加载失败，请稍后重试');
+      } finally {
+        if (!shouldIgnore()) setLoading(false);
       }
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     let ignore = false;
-    void loadOrders(() => ignore);
+    void loadFirstPage(tab, () => ignore);
 
     return () => {
       ignore = true;
     };
-  }, [loadOrders, pathname]);
+  }, [loadFirstPage, tab, pathname]);
 
-  const total = orders.length;
-  const guessWon = orders.filter((order) => order.orderType === 'guess' || Boolean(order.guessId)).length;
-  const bought = orders.filter((order) => order.orderType !== 'guess' && !order.guessId).length;
-  const totalSpent = orders.reduce((sum, order) => sum + order.amount, 0);
-  const filtered = tab === 'all' ? orders : orders.filter((order) => mapOrderToTab(order.status) === tab);
+  const loadMore = useCallback(async () => {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const data = await fetchOrders({ tab, cursor });
+      setOrders((prev) => [...prev, ...data.items]);
+      setCursor(data.nextCursor);
+    } catch {
+      // 静默失败，等下次进入 sentinel 时再试
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [cursor, loadingMore, tab]);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !cursor) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMore();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [cursor, loadMore]);
+
   const badgeMap = useMemo(
-    () => ({
-      pending: orders.filter((order) => mapOrderToTab(order.status) === 'pending').length,
-      shipped: orders.filter((order) => mapOrderToTab(order.status) === 'shipped').length,
-    }),
-    [orders],
+    () => ({ pending: summary.pendingCount, shipped: summary.shippedCount }),
+    [summary.pendingCount, summary.shippedCount],
   );
 
   const triggerToast = (message: string) => {
@@ -163,7 +195,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <MobileShell tab="orders">
+    <MobileShell>
       <div className={styles.page}>
         <header className={styles.header}>
           <button className={styles.back} type="button" onClick={() => router.back()}>
@@ -173,10 +205,10 @@ export default function OrdersPage() {
         </header>
 
         <OrdersSummary
-          total={total}
-          guessWon={guessWon}
-          bought={bought}
-          totalSpent={totalSpent}
+          total={summary.total}
+          guessWon={summary.guessWon}
+          bought={summary.bought}
+          totalSpent={summary.totalSpent}
           tab={tab}
           badgeMap={badgeMap}
           onTabChange={setTab}
@@ -186,12 +218,18 @@ export default function OrdersPage() {
           loading={loading}
           error={error}
           tab={tab}
-          orders={filtered}
-          onReload={() => void loadOrders()}
+          orders={orders}
+          onReload={() => void loadFirstPage(tab)}
           onGoGuess={() => router.push('/')}
           onOpenDetail={(orderId) => router.push(`/order-detail?id=${encodeURIComponent(orderId)}`)}
           onAction={handleAction}
         />
+
+        {cursor ? (
+          <div ref={sentinelRef} className={styles.loadMoreSentinel}>
+            {loadingMore ? '加载中...' : null}
+          </div>
+        ) : null}
 
         {toast ? <div className={styles.toast}>{toast}</div> : null}
       </div>

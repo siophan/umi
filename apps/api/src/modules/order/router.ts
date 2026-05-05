@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { CreateOrderPayload, CreateOrderResult } from '@umi/shared';
+import type { CreateOrderPayload, CreateOrderResult, OrderListTab } from '@umi/shared';
 import { toEntityId } from '@umi/shared';
 
 import { getRequestUser, requireUser } from '../../lib/auth';
@@ -18,12 +18,18 @@ function getClientIp(request: { ip?: string; socket?: { remoteAddress?: string }
 
 export const orderRouter = Router();
 
+const ORDER_TABS: ReadonlySet<OrderListTab> = new Set(['all', 'pending', 'shipped', 'done', 'refund']);
+
 orderRouter.get(
   '/',
   requireUser,
   asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
-    ok(response, await fetchUserOrders(user.id));
+    const rawTab = String(request.query['tab'] ?? 'all') as OrderListTab;
+    const tab: OrderListTab = ORDER_TABS.has(rawTab) ? rawTab : 'all';
+    const cursorRaw = request.query['cursor'];
+    const cursor = typeof cursorRaw === 'string' && cursorRaw.length ? cursorRaw : null;
+    ok(response, await fetchUserOrders(user.id, tab, cursor));
   }),
 );
 

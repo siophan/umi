@@ -459,6 +459,14 @@
   gap: 4px;
 }
 
+.loadMoreSentinel {
+  padding: 16px;
+  text-align: center;
+  color: #bbb;
+  font-size: 12px;
+  min-height: 40px;
+}
+
 .toast {
   position: fixed;
   left: 50%;

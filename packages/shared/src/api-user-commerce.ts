@@ -418,8 +418,21 @@ export interface LiveListResult {
 
 export type LiveDetailResult = LiveListItem;
 
+export type OrderListTab = 'all' | 'pending' | 'shipped' | 'done' | 'refund';
+
+export interface OrderListSummary {
+  total: number;
+  guessWon: number;
+  bought: number;
+  totalSpent: number;
+  pendingCount: number;
+  shippedCount: number;
+}
+
 export interface OrderListResult {
   items: OrderSummary[];
+  nextCursor: string | null;
+  summary: OrderListSummary;
 }
 
 export interface CreateOrderPayload {

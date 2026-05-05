@@ -5,13 +5,18 @@ import type {
   FetchOrderPayStatusResult,
   OrderDetailResult,
   OrderListResult,
+  OrderListTab,
 } from '@umi/shared';
 
 import { getJson, postJson } from './shared';
 
-// 读取当前用户订单列表。
-export function fetchOrders() {
-  return getJson<OrderListResult>('/api/orders');
+// 读取当前用户订单列表（支持 tab 过滤 + cursor 分页）。
+export function fetchOrders(params: { tab?: OrderListTab; cursor?: string | null } = {}) {
+  const search = new URLSearchParams();
+  if (params.tab && params.tab !== 'all') search.set('tab', params.tab);
+  if (params.cursor) search.set('cursor', params.cursor);
+  const qs = search.toString();
+  return getJson<OrderListResult>(`/api/orders${qs ? `?${qs}` : ''}`);
 }
 
 // 读取单个订单详情。
