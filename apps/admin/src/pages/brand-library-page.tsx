@@ -36,7 +36,6 @@ interface BrandLibraryPageProps {
 export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
   const [messageApi, contextHolder] = message.useMessage();
   const [searchForm] = Form.useForm<BrandLibraryFilters>();
-  const [brandProductForm] = Form.useForm<BrandProductFormValues>();
   const [data, setData] = useState<BrandLibraryPageData>(EMPTY_BRAND_LIBRARY_DATA);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
@@ -237,26 +236,26 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
         onClose={() => setSelected(null)}
       />
 
-      <AdminBrandLibraryFormModal
-        brandIdOptions={brandIdOptions}
-        categoryIdOptions={categoryIdOptions}
-        editing={editingItem != null}
-        form={brandProductForm}
-        initialValues={formInitialValues}
-        open={formOpen}
-        submitting={submitting}
-        onCancel={() => {
-          setFormOpen(false);
-          setEditingItem(null);
-        }}
-        onSubmit={() => void handleSubmitBrandProduct()}
-      />
+      {formOpen && (
+        <AdminBrandLibraryFormModal
+          brandIdOptions={brandIdOptions}
+          categoryIdOptions={categoryIdOptions}
+          editing={editingItem != null}
+          initialValues={formInitialValues}
+          open={formOpen}
+          submitting={submitting}
+          onCancel={() => {
+            setFormOpen(false);
+            setEditingItem(null);
+          }}
+          onSubmit={(values) => handleSubmitBrandProduct(values)}
+        />
+      )}
     </div>
   );
 
-  async function handleSubmitBrandProduct() {
+  async function handleSubmitBrandProduct(values: BrandProductFormValues) {
     try {
-      const values = await brandProductForm.validateFields();
       setSubmitting(true);
       const specTable = (values.specTable ?? [])
         .filter((row): row is { key: string; value: string } =>
@@ -360,9 +359,6 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
       setEditingItem(null);
       setActionSeed((value) => value + 1);
     } catch (error) {
-      if (error instanceof Error && 'errorFields' in error) {
-        return;
-      }
       messageApi.error(error instanceof Error ? error.message : '保存品牌商品失败');
     } finally {
       setSubmitting(false);

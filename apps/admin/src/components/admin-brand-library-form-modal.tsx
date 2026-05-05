@@ -29,12 +29,12 @@ interface AdminBrandLibraryFormModalProps {
   brandIdOptions: Array<{ label: string; value: string }>;
   categoryIdOptions: Array<{ label: string; value: string }>;
   editing: boolean;
-  form: ReturnType<typeof Form.useForm<BrandProductFormValues>>[0];
-  /** 每次 modal open 时 useEffect 会按这个值 reset+setFieldsValue 兜底，
-   *  解决 useForm 实例长期复用时 initialValues 不重新注入的问题 */
+  /** 用于 Form 的 initialValues。modal 在 page 端用 {formOpen && <Modal>} 守门，
+   *  每次 open 时整个 modal component（包括内部 useForm 实例）都是全新创建，
+   *  initialValues 必然在新 form 的首次 mount 注入 store，不会有"残留覆盖"问题 */
   initialValues: Partial<BrandProductFormValues>;
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: (values: BrandProductFormValues) => void | Promise<void>;
   open: boolean;
   submitting: boolean;
 }
@@ -139,38 +139,34 @@ export function AdminBrandLibraryFormModal({
   brandIdOptions,
   categoryIdOptions,
   editing,
-  form,
   initialValues,
   onCancel,
   onSubmit,
   open,
   submitting,
 }: AdminBrandLibraryFormModalProps) {
+  // useForm 在 modal 内部创建。配合 page 端 {formOpen && <Modal>} 守门，
+  // 每次 modal mount 都是全新实例和全新 store，根除"长期持有 store 残留覆盖
+  // initialValues"导致的回显问题
+  const [form] = Form.useForm<BrandProductFormValues>();
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
 
-  // 每次打开 modal 重置回首个 tab，避免上次留在中间 tab 体验割裂；同时强制把 form
-  // store 重置成最新 initialValues。useForm 实例长期持有 store，antd 内部
-  // setInitialValues 在 Form re-mount 时只 deep-merge 不覆盖 store 已有字段，
-  // 所以单靠 initialValues 切换 record 不会重新注入——表现是编辑回显时
-  // SKU InputNumber 等字段显示空。这里 resetFields+setFieldsValue 双保险：
-  // resetFields 清掉旧字段并按 store.initialValues 重置；setFieldsValue 用最新
-  // 的 props.initialValues 兜底覆盖（防止 store.initialValues 没及时更新）
+  // 每次打开 modal 重置回首个 tab；form 实例随 modal mount/unmount 销毁，
+  // 不再需要 reset/setFieldsValue 兜底——initialValues 在新 form 首次 mount
+  // 时通过 antd 内部 setInitialValues 完整注入新 store
   useEffect(() => {
     if (open) {
       setActiveTab('basic');
-      form.resetFields();
-      form.setFieldsValue(initialValues as Partial<BrandProductFormValues>);
     }
-  }, [open, initialValues, form]);
+  }, [open]);
 
-  // 用 useWatch 实时拿 multiSpec，避免 Form.Item shouldUpdate 在 mount 时的
-  // 渲染时序问题——shouldUpdate 在初始化时不一定能让 children 拿到最新 store 值
+  // 用 useWatch 实时拿 multiSpec，避免 Form.Item shouldUpdate 的 mount 时序问题
   const multiSpec = !!Form.useWatch('multiSpec', form);
 
   const handleOk = async () => {
     try {
-      await form.validateFields();
-      onSubmit();
+      const values = await form.validateFields();
+      await onSubmit(values);
     } catch (err: unknown) {
       if (!isFormValidateError(err)) {
         throw err;
