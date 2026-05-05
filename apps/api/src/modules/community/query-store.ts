@@ -99,10 +99,45 @@ export async function buildCommunityGuessInfoMap(rows: PostRow[]) {
   return guessInfoMap;
 }
 
-export async function fetchCommunityFeedRows(userId: string | null, tab: 'recommend' | 'follow') {
+export const COMMUNITY_FEED_PAGE_SIZE = 20;
+
+export type FeedCursor = { createdAtMs: number; id: string };
+
+export function parseFeedCursor(raw: string | null | undefined): FeedCursor | null {
+  if (!raw) return null;
+  const idx = raw.lastIndexOf('_');
+  if (idx <= 0) return null;
+  const ms = Number(raw.slice(0, idx));
+  const id = raw.slice(idx + 1);
+  if (!Number.isFinite(ms) || ms <= 0 || !id) return null;
+  return { createdAtMs: ms, id };
+}
+
+export function buildFeedCursor(row: PostRow): string {
+  const createdAt = row.created_at instanceof Date ? row.created_at : new Date(row.created_at);
+  return `${createdAt.getTime()}_${row.id}`;
+}
+
+function buildCursorClause(cursor: FeedCursor | null): { sql: string; params: Array<Date | string | number> } {
+  if (!cursor) {
+    return { sql: '', params: [] };
+  }
+  const dt = new Date(cursor.createdAtMs);
+  return {
+    sql: ' AND (p.created_at < ? OR (p.created_at = ? AND p.id < ?))',
+    params: [dt, dt, cursor.id],
+  };
+}
+
+export async function fetchCommunityFeedRows(
+  userId: string | null,
+  tab: 'recommend' | 'follow',
+  cursor: FeedCursor | null = null,
+): Promise<{ rows: PostRow[]; nextCursor: string | null }> {
   const db = getDbPool();
   const visibilitySql = buildPostVisibilityClause('p');
   const viewerId = userId && userId.trim() ? userId : '0';
+  const fetchSize = COMMUNITY_FEED_PAGE_SIZE + 1;
   const baseParams: Array<string | number> = [
     POST_INTERACTION_LIKE,
     COMMENT_TARGET_POST,
@@ -111,10 +146,11 @@ export async function fetchCommunityFeedRows(userId: string | null, tab: 'recomm
     viewerId,
     POST_INTERACTION_BOOKMARK,
   ];
+  const cursorClause = buildCursorClause(cursor);
 
   if (tab === 'follow') {
     if (viewerId === '0') {
-      return [];
+      return { rows: [], nextCursor: null };
     }
 
     const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -177,13 +213,13 @@ export async function fetchCommunityFeedRows(userId: string | null, tab: 'recomm
         INNER JOIN user u ON u.id = p.user_id
         LEFT JOIN user_profile up ON up.user_id = u.id
         WHERE uf.follower_id = ?
-          AND ${visibilitySql}
+          AND ${visibilitySql}${cursorClause.sql}
         ORDER BY p.created_at DESC, p.id DESC
-        LIMIT 20
+        LIMIT ${fetchSize}
       `,
-      [...baseParams, viewerId, ...buildPostVisibilityParams(viewerId)],
+      [...baseParams, viewerId, ...buildPostVisibilityParams(viewerId), ...cursorClause.params],
     );
-    return rows as PostRow[];
+    return finalizeFeedPage(rows as PostRow[]);
   }
 
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
@@ -245,13 +281,21 @@ export async function fetchCommunityFeedRows(userId: string | null, tab: 'recomm
       FROM post p
       INNER JOIN user u ON u.id = p.user_id
       LEFT JOIN user_profile up ON up.user_id = u.id
-      WHERE ${visibilitySql}
+      WHERE ${visibilitySql}${cursorClause.sql}
       ORDER BY p.created_at DESC, p.id DESC
-      LIMIT 20
+      LIMIT ${fetchSize}
     `,
-    [...baseParams, ...buildPostVisibilityParams(viewerId)],
+    [...baseParams, ...buildPostVisibilityParams(viewerId), ...cursorClause.params],
   );
-  return rows as PostRow[];
+  return finalizeFeedPage(rows as PostRow[]);
+}
+
+function finalizeFeedPage(rows: PostRow[]): { rows: PostRow[]; nextCursor: string | null } {
+  if (rows.length > COMMUNITY_FEED_PAGE_SIZE) {
+    const trimmed = rows.slice(0, COMMUNITY_FEED_PAGE_SIZE);
+    return { rows: trimmed, nextCursor: buildFeedCursor(trimmed[trimmed.length - 1]) };
+  }
+  return { rows, nextCursor: null };
 }
 
 export async function fetchCommunityPostRow(userId: string, postId: string) {

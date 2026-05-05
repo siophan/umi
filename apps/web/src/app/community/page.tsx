@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 
 import { MobileShell } from '../../components/mobile-shell';
 import { hasAuthToken } from '../../lib/api/shared';
@@ -52,6 +53,9 @@ export default function CommunityPage() {
     setRepostDraft,
     repostSaving,
     visibleFeed,
+    hasMoreFeed,
+    loadingMore,
+    loadMoreFeed,
     openRepostComposer,
     closeRepostComposer,
     toggleLike,
@@ -88,6 +92,25 @@ export default function CommunityPage() {
     selectedGuessLink,
     clearGuessLink,
   } = useCommunityPageState();
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target) return;
+    if (!feedReady || !hasMoreFeed) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadMoreFeed();
+        }
+      },
+      { rootMargin: '200px 0px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [feedReady, hasMoreFeed, loadMoreFeed, tab]);
 
   function openNotifications() {
     router.push(hasAuthToken() ? '/notifications' : '/login');
@@ -151,11 +174,15 @@ export default function CommunityPage() {
           onToggleBookmark={(postId, currentTab, bookmarked) => void toggleBookmark(postId, currentTab, bookmarked)}
         />
 
-        <div className={styles.loadMore}>
-          {feedReady ? (
-            <><i className="fa-solid fa-check" /> 已展示最新动态</>
-          ) : (
+        <div className={styles.loadMore} ref={loadMoreRef}>
+          {!feedReady ? (
+            <><i className="fa-solid fa-spinner fa-spin" /> 加载中...</>
+          ) : loadingMore ? (
             <><i className="fa-solid fa-spinner fa-spin" /> 加载更多动态...</>
+          ) : hasMoreFeed ? (
+            <><i className="fa-solid fa-arrow-down" /> 上拉加载更多</>
+          ) : (
+            <><i className="fa-solid fa-check" /> 已展示最新动态</>
           )}
         </div>
 

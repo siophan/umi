@@ -35,14 +35,17 @@ communityRouter.get(
   optionalUser,
   asyncHandler(async (request, response) => {
     const tab = request.query.tab === 'follow' ? 'follow' : 'recommend';
+    const cursor = typeof request.query.cursor === 'string' && request.query.cursor.length > 0
+      ? request.query.cursor
+      : null;
     const user = request.user ? getRequestUser(request) : null;
 
     if (tab === 'follow' && !user) {
-      ok(response, { items: [] });
+      ok(response, { items: [], nextCursor: null });
       return;
     }
 
-    ok(response, await getCommunityFeed(user?.id ?? null, tab));
+    ok(response, await getCommunityFeed(user?.id ?? null, tab, cursor));
   }),
 );
 

@@ -12,8 +12,12 @@ import type {
 
 import { deleteJson, getJson, postJson } from './shared';
 
-export async function fetchCommunityFeed(tab: 'recommend' | 'follow') {
-  return getJson<CommunityFeedResult>(`/api/community/feed?tab=${encodeURIComponent(tab)}`);
+export async function fetchCommunityFeed(tab: 'recommend' | 'follow', cursor?: string | null) {
+  const params = new URLSearchParams({ tab });
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+  return getJson<CommunityFeedResult>(`/api/community/feed?${params.toString()}`);
 }
 
 export async function fetchCommunityDiscovery() {

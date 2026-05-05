@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 
 import {
@@ -37,6 +37,13 @@ type GuessLinkCandidate = {
 const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 type AllowedImageMime = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
 
+function dedupFeedAppend(prev: FeedItem[], next: FeedItem[]): FeedItem[] {
+  if (next.length === 0) return prev;
+  const seen = new Set(prev.map((item) => item.id));
+  const additions = next.filter((item) => !seen.has(item.id));
+  return additions.length === 0 ? prev : [...prev, ...additions];
+}
+
 export function useCommunityPageState() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -50,6 +57,10 @@ export function useCommunityPageState() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [recommendFeed, setRecommendFeed] = useState<FeedItem[]>([]);
   const [followFeed, setFollowFeed] = useState<FeedItem[]>([]);
+  const [recommendCursor, setRecommendCursor] = useState<string | null>(null);
+  const [followCursor, setFollowCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const [toast, setToast] = useState('');
   const [publishScope, setPublishScope] = useState<PublishScope>('public');
   const [scopeDraft, setScopeDraft] = useState<PublishScope>('public');
@@ -97,6 +108,11 @@ export function useCommunityPageState() {
     }
     toastTimerRef.current = window.setTimeout(() => setToast(''), 1800);
   }
+
+  const showToastRef = useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  });
 
   useEffect(() => () => {
     if (toastTimerRef.current) {
@@ -157,7 +173,9 @@ export function useCommunityPageState() {
       const authed = hasAuthToken();
       const [recommendResult, followResult, discoveryResult] = await Promise.allSettled([
         fetchCommunityFeed('recommend'),
-        authed ? fetchCommunityFeed('follow') : Promise.resolve({ items: [] }),
+        authed
+          ? fetchCommunityFeed('follow')
+          : Promise.resolve({ items: [], nextCursor: null }),
         fetchCommunityDiscovery(),
       ]);
 
@@ -167,9 +185,11 @@ export function useCommunityPageState() {
 
       if (recommendResult.status === 'fulfilled') {
         setRecommendFeed(recommendResult.value.items.map(mapCommunityFeedItem));
+        setRecommendCursor(recommendResult.value.nextCursor ?? null);
         setFeedError('');
       } else {
         setRecommendFeed([]);
+        setRecommendCursor(null);
         setFeedError(
           recommendResult.reason instanceof Error
             ? recommendResult.reason.message
@@ -179,8 +199,10 @@ export function useCommunityPageState() {
 
       if (followResult.status === 'fulfilled') {
         setFollowFeed(followResult.value.items.map(mapCommunityFeedItem));
+        setFollowCursor(followResult.value.nextCursor ?? null);
       } else {
         setFollowFeed([]);
+        setFollowCursor(null);
       }
 
       if (discoveryResult.status === 'fulfilled') {
@@ -199,6 +221,38 @@ export function useCommunityPageState() {
       ignore = true;
     };
   }, []);
+
+  const loadMoreFeed = useCallback(async () => {
+    if (loadingMoreRef.current) {
+      return;
+    }
+    const currentTab = tab;
+    const cursor = currentTab === 'recommend' ? recommendCursor : followCursor;
+    if (!cursor) {
+      return;
+    }
+    if (currentTab === 'follow' && !hasAuthToken()) {
+      return;
+    }
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const result = await fetchCommunityFeed(currentTab, cursor);
+      const mapped = result.items.map(mapCommunityFeedItem);
+      if (currentTab === 'recommend') {
+        setRecommendFeed((prev) => dedupFeedAppend(prev, mapped));
+        setRecommendCursor(result.nextCursor ?? null);
+      } else {
+        setFollowFeed((prev) => dedupFeedAppend(prev, mapped));
+        setFollowCursor(result.nextCursor ?? null);
+      }
+    } catch (error) {
+      showToastRef.current(error instanceof Error ? error.message : '加载更多失败');
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [tab, recommendCursor, followCursor]);
 
   function resetPublish() {
     setPublishText('');
@@ -677,6 +731,9 @@ export function useCommunityPageState() {
     setRepostDraft,
     repostSaving,
     visibleFeed,
+    hasMoreFeed: tab === 'recommend' ? Boolean(recommendCursor) : Boolean(followCursor),
+    loadingMore,
+    loadMoreFeed,
     showToast,
     openRepostComposer,
     closeRepostComposer,

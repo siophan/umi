@@ -77,6 +77,7 @@ export interface CommunityFeedItem {
 
 export interface CommunityFeedResult {
   items: CommunityFeedItem[];
+  nextCursor: string | null;
 }
 
 export type CommunityCommentSort = 'hot' | 'newest';

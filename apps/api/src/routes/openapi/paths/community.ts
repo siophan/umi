@@ -23,6 +23,13 @@ export const communityPaths = {
           },
           description: '动态流类型',
         },
+        {
+          name: 'cursor',
+          in: 'query',
+          required: false,
+          schema: { type: 'string' },
+          description: '上一页返回的 nextCursor，省略则返回首屏',
+        },
       ],
       responses: {
         200: successResponse({
@@ -32,6 +39,7 @@ export const communityPaths = {
               type: 'array',
               items: { type: 'object', additionalProperties: true },
             },
+            nextCursor: { type: 'string', nullable: true },
           },
         }),
       },

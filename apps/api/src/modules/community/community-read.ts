@@ -27,6 +27,7 @@ import {
   buildCommunityGuessInfoMap,
   fetchCommunityFeedRows,
   fetchCommunityPostRow,
+  parseFeedCursor,
 } from './query-store';
 import {
   sanitizeCommunityComment,
@@ -36,11 +37,14 @@ import {
 export async function getCommunityFeed(
   userId: string | null,
   tab: 'recommend' | 'follow',
+  cursor: string | null = null,
 ): Promise<CommunityFeedResult> {
-  const rows = await fetchCommunityFeedRows(userId, tab);
+  const parsedCursor = parseFeedCursor(cursor);
+  const { rows, nextCursor } = await fetchCommunityFeedRows(userId, tab, parsedCursor);
   const guessInfoMap = await buildCommunityGuessInfoMap(rows);
   return {
     items: rows.map((row) => sanitizeCommunityFeedItem(row, guessInfoMap.get(String(row.guess_id ?? '')))),
+    nextCursor,
   };
 }
 
