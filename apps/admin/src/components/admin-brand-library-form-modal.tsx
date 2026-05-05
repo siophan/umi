@@ -669,7 +669,6 @@ export function AdminBrandLibraryFormModal({
         <Form
           form={form}
           layout="vertical"
-          preserve={false}
           initialValues={initialValues}
         >
           <Tabs
