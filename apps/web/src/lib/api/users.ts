@@ -1,5 +1,6 @@
 import type {
   MeActivityResult,
+  MePostPageResult,
   MeSummaryResult,
   PublicUserActivityResult,
   UserPublicProfile,
@@ -18,6 +19,18 @@ export async function fetchUserProfileActivity(userId: string) {
 
 export async function fetchMeActivity() {
   return getJson<MeActivityResult>('/api/users/me/activity');
+}
+
+export async function fetchMeWorksMore(cursor: string) {
+  return getJson<MePostPageResult>(`/api/users/me/works?cursor=${encodeURIComponent(cursor)}`);
+}
+
+export async function fetchMeBookmarksMore(cursor: string) {
+  return getJson<MePostPageResult>(`/api/users/me/bookmarks?cursor=${encodeURIComponent(cursor)}`);
+}
+
+export async function fetchMeLikesMore(cursor: string) {
+  return getJson<MePostPageResult>(`/api/users/me/likes?cursor=${encodeURIComponent(cursor)}`);
 }
 
 export async function fetchMeSummary() {

@@ -696,6 +696,14 @@
   display: block;
 }
 
+.loadMoreSentinel {
+  padding: 16px;
+  text-align: center;
+  color: #bbb;
+  font-size: 13px;
+  min-height: 40px;
+}
+
 .sectionTitle {
   display: flex;
   align-items: center;

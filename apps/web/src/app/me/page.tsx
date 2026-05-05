@@ -1,12 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { UserSearchItem } from '@umi/shared';
 
 import { fetchMe, logout } from '../../lib/api/auth';
 import { clearAuthToken } from '../../lib/api/shared';
-import { fetchMeActivity, fetchMeSummary, searchUsers } from '../../lib/api/users';
+import {
+  fetchMeActivity,
+  fetchMeBookmarksMore,
+  fetchMeLikesMore,
+  fetchMeSummary,
+  fetchMeWorksMore,
+  searchUsers,
+} from '../../lib/api/users';
 import { MobileShell } from '../../components/mobile-shell';
 import { MeActivitySections } from './me-activity-sections';
 import { MeOverlays } from './me-overlays';
@@ -82,6 +89,12 @@ export default function MePage() {
     warehouseItemCount: 0,
     availableCouponCount: 0,
   });
+  const [cursors, setCursors] = useState<{
+    works: string | null;
+    bookmarks: string | null;
+    likes: string | null;
+  }>({ works: null, bookmarks: null, likes: null });
+  const [loadingMore, setLoadingMore] = useState({ works: false, bookmarks: false, likes: false });
   const [authReady, setAuthReady] = useState(false);
   const likeTotal = useMemo(
     () => activity.works.reduce((sum, post) => sum + post.likes, 0),
@@ -185,6 +198,11 @@ export default function MePage() {
           bookmarks: meActivity.bookmarks,
           likes: meActivity.likes,
         });
+        setCursors({
+          works: meActivity.worksCursor,
+          bookmarks: meActivity.bookmarksCursor,
+          likes: meActivity.likesCursor,
+        });
         setSummary(meSummary);
         setAuthReady(true);
       } catch {
@@ -232,6 +250,27 @@ export default function MePage() {
       window.clearTimeout(timer);
     };
   }, [searchOpen, searchValue]);
+
+  const handleLoadMore = useCallback(
+    async (tab: 'works' | 'favs' | 'likes') => {
+      const key = tab === 'favs' ? 'bookmarks' : tab;
+      const cursor = cursors[key];
+      if (!cursor || loadingMore[key]) return;
+
+      setLoadingMore((prev) => ({ ...prev, [key]: true }));
+      try {
+        const fetch = tab === 'works' ? fetchMeWorksMore : tab === 'favs' ? fetchMeBookmarksMore : fetchMeLikesMore;
+        const result = await fetch(cursor);
+        setActivity((prev) => ({ ...prev, [key]: [...prev[key], ...result.items] }));
+        setCursors((prev) => ({ ...prev, [key]: result.nextCursor }));
+      } catch {
+        // silently ignore
+      } finally {
+        setLoadingMore((prev) => ({ ...prev, [key]: false }));
+      }
+    },
+    [cursors, loadingMore],
+  );
 
   async function handleLogout() {
     if (loggingOut) {
@@ -289,7 +328,10 @@ export default function MePage() {
           tab={tab}
           currentUser={{ avatar: currentUser.avatar, name: currentUser.name }}
           activity={activity}
+          cursors={cursors}
+          loadingMore={loadingMore}
           onChangeTab={setTab}
+          onLoadMore={handleLoadMore}
           onOpenPost={(postId) => router.push(`/post/${encodeURIComponent(postId)}`)}
           onOpenCommunity={() => router.push('/community')}
         />

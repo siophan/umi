@@ -3,6 +3,7 @@ import type mysql from 'mysql2/promise';
 import type {
   MeActivityResult,
   MePostItem,
+  MePostPageResult,
   MeSummaryResult,
   PublicUserActivityResult,
   UpdateMePayload,
@@ -192,6 +193,23 @@ export async function unfollowUser(viewerId: string, targetUserId: string) {
   return { success: true as const };
 }
 
+const ME_PAGE_SIZE = 20;
+
+function buildCursor(row: mysql.RowDataPacket, field: string): string {
+  const val = (row as Record<string, unknown>)[field];
+  return new Date(val as string | Date).toISOString();
+}
+
+function sliceWithCursor(
+  rows: mysql.RowDataPacket[],
+  field: string,
+): { items: mysql.RowDataPacket[]; nextCursor: string | null } {
+  const hasMore = rows.length > ME_PAGE_SIZE;
+  const items = hasMore ? rows.slice(0, ME_PAGE_SIZE) : rows;
+  const nextCursor = hasMore ? buildCursor(items[items.length - 1], field) : null;
+  return { items, nextCursor };
+}
+
 export async function getMeActivity(userId: string): Promise<MeActivityResult> {
   const db = getDbPool();
 
@@ -222,9 +240,9 @@ export async function getMeActivity(userId: string): Promise<MeActivityResult> {
       LEFT JOIN user_profile up ON up.user_id = p.user_id
       WHERE p.user_id = ?
       ORDER BY p.created_at DESC
-      LIMIT 20
+      LIMIT ?
     `,
-    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId],
+    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, ME_PAGE_SIZE + 1],
   );
 
   const [bookmarkRows] = await db.execute<mysql.RowDataPacket[]>(
@@ -236,6 +254,7 @@ export async function getMeActivity(userId: string): Promise<MeActivityResult> {
         p.tag,
         p.images,
         p.created_at,
+        pi.created_at AS pi_created_at,
         up.name AS author_name,
         up.avatar_url AS author_avatar_url,
         COALESCE((
@@ -256,12 +275,71 @@ export async function getMeActivity(userId: string): Promise<MeActivityResult> {
       WHERE pi.user_id = ?
         AND pi.interaction_type = ?
       ORDER BY pi.created_at DESC
-      LIMIT 20
+      LIMIT ?
     `,
-    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, POST_INTERACTION_BOOKMARK],
+    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, POST_INTERACTION_BOOKMARK, ME_PAGE_SIZE + 1],
   );
 
   const [likeRows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        p.id,
+        p.title,
+        p.content,
+        p.tag,
+        p.images,
+        p.created_at,
+        pi.created_at AS pi_created_at,
+        up.name AS author_name,
+        up.avatar_url AS author_avatar_url,
+        COALESCE((
+          SELECT COUNT(*)
+          FROM post_interaction pi2
+          WHERE pi2.post_id = p.id
+            AND pi2.interaction_type = ?
+        ), 0) AS likes,
+        COALESCE((
+          SELECT COUNT(*)
+          FROM comment_item ci
+          WHERE ci.target_id = p.id
+            AND ci.target_type = ?
+        ), 0) AS comments
+      FROM post_interaction pi
+      INNER JOIN post p ON p.id = pi.post_id
+      LEFT JOIN user_profile up ON up.user_id = p.user_id
+      WHERE pi.user_id = ?
+        AND pi.interaction_type = ?
+      ORDER BY pi.created_at DESC
+      LIMIT ?
+    `,
+    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, POST_INTERACTION_LIKE, ME_PAGE_SIZE + 1],
+  );
+
+  const [messageCountRows] = await db.execute<mysql.RowDataPacket[]>(
+    `SELECT COALESCE(SUM(unread_count), 0) AS unread_count FROM chat_conversation WHERE user_id = ?`,
+    [userId],
+  );
+
+  const works = sliceWithCursor(worksRows, 'created_at');
+  const bookmarks = sliceWithCursor(bookmarkRows, 'pi_created_at');
+  const likes = sliceWithCursor(likeRows, 'pi_created_at');
+
+  return {
+    unreadMessageCount: Number((messageCountRows[0] as { unread_count?: number | string } | undefined)?.unread_count ?? 0),
+    works: works.items.map((row) => sanitizePost(row as PostRow)),
+    worksCursor: works.nextCursor,
+    bookmarks: bookmarks.items.map((row) => sanitizePost(row as PostRow)),
+    bookmarksCursor: bookmarks.nextCursor,
+    likes: likes.items.map((row) => sanitizePost(row as PostRow)),
+    likesCursor: likes.nextCursor,
+  };
+}
+
+export async function getMeWorksPaged(userId: string, cursor: string): Promise<MePostPageResult> {
+  const db = getDbPool();
+  const cursorDate = new Date(cursor);
+
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
         p.id,
@@ -274,38 +352,105 @@ export async function getMeActivity(userId: string): Promise<MeActivityResult> {
         up.avatar_url AS author_avatar_url,
         COALESCE((
           SELECT COUNT(*)
-          FROM post_interaction pi2
-          WHERE pi2.post_id = p.id
-            AND pi2.interaction_type = ?
+          FROM post_interaction pi
+          WHERE pi.post_id = p.id AND pi.interaction_type = ?
         ), 0) AS likes,
         COALESCE((
           SELECT COUNT(*)
           FROM comment_item ci
-          WHERE ci.target_id = p.id
-            AND ci.target_type = ?
+          WHERE ci.target_id = p.id AND ci.target_type = ?
+        ), 0) AS comments
+      FROM post p
+      LEFT JOIN user_profile up ON up.user_id = p.user_id
+      WHERE p.user_id = ? AND p.created_at < ?
+      ORDER BY p.created_at DESC
+      LIMIT ?
+    `,
+    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, cursorDate, ME_PAGE_SIZE + 1],
+  );
+
+  const { items, nextCursor } = sliceWithCursor(rows, 'created_at');
+  return { items: items.map((row) => sanitizePost(row as PostRow)), nextCursor };
+}
+
+export async function getMeBookmarksPaged(userId: string, cursor: string): Promise<MePostPageResult> {
+  const db = getDbPool();
+  const cursorDate = new Date(cursor);
+
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        p.id,
+        p.title,
+        p.content,
+        p.tag,
+        p.images,
+        p.created_at,
+        pi.created_at AS pi_created_at,
+        up.name AS author_name,
+        up.avatar_url AS author_avatar_url,
+        COALESCE((
+          SELECT COUNT(*)
+          FROM post_interaction pi2
+          WHERE pi2.post_id = p.id AND pi2.interaction_type = ?
+        ), 0) AS likes,
+        COALESCE((
+          SELECT COUNT(*)
+          FROM comment_item ci
+          WHERE ci.target_id = p.id AND ci.target_type = ?
         ), 0) AS comments
       FROM post_interaction pi
       INNER JOIN post p ON p.id = pi.post_id
       LEFT JOIN user_profile up ON up.user_id = p.user_id
-      WHERE pi.user_id = ?
-        AND pi.interaction_type = ?
+      WHERE pi.user_id = ? AND pi.interaction_type = ? AND pi.created_at < ?
       ORDER BY pi.created_at DESC
-      LIMIT 20
+      LIMIT ?
     `,
-    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, POST_INTERACTION_LIKE],
+    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, POST_INTERACTION_BOOKMARK, cursorDate, ME_PAGE_SIZE + 1],
   );
 
-  const [messageCountRows] = await db.execute<mysql.RowDataPacket[]>(
-    `SELECT COALESCE(SUM(unread_count), 0) AS unread_count FROM chat_conversation WHERE user_id = ?`,
-    [userId],
+  const { items, nextCursor } = sliceWithCursor(rows, 'pi_created_at');
+  return { items: items.map((row) => sanitizePost(row as PostRow)), nextCursor };
+}
+
+export async function getMeLikesPaged(userId: string, cursor: string): Promise<MePostPageResult> {
+  const db = getDbPool();
+  const cursorDate = new Date(cursor);
+
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT
+        p.id,
+        p.title,
+        p.content,
+        p.tag,
+        p.images,
+        p.created_at,
+        pi.created_at AS pi_created_at,
+        up.name AS author_name,
+        up.avatar_url AS author_avatar_url,
+        COALESCE((
+          SELECT COUNT(*)
+          FROM post_interaction pi2
+          WHERE pi2.post_id = p.id AND pi2.interaction_type = ?
+        ), 0) AS likes,
+        COALESCE((
+          SELECT COUNT(*)
+          FROM comment_item ci
+          WHERE ci.target_id = p.id AND ci.target_type = ?
+        ), 0) AS comments
+      FROM post_interaction pi
+      INNER JOIN post p ON p.id = pi.post_id
+      LEFT JOIN user_profile up ON up.user_id = p.user_id
+      WHERE pi.user_id = ? AND pi.interaction_type = ? AND pi.created_at < ?
+      ORDER BY pi.created_at DESC
+      LIMIT ?
+    `,
+    [POST_INTERACTION_LIKE, COMMENT_TARGET_POST, userId, POST_INTERACTION_LIKE, cursorDate, ME_PAGE_SIZE + 1],
   );
 
-  return {
-    unreadMessageCount: Number((messageCountRows[0] as { unread_count?: number | string } | undefined)?.unread_count ?? 0),
-    works: worksRows.map((row) => sanitizePost(row as PostRow)),
-    bookmarks: bookmarkRows.map((row) => sanitizePost(row as PostRow)),
-    likes: likeRows.map((row) => sanitizePost(row as PostRow)),
-  };
+  const { items, nextCursor } = sliceWithCursor(rows, 'pi_created_at');
+  return { items: items.map((row) => sanitizePost(row as PostRow)), nextCursor };
 }
 
 export async function updateMe(userId: string, payload: UpdateMePayload): Promise<UserSummary> {

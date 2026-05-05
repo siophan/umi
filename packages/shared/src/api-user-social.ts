@@ -30,11 +30,19 @@ export interface MePostItem {
   authorAvatar: string | null;
 }
 
+export interface MePostPageResult {
+  items: MePostItem[];
+  nextCursor: string | null;
+}
+
 export interface MeActivityResult {
   unreadMessageCount: number;
   works: MePostItem[];
+  worksCursor: string | null;
   bookmarks: MePostItem[];
+  bookmarksCursor: string | null;
   likes: MePostItem[];
+  likesCursor: string | null;
 }
 
 export interface PublicUserActivityResult {

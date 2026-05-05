@@ -1,5 +1,7 @@
 'use client';
 
+import { type RefObject, useEffect, useRef } from 'react';
+
 import type { ActivityPost } from './me-helpers';
 import { formatCount, formatTimeLabel, tagClassMap } from './me-helpers';
 import styles from './page.module.css';
@@ -15,7 +17,18 @@ type MeActivitySectionsProps = {
     bookmarks: ActivityPost[];
     likes: ActivityPost[];
   };
+  cursors: {
+    works: string | null;
+    bookmarks: string | null;
+    likes: string | null;
+  };
+  loadingMore: {
+    works: boolean;
+    bookmarks: boolean;
+    likes: boolean;
+  };
   onChangeTab: (tab: 'works' | 'favs' | 'likes') => void;
+  onLoadMore: (tab: 'works' | 'favs' | 'likes') => void;
   onOpenPost: (postId: string) => void;
   onOpenCommunity: () => void;
 };
@@ -81,10 +94,47 @@ export function MeActivitySections({
   tab,
   currentUser,
   activity,
+  cursors,
+  loadingMore,
   onChangeTab,
+  onLoadMore,
   onOpenPost,
   onOpenCommunity,
 }: MeActivitySectionsProps) {
+  const worksSentinelRef = useRef<HTMLDivElement>(null);
+  const bookmarksSentinelRef = useRef<HTMLDivElement>(null);
+  const likesSentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinels: Array<{
+      ref: RefObject<HTMLDivElement | null>;
+      tabKey: 'works' | 'favs' | 'likes';
+      cursor: string | null;
+    }> = [
+      { ref: worksSentinelRef, tabKey: 'works', cursor: cursors.works },
+      { ref: bookmarksSentinelRef, tabKey: 'favs', cursor: cursors.bookmarks },
+      { ref: likesSentinelRef, tabKey: 'likes', cursor: cursors.likes },
+    ];
+
+    const observers = sentinels.map(({ ref, tabKey, cursor }) => {
+      if (!ref.current || !cursor) return null;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) {
+            onLoadMore(tabKey);
+          }
+        },
+        { threshold: 0.1 },
+      );
+      observer.observe(ref.current);
+      return observer;
+    });
+
+    return () => {
+      observers.forEach((obs) => obs?.disconnect());
+    };
+  }, [cursors, onLoadMore]);
+
   return (
     <>
       <section className={styles.tabs}>
@@ -114,6 +164,11 @@ export function MeActivitySections({
             </div>
           )}
         </div>
+        {cursors.works ? (
+          <div ref={worksSentinelRef} className={styles.loadMoreSentinel}>
+            {loadingMore.works ? '加载中...' : null}
+          </div>
+        ) : null}
       </section>
 
       <section className={tab === 'favs' ? styles.panelActive : styles.panel}>
@@ -131,6 +186,11 @@ export function MeActivitySections({
             </div>
           )}
         </div>
+        {cursors.bookmarks ? (
+          <div ref={bookmarksSentinelRef} className={styles.loadMoreSentinel}>
+            {loadingMore.bookmarks ? '加载中...' : null}
+          </div>
+        ) : null}
       </section>
 
       <section className={tab === 'likes' ? styles.panelActive : styles.panel}>
@@ -148,6 +208,11 @@ export function MeActivitySections({
             </div>
           )}
         </div>
+        {cursors.likes ? (
+          <div ref={likesSentinelRef} className={styles.loadMoreSentinel}>
+            {loadingMore.likes ? '加载中...' : null}
+          </div>
+        ) : null}
       </section>
     </>
   );

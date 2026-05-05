@@ -10,7 +10,10 @@ import { HttpError, asyncHandler, withErrorBoundary } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import {
   getMeActivity,
+  getMeBookmarksPaged,
+  getMeLikesPaged,
   getMeSummary,
+  getMeWorksPaged,
   getUserProfileById,
   getUserPublicActivity,
   followUser,
@@ -51,6 +54,45 @@ userRouter.get(
   asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
     ok(response, await getMeActivity(user.id));
+  }),
+);
+
+userRouter.get(
+  '/me/works',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const cursor = String(request.query['cursor'] ?? '');
+    if (!cursor) {
+      throw new HttpError(400, 'cursor required');
+    }
+    ok(response, await getMeWorksPaged(user.id, cursor));
+  }),
+);
+
+userRouter.get(
+  '/me/bookmarks',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const cursor = String(request.query['cursor'] ?? '');
+    if (!cursor) {
+      throw new HttpError(400, 'cursor required');
+    }
+    ok(response, await getMeBookmarksPaged(user.id, cursor));
+  }),
+);
+
+userRouter.get(
+  '/me/likes',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const cursor = String(request.query['cursor'] ?? '');
+    if (!cursor) {
+      throw new HttpError(400, 'cursor required');
+    }
+    ok(response, await getMeLikesPaged(user.id, cursor));
   }),
 );
 
