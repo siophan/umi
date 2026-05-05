@@ -12,6 +12,7 @@ import {
   COMMENT_TARGET_POST,
   POST_INTERACTION_BOOKMARK,
   POST_INTERACTION_LIKE,
+  POST_SCOPE_PRIVATE,
   REPORT_STATUS_PENDING,
   REPORT_STATUS_REVIEWING,
   REPORT_TARGET_POST,
@@ -320,13 +321,22 @@ export async function repostCommunityPost(
     throw new Error('原动态不存在或不可见');
   }
 
+  const originScope = Number(original.scope ?? 10);
+  if (originScope >= POST_SCOPE_PRIVATE) {
+    throw new Error('该动态为私密，不能转发');
+  }
+
   const db = getDbPool();
   const content = normalizeCommunityPostContent(payload.content || '转发动态');
   const title = buildCommunityPostTitle(content);
   const location = normalizeCommunityLocation(payload.location);
   const scope = postScopeValueToCode(payload.scope);
+  if (scope < originScope) {
+    throw new Error('转发可见范围不能比原动态更宽');
+  }
   const images = normalizeCommunityImages(payload.images);
   const rootPostId = String(original.repost_id ?? original.id);
+  const tag = (typeof original.tag === 'string' && original.tag.trim()) || '转发';
 
   const [result] = await db.execute<mysql.ResultSetHeader>(
     `
@@ -350,7 +360,7 @@ export async function repostCommunityPost(
       title,
       content,
       JSON.stringify(images),
-      '转发',
+      tag,
       original.guess_id ?? null,
       location,
       scope,

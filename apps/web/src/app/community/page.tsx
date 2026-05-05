@@ -51,6 +51,8 @@ export default function CommunityPage() {
     repostTarget,
     repostDraft,
     setRepostDraft,
+    repostScope,
+    setRepostScope,
     repostSaving,
     visibleFeed,
     hasMoreFeed,
@@ -218,6 +220,8 @@ export default function CommunityPage() {
           repostTarget={repostTarget}
           repostDraft={repostDraft}
           onChangeRepostDraft={setRepostDraft}
+          repostScope={repostScope}
+          onChangeRepostScope={setRepostScope}
           onCloseRepost={closeRepostComposer}
           repostSaving={repostSaving}
           onSubmitRepost={() => void handleRepostSubmit()}

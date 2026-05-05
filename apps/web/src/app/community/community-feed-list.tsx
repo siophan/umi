@@ -159,7 +159,7 @@ function CommunityFeedCard({
             onOpenRepost(item, currentTab);
           }}
         >
-          <i className="fa-solid fa-share-nodes" />
+          <i className="fa-solid fa-retweet" />
           {fmtNum(item.shares)}
         </button>
         <button

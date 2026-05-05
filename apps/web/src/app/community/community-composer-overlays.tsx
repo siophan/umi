@@ -5,7 +5,7 @@ import type { ChangeEvent, RefObject } from 'react';
 import type { GuessId } from '@umi/shared';
 
 import type { EmojiCategory, FollowUser, PublishScope } from './page-helpers';
-import { SCOPE_META, emojiCategories, getScopeLabel, myProfile, topicOptions } from './page-helpers';
+import { SCOPE_META, canRepostWithScope, emojiCategories, getScopeLabel, myProfile, topicOptions } from './page-helpers';
 import styles from './page.module.css';
 
 type RepostTarget = {
@@ -13,6 +13,7 @@ type RepostTarget = {
   tab: 'recommend' | 'follow';
   title: string;
   author: string;
+  originScope: PublishScope;
 } | null;
 
 type GuessLinkCandidate = {
@@ -50,6 +51,8 @@ type Props = {
   repostTarget: RepostTarget;
   repostDraft: string;
   onChangeRepostDraft: (value: string) => void;
+  repostScope: PublishScope;
+  onChangeRepostScope: (scope: PublishScope) => void;
   onCloseRepost: () => void;
   repostSaving: boolean;
   onSubmitRepost: () => void;
@@ -109,6 +112,8 @@ export function CommunityComposerOverlays({
   repostTarget,
   repostDraft,
   onChangeRepostDraft,
+  repostScope,
+  onChangeRepostScope,
   onCloseRepost,
   repostSaving,
   onSubmitRepost,
@@ -343,16 +348,42 @@ export function CommunityComposerOverlays({
                 onChange={(event) => onChangeRepostDraft(event.target.value)}
               />
               <div className={styles.repostFieldMeta}>
-                <span>公开发布，所有人可见</span>
+                <span>{SCOPE_META[repostScope].label}可见</span>
                 <span>{repostDraft.trim().length} 字</span>
               </div>
             </div>
+
+            {repostTarget ? (
+              <div className={styles.repostScopeRow}>
+                {PUBLISH_SCOPE_OPTIONS.map((option) => {
+                  const allowed = canRepostWithScope(repostTarget.originScope, option);
+                  const active = repostScope === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`${styles.repostScopeChip} ${active ? styles.repostScopeChipActive : ''}`}
+                      disabled={!allowed}
+                      onClick={() => onChangeRepostScope(option)}
+                    >
+                      <i className={`fa-solid ${SCOPE_META[option].icon}`} />
+                      {SCOPE_META[option].label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
 
             <div className={styles.repostActions}>
               <button className={styles.repostGhostBtn} type="button" onClick={onCloseRepost}>
                 取消
               </button>
-              <button className={styles.repostSubmitBtn} type="button" disabled={repostSaving} onClick={onSubmitRepost}>
+              <button
+                className={styles.repostSubmitBtn}
+                type="button"
+                disabled={repostSaving || !repostDraft.trim()}
+                onClick={onSubmitRepost}
+              >
                 <i className={`fa-solid ${repostSaving ? 'fa-spinner fa-spin' : 'fa-retweet'}`} /> {repostSaving ? '转发中' : '确认转发'}
               </button>
             </div>

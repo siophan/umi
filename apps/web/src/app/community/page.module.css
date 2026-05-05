@@ -1093,6 +1093,37 @@
   font-weight: 600;
 }
 
+.repostScopeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.repostScopeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 1px solid #eee2d8;
+  background: #fff8f3;
+  color: #8f7561;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.repostScopeChip:disabled {
+  opacity: 0.4;
+}
+
+.repostScopeChipActive {
+  border-color: transparent;
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  color: #fff;
+}
+
 .repostActions {
   display: flex;
   gap: 10px;

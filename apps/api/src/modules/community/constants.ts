@@ -11,7 +11,7 @@ export const POST_INTERACTION_BOOKMARK = 20;
 export const POST_SCOPE_PUBLIC = 10;
 const POST_SCOPE_FOLLOWERS = 20;
 export const POST_SCOPE_FRIENDS = 30;
-const POST_SCOPE_PRIVATE = 90;
+export const POST_SCOPE_PRIVATE = 90;
 
 export type PostRow = {
   id: number | string;

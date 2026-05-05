@@ -21,9 +21,11 @@ import { hasAuthToken } from '../../lib/api/shared';
 import { uploadOssImage } from '../../lib/api/uploads';
 import type { EmojiCategory, FeedItem, FollowUser, HotTopic, PublishScope } from './page-helpers';
 import {
+  canRepostWithScope,
   defaultFollowedUsers,
   getScopeLabel,
   mapCommunityFeedItem,
+  toPublishScope,
   topicOptions,
 } from './page-helpers';
 
@@ -81,8 +83,10 @@ export function useCommunityPageState() {
     tab: 'recommend' | 'follow';
     title: string;
     author: string;
+    originScope: PublishScope;
   } | null>(null);
-  const [repostDraft, setRepostDraft] = useState('转发动态');
+  const [repostDraft, setRepostDraft] = useState('');
+  const [repostScope, setRepostScope] = useState<PublishScope>('public');
   const [repostSaving, setRepostSaving] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -272,13 +276,20 @@ export function useCommunityPageState() {
   }
 
   function openRepostComposer(item: FeedItem, currentTab: 'recommend' | 'follow') {
+    const originScope = toPublishScope(item.scope);
+    if (originScope === 'private') {
+      showToast('该动态为私密，不能转发');
+      return;
+    }
     setRepostTarget({
       postId: item.id,
       tab: currentTab,
       title: item.title,
       author: item.author.name,
+      originScope,
     });
-    setRepostDraft('转发动态');
+    setRepostDraft('');
+    setRepostScope(originScope);
   }
 
   function closeRepostComposer() {
@@ -286,7 +297,8 @@ export function useCommunityPageState() {
       return;
     }
     setRepostTarget(null);
-    setRepostDraft('转发动态');
+    setRepostDraft('');
+    setRepostScope('public');
   }
 
   function updateFeedList(currentTab: 'recommend' | 'follow', updater: (list: FeedItem[]) => FeedItem[]) {
@@ -668,23 +680,24 @@ export function useCommunityPageState() {
     if (!repostTarget || repostSaving) {
       return;
     }
-
+    if (!canRepostWithScope(repostTarget.originScope, repostScope)) {
+      showToast('转发可见范围不能比原动态更宽');
+      return;
+    }
     const content = repostDraft.trim() || '转发动态';
 
     try {
       setRepostSaving(true);
       const reposted = await repostCommunityPost(repostTarget.postId, {
         content,
-        scope: 'public',
+        scope: repostScope,
       });
       const mapped = mapCommunityFeedItem(reposted);
       setRecommendFeed((current) => [mapped, ...current]);
-      if (repostTarget.tab === 'follow') {
-        setFollowFeed((current) => [mapped, ...current]);
-      }
       updateShares(repostTarget.postId, repostTarget.tab);
       setRepostTarget(null);
-      setRepostDraft('转发动态');
+      setRepostDraft('');
+      setRepostScope('public');
       showToast('✅ 转发成功');
     } catch (error) {
       showToast(error instanceof Error ? error.message : '转发失败');
@@ -729,6 +742,8 @@ export function useCommunityPageState() {
     repostTarget,
     repostDraft,
     setRepostDraft,
+    repostScope,
+    setRepostScope,
     repostSaving,
     visibleFeed,
     hasMoreFeed: tab === 'recommend' ? Boolean(recommendCursor) : Boolean(followCursor),

@@ -210,6 +210,23 @@ export function shouldRenderStandaloneTitle(title: string | null | undefined, de
   return normalizedTitle !== normalizedDesc;
 }
 
+export const SCOPE_RANK: Record<PublishScope, number> = {
+  public: 10,
+  followers: 20,
+  friends: 30,
+  private: 90,
+};
+
+export function toPublishScope(scope: Scope | PublishScope | null | undefined): PublishScope {
+  if (!scope) return 'public';
+  if (scope === 'fans') return 'followers';
+  return scope as PublishScope;
+}
+
+export function canRepostWithScope(originScope: PublishScope, targetScope: PublishScope): boolean {
+  return SCOPE_RANK[targetScope] >= SCOPE_RANK[originScope];
+}
+
 export function getScopeLabel(scope: PublishScope) {
   return SCOPE_META[scope].label;
 }
