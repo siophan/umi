@@ -20,7 +20,6 @@ export default function ActivitiesPage() {
       <section className={styles.empty}>
         <div className={styles.emptyIcon}>🎁</div>
         <div className={styles.emptyTitle}>暂无活动</div>
-        <div className={styles.emptyDesc}>限时活动与福利将在此处展示</div>
       </section>
     </main>
   );

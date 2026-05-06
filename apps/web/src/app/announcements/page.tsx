@@ -20,7 +20,6 @@ export default function AnnouncementsPage() {
       <section className={styles.empty}>
         <div className={styles.emptyIcon}>📢</div>
         <div className={styles.emptyTitle}>暂无公告</div>
-        <div className={styles.emptyDesc}>平台公告将在此处展示</div>
       </section>
     </main>
   );
