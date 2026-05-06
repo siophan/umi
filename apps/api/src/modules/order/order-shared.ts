@@ -47,6 +47,8 @@ export type OrderRow = {
   item_id: number | string | null;
   product_id: number | string | null;
   brand_product_sku_id?: number | string | null;
+  shop_id?: number | string | null;
+  shop_name?: string | null;
   product_name: string | null;
   product_img: string | null;
   quantity: number | string | null;
@@ -307,6 +309,8 @@ function sanitizeOrderItem(row: OrderRow): OrderItem | null {
     id: toEntityId(row.item_id),
     productId: toEntityId(row.product_id),
     brandProductSkuId: toEntityId(row.brand_product_sku_id ?? 0),
+    shopId: row.shop_id ? toEntityId(row.shop_id) : null,
+    shopName: row.shop_name?.trim() || null,
     productName: row.product_name,
     productImg: row.product_img || '',
     skuText: row.item_specs?.trim() || null,
@@ -467,6 +471,8 @@ export const orderListSql = `
     oi.id AS item_id,
     oi.product_id,
     oi.brand_product_sku_id,
+    p.shop_id,
+    s.name AS shop_name,
     bp.name AS product_name,
     COALESCE(bps.image, bp.default_img) AS product_img,
     oi.quantity,
@@ -519,6 +525,7 @@ export const orderListSql = `
   LEFT JOIN guess g ON g.id = o.guess_id
   LEFT JOIN order_item oi ON oi.order_id = o.id
   LEFT JOIN product p ON p.id = oi.product_id
+  LEFT JOIN shop s ON s.id = p.shop_id
   LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
   LEFT JOIN brand_product_sku bps ON bps.id = oi.brand_product_sku_id
   LEFT JOIN address a ON a.id = o.address_id

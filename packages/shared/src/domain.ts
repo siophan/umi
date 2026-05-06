@@ -156,6 +156,8 @@ export interface OrderItem {
   id: EntityId;
   productId: ProductId;
   brandProductSkuId: EntityId;
+  shopId?: EntityId | null;
+  shopName?: string | null;
   productName: string;
   productImg: string;
   skuText?: string | null;

@@ -141,6 +141,8 @@ function OrderDetailPageInner() {
   const [order, setOrder] = useState<OrderDetailResult | null>(null);
   const [toast, setToast] = useState('');
   const [logisticsOpen, setLogisticsOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -213,7 +215,6 @@ function OrderDetailPageInner() {
             <i className="fa-solid fa-chevron-left" />
           </button>
           <div className={styles.title}>订单详情</div>
-          <div className={styles.headerRight} />
         </header>
         <section className={styles.card}>
           <div className={styles.cardTitle}>订单不存在</div>
@@ -233,18 +234,36 @@ function OrderDetailPageInner() {
     }
   }
 
-  async function handleCancelOrder() {
-    if (!order) return;
-    if (typeof window !== 'undefined' && !window.confirm('确认取消该订单？取消后不可恢复。')) {
-      return;
-    }
+  async function handleCancelConfirm() {
+    if (!order || cancelling) return;
+    setCancelling(true);
     try {
       await cancelOrder(order.id);
       setOrder((current) => (current ? { ...current, status: 'cancelled' } : current));
+      setCancelOpen(false);
       setToast('✅ 订单已取消');
     } catch (error) {
       setToast(error instanceof Error ? error.message : '取消订单失败');
+    } finally {
+      setCancelling(false);
     }
+  }
+
+  function handleContactService() {
+    router.push('/chat');
+  }
+
+  function handleEnterShop() {
+    if (order?.orderType === 'guess') {
+      setToast('竞猜奖励无关联店铺');
+      return;
+    }
+    const shopId = firstItem?.shopId;
+    if (!shopId) {
+      setToast('暂无店铺信息');
+      return;
+    }
+    router.push(`/shop/${shopId}`);
   }
 
   function handleReview() {
@@ -269,14 +288,6 @@ function OrderDetailPageInner() {
           <i className="fa-solid fa-chevron-left" />
         </button>
         <div className={styles.title}>订单详情</div>
-        <div className={styles.headerRight}>
-          <button className={styles.headerBtn} type="button" onClick={() => setToast('客服')}>
-            <i className="fa-solid fa-headset" />
-          </button>
-          <button className={styles.headerBtn} type="button" onClick={() => setToast('更多操作')}>
-            <i className="fa-solid fa-ellipsis" />
-          </button>
-        </div>
       </header>
 
       <section className={`${styles.banner} ${styles[meta.cls]}`}>
@@ -367,11 +378,13 @@ function OrderDetailPageInner() {
       ) : null}
 
       <section className={styles.card}>
-        <button className={styles.shopRow} type="button" onClick={() => setToast('进入店铺')}>
+        <button className={styles.shopRow} type="button" onClick={handleEnterShop}>
           <div className={styles.shopIcon}>
             <i className="fa-solid fa-crown" />
           </div>
-          <div className={styles.shopName}>{order.orderType === 'guess' ? '竞猜奖励' : '店铺订单'}</div>
+          <div className={styles.shopName}>
+            {order.orderType === 'guess' ? '竞猜奖励' : firstItem.shopName || '店铺订单'}
+          </div>
           <div className={styles.arrow}>
             <i className="fa-solid fa-chevron-right" />
           </div>
@@ -575,17 +588,17 @@ function OrderDetailPageInner() {
 
       <footer className={styles.bottom}>
         <div className={styles.bottomLeft}>
-          <button className={styles.bottomIcon} type="button" onClick={() => setToast('联系客服')}>
+          <button className={styles.bottomIcon} type="button" onClick={handleContactService}>
             <i className="fa-solid fa-headset" />
             <span>客服</span>
           </button>
-          <button className={styles.bottomIcon} type="button" onClick={() => setToast('进入店铺')}>
+          <button className={styles.bottomIcon} type="button" onClick={handleEnterShop}>
             <i className="fa-solid fa-store" />
             <span>店铺</span>
           </button>
         </div>
         {bucket === 'pending' && order.status === 'pending' ? (
-          <button className={styles.btnPrimary} type="button" onClick={handleCancelOrder}>
+          <button className={styles.btnPrimary} type="button" onClick={() => setCancelOpen(true)}>
             取消订单
           </button>
         ) : null}
@@ -651,6 +664,56 @@ function OrderDetailPageInner() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {cancelOpen ? (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => (cancelling ? null : setCancelOpen(false))}
+          role="presentation"
+        >
+          <div
+            className={styles.confirmSheet}
+            onClick={(event) => event.stopPropagation()}
+            role="presentation"
+          >
+            <div className={styles.confirmIcon}>
+              <i className="fa-solid fa-circle-exclamation" />
+            </div>
+            <div className={styles.confirmHeading}>确认取消该订单？</div>
+            <div className={styles.confirmProduct}>
+              <img src={firstItem.productImg} alt={firstItem.productName} />
+              <div className={styles.confirmProductInfo}>
+                <div className={styles.confirmProductName}>{firstItem.productName}</div>
+                <div className={styles.confirmProductPrice}>
+                  {isFreeOrder ? '🎁 免费' : `¥${firstItem.unitPrice.toFixed(1)}`}
+                </div>
+              </div>
+            </div>
+            <div className={styles.confirmDesc}>
+              取消后订单将关闭，库存将释放回商家，此操作不可恢复。
+            </div>
+            <div className={styles.confirmActions}>
+              <button
+                className={styles.confirmCancel}
+                type="button"
+                disabled={cancelling}
+                onClick={() => setCancelOpen(false)}
+              >
+                再想想
+              </button>
+              <button
+                className={styles.confirmSubmit}
+                type="button"
+                disabled={cancelling}
+                onClick={handleCancelConfirm}
+              >
+                <i className="fa-solid fa-circle-xmark" />
+                {cancelling ? '取消中…' : '确认取消'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
