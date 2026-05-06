@@ -250,7 +250,16 @@ function OrderDetailPageInner() {
   }
 
   function handleContactService() {
-    router.push('/chat');
+    if (order?.orderType === 'guess') {
+      setToast('竞猜奖励暂无客服会话');
+      return;
+    }
+    const shopUserId = firstItem?.shopUserId;
+    if (!shopUserId) {
+      setToast('暂无店铺客服');
+      return;
+    }
+    router.push(`/chat/${encodeURIComponent(shopUserId)}`);
   }
 
   function handleEnterShop() {

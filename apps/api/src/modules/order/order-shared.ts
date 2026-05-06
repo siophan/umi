@@ -48,6 +48,7 @@ export type OrderRow = {
   product_id: number | string | null;
   brand_product_sku_id?: number | string | null;
   shop_id?: number | string | null;
+  shop_user_id?: number | string | null;
   shop_name?: string | null;
   product_name: string | null;
   product_img: string | null;
@@ -310,6 +311,7 @@ function sanitizeOrderItem(row: OrderRow): OrderItem | null {
     productId: toEntityId(row.product_id),
     brandProductSkuId: toEntityId(row.brand_product_sku_id ?? 0),
     shopId: row.shop_id ? toEntityId(row.shop_id) : null,
+    shopUserId: row.shop_user_id ? toEntityId(row.shop_user_id) : null,
     shopName: row.shop_name?.trim() || null,
     productName: row.product_name,
     productImg: row.product_img || '',
@@ -472,6 +474,7 @@ export const orderListSql = `
     oi.product_id,
     oi.brand_product_sku_id,
     p.shop_id,
+    s.user_id AS shop_user_id,
     s.name AS shop_name,
     bp.name AS product_name,
     COALESCE(bps.image, bp.default_img) AS product_img,
