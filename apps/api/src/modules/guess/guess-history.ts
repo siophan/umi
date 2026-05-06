@@ -3,8 +3,10 @@ import type mysql from 'mysql2/promise';
 import { toEntityId, type GuessHistoryResult } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
-import { PAY_STATUS_PAID, PAY_STATUS_REFUNDED } from '../payment/payment-shared';
+import { PAY_STATUS_REFUNDED } from '../payment/payment-shared';
 import {
+  BET_CANCELED,
+  BET_LOST,
   BET_PENDING,
   BET_WON,
   getChoiceText,
@@ -19,6 +21,8 @@ import {
 } from './guess-shared';
 
 const GUESS_SCOPE_FRIEND = 20;
+// 真实下注状态（已下注待开奖 / 已结算赢 / 已结算输）— 不含 BET_WAITING_PAY(5) 也不含 BET_CANCELED(90)
+const REAL_BET_STATUS = [BET_PENDING, BET_WON, BET_LOST] as const;
 
 type StatsRow = mysql.RowDataPacket & {
   total: number | string | null;
@@ -40,7 +44,16 @@ type OpponentRow = mysql.RowDataPacket & {
 export async function getUserHistoryResult(userId: string, userName: string): Promise<GuessHistoryResult> {
   const db = getDbPool();
 
-  // 主查询：拉最近 100 笔卡片所需明细（已支付 + 已退款）
+  // 真实下注 + 流标退款的复合过滤；存量数据按 status 识别（pay_status 列是后期加的，不可作主依据）
+  const realBetWhere = `
+    (
+      gb.status IN (?, ?, ?)
+      OR (gb.status = ? AND gb.pay_status = ?)
+    )
+  `;
+  const realBetParams = [BET_PENDING, BET_WON, BET_LOST, BET_CANCELED, PAY_STATUS_REFUNDED];
+
+  // 主查询：拉最近 100 笔卡片所需明细
   const fetchBetDetails = db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
@@ -76,11 +89,11 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       LEFT JOIN product p ON p.id = gp.product_id
       LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE gb.user_id = ?
-        AND gb.pay_status IN (?, ?)
+        AND ${realBetWhere}
       ORDER BY gb.created_at DESC, gb.id DESC
       LIMIT 100
     `,
-    [userId, PAY_STATUS_PAID, PAY_STATUS_REFUNDED],
+    [userId, ...realBetParams],
   );
 
   // 全量统计 — 不受 LIMIT 100 截断；逻辑必须与下面 active/history/pk 过滤一致
@@ -88,31 +101,31 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
     `
       SELECT
         COUNT(*) AS total,
-        SUM(CASE WHEN gb.pay_status = ? AND gb.status = ? AND g.status = ? THEN 1 ELSE 0 END) AS active,
-        SUM(CASE WHEN gb.pay_status = ? AND gb.status = ? AND g.status IN (?, ?) THEN 1 ELSE 0 END) AS won,
-        SUM(CASE WHEN gb.pay_status = ? AND gb.status <> ? AND g.status IN (?, ?) THEN 1 ELSE 0 END) AS lost,
+        SUM(CASE WHEN gb.status = ? AND g.status = ? THEN 1 ELSE 0 END) AS active,
+        SUM(CASE WHEN gb.status = ? AND g.status IN (?, ?) THEN 1 ELSE 0 END) AS won,
+        SUM(CASE WHEN gb.status <> ? AND gb.status <> ? AND g.status IN (?, ?) THEN 1 ELSE 0 END) AS lost,
         SUM(CASE WHEN g.scope = ? AND (
-          (gb.pay_status = ? AND g.status IN (?, ?))
-          OR (gb.pay_status = ? AND g.status = ?)
+          (gb.status IN (?, ?, ?) AND g.status IN (?, ?))
+          OR (gb.status = ? AND gb.pay_status = ? AND g.status = ?)
         ) THEN 1 ELSE 0 END) AS pk
       FROM guess_bet gb
       INNER JOIN guess g ON g.id = gb.guess_id
       WHERE gb.user_id = ?
-        AND gb.pay_status IN (?, ?)
+        AND ${realBetWhere}
     `,
     [
-      // active: paid + bet pending + guess active
-      PAY_STATUS_PAID, BET_PENDING, GUESS_ACTIVE,
-      // won: paid + bet=BET_WON + guess in (settled, rejected)
-      PAY_STATUS_PAID, BET_WON, GUESS_SETTLED, GUESS_REJECTED,
-      // lost: paid + bet<>WON + guess in (settled, rejected) — 与 JS map 中 else→'lost' 一致
-      PAY_STATUS_PAID, BET_WON, GUESS_SETTLED, GUESS_REJECTED,
-      // pk: friend scope + (paid+settled/rejected OR refunded+abandoned)
+      // active: bet=PENDING + guess=ACTIVE
+      BET_PENDING, GUESS_ACTIVE,
+      // won: bet=BET_WON + guess in (settled, rejected)
+      BET_WON, GUESS_SETTLED, GUESS_REJECTED,
+      // lost: bet<>WON AND bet<>CANCELED (排除流标退款) AND guess in (settled, rejected)
+      BET_WON, BET_CANCELED, GUESS_SETTLED, GUESS_REJECTED,
+      // pk: friend scope + (real-bet-status + settled/rejected OR refunded + abandoned)
       GUESS_SCOPE_FRIEND,
-      PAY_STATUS_PAID, GUESS_SETTLED, GUESS_REJECTED,
-      PAY_STATUS_REFUNDED, GUESS_ABANDONED,
+      BET_PENDING, BET_WON, BET_LOST, GUESS_SETTLED, GUESS_REJECTED,
+      BET_CANCELED, PAY_STATUS_REFUNDED, GUESS_ABANDONED,
       // total filter
-      userId, PAY_STATUS_PAID, PAY_STATUS_REFUNDED,
+      userId, ...realBetParams,
     ],
   );
 
@@ -154,24 +167,25 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       [guessIds],
     );
 
+    // 参与人数 + 投票分布按真实下注 status 识别（含存量数据，排除 WAITING_PAY/CANCELED）
     const participantsP = db.query<mysql.RowDataPacket[]>(
       `
         SELECT guess_id, COUNT(*) AS participant_count
         FROM guess_bet
-        WHERE guess_id IN (?) AND pay_status = ?
+        WHERE guess_id IN (?) AND status IN (?, ?, ?)
         GROUP BY guess_id
       `,
-      [guessIds, PAY_STATUS_PAID],
+      [guessIds, ...REAL_BET_STATUS],
     );
 
     const votesP = db.query<mysql.RowDataPacket[]>(
       `
         SELECT guess_id, choice_idx AS option_index, COUNT(*) AS vote_count
         FROM guess_bet
-        WHERE guess_id IN (?) AND pay_status = ?
+        WHERE guess_id IN (?) AND status IN (?, ?, ?)
         GROUP BY guess_id, choice_idx
       `,
-      [guessIds, PAY_STATUS_PAID],
+      [guessIds, ...REAL_BET_STATUS],
     );
 
     const [[optsRaw], [partsRaw], [votesRaw]] = await Promise.all([optionsP, participantsP, votesP]);
@@ -200,10 +214,7 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
 
   const active = typedBetRows
     .filter(
-      (row) =>
-        Number(row.guess_status) === GUESS_ACTIVE &&
-        Number(row.status) === BET_PENDING &&
-        Number(row.pay_status) === PAY_STATUS_PAID,
+      (row) => Number(row.guess_status) === GUESS_ACTIVE && Number(row.status) === BET_PENDING,
     )
     .map((row) => {
       const options = optionsByGuess.get(String(row.guess_id)) || [];
@@ -302,10 +313,10 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
         LEFT JOIN user_profile up ON up.user_id = gb2.user_id
         WHERE gb2.guess_id IN (?)
           AND gb2.user_id <> ?
-          AND gb2.pay_status = ?
+          AND gb2.status IN (?, ?, ?)
         ORDER BY gb2.guess_id ASC, gb2.created_at ASC, gb2.id ASC
       `,
-      [settledFriendGuessIds, userId, PAY_STATUS_PAID],
+      [settledFriendGuessIds, userId, ...REAL_BET_STATUS],
     );
     for (const row of opponentRows) {
       const key = String(row.guess_id);
