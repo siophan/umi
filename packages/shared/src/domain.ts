@@ -62,6 +62,7 @@ export interface UserSummary {
   worksPrivacy?: 'all' | 'friends' | 'me';
   favPrivacy?: 'all' | 'me';
   inviteCount?: number;
+  inviteCode?: string | null;
 }
 
 export interface UserPublicProfile {

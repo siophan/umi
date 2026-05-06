@@ -174,19 +174,13 @@ export default function FeaturesPage() {
         <div className={styles.grid}>
           {welfare.map((item) => (
             <button
-              className={`${styles.gridItem} ${item.href === '/invite' || item.href === '/checkin' ? styles.gridItemDisabled : ''}`}
+              className={styles.gridItem}
               key={item.label}
               type="button"
-              onClick={() => {
-                if (item.href === '/invite' || item.href === '/checkin') {
-                  return;
-                }
-                router.push(item.href);
-              }}
+              onClick={() => router.push(item.href)}
             >
               <div className={`${styles.iconWrap} ${item.cls}`}>
                 <i className={item.icon} />
-                {(item.href === '/invite' || item.href === '/checkin') ? <span className={styles.badgeMuted}>建设中</span> : null}
               </div>
               <span>{item.label}</span>
             </button>

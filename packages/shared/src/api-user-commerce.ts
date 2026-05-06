@@ -337,6 +337,20 @@ export interface ClaimCouponResult {
   templateId: EntityId;
 }
 
+export interface CheckinStatus {
+  streak: number;
+  total: number;
+  checkedToday: boolean;
+  lastCheckinDate: string | null;
+}
+
+export interface CheckinResult {
+  alreadyChecked: boolean;
+  streak: number;
+  total: number;
+  reward: number;
+}
+
 export interface GuessHistoryStats {
   total: number;
   active: number;

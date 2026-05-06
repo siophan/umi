@@ -12,6 +12,7 @@ import { authRouter } from './modules/auth/router';
 import { bannerRouter } from './modules/banner/router';
 import { cartRouter } from './modules/cart/router';
 import { chatRouter } from './modules/chat/router';
+import { checkinRouter } from './modules/checkin/router';
 import { communityRouter } from './modules/community/router';
 import { couponRouter } from './modules/coupon/router';
 import { liveRouter } from './modules/live/router';
@@ -80,6 +81,7 @@ export function createApp(): Express {
   app.use('/api/cart', cartRouter);
   app.use('/api/addresses', addressRouter);
   app.use('/api/coupons', couponRouter);
+  app.use('/api/checkin', checkinRouter);
   app.use('/api/guesses', guessRouter);
   app.use('/api/orders', orderRouter);
   app.use('/api/products', productRouter);

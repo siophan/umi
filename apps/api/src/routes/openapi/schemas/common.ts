@@ -44,6 +44,8 @@ export const commonSchemas = {
         example: '2026-04-19T10:30:00.000Z',
       },
       shopVerified: { type: 'boolean', example: true },
+      inviteCount: { type: 'integer', example: 3 },
+      inviteCode: { type: 'string', nullable: true, example: 'INVITE101' },
     },
   },
 } as const;

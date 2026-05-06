@@ -12,6 +12,7 @@ const userSelectSql = `
   SELECT
     u.id,
     u.uid_code,
+    u.invite_code,
     u.phone_number,
     u.password,
     u.banned,

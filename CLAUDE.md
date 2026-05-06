@@ -491,6 +491,68 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
+## 29. 每日签到（页面 + 后端 + DB 已完成 2026-05-06，奖励发券待二期）
+
+**进度**：`/checkin` 页面 + `POST /api/checkin` + `GET /api/checkin/status` + `user_checkin` 表已落地，签到本身可走通；奖励部分（发券）暂未接入，签到成功不发任何东西，仅记录 streak / total。
+
+**已完成：**
+- DB：`packages/db/sql/user_checkin.sql`（`(user_id, checkin_date)` UNIQUE，DB 层去重；`reward INT` 字段预留但本期写 0）
+- 后端：`apps/api/src/modules/checkin/router.ts` + `store.ts`，`app.ts` 挂 `/api/checkin`
+  - `performCheckin` 在事务内 `SELECT ... FOR UPDATE` 锁本人最近一行，已签今日返回 alreadyChecked，router 翻成 `CHECKIN_ALREADY_DONE` 400
+  - streak 计算：上一行日期 = 今天-1 → streak+1，否则 streak=1；total 累加
+- shared 类型：`CheckinStatus` / `CheckinResult` 加在 `packages/shared/src/api-user-commerce.ts`
+- 前端：`apps/web/src/app/checkin/page.tsx` 替换原 stub；7 天时间线展示已签/今日/未来三态；hero 显示真实 streak/total
+- 入口：`apps/web/src/app/features/page.tsx` "每日签到" 入口去掉「建设中」禁用态，正常 push `/checkin`
+
+**遗留 P1 — 奖励发券**：
+
+签到本期不发任何奖励，时间线"奖励待开通"是占位。要补"连续 N 天发 X 券"必须先做完 #品牌发券改造（memory `project_coupon_brand_issued.md`）：
+- `coupon_template` 加 `brand_id` 字段（目前只有 `shop_id`，已被废弃但没替换）
+- admin 后台新增"按品牌维度配置 coupon_template"入口
+- 然后回到 checkin 模块加"streak → templateId" 映射表（运营后台维护，代码不写死），`performCheckin` 命中映射时调内部 `claimCouponFromTemplate(userId, templateId)` 把券塞进 `coupon` 表
+- `user_checkin.reward` 列保留 INT 不动，可改成存"本次发的券模板 id"也可以加 `reward_coupon_template_id` 字段，二期决定
+
+**遗留 P2 — 老系统的"今日任务"段不做**：
+
+`umi-origin/frontend/checkin.html` 底部还有"参与 1 次竞猜 +10 零食币 / 发布 1 条动态 +5 零食币"等任务列表。这部分老系统也是纯静态 mock，没有真实任务追踪闭环；新版金币已下线（#20），即便接也没奖励单位可挂，本期不实现。
+
+---
+
+## 30. 邀请有礼（页面已实现，奖励发券 + 邀请记录后端待二期）
+
+**进度**：`/invite` 页面从原"邀请功能建设中"占位换成完整 UI——hero / 邀请码卡（复制+分享）/ 4 档奖励梯度 / 邀请记录空状态。`UserSummary.inviteCode` 字段在 `/api/users/me` 已暴露，页面读真码；后端**邀请记录、奖励发券、注册带邀请码闭环、注册时 invite_code 生成**四段未做，奖励配置与 #29 共依赖「品牌发券改造」。
+
+**已完成：**
+- shared：`UserSummary` 加 `inviteCode?: string | null`，OpenAPI `common.ts` 同步
+- 后端：`apps/api/src/modules/users/query-store.ts` userSelectSql 加 `u.invite_code`；`model.ts` UserRow + sanitizeUser 透传
+- 前端：`apps/web/src/app/invite/page.tsx` 完整重写——4 档梯度（新人券 / 券礼包 / 成就 / VIP，纯文案）、复制邀请链接（`navigator.clipboard` + textarea fallback）、Web Share API + 复制 fallback；`inviteCode` 为 null 时显示「敬请期待」、按钮 toast「邀请码暂未开放」
+
+**遗留 P1 — 奖励发券（与 #29 共依赖品牌发券改造）：**
+
+4 档奖励目前只是文案展示，命中阶梯不会真实发券。要补必须先做：
+- `coupon_template` 加 `brand_id` 字段（同 #29；memory `project_coupon_brand_issued.md`）
+- admin 后台新增"按品牌维度配置 coupon_template"入口
+- DB `invite_reward_config` 表已存在（`inviter_reward_type / value / ref_id` + `invitee_reward_type / value / ref_id`），admin 后台补"档位 → coupon_template_id" 映射 UI
+- 邀请人触达阶梯 / 被邀请人首次注册命中条件 → 调内部 `claimCouponFromTemplate(userId, templateId)` 写入 `coupon` 表
+
+**遗留 P1 — 老账号 invite_code 全为 NULL：**
+
+`user.invite_code` 列虽已存在（UNIQUE varchar(191)），但注册流程从未写过，所有现有用户该字段全 null，页面显示「敬请期待」、按钮全部 toast「邀请码暂未开放」。修法（参考 `query-store.ts` 已有的 `ensureUserUidCode` lazy-gen pattern）：
+- 加 `ensureUserInviteCode(userId, currentCode)`：碰撞重试 + 仅 `WHERE invite_code IS NULL` 时 UPDATE
+- `attachUserUidCode` → `attachUserCodes`，把 invite_code 一起 lazy backfill
+- 注册路径同步 INSERT 时直接生成
+- 与"奖励发券"一起做，先做生成再做发券
+
+**遗留 P2 — 邀请记录后端：**
+
+老系统 `umi-origin/frontend/invite.html` 调 `GET /invite/records`，新版没实现。`invite_record` 表已存在，admin 已能查（`apps/api/src/modules/admin/invites.ts`），用户端补 `GET /api/invite/records` 返回 `{ items: [{ name, avatar, time, rewardLabel }] }` 即可。本期页面以空状态占位。
+
+**遗留 P2 — 注册带邀请码闭环：**
+
+`apps/web/src/app/register` 流程未消费 URL 上的 `?invite=<code>`，`RegisterPayload` 也没有 inviteCode 字段。"复制链接"按钮分享出去的链接对方点开后，注册需要把 invite code 携带到 `register` API → 写 `invite_record(inviter_id, invitee_id)` → 触发奖励发放。本期复制链接可点但落地后无效。
+
+---
+
 ## 21. 用户端商品详情未消费 brand_product 的图（P2）
 
 **文件**：`apps/api/src/modules/product/product-shared.ts:294`（getProductById SELECT）+ `apps/api/src/modules/product/product-detail.ts:337`（images 数组拼装）
@@ -510,5 +572,5 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 2    | Server Component 硬编码 URL / 仓库提货真闭环（#27，批次 1）|
-| P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）/ 仓库 fulfillment_order 物流号未拼到 tracking 字段（#27）|
-| P2     | 15   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28） |
+| P1     | 7    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）/ 仓库 fulfillment_order 物流号未拼到 tracking 字段（#27）/ 签到奖励发券待 #品牌发券改造（#29）/ 邀请奖励发券 + 老账号 invite_code 生成（#30） |
+| P2     | 17   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请记录后端 + 注册带邀请码闭环（#30） |
