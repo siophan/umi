@@ -93,9 +93,6 @@ export default function ChatListPage() {
           <i className="fa-solid fa-arrow-left" />
         </button>
         <h1>消息</h1>
-        <button className={styles.plusBtn} type="button" aria-label="更多">
-          <i className="fa-solid fa-plus" />
-        </button>
       </header>
 
       <div className={styles.systemRow}>
@@ -103,14 +100,14 @@ export default function ChatListPage() {
           <div className={styles.systemIcon}>🔔</div>
           <span>通知</span>
         </Link>
-        <button className={styles.systemItem} type="button">
+        <Link className={styles.systemItem} href="/announcements">
           <div className={`${styles.systemIcon} ${styles.infoIcon}`}>📢</div>
           <span>公告</span>
-        </button>
-        <button className={styles.systemItem} type="button">
+        </Link>
+        <Link className={styles.systemItem} href="/activities">
           <div className={`${styles.systemIcon} ${styles.successIcon}`}>🎁</div>
           <span>活动</span>
-        </button>
+        </Link>
       </div>
 
       <div className={styles.chatList}>
