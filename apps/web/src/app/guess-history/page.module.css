@@ -43,13 +43,14 @@
 }
 
 .hero {
+  position: relative;
   margin: 12px 14px 0;
   padding: 24px 20px;
   border-radius: 18px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   color: #fff;
-  position: relative;
   overflow: hidden;
+  animation: fadeUp 0.4s ease both;
 }
 
 .hero::before,
@@ -58,6 +59,7 @@
   position: absolute;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
+  animation: heroPulse 3s ease-in-out infinite;
 }
 
 .hero::before {
@@ -72,6 +74,21 @@
   left: 30%;
   width: 80px;
   height: 80px;
+  animation-duration: 4s;
+  animation-delay: 1s;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@keyframes heroPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
 }
 
 .heroTitle {
@@ -102,6 +119,11 @@
   padding: 12px 4px;
   text-align: center;
   backdrop-filter: blur(10px);
+  transition: transform 0.2s;
+}
+
+.statItem:hover {
+  transform: translateY(-2px);
 }
 
 .statVal {
@@ -109,10 +131,21 @@
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.5px;
+  background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.8) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .accentGreen {
   background: linear-gradient(180deg, #a8ff78 0%, #78ffd6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.accentGold {
+  background: linear-gradient(180deg, #ffd700 0%, #ffaa00 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -155,6 +188,7 @@
   stroke: url(#ghRing);
   stroke-width: 6;
   stroke-linecap: round;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ringInfo {
@@ -164,6 +198,7 @@
 .ringPct {
   font-size: 20px;
   font-weight: 900;
+  letter-spacing: -0.5px;
 }
 
 .ringDetail {
@@ -182,6 +217,7 @@
 
 .ringBarWin {
   background: linear-gradient(90deg, #a8ff78, #78ffd6);
+  transition: width 1.2s ease;
 }
 
 .ringBarLoss {
@@ -199,6 +235,8 @@
   padding: 12px 14px 10px;
   background: #f5f5f8;
   scrollbar-width: none;
+  animation: fadeUp 0.4s ease both;
+  animation-delay: 0.08s;
 }
 
 .tabs::-webkit-scrollbar {
@@ -215,6 +253,12 @@
   color: #888;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
+  transition: transform 0.2s;
+}
+
+.tab:active {
+  transform: scale(0.96);
 }
 
 .tabActive {
@@ -225,13 +269,69 @@
 }
 
 .count {
+  display: inline-block;
   margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #f0f0f0;
+  color: #999;
   font-size: 10px;
-  font-weight: 400;
+  font-weight: 800;
+}
+
+.tabActive .count {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.tabDot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3b30;
+  border: 2px solid #f5f5f8;
+  animation: liveDot 1s ease-in-out infinite;
 }
 
 .records {
   padding: 4px 14px 16px;
+  animation: fadeUp 0.4s ease both;
+  animation-delay: 0.16s;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #999;
+}
+
+.sectionDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff3b30;
+  animation: liveDot 1s ease-in-out infinite;
+}
+
+.seeAll {
+  display: block;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 6px;
+  background: transparent;
+  border: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #667eea;
+  cursor: pointer;
 }
 
 .issueCard {
@@ -300,6 +400,17 @@
   }
 }
 
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .activeCard {
   position: relative;
   overflow: hidden;
@@ -308,6 +419,12 @@
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.activeCard:active {
+  transform: scale(0.99);
 }
 
 .liveBadge {
@@ -324,6 +441,17 @@
   color: #fff;
   font-size: 10px;
   font-weight: 700;
+  animation: liveBlink 1.5s ease-in-out infinite;
+}
+
+@keyframes liveBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .liveDot {
@@ -331,6 +459,17 @@
   height: 5px;
   border-radius: 50%;
   background: #fff;
+  animation: liveDot 1s ease-in-out infinite;
+}
+
+@keyframes liveDot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .activeImg {
@@ -338,6 +477,38 @@
   height: 140px;
   object-fit: cover;
   display: block;
+}
+
+.activeImgFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f1f5, #e6e8ee);
+  color: #b8bbc4;
+  font-size: 28px;
+}
+
+.activeCardCompact .activeImg {
+  height: 100px;
+}
+
+.activeCardCompact .activeBody {
+  padding: 10px 14px;
+}
+
+.activeCardCompact .activeTitle {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.activeCardCompact .activeMeta,
+.activeCardCompact .activeProgress {
+  display: none;
+}
+
+.activeCardCompact .activeChoice {
+  margin-bottom: 6px;
+  font-size: 11px;
 }
 
 .activeBody {
@@ -352,9 +523,17 @@
 }
 
 .activeMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 10px;
   font-size: 11px;
   color: #999;
+}
+
+.activeMeta i {
+  font-size: 10px;
+  margin-right: 4px;
 }
 
 .activeChoice {
@@ -379,6 +558,19 @@
   align-items: center;
   gap: 4px;
   color: #ff5722;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.activeCountdown i {
+  margin-right: 2px;
+}
+
+.activeEnded {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #34c759;
   font-size: 12px;
   font-weight: 700;
 }
@@ -414,6 +606,16 @@
   font-size: 11px;
 }
 
+.optA {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.optB {
+  color: #f093fb;
+  font-weight: 600;
+}
+
 .progressBar {
   display: flex;
   height: 6px;
@@ -424,14 +626,23 @@
 
 .progressLeft {
   background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.8s ease;
+  border-radius: 3px;
 }
 
 .card {
+  position: relative;
   overflow: hidden;
   margin-bottom: 10px;
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.card:active {
+  transform: scale(0.99);
 }
 
 .cardWon {
@@ -440,6 +651,10 @@
 
 .cardLost {
   border-left: 4px solid #ff9500;
+}
+
+.cardRefunded {
+  border-left: 4px solid #8e8e93;
 }
 
 .cardHeader {
@@ -466,19 +681,60 @@
   background: linear-gradient(135deg, #ff9500, #ff6b00);
 }
 
+.resultRefunded {
+  background: linear-gradient(135deg, #8e8e93, #6e6e73);
+}
+
 .cardTitle {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cardTitleText {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
-  font-weight: 700;
+  min-width: 0;
 }
 
 .cardDate {
   flex-shrink: 0;
   font-size: 11px;
   color: #bbb;
+}
+
+.streakBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.streakWin {
+  background: linear-gradient(
+    135deg,
+    rgba(52, 199, 89, 0.1),
+    rgba(48, 209, 88, 0.1)
+  );
+  color: #34c759;
+}
+
+.streakLoss {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 149, 0, 0.1),
+    rgba(255, 107, 0, 0.1)
+  );
+  color: #ff9500;
 }
 
 .cardBody {
@@ -499,6 +755,7 @@
 
 .cardRow strong {
   color: #333;
+  font-weight: 600;
 }
 
 .good {
@@ -507,6 +764,10 @@
 
 .bad {
   color: #ff9500 !important;
+}
+
+.muted {
+  color: #8e8e93 !important;
 }
 
 .rewardBox {
@@ -538,6 +799,15 @@
   color: #ff9500;
 }
 
+.rewardRefunded {
+  background: linear-gradient(
+    135deg,
+    rgba(142, 142, 147, 0.08),
+    rgba(110, 110, 115, 0.08)
+  );
+  color: #6e6e73;
+}
+
 .pkCard {
   position: relative;
   overflow: hidden;
@@ -546,6 +816,12 @@
   border-radius: 16px;
   background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
   color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.pkCard:active {
+  transform: scale(0.99);
 }
 
 .pkCard::before {
@@ -601,6 +877,22 @@
   margin-bottom: 4px;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
+  object-fit: cover;
+}
+
+.pkAvatarFallback {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 4px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
 }
 
 .pkName {
@@ -612,7 +904,6 @@
   margin-top: 2px;
   font-size: 10px;
   opacity: 0.5;
-  white-space: pre-line;
 }
 
 .pkIcon {
@@ -627,6 +918,17 @@
   box-shadow: 0 2px 10px rgba(255, 87, 34, 0.4);
   font-size: 11px;
   font-weight: 900;
+  animation: vsBounce 2s ease-in-out infinite;
+}
+
+@keyframes vsBounce {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .pkFooter {
@@ -657,10 +959,6 @@
   font-size: 32px;
 }
 
-.emptyIcon i {
-  font-size: 32px;
-}
-
 .emptyText {
   font-size: 14px;
   color: #999;
@@ -671,6 +969,28 @@
   margin-top: 4px;
   font-size: 12px;
   color: #ccc;
+}
+
+.emptyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  height: 36px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(102, 126, 234, 0.3);
+  transition: transform 0.15s;
+}
+
+.emptyBtn:active {
+  transform: scale(0.94);
 }
 
 .toast {

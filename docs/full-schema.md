@@ -674,11 +674,20 @@
 | 4 | `choice_idx` | `int` | `NO` | `NULL` | `-` | `-` | 下注选项索引 |
 | 5 | `amount` | `bigint` | `YES` | `NULL` | `-` | `-` | 下注金额，单位分 |
 | 6 | `product_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 关联商品 ID |
-| 7 | `coupon_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 使用优惠券 ID |
-| 8 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
-| 9 | `reward_type` | `tinyint unsigned` | `YES` | `NULL` | `-` | `-` | 奖励类型编码 |
-| 10 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 11 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+| 7 | `brand_product_sku_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 关联 SKU ID（多规格改造） |
+| 8 | `coupon_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 使用优惠券 ID |
+| 9 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码：5=waiting_pay, 10=pending, 30=won, 40=lost, 90=canceled |
+| 10 | `pay_status` | `tinyint unsigned` | `NO` | `10` | `MUL` | `-` | 支付状态：10=waiting, 20=paid, 30=failed, 40=closed, 50=refunded |
+| 11 | `pay_channel` | `tinyint unsigned` | `YES` | `NULL` | `-` | `-` | 支付渠道：10=wechat, 20=alipay |
+| 12 | `pay_no` | `varchar(64)` | `YES` | `NULL` | `UNI` | `-` | 我方生成的 out_trade_no（GB 前缀） |
+| 13 | `pay_trade_no` | `varchar(64)` | `YES` | `NULL` | `-` | `-` | 第三方交易号（微信 transaction_id / 支付宝 trade_no） |
+| 14 | `paid_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 支付完成时间 |
+| 15 | `pay_expires_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 支付链接过期时间 |
+| 16 | `reward_type` | `tinyint unsigned` | `YES` | `NULL` | `-` | `-` | 奖励类型编码 |
+| 17 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 18 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+
+> 索引：`uk_pay_no(pay_no)` + `idx_user_guess_paystatus(user_id, guess_id, pay_status)`。原 `(user_id, guess_id)` 唯一索引已 DROP，"已支付不可重复参与"判重交由应用层做。详见 `packages/db/sql/guess_bet_payment.sql`。
 
 ## guess_invitation
 

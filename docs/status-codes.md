@@ -171,10 +171,28 @@
 
 | 原语义 | 编码 | 说明 |
 | --- | --- | --- |
-| `pending` | `10` | 已下注，待开奖 |
+| `waiting_pay` | `5` | 已发起，待支付（pay_status=10 期间的占位状态） |
+| `pending` | `10` | 已支付，待开奖 |
 | `won` | `30` | 已中奖 |
 | `lost` | `40` | 未中奖 |
-| `canceled` | `90` | 已撤销 |
+| `canceled` | `90` | 已撤销（含流标退款，配 pay_status=50） |
+
+### `guess_bet.pay_status`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `waiting` | `10` | 等待支付 |
+| `paid` | `20` | 已支付 |
+| `failed` | `30` | 支付失败 |
+| `closed` | `40` | 已关闭（用户取消或超时） |
+| `refunded` | `50` | 已退款（流标退款 / admin 作废） |
+
+### `guess_bet.pay_channel`
+
+| 原语义 | 编码 | 说明 |
+| --- | --- | --- |
+| `wechat` | `10` | 微信支付 |
+| `alipay` | `20` | 支付宝 |
 
 ### `guess_invitation.status`
 

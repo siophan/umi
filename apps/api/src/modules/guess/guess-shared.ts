@@ -51,12 +51,16 @@ export type GuessBetRow = {
   choice_idx: number | string;
   amount: number | string | null;
   status: number | string;
+  pay_status: number | string;
   created_at: Date | string;
   guess_title: string;
   guess_status: number | string;
   guess_scope: number | string;
   guess_end_time: Date | string;
+  guess_image: string | null;
+  my_choice_odds: number | string | null;
   result_text: string | null;
+  prize_product_name: string | null;
 };
 
 export type GuessOptionRow = {

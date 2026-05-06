@@ -344,15 +344,18 @@ export interface GuessHistoryStats {
   lost: number;
   pk: number;
   winRate: number;
+  level: number;
 }
 
 export interface GuessHistoryActiveItem {
   betId: EntityId;
   guessId: GuessId;
   title: string;
+  imageUrl: string | null;
   participants: number;
   endTime: string;
   choiceText: string;
+  oddsCurrent: number;
   optionProgress: number[];
   options: string[];
 }
@@ -364,8 +367,10 @@ export interface GuessHistoryRecordItem {
   date: string;
   choiceText: string;
   resultText: string;
-  outcome: 'won' | 'lost';
+  outcome: 'won' | 'lost' | 'refunded';
   rewardText: string;
+  amountYuan: number;
+  participants: number;
 }
 
 export interface GuessHistoryPkItem {
@@ -374,10 +379,13 @@ export interface GuessHistoryPkItem {
   title: string;
   outcome: 'won' | 'lost';
   leftName: string;
+  leftAvatar: string | null;
   leftChoice: string;
   rightName: string;
+  rightAvatar: string | null;
   rightChoice: string;
-  footer: string;
+  date: string;
+  prize: string;
 }
 
 export interface GuessHistoryResult {
