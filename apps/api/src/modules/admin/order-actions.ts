@@ -14,6 +14,13 @@ import { toEntityId } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
 import { HttpError } from '../../lib/errors';
+import { appLogger } from '../../lib/logger';
+import { refundPayOrder } from '../payment/payment-service';
+import {
+  PAY_STATUS_PAID,
+  PAY_STATUS_REFUNDED,
+  payChannelCodeToKey,
+} from '../payment/payment-shared';
 import {
   FULFILLMENT_PENDING,
   FULFILLMENT_PROCESSING,
@@ -36,6 +43,10 @@ import { OPERATOR_ROLE_ADMIN } from '../order/order-shared';
 type OrderActionRow = {
   id: number | string;
   status: number | string | null;
+  pay_no?: string | null;
+  pay_channel?: number | string | null;
+  pay_status?: number | string | null;
+  amount?: number | string | null;
 };
 
 type FulfillmentActionRow = {
@@ -46,6 +57,8 @@ type FulfillmentActionRow = {
 type RefundActionRow = {
   id: number | string;
   status: number | string | null;
+  refund_no?: string | null;
+  refund_amount?: number | string | null;
 };
 
 function toShippingTypeCode(value: ShipAdminOrderPayload['shippingType']) {
@@ -64,7 +77,7 @@ async function getOrderForUpdate(
 ) {
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
     `
-      SELECT id, status
+      SELECT id, status, pay_no, pay_channel, pay_status, amount
       FROM \`order\`
       WHERE id = ?
       LIMIT 1
@@ -101,7 +114,7 @@ async function getLatestRefundForUpdate(
 ) {
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
     `
-      SELECT id, status
+      SELECT id, status, refund_no, refund_amount
       FROM order_refund
       WHERE order_id = ?
       ORDER BY id DESC
@@ -282,6 +295,52 @@ export async function completeAdminOrderRefund(
       throw new Error('当前退款状态不支持完成退款');
     }
 
+    // 调原通道退款前先校验支付态：必须是已支付才能退；幂等情况下 pay_status 已是 REFUNDED
+    // 也要继续走完 DB 收尾流程（避免 admin 重试时 DB 留在中间态）
+    const payStatus = Number(order.pay_status ?? 0);
+    if (payStatus !== PAY_STATUS_PAID && payStatus !== PAY_STATUS_REFUNDED) {
+      throw new Error('订单支付状态异常，无法退款');
+    }
+
+    const channelKey = payChannelCodeToKey(Number(order.pay_channel ?? 0));
+    if (!channelKey || !order.pay_no) {
+      throw new Error('订单缺少支付渠道或支付单号，无法发起退款');
+    }
+
+    const totalCents = Number(order.amount ?? 0);
+    const refundCents = Number(refund.refund_amount ?? totalCents);
+    if (totalCents <= 0 || refundCents <= 0) {
+      throw new Error('订单金额异常，无法退款');
+    }
+    if (refundCents > totalCents) {
+      throw new Error('退款金额超过订单金额');
+    }
+
+    const refundNo = refund.refund_no?.trim() || `OR${order.id}R${refund.id}`;
+
+    // 调网关退款；refund_no 是幂等键，重试时网关返回相同结果不会重复扣款
+    if (payStatus === PAY_STATUS_PAID) {
+      try {
+        await refundPayOrder(channelKey, {
+          payNo: order.pay_no,
+          refundNo,
+          totalCents,
+          refundCents,
+          reason: '后台完成退款',
+        });
+      } catch (error) {
+        appLogger.error(
+          { err: error, orderId: order.id, payNo: order.pay_no, channel: channelKey },
+          '[completeAdminOrderRefund] 网关退款失败',
+        );
+        throw new HttpError(
+          502,
+          'ADMIN_ORDER_REFUND_GATEWAY_FAILED',
+          error instanceof Error ? error.message : '退款网关请求失败，请稍后再试',
+        );
+      }
+    }
+
     const previousOrderStatus = Number(order.status ?? 0);
     const completedAt = new Date().toISOString();
 
@@ -290,11 +349,12 @@ export async function completeAdminOrderRefund(
         UPDATE order_refund
         SET
           status = ?,
+          refund_no = ?,
           completed_at = CURRENT_TIMESTAMP(3),
           updated_at = CURRENT_TIMESTAMP(3)
         WHERE id = ?
       `,
-      [REFUND_COMPLETED, refund.id],
+      [REFUND_COMPLETED, refundNo, refund.id],
     );
 
     await connection.execute(
@@ -302,10 +362,11 @@ export async function completeAdminOrderRefund(
         UPDATE \`order\`
         SET
           status = ?,
+          pay_status = ?,
           updated_at = CURRENT_TIMESTAMP(3)
         WHERE id = ?
       `,
-      [ORDER_REFUNDED, order.id],
+      [ORDER_REFUNDED, PAY_STATUS_REFUNDED, order.id],
     );
 
     // 退款完成 → 全单退货入库；按 order_item.quantity 把 brand_product_sku.stock 加回去。
@@ -332,6 +393,10 @@ export async function completeAdminOrderRefund(
     );
 
     await connection.commit();
+    appLogger.info(
+      { orderId: order.id, refundId: refund.id, refundNo, channel: channelKey, refundCents },
+      '[completeAdminOrderRefund] 退款完成',
+    );
 
     return {
       id: toEntityId(order.id),

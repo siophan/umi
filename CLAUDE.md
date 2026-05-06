@@ -20,23 +20,19 @@
 
 ---
 
-## 2. 注册时选择的头像不生效（P1）
+## 2. 注册时选择的头像不生效（已完成）
 
-**文件**：`apps/web/src/app/register/page.tsx:33` / `130`
-
-`selectedAvatar` state 由用户在第 3 步选中，但 `handleRegister()` 调用 `register()` 时从未传入。`RegisterPayload`（`packages/shared/src/api.ts:88`）也没有头像字段。用户选了头像完全无效。
-
-**修法**：在 `RegisterPayload` 加 `avatar?: string`，注册时把 `avatars[selectedAvatar].src` 传进去，后端写入 `user_profile.avatar`。
+注册链路已全部接通：
+- 前端 `apps/web/src/app/register/page.tsx:148` 在 `register()` 调用里传 `avatar: avatars[selectedAvatar]?.src`
+- shared `RegisterPayload`（`packages/shared/src/api-auth.ts:71`）已含 `avatar?: string`
+- 后端 `apps/api/src/modules/auth/store.ts:361` 透传到 `createUserProfile`，`INSERT INTO user_profile (user_id, name, avatar_url, ...)` 落库
+- OpenAPI schema `apps/api/src/routes/openapi/schemas/auth.ts` 同步加 `avatar` 字段（2026-05-06 补）
 
 ---
 
-## 3. 忘记密码仅 toast（P1）
+## 3. 忘记密码仅 toast（已完成）
 
-**文件**：`apps/web/src/app/login/page.tsx:325`
-
-点击"忘记密码？"只显示 toast "密码重置功能开发中"，没有任何密码重置流程。
-
-**修法**：补 `/reset-password` 页面，复用已有 `sendCode` + `changePassword` 接口完成验证码重置流程。
+`/reset-password` 页面已落地（3 步：手机号 → 验证码 → 新密码），登录页"忘记密码？"现在是 `<Link href="/reset-password">`，调 `sendCode({ bizType: 'reset_password' })` 发码 + `resetPassword({ phone, code, newPassword })` 提交（已存在的后端 `POST /api/auth/reset-password`）。验证码不在第 2 步单独 verify，提交重置时一起校验。
 
 ---
 
@@ -70,17 +66,9 @@
 
 ---
 
-## 7. 购物车满减阈值 ¥200 硬编码前端（P1）
+## 7. 购物车满减阈值 ¥200 硬编码前端（已完成）
 
-**文件**：`apps/web/src/app/cart/page.tsx:1318`
-
-```ts
-const promoGap = Math.max(0, 200 - total);
-```
-
-¥200 满减门槛直接写死在前端，无法通过后台配置调整，也无法与实际促销活动联动。
-
-**修法**：从 `/api/cart` 或专属促销接口返回当前有效满减规则，前端按接口数据渲染。
+购物车 `apps/web/src/app/cart/page.tsx:30` 现走 `/api/cart` 返回的 `promoThreshold`，`promoGap = promoThreshold > 0 ? Math.max(0, promoThreshold - total) : 0`，运营可在后台调阈值，0 表示不展示满减提示。
 
 ---
 
@@ -164,8 +152,10 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ### 仍待办
 - **超时未付订单库存归还**（P1）：当前 `createPendingOrder` 即时扣库存做"占用"，但没有定时 job 把 `pay_status=closed` 的订单库存归还。短期手动 SQL 修，长期补 scheduler。
-- **退款 API**（P1）：`pay_status=50 (refunded)` 字段已留位，竞猜双付 + 商城退款都没调 wechat/alipay refund API。
 - **admin returnUrl 配置**：竞猜支付与商城支付共用同一个 `returnUrl`（admin 后台配），需指向 `/payment/return`，用 `?orderId=` / `?betId=` 区分。
+
+### 已完成
+- **退款 API**（2026-05-06 完成商城部分）：`completeAdminOrderRefund` 在事务内调 `refundPayOrder(channelKey, { payNo, refundNo, totalCents, refundCents })`，refund_no 用 `order_refund.refund_no` 兜底 `OR{orderId}R{refundId}` 做幂等；网关失败抛 `ADMIN_ORDER_REFUND_GATEWAY_FAILED` + 事务回滚；网关成功才推 `order.pay_status=50` + `order_refund.status=90` + 全单退货入库（按 SKU 维度 `bps.stock += oi.quantity`）+ 状态日志。竞猜流标部分 4-29 已完成。
 
 ---
 
@@ -252,7 +242,7 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 **待执行**：`packages/db/sql/drop_coin_ledger.sql` 由运维手工执行（之前 `guess_bet_payment.sql` / `order_payment.sql` 也走同样流程）。执行前已确认历史数据可丢弃。
 
-**仍未做**：商城退款 API（`order` 主动调 wechat/alipay refund）—— 留在 #15 P1 待办，思路同竞猜流标，复用 `refundPayOrder`。
+**已完成（2026-05-06）**：商城退款 API 落在 `completeAdminOrderRefund`，思路同竞猜流标 + 复用 `refundPayOrder`。详见 #15 已完成段。
 
 ---
 
@@ -584,5 +574,5 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 0    | （仓库提货闭环已于 2026-05-06 完成，见 #27）|
-| P1     | 6    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）/ 签到奖励发券待 #品牌发券改造（#29）/ 邀请奖励发券 + 老账号 invite_code 生成（#30） |
+| P1     | 2    | 签到奖励发券待 #品牌发券改造（#29）/ 邀请奖励发券 + 老账号 invite_code 生成（#30） |
 | P2     | 17   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请记录后端 + 注册带邀请码闭环（#30） |

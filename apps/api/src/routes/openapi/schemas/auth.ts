@@ -46,6 +46,12 @@ export const authSchemas = {
       code: { type: 'string', example: '123456' },
       password: { type: 'string', example: '123456' },
       name: { type: 'string', example: 'Joy User' },
+      avatar: {
+        type: 'string',
+        nullable: true,
+        description: '注册时选中的头像 URL；写入 user_profile.avatar_url',
+        example: '/legacy/images/mascot/mouse-main.png',
+      },
     },
   },
   ChangePasswordPayload: {
