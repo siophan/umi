@@ -173,7 +173,9 @@ export function SearchResultsView({
                         <em>¥</em>
                         {item.price}
                       </div>
-                      <div className={styles.orig}>¥{item.originalPrice}</div>
+                      {item.originalPrice > item.price ? (
+                        <div className={styles.orig}>¥{item.originalPrice}</div>
+                      ) : null}
                     </div>
                     <div className={styles.productMeta}>
                       <span className={styles.productSales}>{item.salesText}</span>

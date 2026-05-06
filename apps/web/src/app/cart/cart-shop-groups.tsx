@@ -97,7 +97,9 @@ export function CartShopGroups({
                           <small>¥</small>
                           {item.price}
                         </span>
-                        <span className={styles.itemOrig}>¥{item.originalPrice}</span>
+                        {item.originalPrice > item.price ? (
+                          <span className={styles.itemOrig}>¥{item.originalPrice}</span>
+                        ) : null}
                       </div>
                       <div className={styles.qty}>
                         <button

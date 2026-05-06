@@ -100,7 +100,9 @@ export function ProductDetailBody({
                   <small>¥</small>
                   {guessPrice}
                 </div>
-                <div className={styles.guessSub}>原价 ¥{product.originalPrice}</div>
+                {product.originalPrice > guessPrice ? (
+                  <div className={styles.guessSub}>原价 ¥{product.originalPrice}</div>
+                ) : null}
               </div>
               <div className={styles.panelHead}>
                 <div className={styles.panelTitle}>
@@ -218,10 +220,12 @@ export function ProductDetailBody({
                   <small>¥</small>
                   {directPrice}
                 </div>
-                <div className={styles.directRow}>
-                  <span className={styles.directOrig}>¥{product.originalPrice}</span>
-                  <span className={styles.directSave}>省 ¥{Math.max(0, product.originalPrice - directPrice)}</span>
-                </div>
+                {product.originalPrice > directPrice ? (
+                  <div className={styles.directRow}>
+                    <span className={styles.directOrig}>¥{product.originalPrice}</span>
+                    <span className={styles.directSave}>省 ¥{product.originalPrice - directPrice}</span>
+                  </div>
+                ) : null}
               </div>
               <div className={styles.panelHead}>
                 <div className={styles.panelTitle}>

@@ -67,7 +67,9 @@ export function ProductDetailSummary({
             <small>¥</small>
             {activePrice}
           </div>
-          <div className={styles.priceOrig}>¥{product.originalPrice}</div>
+          {product.originalPrice > activePrice ? (
+            <div className={styles.priceOrig}>¥{product.originalPrice}</div>
+          ) : null}
           <div className={styles.priceTags}>
             {discountPercent > 0 ? <span className={`${styles.priceTag} ${styles.tagOff}`}>{discountPercent}%OFF</span> : null}
             <span className={`${styles.priceTag} ${styles.tagHot}`}>
