@@ -58,8 +58,14 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       LEFT JOIN guess_option result_option
         ON result_option.guess_id = g.id
        AND result_option.is_result = 1
-      LEFT JOIN guess_product gp ON gp.guess_id = g.id
-      LEFT JOIN brand_product bp ON bp.id = gp.brand_product_id
+      LEFT JOIN (
+        SELECT guess_id, MIN(id) AS gp_id
+        FROM guess_product
+        GROUP BY guess_id
+      ) latest_gp ON latest_gp.guess_id = g.id
+      LEFT JOIN guess_product gp ON gp.id = latest_gp.gp_id
+      LEFT JOIN product p ON p.id = gp.product_id
+      LEFT JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE gb.user_id = ?
         AND gb.pay_status IN (?, ?)
       ORDER BY gb.created_at DESC, gb.id DESC
