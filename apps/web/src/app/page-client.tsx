@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { hasAuthToken } from '../lib/api/shared';
@@ -26,10 +27,14 @@ function openTargetPath(router: ReturnType<typeof useRouter>, targetPath?: strin
   router.push(targetPath);
 }
 
-const MODE_ROUTES = ['/guess?mode=champion', '/guess?mode=triple', '/guess?mode=blind'] as const;
-
 export default function HomePageClient({ initialData }: HomePageClientProps) {
   const router = useRouter();
+  const [toast, setToast] = useState('');
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(''), 1800);
+    return () => window.clearTimeout(id);
+  }, [toast]);
   const {
     mode,
     setMode,
@@ -67,9 +72,8 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
     router.push(hasAuthToken() ? '/notifications' : '/login');
   }
 
-  function handleOpenMode(index: number) {
-    const target = MODE_ROUTES[index] ?? '/guess';
-    router.push(target);
+  function handleOpenMode(_index: number) {
+    setToast('玩法即将上线');
   }
 
   return (
@@ -155,6 +159,26 @@ export default function HomePageClient({ initialData }: HomePageClientProps) {
           />
         )}
       </main>
+      {toast ? (
+        <div
+          style={{
+            position: 'fixed',
+            left: '50%',
+            bottom: 88,
+            transform: 'translateX(-50%)',
+            padding: '10px 18px',
+            borderRadius: 999,
+            background: 'rgba(0,0,0,0.78)',
+            color: '#fff',
+            fontSize: 13,
+            fontWeight: 600,
+            zIndex: 999,
+            pointerEvents: 'none',
+          }}
+        >
+          {toast}
+        </div>
+      ) : null}
     </MobileShell>
   );
 }

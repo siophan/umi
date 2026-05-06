@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PostDetailArticle } from './post-detail-article';
 import { PostDetailComments } from './post-detail-comments';
 import { PostDetailOverlays } from './post-detail-overlays';
 import { PostDetailRelated } from './post-detail-related';
 import { usePostDetailState } from './use-post-detail-state';
+import { hasAuthToken } from '../../../lib/api/shared';
+import { followUser, unfollowUser } from '../../../lib/api/users';
 import styles from './page.module.css';
 
 export default function PostDetailPage() {
@@ -56,6 +59,35 @@ export default function PostDetailPage() {
     handleSubmitReport,
     showToast,
   } = usePostDetailState(postId);
+
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
+  const [followAuthorSaving, setFollowAuthorSaving] = useState(false);
+
+  async function handleToggleFollowAuthor() {
+    if (!post) return;
+    if (!hasAuthToken()) {
+      router.push('/login');
+      return;
+    }
+    if (followAuthorSaving) return;
+    const next = !isFollowingAuthor;
+    setFollowAuthorSaving(true);
+    setIsFollowingAuthor(next);
+    try {
+      if (next) {
+        await followUser(post.author.id);
+        showToast('✅ 关注成功');
+      } else {
+        await unfollowUser(post.author.id);
+        showToast('已取消关注');
+      }
+    } catch (error) {
+      setIsFollowingAuthor(!next);
+      showToast(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setFollowAuthorSaving(false);
+    }
+  }
 
   if (!ready) {
     return (
@@ -108,6 +140,10 @@ export default function PostDetailPage() {
         likeSaving={likeSaving}
         bookmarkSaving={bookmarkSaving}
         totalCommentCount={totalCommentCount}
+        isFollowingAuthor={isFollowingAuthor}
+        followAuthorSaving={followAuthorSaving}
+        showFollowAuthor
+        onToggleFollowAuthor={() => void handleToggleFollowAuthor()}
         onOpenUser={(uid) => router.push(`/user/${encodeURIComponent(uid)}`)}
         onOpenGuess={(guessId) => router.push(`/guess/${guessId}`)}
         onToggleLike={() => void handleToggleLike()}

@@ -168,15 +168,22 @@ export function ProductDetailSummary({
             {product.shopName ? <span className={styles.specChip}>店铺：{product.shopName}</span> : null}
           </div>
         </div>
-        <div className={styles.specFoot}>
-          <span className={styles.specFootSel}>
-            当前商品 <b>{product.brand}</b> / <b>{product.category}</b>
-            {selectedSku?.specSummary ? <> / <b>{selectedSku.specSummary}</b></> : null}
-          </span>
-          <span className={styles.specFootPrice}>
-            ¥{activePrice} <small>{displayStock > 0 ? '现价' : '暂不可下单'}</small>
-          </span>
-        </div>
+        {hasSpecDefs ? (
+          <div className={styles.specFoot}>
+            <span className={styles.specFootSel}>
+              {selectedSku ? (
+                <>
+                  已选 <b>{selectedSku.specSummary}</b>
+                </>
+              ) : (
+                <>请选择规格</>
+              )}
+            </span>
+            <span className={styles.specFootPrice}>
+              <small>¥ </small>{activePrice}
+            </span>
+          </div>
+        ) : null}
       </section>
     </>
   );

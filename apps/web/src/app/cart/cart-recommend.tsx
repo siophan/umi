@@ -10,6 +10,7 @@ type CartRecommendProps = {
   recommendItems: ProductFeedItem[];
   onRetry: () => void;
   onOpenProduct: (productId: string) => void;
+  onQuickAdd: (productId: string) => void;
 };
 
 export function CartRecommend({
@@ -18,6 +19,7 @@ export function CartRecommend({
   recommendItems,
   onRetry,
   onOpenProduct,
+  onQuickAdd,
 }: CartRecommendProps) {
   if (cartError) {
     return null;
@@ -54,9 +56,22 @@ export function CartRecommend({
             <img className={styles.recommendImg} src={item.img || '/legacy/images/products/p001-lays.jpg'} alt={item.name} />
             <div className={styles.recommendInfo}>
               <div className={styles.recommendName}>{item.name}</div>
-              <div className={styles.recommendPrice}>
-                <small>¥</small>
-                {item.price}
+              <div className={styles.recommendPriceRow}>
+                <div className={styles.recommendPrice}>
+                  <small>¥</small>
+                  {item.price}
+                </div>
+                <button
+                  className={styles.recommendAdd}
+                  type="button"
+                  aria-label="加入购物车"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onQuickAdd(item.id);
+                  }}
+                >
+                  <i className="fa-solid fa-plus" />
+                </button>
               </div>
             </div>
           </article>

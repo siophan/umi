@@ -13,12 +13,16 @@ type PostDetailArticleProps = {
   likeSaving: boolean;
   bookmarkSaving: boolean;
   totalCommentCount: number;
+  isFollowingAuthor: boolean;
+  followAuthorSaving: boolean;
+  showFollowAuthor: boolean;
   onOpenUser: (uid: string) => void;
   onOpenGuess: (guessId: string) => void;
   onToggleLike: () => void;
   onOpenComments: () => void;
   onOpenShare: () => void;
   onToggleBookmark: () => void;
+  onToggleFollowAuthor: () => void;
 };
 
 export function PostDetailArticle({
@@ -28,33 +32,49 @@ export function PostDetailArticle({
   likeSaving,
   bookmarkSaving,
   totalCommentCount,
+  isFollowingAuthor,
+  followAuthorSaving,
+  showFollowAuthor,
   onOpenUser,
   onOpenGuess,
   onToggleLike,
   onOpenComments,
   onOpenShare,
   onToggleBookmark,
+  onToggleFollowAuthor,
 }: PostDetailArticleProps) {
   return (
     <article className={styles.card}>
-      <button className={styles.cardAuthor} type="button" onClick={() => onOpenUser(post.author.uid)}>
-        <img src={post.author.avatar || '/legacy/images/mascot/mouse-main.png'} alt={post.author.name} />
-        <div className={styles.cardAuthorInfo}>
-          <div className={styles.cardAuthorName}>
-            {post.author.name}
-            {post.author.verified ? <span><i className="fa-solid fa-circle-check" /></span> : null}
+      <div className={styles.cardAuthor}>
+        <button className={styles.cardAuthorMain} type="button" onClick={() => onOpenUser(post.author.uid)}>
+          <img src={post.author.avatar || '/legacy/images/mascot/mouse-main.png'} alt={post.author.name} />
+          <div className={styles.cardAuthorInfo}>
+            <div className={styles.cardAuthorName}>
+              {post.author.name}
+              {post.author.verified ? <span><i className="fa-solid fa-circle-check" /></span> : null}
+            </div>
+            <div className={styles.cardAuthorMeta}>
+              <span>{formatRelativeTime(post.createdAt)}</span>
+              {post.location ? (
+                <span className={styles.cardAuthorLoc}>
+                  <i className="fa-solid fa-location-dot" />
+                  {post.location}
+                </span>
+              ) : null}
+            </div>
           </div>
-          <div className={styles.cardAuthorMeta}>
-            <span>{formatRelativeTime(post.createdAt)}</span>
-            {post.location ? (
-              <span className={styles.cardAuthorLoc}>
-                <i className="fa-solid fa-location-dot" />
-                {post.location}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </button>
+        </button>
+        {showFollowAuthor ? (
+          <button
+            className={isFollowingAuthor ? styles.followBtnActive : styles.followBtn}
+            type="button"
+            disabled={followAuthorSaving}
+            onClick={onToggleFollowAuthor}
+          >
+            {isFollowingAuthor ? '已关注' : '+ 关注'}
+          </button>
+        ) : null}
+      </div>
 
       <div className={styles.content}>
         {post.title ? <h1 className={styles.title}>{post.title}</h1> : null}

@@ -472,8 +472,14 @@
   font-weight: 600;
 }
 
-.recommendPrice {
+.recommendPriceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 2px;
+}
+
+.recommendPrice {
   color: #e64a19;
   font-size: 13px;
   font-weight: 800;
@@ -482,6 +488,26 @@
 .recommendPrice small {
   font-size: 9px;
   font-weight: 600;
+}
+
+.recommendAdd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.recommendAdd:active {
+  filter: brightness(0.9);
+  transform: scale(0.9);
 }
 
 .empty {

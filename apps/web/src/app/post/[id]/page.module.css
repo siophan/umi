@@ -71,9 +71,19 @@
   gap: 10px;
   padding: 12px 14px 0;
   width: 100%;
+}
+
+.cardAuthorMain {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   text-align: left;
+  cursor: pointer;
 }
 
 .cardAuthor img {
@@ -81,6 +91,39 @@
   height: 38px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.followBtn,
+.followBtnActive {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.15s;
+}
+
+.followBtn {
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+  color: #fff;
+}
+
+.followBtnActive {
+  background: #f3f3f5;
+  color: #999;
+}
+
+.followBtn:active,
+.followBtnActive:active {
+  transform: scale(0.96);
+}
+
+.followBtn:disabled,
+.followBtnActive:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .cardAuthorInfo {

@@ -152,7 +152,7 @@ export default function LiveDetailPage() {
             <span>{getHostName(live)}</span>
           </div>
           <div className={styles.viewers}>
-            🔥 {formatNum(Number(live?.participants || 0))}
+            👁 {formatNum(Number(live?.participants || 0))}
           </div>
         </div>
       </section>

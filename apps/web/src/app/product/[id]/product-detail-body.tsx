@@ -305,13 +305,13 @@ export function ProductDetailBody({
                   <button className={styles.compareCard} type="button" onClick={() => onChangeTab('guess')}>
                     <span>竞猜价</span>
                     <strong>¥{guessPrice}</strong>
-                    <em>去竞猜 <i className="fa-solid fa-arrow-right" /></em>
+                    <em>去竞猜 →</em>
                   </button>
                 ) : null}
                 <button className={styles.compareCardGreen} type="button" onClick={() => onChangeTab('inv')}>
                   <span>换购价</span>
                   <strong>¥{directPrice}</strong>
-                  <em>去换购 <i className="fa-solid fa-arrow-right" /></em>
+                  <em>去换购 →</em>
                 </button>
               </div>
             </div>

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { CartItem as CartLineItem, ProductFeedItem } from '@umi/shared';
+import { toEntityId, type CartItem as CartLineItem, type ProductFeedItem } from '@umi/shared';
 
-import { fetchCart, removeCartItem, updateCartItem } from '../../lib/api/cart';
-import { fetchProductList } from '../../lib/api/products';
+import { addCartItem, fetchCart, removeCartItem, updateCartItem } from '../../lib/api/cart';
+import { fetchProductDetail, fetchProductList } from '../../lib/api/products';
+import { pickDefaultSku } from '../../components/sku-selector/sku-selector';
 import { hasAuthToken } from '../../lib/api/shared';
 import { CartFooterBar } from './cart-footer-bar';
 import { getErrorMessage, getGroupKey } from './cart-helpers';
@@ -287,6 +288,40 @@ export default function CartPage() {
   }
 
   /**
+   * 推荐商品 + 号快捷加车。
+   * 单规格商品取默认 sku 直接 addCartItem；多规格商品 fallback 跳详情页让用户选规格。
+   */
+  async function handleQuickAdd(productId: string) {
+    try {
+      const detail = await fetchProductDetail(productId);
+      const product = detail?.product;
+      if (!product) {
+        showToast('商品已下架');
+        return;
+      }
+      const hasSpecDefs = (product.specDefinitions ?? []).length > 0;
+      if (hasSpecDefs) {
+        router.push(`/product/${productId}`);
+        return;
+      }
+      const sku = pickDefaultSku(product.skus);
+      if (!sku || sku.status !== 'active' || (sku.available ?? 0) <= 0) {
+        showToast('商品已售罄');
+        return;
+      }
+      await addCartItem({
+        productId: toEntityId(product.id),
+        brandProductSkuId: toEntityId(sku.id),
+        quantity: 1,
+      });
+      showToast('已加入购物车 🛒');
+      setReloadToken((current) => current + 1);
+    } catch {
+      showToast('加入购物车失败');
+    }
+  }
+
+  /**
    * 从购物车进入支付页。
    * 这里只传被勾选的 cartItemIds，支付页再按真实购物车数据拉取快照。
    */
@@ -376,6 +411,7 @@ export default function CartPage() {
             recommendItems={recommendItems}
             onRetry={() => setReloadToken((current) => current + 1)}
             onOpenProduct={(productId) => router.push(`/product/${productId}`)}
+            onQuickAdd={handleQuickAdd}
           />
         </>
       ) : null}
