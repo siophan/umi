@@ -12,13 +12,11 @@
 
 ---
 
-## 1. Server Component 硬编码 API 地址（P0）
+## 1. Server Component 硬编码 API 地址（已完成）
 
-**文件**：`apps/web/src/app/page.tsx:11`、`apps/web/src/app/lives/page.tsx:5`、`apps/web/src/app/ranking/page.tsx:12`
+三个 Server Component（`apps/web/src/app/page.tsx`、`apps/web/src/app/lives/page.tsx`、`apps/web/src/app/ranking/page.tsx`）原先各自写死 `const apiBaseUrl = 'http://127.0.0.1:4000'`，现已统一走 `src/lib/env.ts` 的 `serverApiBaseUrl`（NEXT_PUBLIC_API_BASE_URL 兜底为本地 dev API）。
 
-三个 Server Component 自己写死了 `const apiBaseUrl = 'http://127.0.0.1:4000'`，没有走 `src/lib/env.ts` 的 `NEXT_PUBLIC_API_BASE_URL`。生产环境会直接请求失败。
-
-**修法**：统一改为 import `apiBaseUrl` from `../../lib/env`，或用 `process.env.NEXT_PUBLIC_API_BASE_URL`。
+`live/[id]/page.tsx` / `test-api/page.tsx` 都是 `'use client'`，使用 `apiBaseUrl` 浏览器侧符合预期；全 web 包再无别的 `127.0.0.1:4000` 残留。
 
 ---
 
@@ -448,9 +446,9 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
-## 27. 我的仓库 `/warehouse` 2026-05-05 修复 + 遗留
+## 27. 我的仓库 `/warehouse` 2026-05-05 修复 + 2026-05-06 提货闭环
 
-**已修复**：
+**2026-05-05 已修复**：
 - 物资总值条下加 12px padding 间距、列表客户端无限滚动（PAGE_SIZE=10，tab 切换重置）、移除底部 tab bar
 - 「物流」按钮：从 toast "物流：顺丰 SF1234567890" 假数据改为弹窗（`warehouse-tracking-modal.tsx`）展示 carrier + 运单号 + 复制按钮（`navigator.clipboard` + textarea fallback）；当前后端不返回值，弹窗显示"暂无物流信息"占位
 - 「寄售」弹窗：删除"寄售数量"input（接口本就 1:1 整批寄售，输入框是误导），文案改"本次将整批寄售 ×N"
@@ -458,14 +456,28 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 - 首屏 loading 4 张 skeleton 占位（之前 loading 时三个分支都不命中是空白）
 - **顺手修一个隐藏 bug**：`apps/api/src/modules/warehouse/warehouse-shared.ts` 的 `sanitizePhysicalRow` 之前 `status: row.status as WarehouseItem['status']` 是把 DB INT(10/20/30) 强转成字符串 union；新增 `mapPhysicalStatus` 做 number→label 映射，否则前端 `mapWarehouseTab` 用 `=== 'consigning'` 比对永远 false，**所有实体仓寄售物品都错落到「待提货」tab**
 
-**遗留 P0 — 提货真闭环**：
-当前提货按钮只是 toast。完整方案见 memory `project_warehouse_redesign.md` 批次 1：`POST /api/warehouse/:id/ship` 派发 virtual/physical，事务里改仓库 status + 写 fulfillment_order(type=10/ship, status=10/pending) + warehouse_item_log；前端弹地址 sheet（无地址引到 /me/addresses 新增）→ 选完才能确认。**强制选地址**是已敲定决策（老系统空 body 提货 → 履约 receiver 全空 → 无法发货）。
+**2026-05-06 提货闭环（批次 1，已完成）**：
 
-**遗留 P1 — 物流号字段后端不返回**：
-`packages/shared/src/domain.ts` 的 `WarehouseItem` 已加 `tracking?: { carrier; trackingNo } | null` 字段，但 `sanitizeVirtualRow` / `sanitizePhysicalRow` 没拼。批次 1 提货闭环时一并：`SELECT` 加 `LEFT JOIN fulfillment_order fo ON fo.warehouse_item_id = pw.id AND fo.status >= 30(shipped)`，把 `fo.carrier / fo.tracking_no` 喂到 sanitize 的 `tracking` 字段；运输中 tab 的判定也按"履约单驱动运输状态"原则改为 `fulfillment_order.status=30` 而不是 `physical_warehouse.status`。
+- 后端：`POST /api/warehouse/:id/ship` body `{ addressId }` → `warehouse-ship.ts:shipWarehouseItem`。事务内：锁地址 + 锁仓库行（FOR UPDATE）→ 校验 vw.status=10 / pw.status=10 → INSERT `fulfillment_order(type=10/ship, status=10/pending, order_id=NULL, shop_id=反查 product.shop_id)` + INSERT `fulfillment_order_item(brand_product_sku_id, unit_price, quantity)` + UPDATE vw.status=30 / pw.status=30 + INSERT `warehouse_item_log(action=40/outbound, source_id=fulfillment_order.id, operator_role=20/user)`
+- 路由：`apps/api/src/modules/warehouse/router.ts` 加 `POST /:id/ship`（id 走 `vw-{id}` / `pw-{id}` 派发）
+- 用户列表查询重写（`warehouse-user.ts`）：
+  - branch 1 改成 fulfillment_order 驱动：从 `fulfillment_order_item` 展开（之前 INNER JOIN 到 order/order_item 拿不到仓库提货建出来的 fo），CASE 把 fo.status=40 映射 `'completed'`、其余 10/20/30 全映射 `'shipping'`
+  - branch 2（physical_warehouse）排除 status=30 fulfilled（提货后退出 listing，由 fo 接管）；status 直接交给 sanitize
+  - virtual 排除 status=30 converted（同理）
+  - 两个分支都吐 `tracking_no`，sanitize 拼到 `WarehouseItem.tracking`（branch 2 永远是 null）
+- `sanitizePhysicalRow` 加 `mapPhysicalRowStatus`：兼容 branch 1 的字符串预映射（'shipping' / 'completed'）和 branch 2 的数字状态码——之前 `Number('shipping')=NaN` 让 branch 1 全部错落到「待提货」tab，是 2026-05-05 那次"hidden bug 修复"引入的回归
+- `markOrderPaid` 顺手补 `INSERT INTO fulfillment_order_item SELECT ...`，否则商城已支付订单的履约单也拿不到 _item，新查询展示不了——这是 2026-04-29 写 `markOrderPaid` 时漏的一笔
+- shared：`WarehouseShipPayload` / `WarehouseShipResult` 加在 `api-user-commerce.ts`
+- 前端：
+  - `lib/api/warehouse.ts` 加 `shipWarehouseItem(id, addressId)`
+  - 新增 `warehouse-ship-modal.tsx` 底部 sheet：fetchAddresses + 默认选中 default + 单选地址 + 「+ 新增 / 管理收货地址」跳 `/address` + 提交 loading 态。无地址时引导新增
+  - `page.tsx` 的 `onPickup` 从 toast 改为 `setShipItem(item)`，提交成功后 toast + reload
+  - `warehouse-tracking-modal.tsx`：carrier 为空字符串时不渲染「承运商」字段（warehouse-ship 默认 carrier=''，admin 发货才填 tracking_no）
 
-**遗留 P2 — 物资总值口径**：
-`page.tsx:97` 的 `counts.totalValue` 把所有 status（含 consigning）的 `price * quantity` 都加进"物资总值"。寄售中=已挂出去要卖的，是否算"我手里的物资"语义可商榷。老系统 `umi-origin/frontend/inventory.html` 算法待 diff 后跟产品确认，本期保留现状。
+**遗留**：
+- 老 vw.status=20 (locked) 仍然 mapWarehouseTab → 'pending' tab，含 提货按钮可点。提货后端会拒绝（要求 status=10）→ 弹错误 toast 而不会破坏数据。要更干净的 UX 应该在 list 层禁用 locked 行的按钮。本期不做。
+- **物资总值口径**：`page.tsx:97` 的 `counts.totalValue` 把所有 status（含 consigning）的 `price * quantity` 都加进"物资总值"。寄售中=已挂出去要卖的，是否算"我手里的物资"语义可商榷。老系统 `umi-origin/frontend/inventory.html` 算法待 diff 后跟产品确认（P2，本期保留现状）。
+- **历史 fulfillment_order 行无 _item**：2026-04-29 ~ 2026-05-06 之间走 markOrderPaid 创建的履约单没写 _item，新查询拿不到。pre-launch 接受不补回填，新订单从此正常显示。
 
 ---
 
@@ -571,6 +583,6 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
-| P0     | 2    | Server Component 硬编码 URL / 仓库提货真闭环（#27，批次 1）|
-| P1     | 7    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）/ 仓库 fulfillment_order 物流号未拼到 tracking 字段（#27）/ 签到奖励发券待 #品牌发券改造（#29）/ 邀请奖励发券 + 老账号 invite_code 生成（#30） |
+| P0     | 0    | （仓库提货闭环已于 2026-05-06 完成，见 #27）|
+| P1     | 6    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）/ 签到奖励发券待 #品牌发券改造（#29）/ 邀请奖励发券 + 老账号 invite_code 生成（#30） |
 | P2     | 17   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请记录后端 + 注册带邀请码闭环（#30） |

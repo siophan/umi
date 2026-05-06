@@ -322,7 +322,7 @@ export async function markOrderPaid(payNo: string, tradeNo: string, paidAt: Date
     const firstShop = itemRows[0] as { shop_id: number | string | null } | undefined;
 
     if (address) {
-      await connection.execute(
+      const [foResult] = await connection.execute<mysql.ResultSetHeader>(
         `INSERT INTO fulfillment_order (
            fulfillment_sn, type, status, user_id, order_id, shop_id, address_id, receiver_name, phone_number,
            province, city, district, detail_address, shipping_type, shipping_fee, total_amount, tracking_no,
@@ -346,6 +346,19 @@ export async function markOrderPaid(payNo: string, tradeNo: string, paidAt: Date
           0,
           Number(order.amount ?? 0),
         ],
+      );
+      const fulfillmentOrderId = Number(foResult.insertId);
+
+      // 把订单项展开到履约项；用户仓库 listing 走 fulfillment_order_item 驱动，缺这条会让"运输中" tab 看不到货
+      await connection.execute(
+        `INSERT INTO fulfillment_order_item (
+           fulfillment_order_id, product_id, brand_product_sku_id, unit_price, quantity, created_at, updated_at
+         )
+         SELECT ?, oi.product_id, oi.brand_product_sku_id, oi.unit_price, oi.quantity,
+                CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
+           FROM order_item oi
+          WHERE oi.order_id = ?`,
+        [fulfillmentOrderId, order.id],
       );
     } else {
       appLogger.warn({ orderId: order.id }, '[markOrderPaid] address missing, skip fulfillment');

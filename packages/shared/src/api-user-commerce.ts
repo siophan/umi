@@ -554,6 +554,16 @@ export interface WarehouseListResult {
   items: WarehouseItem[];
 }
 
+export interface WarehouseShipPayload {
+  addressId: EntityId;
+}
+
+export interface WarehouseShipResult {
+  success: true;
+  fulfillmentOrderId: EntityId;
+  fulfillmentSn: string;
+}
+
 export interface ProductDetailSpecRow {
   key: string;
   value: string;

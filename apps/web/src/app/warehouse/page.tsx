@@ -4,10 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { WarehouseItem } from '@umi/shared';
 
-import { cancelConsignWarehouseItem, consignWarehouseItem, fetchPhysicalWarehouse, fetchVirtualWarehouse } from '../../lib/api/warehouse';
+import {
+  cancelConsignWarehouseItem,
+  consignWarehouseItem,
+  fetchPhysicalWarehouse,
+  fetchVirtualWarehouse,
+  shipWarehouseItem,
+} from '../../lib/api/warehouse';
 import { hasAuthToken } from '../../lib/api/shared';
 import { MobileShell } from '../../components/mobile-shell';
 import { WarehouseConsignModal } from './warehouse-consign-modal';
+import { WarehouseShipModal } from './warehouse-ship-modal';
 import { WarehouseTrackingModal } from './warehouse-tracking-modal';
 import {
   buildSellEstimate,
@@ -34,6 +41,8 @@ export default function WarehousePage() {
   const [sellItem, setSellItem] = useState<WarehouseItem | null>(null);
   const [sellPrice, setSellPrice] = useState('0');
   const [trackingItem, setTrackingItem] = useState<WarehouseItem | null>(null);
+  const [shipItem, setShipItem] = useState<WarehouseItem | null>(null);
+  const [shipping, setShipping] = useState(false);
   const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -201,7 +210,7 @@ export default function WarehousePage() {
             })();
           }}
           onTrackShipment={(item) => setTrackingItem(item)}
-          onPickup={() => triggerToast('提货功能即将上线，敬请期待')}
+          onPickup={(item) => setShipItem(item)}
         />
 
         {sellItem ? (
@@ -220,6 +229,33 @@ export default function WarehousePage() {
             item={trackingItem}
             onClose={() => setTrackingItem(null)}
             onCopyResult={(success) => triggerToast(success ? '✅ 运单号已复制' : '复制失败，请手动选择')}
+          />
+        ) : null}
+
+        {shipItem ? (
+          <WarehouseShipModal
+            item={shipItem}
+            submitting={shipping}
+            onClose={() => {
+              if (shipping) return;
+              setShipItem(null);
+            }}
+            onSubmit={(addressId) => {
+              void (async () => {
+                if (!shipItem || shipping) return;
+                setShipping(true);
+                try {
+                  await shipWarehouseItem(shipItem.id, addressId);
+                  triggerToast(`📦 已提交提货：${shipItem.productName}`);
+                  setShipItem(null);
+                  await loadWarehouse();
+                } catch (error) {
+                  triggerToast(error instanceof Error ? error.message : '提货失败，请重试');
+                } finally {
+                  setShipping(false);
+                }
+              })();
+            }}
           />
         ) : null}
 

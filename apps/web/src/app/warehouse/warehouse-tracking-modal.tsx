@@ -59,10 +59,12 @@ export function WarehouseTrackingModal({ item, onClose, onCopyResult }: Warehous
 
         {tracking ? (
           <>
-            <div className={styles.field}>
-              <div className={styles.label}>承运商</div>
-              <div className={styles.trackingValue}>{tracking.carrier}</div>
-            </div>
+            {tracking.carrier ? (
+              <div className={styles.field}>
+                <div className={styles.label}>承运商</div>
+                <div className={styles.trackingValue}>{tracking.carrier}</div>
+              </div>
+            ) : null}
             <div className={styles.field}>
               <div className={styles.label}>运单号</div>
               <div className={styles.trackingNoRow}>

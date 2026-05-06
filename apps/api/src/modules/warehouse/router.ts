@@ -13,6 +13,7 @@ import {
   getAdminWarehouseStats,
 } from './warehouse-admin';
 import { cancelPhysicalWarehouseConsign, consignPhysicalWarehouseItem } from './warehouse-consign';
+import { shipWarehouseItem } from './warehouse-ship';
 import { getUserPhysicalWarehouseItems, getUserVirtualWarehouseItems } from './warehouse-user';
 
 export const warehouseRouter: ExpressRouter = Router();
@@ -51,6 +52,19 @@ warehouseRouter.post(
   asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
     ok(response, await cancelPhysicalWarehouseConsign(user.id, String(request.params.id)));
+  }),
+);
+
+warehouseRouter.post(
+  '/:id/ship',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const body = request.body as { addressId?: string | number };
+    ok(
+      response,
+      await shipWarehouseItem(user.id, String(request.params.id), String(body.addressId ?? '')),
+    );
   }),
 );
 

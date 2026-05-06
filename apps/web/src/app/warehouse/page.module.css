@@ -778,6 +778,106 @@
   color: #bbb;
 }
 
+.shipAddressList {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.shipAddressItem {
+  text-align: left;
+  padding: 12px;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.shipAddressActive {
+  border-color: #ff6b35;
+  background: linear-gradient(135deg, #fff5ef, #fff0ea);
+}
+
+.shipAddressTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.shipAddressName {
+  font-weight: 800;
+}
+
+.shipAddressPhone {
+  color: #666;
+  font-weight: 500;
+}
+
+.shipAddressTag {
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #ff6b35;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.shipAddressDetail {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.shipManageAddress {
+  margin-top: 4px;
+  padding: 10px;
+  border: 1px dashed #ddd;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #999;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.shipPlaceholder {
+  margin-bottom: 14px;
+  padding: 28px 16px;
+  border-radius: 12px;
+  background: #f8f8fa;
+  text-align: center;
+}
+
+.shipPlaceholderTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.shipPlaceholderText {
+  font-size: 12px;
+  color: #999;
+}
+
+.shipAddAddress {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff6b35, #ff2442);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .skeletonCard {
   display: flex;
   gap: 10px;

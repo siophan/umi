@@ -1,4 +1,4 @@
-import type { WarehouseListResult } from '@umi/shared';
+import type { WarehouseListResult, WarehouseShipPayload, WarehouseShipResult } from '@umi/shared';
 
 import { getJson, postJson } from './shared';
 
@@ -21,5 +21,12 @@ export function cancelConsignWarehouseItem(id: string) {
   return postJson<{ success: true }, Record<string, never>>(
     `/api/warehouse/physical/${encodeURIComponent(id)}/cancel-consign`,
     {},
+  );
+}
+
+export function shipWarehouseItem(id: string, addressId: string) {
+  return postJson<WarehouseShipResult, WarehouseShipPayload>(
+    `/api/warehouse/${encodeURIComponent(id)}/ship`,
+    { addressId },
   );
 }
