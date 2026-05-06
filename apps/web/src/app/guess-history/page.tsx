@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { fetchGuessHistory } from '../../lib/api/guesses';
+import type { GuessHistoryListTab } from '@umi/shared';
+
+import { fetchGuessHistory, fetchGuessHistoryPage } from '../../lib/api/guesses';
 import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 
@@ -13,6 +15,15 @@ type Streak = { type: 'win' | 'loss'; count: number };
 type HistoryItem = Awaited<ReturnType<typeof fetchGuessHistory>>['history'][number];
 type ActiveItem = Awaited<ReturnType<typeof fetchGuessHistory>>['active'][number];
 type PkItem = Awaited<ReturnType<typeof fetchGuessHistory>>['pk'][number];
+
+/** UI tab → 服务端 list tab 映射（"all" 复用 history 流，"已结算"两个 tab 各自独立游标） */
+const TAB_TO_LIST: Record<TabKey, GuessHistoryListTab> = {
+  all: 'history',
+  active: 'active',
+  won: 'won',
+  lost: 'lost',
+  pk: 'pk',
+};
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 22; // r=22 → ≈138.23
 
@@ -380,20 +391,40 @@ export default function GuessHistoryPage() {
   const [loadError, setLoadError] = useState('');
   const [reloadToken, setReloadToken] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const [historyData, setHistoryData] = useState({
-    stats: {
-      total: 0,
-      active: 0,
-      won: 0,
-      lost: 0,
-      pk: 0,
-      winRate: 0,
-      level: 1,
-    },
-    active: [] as ActiveItem[],
-    history: [] as HistoryItem[],
-    pk: [] as PkItem[],
+
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    won: 0,
+    lost: 0,
+    pk: 0,
+    winRate: 0,
+    level: 1,
   });
+
+  // 五条独立流：active / history / won / lost / pk
+  const [activeItems, setActiveItems] = useState<ActiveItem[]>([]);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [wonItems, setWonItems] = useState<HistoryItem[]>([]);
+  const [lostItems, setLostItems] = useState<HistoryItem[]>([]);
+  const [pkItems, setPkItems] = useState<PkItem[]>([]);
+  const [cursors, setCursors] = useState<Record<GuessHistoryListTab, string | null>>({
+    active: null,
+    history: null,
+    won: null,
+    lost: null,
+    pk: null,
+  });
+  // won/lost 不在首屏返回，标记是否已 lazy 加载过
+  const [loadedTabs, setLoadedTabs] = useState<Record<GuessHistoryListTab, boolean>>({
+    active: false,
+    history: false,
+    won: false,
+    lost: false,
+    pk: false,
+  });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // toast 自动消失
   useEffect(() => {
@@ -411,14 +442,12 @@ export default function GuessHistoryPage() {
     }
   }, [router]);
 
-  // 加载数据
+  // 首屏加载：拉 stats + active/history/pk 各自第一页
   useEffect(() => {
     let ignore = false;
-    async function loadHistory() {
+    async function loadInitial() {
       if (!hasAuthToken()) {
-        if (!ignore) {
-          setLoading(false);
-        }
+        if (!ignore) setLoading(false);
         return;
       }
       if (!ignore) {
@@ -427,21 +456,29 @@ export default function GuessHistoryPage() {
       }
       try {
         const data = await fetchGuessHistory();
-        if (!ignore) {
-          setHistoryData(data);
-        }
+        if (ignore) return;
+        setStats(data.stats);
+        setActiveItems(data.active);
+        setHistoryItems(data.history);
+        setPkItems(data.pk);
+        setWonItems([]);
+        setLostItems([]);
+        setCursors({
+          active: data.nextCursor.active,
+          history: data.nextCursor.history,
+          won: null,
+          lost: null,
+          pk: data.nextCursor.pk,
+        });
+        setLoadedTabs({ active: true, history: true, won: false, lost: false, pk: true });
       } catch (error) {
-        if (ignore) {
-          return;
-        }
+        if (ignore) return;
         setLoadError(error instanceof Error ? error.message : '竞猜历史加载失败，请稍后重试');
       } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+        if (!ignore) setLoading(false);
       }
     }
-    void loadHistory();
+    void loadInitial();
     return () => {
       ignore = true;
     };
@@ -449,33 +486,86 @@ export default function GuessHistoryPage() {
 
   // 倒计时 tick — 仅在有 active 时启用
   useEffect(() => {
-    if (historyData.active.length === 0) {
+    if (activeItems.length === 0) {
       return undefined;
     }
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [historyData.active.length]);
+  }, [activeItems.length]);
 
-  const animatedTotal = useAnimatedNumber(historyData.stats.total);
-  const animatedWon = useAnimatedNumber(historyData.stats.won);
-  const animatedRate = useAnimatedNumber(Math.round(historyData.stats.winRate));
+  const animatedTotal = useAnimatedNumber(stats.total);
+  const animatedWon = useAnimatedNumber(stats.won);
+  const animatedRate = useAnimatedNumber(Math.round(stats.winRate));
 
-  const filteredHistory = useMemo(
-    () => historyData.history.filter((card) => tab === 'all' || card.outcome === tab),
-    [historyData.history, tab],
-  );
-
-  // streak 在当前过滤后的列表上算（与老版语义一致）
-  const streaks = useMemo(() => computeStreaks(filteredHistory), [filteredHistory]);
+  const streaks = useMemo(() => {
+    if (tab === 'won') return computeStreaks(wonItems);
+    if (tab === 'lost') return computeStreaks(lostItems);
+    return computeStreaks(historyItems);
+  }, [tab, historyItems, wonItems, lostItems]);
 
   const ringOffset = useMemo(() => {
-    const winRate = Math.max(0, Math.min(100, historyData.stats.winRate));
+    const winRate = Math.max(0, Math.min(100, stats.winRate));
     return RING_CIRCUMFERENCE - (winRate / 100) * RING_CIRCUMFERENCE;
-  }, [historyData.stats.winRate]);
+  }, [stats.winRate]);
 
   const goHome = () => router.push('/');
   const goFriends = () => router.push('/friends');
   const openGuess = (id: string) => router.push(`/guess/${encodeURIComponent(id)}`);
+
+  // 拉某 tab 的下一页（cursor=null 表示 lazy 首页）
+  const loadTabPage = useCallback(
+    async (listTab: GuessHistoryListTab, cursor: string | null) => {
+      const data = await fetchGuessHistoryPage(listTab, cursor);
+      const append = cursor !== null;
+      if (data.tab === 'active') {
+        setActiveItems((prev) => (append ? [...prev, ...data.items] : data.items));
+      } else if (data.tab === 'pk') {
+        setPkItems((prev) => (append ? [...prev, ...data.items] : data.items));
+      } else if (data.tab === 'won') {
+        setWonItems((prev) => (append ? [...prev, ...data.items] : data.items));
+      } else if (data.tab === 'lost') {
+        setLostItems((prev) => (append ? [...prev, ...data.items] : data.items));
+      } else {
+        setHistoryItems((prev) => (append ? [...prev, ...data.items] : data.items));
+      }
+      setCursors((prev) => ({ ...prev, [listTab]: data.nextCursor }));
+      setLoadedTabs((prev) => ({ ...prev, [listTab]: true }));
+    },
+    [],
+  );
+
+  // tab 切换：若 won/lost 没加载过，触发 lazy 首页
+  useEffect(() => {
+    const listTab = TAB_TO_LIST[tab];
+    if (!loadedTabs[listTab]) {
+      void loadTabPage(listTab, null).catch(() => {
+        /* 静默；用户可下拉重试 */
+      });
+    }
+  }, [tab, loadedTabs, loadTabPage]);
+
+  // sentinel 触底加载更多（当前 tab）
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    const listTab = TAB_TO_LIST[tab];
+    const cursor = cursors[listTab];
+    if (!cursor) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting || loadingMore) return;
+        setLoadingMore(true);
+        void loadTabPage(listTab, cursor)
+          .catch(() => {
+            /* 静默；下次进入再试 */
+          })
+          .finally(() => setLoadingMore(false));
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [tab, cursors, loadingMore, loadTabPage]);
 
   const handleSwitchTab = (next: TabKey) => {
     if (next === tab) {
@@ -533,7 +623,7 @@ export default function GuessHistoryPage() {
                 <div className={styles.statLabel}>胜率</div>
               </div>
               <div className={styles.statItem}>
-                <div className={styles.statVal}>Lv.{historyData.stats.level}</div>
+                <div className={styles.statVal}>Lv.{stats.level}</div>
                 <div className={styles.statLabel}>等级</div>
               </div>
             </div>
@@ -557,12 +647,12 @@ export default function GuessHistoryPage() {
                 />
               </svg>
               <div className={styles.ringInfo}>
-                <div className={styles.ringPct}>{historyData.stats.winRate}%</div>
+                <div className={styles.ringPct}>{stats.winRate}%</div>
                 <div className={styles.ringDetail}>
-                  猜中 {historyData.stats.won} 次 / 共 {historyData.stats.won + historyData.stats.lost} 次
+                  猜中 {stats.won} 次 / 共 {stats.won + stats.lost} 次
                 </div>
                 <div className={styles.ringBar}>
-                  <div className={styles.ringBarWin} style={{ width: `${historyData.stats.winRate}%` }} />
+                  <div className={styles.ringBarWin} style={{ width: `${stats.winRate}%` }} />
                   <div className={styles.ringBarLoss} />
                 </div>
               </div>
@@ -572,11 +662,11 @@ export default function GuessHistoryPage() {
           <nav className={styles.tabs}>
             {(
               [
-                ['all', '📋 全部', historyData.stats.total],
-                ['active', '🔴 正在进行', historyData.stats.active],
-                ['won', '🎉 猜中', historyData.stats.won],
-                ['lost', '🎫 未中', historyData.stats.lost],
-                ['pk', '⚡ PK记录', historyData.stats.pk],
+                ['all', '📋 全部', stats.total],
+                ['active', '🔴 正在进行', stats.active],
+                ['won', '🎉 猜中', stats.won],
+                ['lost', '🎫 未中', stats.lost],
+                ['pk', '⚡ PK记录', stats.pk],
               ] as Array<[TabKey, string, number]>
             ).map(([key, label, count]) => (
               <button
@@ -587,69 +677,78 @@ export default function GuessHistoryPage() {
               >
                 {label}
                 <span className={styles.count}>{count}</span>
-                {key === 'active' && historyData.active.length > 0 ? <span className={styles.tabDot} /> : null}
+                {key === 'active' && stats.active > 0 ? <span className={styles.tabDot} /> : null}
               </button>
             ))}
           </nav>
 
           <main className={styles.records}>
             {/* 全部 tab：先显示进行中分区 + 历史记录分区头 */}
-            {tab === 'all' && historyData.active.length > 0 ? (
+            {tab === 'all' && activeItems.length > 0 ? (
               <>
                 <div className={styles.sectionHead}>
                   <span className={styles.sectionDot} />
-                  正在进行 ({historyData.active.length})
+                  正在进行 ({stats.active})
                 </div>
-                {historyData.active.slice(0, 2).map((item, index) => (
+                {activeItems.slice(0, 2).map((item, index) => (
                   <ActiveCard key={item.betId} item={item} index={index} now={now} compact onOpen={openGuess} />
                 ))}
-                {historyData.active.length > 2 ? (
+                {stats.active > 2 ? (
                   <button type="button" className={styles.seeAll} onClick={() => handleSwitchTab('active')}>
-                    查看全部 {historyData.active.length} 个进行中 →
+                    查看全部 {stats.active} 个进行中 →
                   </button>
                 ) : null}
-                <div className={styles.sectionHead}>📋 历史记录 ({historyData.history.length})</div>
+                <div className={styles.sectionHead}>📋 历史记录</div>
               </>
             ) : null}
 
             {/* 进行中 tab */}
             {tab === 'active' &&
-              historyData.active.map((item, index) => (
+              activeItems.map((item, index) => (
                 <ActiveCard key={item.betId} item={item} index={index} now={now} onOpen={openGuess} />
               ))}
 
             {/* 猜中/未中/全部 历史记录 */}
-            {(tab === 'all' || tab === 'won' || tab === 'lost') &&
-              filteredHistory.map((item, index) => (
-                <HistoryCard
-                  key={item.betId}
-                  item={item}
-                  index={index}
-                  streak={streaks[index]}
-                  onOpen={openGuess}
-                />
+            {tab === 'all' &&
+              historyItems.map((item, index) => (
+                <HistoryCard key={item.betId} item={item} index={index} streak={streaks[index]} onOpen={openGuess} />
+              ))}
+            {tab === 'won' &&
+              wonItems.map((item, index) => (
+                <HistoryCard key={item.betId} item={item} index={index} streak={streaks[index]} onOpen={openGuess} />
+              ))}
+            {tab === 'lost' &&
+              lostItems.map((item, index) => (
+                <HistoryCard key={item.betId} item={item} index={index} streak={streaks[index]} onOpen={openGuess} />
               ))}
 
             {/* PK 记录 */}
             {tab === 'pk' &&
-              historyData.pk.map((item, index) => (
+              pkItems.map((item, index) => (
                 <PkCard key={item.betId} item={item} index={index} onOpen={openGuess} />
               ))}
 
+            {/* sentinel 用于触底加载更多 */}
+            {cursors[TAB_TO_LIST[tab]] ? (
+              <div ref={sentinelRef} className={styles.loadMoreSentinel}>
+                {loadingMore ? '加载中…' : ''}
+              </div>
+            ) : null}
+
             {/* Empty */}
-            {!loading && tab === 'active' && historyData.active.length === 0 ? (
+            {!loading && tab === 'active' && activeItems.length === 0 ? (
               <EmptyBlock icon="🔴" title="暂无进行中的竞猜" tip="去大厅参与精彩竞猜吧！" ctaLabel="去参与竞猜" onCta={goHome} />
             ) : null}
-            {!loading && tab === 'all' && filteredHistory.length === 0 && historyData.active.length === 0 ? (
+            {!loading && tab === 'all' && historyItems.length === 0 && activeItems.length === 0 ? (
               <EmptyBlock icon="📋" title="暂无竞猜记录" tip="快去参与竞猜吧！" ctaLabel="去参与竞猜" onCta={goHome} />
             ) : null}
-            {!loading && tab === 'won' && filteredHistory.length === 0 ? (
+            {!loading && tab === 'won' && loadedTabs.won && wonItems.length === 0 ? (
               <EmptyBlock icon="🎉" title="暂无猜中记录" tip="继续加油，好运即将到来！" ctaLabel="去参与竞猜" onCta={goHome} />
             ) : null}
-            {!loading && tab === 'lost' && filteredHistory.length === 0 ? (
+            {!loading && tab === 'lost' && loadedTabs.lost && lostItems.length === 0 ? (
               <EmptyBlock icon="🎫" title="暂无未中记录" tip="你太厉害了，全部猜中！" ctaLabel="去参与竞猜" onCta={goHome} />
             ) : null}
-            {!loading && tab === 'pk' && historyData.pk.length === 0 ? (
+            {!loading && tab === 'pk' && pkItems.length === 0 ? (
               <EmptyBlock icon="⚡" title="暂无 PK 记录" tip="邀请好友开始 PK 对决吧！" ctaLabel="邀请好友" onCta={goFriends} />
             ) : null}
           </main>

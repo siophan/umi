@@ -34,6 +34,41 @@ export const commercePaths = {
       },
     },
   },
+  '/api/guesses/user/history/page': {
+    get: {
+      tags: ['Guess'],
+      summary: '分页拉取竞猜历史的某一类（active/history/won/lost/pk）',
+      security: bearerSecurity,
+      parameters: [
+        {
+          name: 'tab',
+          in: 'query',
+          required: true,
+          schema: { type: 'string', enum: ['active', 'history', 'won', 'lost', 'pk'] },
+          description: '要分页的列表名',
+        },
+        {
+          name: 'cursor',
+          in: 'query',
+          required: false,
+          schema: { type: 'string' },
+          description: 'created_at 游标（ISO 时间），首页留空',
+        },
+      ],
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            tab: { type: 'string' },
+            items: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            nextCursor: { type: 'string', nullable: true },
+          },
+        }),
+        400: errorResponse(400, 'tab 参数不合法 / 游标格式错误'),
+        401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
   '/api/guesses/my-bets': {
     get: {
       tags: ['Guess'],

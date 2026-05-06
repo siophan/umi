@@ -389,12 +389,28 @@ export interface GuessHistoryPkItem {
   prize: string;
 }
 
+export interface GuessHistoryNextCursor {
+  active: string | null;
+  history: string | null;
+  won: string | null;
+  lost: string | null;
+  pk: string | null;
+}
+
 export interface GuessHistoryResult {
   stats: GuessHistoryStats;
   active: GuessHistoryActiveItem[];
   history: GuessHistoryRecordItem[];
   pk: GuessHistoryPkItem[];
+  nextCursor: GuessHistoryNextCursor;
 }
+
+export type GuessHistoryListTab = 'active' | 'history' | 'won' | 'lost' | 'pk';
+
+export type GuessHistoryPageResult =
+  | { tab: 'active'; items: GuessHistoryActiveItem[]; nextCursor: string | null }
+  | { tab: 'history' | 'won' | 'lost'; items: GuessHistoryRecordItem[]; nextCursor: string | null }
+  | { tab: 'pk'; items: GuessHistoryPkItem[]; nextCursor: string | null };
 
 export interface LiveGuessSummary {
   id: GuessId;

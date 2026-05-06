@@ -7,6 +7,8 @@ import type {
   GuessCategoryListResult,
   GuessCommentListResult,
   GuessCommentSummary,
+  GuessHistoryListTab,
+  GuessHistoryPageResult,
   GuessHistoryResult,
   GuessListResult,
   GuessSummary,
@@ -49,6 +51,14 @@ export function fetchGuess(id: string) {
 
 export function fetchGuessHistory() {
   return getJson<GuessHistoryResult>('/api/guesses/user/history');
+}
+
+export function fetchGuessHistoryPage(tab: GuessHistoryListTab, cursor: string | null) {
+  const params = new URLSearchParams({ tab });
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+  return getJson<GuessHistoryPageResult>(`/api/guesses/user/history/page?${params.toString()}`);
 }
 
 export function createGuess(payload: CreateGuessPayload) {

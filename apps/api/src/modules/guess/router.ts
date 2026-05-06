@@ -1,5 +1,6 @@
 import type {
   CreateGuessPayload,
+  GuessHistoryListTab,
   ParticipateGuessPayload,
   PostGuessCommentPayload,
 } from '@umi/shared';
@@ -8,14 +9,14 @@ import { Router } from 'express';
 import type { Router as ExpressRouter } from 'express';
 
 import { getRequestUser, optionalUser, requireUser } from '../../lib/auth';
-import { asyncHandler } from '../../lib/errors';
+import { asyncHandler, HttpError } from '../../lib/errors';
 import { ok } from '../../lib/http';
 import { toRouteHttpError } from '../admin/route-helpers';
 import { getGuessCategories } from './guess-categories';
 import { listGuessComments } from './guess-comments';
 import { createUserGuess } from './guess-create';
 import { getFriendPkSummary } from './friend-pk';
-import { getUserHistoryResult } from './guess-history';
+import { getUserHistoryPage, getUserHistoryResult } from './guess-history';
 import { getGuessDetail, getGuessList, getGuessStats } from './guess-read';
 import {
   addGuessFavorite,
@@ -54,6 +55,26 @@ guessRouter.get(
   asyncHandler(async (request, response) => {
     const user = getRequestUser(request);
     ok(response, await getUserHistoryResult(user.id, user.name));
+  }),
+);
+
+const VALID_HISTORY_TABS: GuessHistoryListTab[] = ['active', 'history', 'won', 'lost', 'pk'];
+
+guessRouter.get(
+  '/user/history/page',
+  requireUser,
+  asyncHandler(async (request, response) => {
+    const user = getRequestUser(request);
+    const tabRaw = String(request.query.tab ?? '').trim();
+    if (!VALID_HISTORY_TABS.includes(tabRaw as GuessHistoryListTab)) {
+      throw new HttpError(400, 'GUESS_HISTORY_TAB_INVALID', 'tab 参数不合法');
+    }
+    const cursorRaw = request.query.cursor;
+    const cursor = typeof cursorRaw === 'string' && cursorRaw.trim() ? cursorRaw.trim() : null;
+    ok(
+      response,
+      await getUserHistoryPage(user.id, user.name, tabRaw as GuessHistoryListTab, cursor),
+    );
   }),
 );
 
