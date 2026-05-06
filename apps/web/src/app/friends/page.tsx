@@ -1,9 +1,10 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { hasAuthToken } from '../../lib/api/shared';
+import { FriendsAddSheet } from './friends-add-sheet';
 import { FriendsPkModal } from './friends-pk-modal';
 import { FriendsOverviewSections } from './friends-overview-sections';
 import { FriendsTabSections } from './friends-tab-sections';
@@ -16,6 +17,7 @@ import styles from './page.module.css';
  */
 function FriendsPageInner() {
   const router = useRouter();
+  const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
     if (!hasAuthToken()) {
@@ -89,7 +91,7 @@ function FriendsPageInner() {
         query={query}
         onChangeQuery={setQuery}
         onReloadHot={reload}
-        onShowToast={showToast}
+        onOpenAddFriend={() => setAddOpen(true)}
       />
 
       <FriendsTabSections
@@ -105,7 +107,7 @@ function FriendsPageInner() {
         onToggleSort={toggleSort}
         onOpenProfile={openProfile}
         onOpenPk={openPk}
-        onOpenMessage={(name) => showToast(`发消息给 ${name}`)}
+        onOpenMessage={(item) => router.push(`/chat/${encodeURIComponent(item.id)}`)}
         onToggleFollowing={(item) => void handleToggleFollowing(item)}
         onToggleFanFollow={(item) => void handleToggleFanFollow(item)}
         onAcceptRequest={(item) => void acceptRequest(item)}
@@ -121,6 +123,13 @@ function FriendsPageInner() {
         onClose={() => setPkOpen(false)}
         onSelectGuess={setSelectedGuessId}
         onConfirm={confirmPk}
+      />
+
+      <FriendsAddSheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onShowToast={showToast}
+        onAccepted={reload}
       />
 
       {toast ? <div className={styles.toast}>{toast}</div> : null}

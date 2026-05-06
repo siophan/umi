@@ -203,11 +203,20 @@ export interface UserSearchItem {
   winRate?: number;
   shopVerified?: boolean;
   shopName?: string | null;
-  relation: 'self' | 'friend' | 'following' | 'fan' | 'none';
+  relation: 'self' | 'friend' | 'pending' | 'following' | 'fan' | 'none';
 }
 
 export interface UserSearchResult {
   items: UserSearchItem[];
+}
+
+export interface SendFriendRequestPayload {
+  targetUserId: string;
+}
+
+export interface SendFriendRequestResult {
+  success: true;
+  status: 'pending' | 'accepted';
 }
 
 export interface ChatConversationItem {

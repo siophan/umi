@@ -1,4 +1,9 @@
-import type { SocialFriendsResult, SocialOverviewResult } from '@umi/shared';
+import type {
+  SendFriendRequestPayload,
+  SendFriendRequestResult,
+  SocialFriendsResult,
+  SocialOverviewResult,
+} from '@umi/shared';
 
 import { getJson, postJson } from './shared';
 
@@ -30,5 +35,12 @@ export async function rejectFriendRequest(userId: string) {
   return postJson<{ success: true }, Record<string, never>>(
     `/api/social/requests/${encodeURIComponent(userId)}/reject`,
     {},
+  );
+}
+
+export async function sendFriendRequest(targetUserId: string) {
+  return postJson<SendFriendRequestResult, SendFriendRequestPayload>(
+    '/api/social/requests',
+    { targetUserId },
   );
 }

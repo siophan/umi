@@ -469,6 +469,28 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
+## 28. 好友页加好友 + 消息按钮接通（已完成 2026-05-06）
+
+**进度**：好友页（`apps/web/src/app/friends`）顶部"加好友"按钮、好友卡片"消息"按钮两个 stub 全部接通真链路。
+
+### 加好友
+- 后端：`POST /api/social/requests` body `{ targetUserId }` → `social/store.ts:sendFriendRequest(viewerId, targetId)`，覆盖 6 种边界（自加自己 / 目标不存在 / 已是好友 / 已 pending 幂等返回 / **reverse pending 自动闭合双向 accepted** / 已 rejected 重投 pending）
+- `searchUsers` SELECT/ORDER BY 加 pending 分支，`UserSearchItem.relation` 增加 `'pending'` 枚举值
+- 前端：新增 `friends-add-sheet.tsx` 底部 sheet（搜索 debounce 300ms + reqToken 防竞态 + 行尾按钮按 relation 显示「已是好友/已申请/添加」），自动接受路径下关闭 sheet 并触发主页 reload
+- shared 类型：`SendFriendRequestPayload` / `SendFriendRequestResult { success, status: 'pending'|'accepted' }`
+
+### 消息按钮
+- `friends-tab-sections.tsx` 的 `onOpenMessage` 签名改为 `(item: { id, name }) => void`
+- `page.tsx` 直接 `router.push(\`/chat/${id}\`)`；`/chat/[id]` 页面已存在并就绪（`fetchChatDetail` / `sendChatMessage`）
+
+### 仍未做
+- 老系统 PK 弹层有"邀请已发送 + 微信/链接分享"成功页，新版直接关闭跳竞猜，**少了 PK 成功反馈态**（CLAUDE.md 记录但不阻塞）
+- "发起 PK"语义被偷换：从"发 PK 邀请"改成"跳同一竞猜详情 `?pkFriend=`"，依赖目标用户主动下注，没有真正的 PK 邀请下发链路；与 admin 端「好友竞猜」（`/create?mode=pk`）也未桥接（P2）
+- "PK 记录"快捷入口跳混合的 `/guess-history`，没有专属 PK 维度过滤页（P2）
+- 删除 / 拉黑好友：两版都缺（P2）
+
+---
+
 ## 21. 用户端商品详情未消费 brand_product 的图（P2）
 
 **文件**：`apps/api/src/modules/product/product-shared.ts:294`（getProductById SELECT）+ `apps/api/src/modules/product/product-detail.ts:337`（images 数组拼装）
@@ -489,4 +511,4 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 |--------|------|------|
 | P0     | 2    | Server Component 硬编码 URL / 仓库提货真闭环（#27，批次 1）|
 | P1     | 5    | 注册头像不生效 / 忘记密码无流程 / 购物车满减硬编码 / 商城退款 API（#15 P1）/ 仓库 fulfillment_order 物流号未拼到 tracking 字段（#27）|
-| P2     | 14   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选） |
+| P2     | 15   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28） |

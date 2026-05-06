@@ -9,9 +9,29 @@ import {
   getSocialOverview,
   rejectFriendRequest,
   searchFriends,
+  sendFriendRequest,
 } from './store';
 
 export const socialRouter: ExpressRouter = Router();
+
+socialRouter.post(
+  '/requests',
+  requireUser,
+  withErrorBoundary(
+    {
+      status: 400,
+      code: 'FRIEND_REQUEST_FAILED',
+      message: '发送好友申请失败',
+    },
+    async (request, response) => {
+      const user = getRequestUser(request);
+      const targetUserId = String(
+        (request.body as { targetUserId?: unknown })?.targetUserId ?? '',
+      );
+      ok(response, await sendFriendRequest(user.id, targetUserId));
+    },
+  ),
+);
 
 socialRouter.post(
   '/requests/:id/accept',

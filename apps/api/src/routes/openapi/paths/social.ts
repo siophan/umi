@@ -72,6 +72,39 @@ export const socialPaths = {
       },
     },
   },
+  '/api/social/requests': {
+    post: {
+      tags: ['Social'],
+      summary: '发送好友申请',
+      security: bearerSecurity,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['targetUserId'],
+              properties: {
+                targetUserId: { type: 'string', description: '目标用户内部 ID' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            status: { type: 'string', enum: ['pending', 'accepted'] },
+          },
+        }),
+        400: errorResponse(400, '发送好友申请失败'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '用户不存在'),
+      },
+    },
+  },
   '/api/social/requests/{id}/accept': {
     post: {
       tags: ['Social'],

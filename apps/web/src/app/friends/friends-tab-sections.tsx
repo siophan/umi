@@ -19,7 +19,7 @@ type FriendsTabSectionsProps = {
   onToggleSort: () => void;
   onOpenProfile: (uid: string) => void;
   onOpenPk: (item: FriendItem) => void;
-  onOpenMessage: (name: string) => void;
+  onOpenMessage: (item: { id: string; name: string }) => void;
   onToggleFollowing: (item: FollowingItem) => void;
   onToggleFanFollow: (item: FanItem) => void;
   onAcceptRequest: (item: RequestItem) => void;
@@ -83,7 +83,7 @@ export function FriendsTabSections({
               <button className={styles.primaryBtn} type="button" onClick={() => onOpenPk(item)}>
                 <i className="fa-solid fa-bolt" /> PK
               </button>
-              <button className={styles.outlineIconBtn} type="button" onClick={() => onOpenMessage(item.name)}>
+              <button className={styles.outlineIconBtn} type="button" onClick={() => onOpenMessage({ id: item.id, name: item.name })}>
                 <i className="fa-regular fa-comment" />
               </button>
             </div>

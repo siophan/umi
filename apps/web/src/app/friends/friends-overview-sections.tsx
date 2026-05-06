@@ -22,7 +22,7 @@ type Props = {
   query: string;
   onChangeQuery: (value: string) => void;
   onReloadHot: () => void;
-  onShowToast: (message: string) => void;
+  onOpenAddFriend: () => void;
 };
 
 export function FriendsOverviewSections({
@@ -42,7 +42,7 @@ export function FriendsOverviewSections({
   query,
   onChangeQuery,
   onReloadHot,
-  onShowToast,
+  onOpenAddFriend,
 }: Props) {
   return (
     <>
@@ -51,7 +51,7 @@ export function FriendsOverviewSections({
           <i className="fa-solid fa-arrow-left" />
         </button>
         <div className={styles.headerTitle}>好友</div>
-        <button className={styles.actionBtn} type="button" onClick={() => onShowToast('添加好友')}>
+        <button className={styles.actionBtn} type="button" onClick={onOpenAddFriend} aria-label="添加好友">
           <i className="fa-solid fa-user-plus" />
         </button>
       </header>

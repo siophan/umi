@@ -2,6 +2,7 @@ import type mysql from 'mysql2/promise';
 
 import { toEntityId } from '@umi/shared';
 import type {
+  SendFriendRequestResult,
   SocialOverviewResult,
   SocialUserItem,
   UserSearchItem,
@@ -9,6 +10,7 @@ import type {
 } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { HttpError } from '../../lib/errors';
 
 const FRIENDSHIP_PENDING = 10;
 const FRIENDSHIP_ACCEPTED = 30;
@@ -349,6 +351,13 @@ export async function searchUsers(userId: string, q?: string): Promise<UserSearc
           ) THEN 'friend'
           WHEN EXISTS (
             SELECT 1
+            FROM friendship fp
+            WHERE fp.user_id = ?
+              AND fp.friend_id = u.id
+              AND fp.status = ?
+          ) THEN 'pending'
+          WHEN EXISTS (
+            SELECT 1
             FROM user_follow uf
             WHERE uf.follower_id = ?
               AND uf.following_id = u.id
@@ -392,17 +401,24 @@ export async function searchUsers(userId: string, q?: string): Promise<UserSearc
           ) THEN 0
           WHEN EXISTS (
             SELECT 1
+            FROM friendship fp
+            WHERE fp.user_id = ?
+              AND fp.friend_id = u.id
+              AND fp.status = ?
+          ) THEN 1
+          WHEN EXISTS (
+            SELECT 1
             FROM user_follow uf
             WHERE uf.follower_id = ?
               AND uf.following_id = u.id
-          ) THEN 1
+          ) THEN 2
           WHEN EXISTS (
             SELECT 1
             FROM user_follow uf
             WHERE uf.follower_id = u.id
               AND uf.following_id = ?
-          ) THEN 2
-          ELSE 3
+          ) THEN 3
+          ELSE 4
         END ASC,
         COALESCE((SELECT COUNT(*) FROM user_follow f1 WHERE f1.following_id = u.id), 0) DESC,
         COALESCE((SELECT COUNT(*) FROM guess_bet gb1 WHERE gb1.user_id = u.id), 0) DESC,
@@ -412,6 +428,8 @@ export async function searchUsers(userId: string, q?: string): Promise<UserSearc
     [
       userId,
       FRIENDSHIP_ACCEPTED,
+      userId,
+      FRIENDSHIP_PENDING,
       userId,
       userId,
       userId,
@@ -423,6 +441,8 @@ export async function searchUsers(userId: string, q?: string): Promise<UserSearc
       userId,
       FRIENDSHIP_ACCEPTED,
       userId,
+      FRIENDSHIP_PENDING,
+      userId,
       userId,
     ],
   );
@@ -430,4 +450,112 @@ export async function searchUsers(userId: string, q?: string): Promise<UserSearc
   return {
     items: (rows as UserSearchRow[]).map((row) => sanitizeUserSearchRow(row)),
   };
+}
+
+export async function sendFriendRequest(
+  viewerId: string,
+  targetUserId: string,
+): Promise<SendFriendRequestResult> {
+  if (!targetUserId || String(targetUserId) === String(viewerId)) {
+    throw new HttpError(400, 'FRIEND_REQUEST_INVALID', '不能添加自己为好友');
+  }
+
+  const db = getDbPool();
+
+  const [targetRows] = await db.execute<mysql.RowDataPacket[]>(
+    'SELECT id FROM user WHERE id = ? LIMIT 1',
+    [targetUserId],
+  );
+  if (!targetRows.length) {
+    throw new HttpError(404, 'FRIEND_REQUEST_TARGET_NOT_FOUND', '用户不存在');
+  }
+
+  const [forwardRows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT status
+      FROM friendship
+      WHERE user_id = ?
+        AND friend_id = ?
+      LIMIT 1
+    `,
+    [viewerId, targetUserId],
+  );
+
+  if (forwardRows.length) {
+    const currentStatus = Number(forwardRows[0].status);
+    if (currentStatus === FRIENDSHIP_ACCEPTED) {
+      return { success: true as const, status: 'accepted' };
+    }
+    if (currentStatus === FRIENDSHIP_PENDING) {
+      return { success: true as const, status: 'pending' };
+    }
+  }
+
+  const [reverseRows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT status
+      FROM friendship
+      WHERE user_id = ?
+        AND friend_id = ?
+      LIMIT 1
+    `,
+    [targetUserId, viewerId],
+  );
+
+  const reverseAccepted = reverseRows.length && Number(reverseRows[0].status) === FRIENDSHIP_ACCEPTED;
+  const reversePending = reverseRows.length && Number(reverseRows[0].status) === FRIENDSHIP_PENDING;
+
+  if (reverseAccepted) {
+    if (forwardRows.length) {
+      await db.execute(
+        `
+          UPDATE friendship
+          SET status = ?,
+              updated_at = CURRENT_TIMESTAMP(3)
+          WHERE user_id = ?
+            AND friend_id = ?
+        `,
+        [FRIENDSHIP_ACCEPTED, viewerId, targetUserId],
+      );
+    } else {
+      await db.execute(
+        `
+          INSERT INTO friendship (user_id, friend_id, status, created_at, updated_at)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+        `,
+        [viewerId, targetUserId, FRIENDSHIP_ACCEPTED],
+      );
+    }
+    return { success: true as const, status: 'accepted' };
+  }
+
+  if (reversePending) {
+    return acceptFriendRequest(viewerId, targetUserId).then(() => ({
+      success: true as const,
+      status: 'accepted',
+    }));
+  }
+
+  if (forwardRows.length) {
+    await db.execute(
+      `
+        UPDATE friendship
+        SET status = ?,
+            updated_at = CURRENT_TIMESTAMP(3)
+        WHERE user_id = ?
+          AND friend_id = ?
+      `,
+      [FRIENDSHIP_PENDING, viewerId, targetUserId],
+    );
+  } else {
+    await db.execute(
+      `
+        INSERT INTO friendship (user_id, friend_id, status, created_at, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+      `,
+      [viewerId, targetUserId, FRIENDSHIP_PENDING],
+    );
+  }
+
+  return { success: true as const, status: 'pending' };
 }
