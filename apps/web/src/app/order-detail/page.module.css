@@ -550,6 +550,16 @@
   color: #666;
 }
 
+.payChannel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.payChannel i {
+  font-size: 14px;
+}
+
 .priceValue {
   font-weight: 600;
   color: #1a1a1a;

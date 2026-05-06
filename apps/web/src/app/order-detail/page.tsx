@@ -110,11 +110,38 @@ function buildTimeline(order: OrderDetailResult): TimelineStep[] {
   ];
 }
 
-function payChannelLabel(channel: OrderDetailResult['payChannel'], orderType?: string | null) {
-  if (orderType === 'guess') return '🎯 竞猜获奖(免费)';
-  if (channel === 'wechat') return '💚 微信支付';
-  if (channel === 'alipay') return '🔵 支付宝';
-  return '—';
+function PayChannelLabel({
+  channel,
+  orderType,
+}: {
+  channel: OrderDetailResult['payChannel'];
+  orderType?: string | null;
+}) {
+  if (orderType === 'guess') {
+    return (
+      <span className={styles.payChannel}>
+        <i className="fa-solid fa-trophy" style={{ color: '#ff9800' }} />
+        竞猜获奖（免费）
+      </span>
+    );
+  }
+  if (channel === 'wechat') {
+    return (
+      <span className={styles.payChannel}>
+        <i className="fa-brands fa-weixin" style={{ color: '#07c160' }} />
+        微信支付
+      </span>
+    );
+  }
+  if (channel === 'alipay') {
+    return (
+      <span className={styles.payChannel}>
+        <i className="fa-brands fa-alipay" style={{ color: '#1677ff' }} />
+        支付宝
+      </span>
+    );
+  }
+  return <span>—</span>;
 }
 
 function refundStatusText(status: NonNullable<OrderDetailResult['refund']>['status']) {
@@ -507,7 +534,9 @@ function OrderDetailPageInner() {
         </div>
         <div className={styles.priceRow}>
           <span className={styles.priceLabel}>支付方式</span>
-          <span className={styles.priceValue}>{payChannelLabel(order.payChannel, order.orderType)}</span>
+          <span className={styles.priceValue}>
+            <PayChannelLabel channel={order.payChannel} orderType={order.orderType} />
+          </span>
         </div>
         <div className={styles.priceTotal}>
           {isFreeOrder ? (
