@@ -860,6 +860,10 @@
   background: linear-gradient(135deg, #ff9500, #ff6b00);
 }
 
+.pkRefunded {
+  background: linear-gradient(135deg, #8e8e93, #6e6e73);
+}
+
 .pkVs {
   display: flex;
   align-items: center;

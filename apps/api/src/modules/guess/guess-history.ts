@@ -20,7 +20,15 @@ import {
 
 const GUESS_SCOPE_FRIEND = 20;
 
+type StatsRow = mysql.RowDataPacket & {
+  total: number | string | null;
+  active: number | string | null;
+  won: number | string | null;
+  lost: number | string | null;
+  pk: number | string | null;
+};
 type LevelRow = mysql.RowDataPacket & { level: number | string };
+type ProfileRow = mysql.RowDataPacket & { avatar_url: string | null };
 type OpponentRow = mysql.RowDataPacket & {
   guess_id: number | string;
   user_id: number | string;
@@ -31,8 +39,9 @@ type OpponentRow = mysql.RowDataPacket & {
 
 export async function getUserHistoryResult(userId: string, userName: string): Promise<GuessHistoryResult> {
   const db = getDbPool();
-  // 只拉已支付 + 已退款的 bet — 排除 waiting/failed/closed（用户没真正下成的）
-  const [betRows] = await db.execute<mysql.RowDataPacket[]>(
+
+  // 主查询：拉最近 100 笔卡片所需明细（已支付 + 已退款）
+  const fetchBetDetails = db.execute<mysql.RowDataPacket[]>(
     `
       SELECT
         gb.id,
@@ -74,14 +83,68 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
     [userId, PAY_STATUS_PAID, PAY_STATUS_REFUNDED],
   );
 
-  const typedBetRows = betRows as GuessBetRow[];
+  // 全量统计 — 不受 LIMIT 100 截断；逻辑必须与下面 active/history/pk 过滤一致
+  const fetchStats = db.execute<StatsRow[]>(
+    `
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN gb.pay_status = ? AND gb.status = ? AND g.status = ? THEN 1 ELSE 0 END) AS active,
+        SUM(CASE WHEN gb.pay_status = ? AND gb.status = ? AND g.status IN (?, ?) THEN 1 ELSE 0 END) AS won,
+        SUM(CASE WHEN gb.pay_status = ? AND gb.status <> ? AND g.status IN (?, ?) THEN 1 ELSE 0 END) AS lost,
+        SUM(CASE WHEN g.scope = ? AND (
+          (gb.pay_status = ? AND g.status IN (?, ?))
+          OR (gb.pay_status = ? AND g.status = ?)
+        ) THEN 1 ELSE 0 END) AS pk
+      FROM guess_bet gb
+      INNER JOIN guess g ON g.id = gb.guess_id
+      WHERE gb.user_id = ?
+        AND gb.pay_status IN (?, ?)
+    `,
+    [
+      // active: paid + bet pending + guess active
+      PAY_STATUS_PAID, BET_PENDING, GUESS_ACTIVE,
+      // won: paid + bet=BET_WON + guess in (settled, rejected)
+      PAY_STATUS_PAID, BET_WON, GUESS_SETTLED, GUESS_REJECTED,
+      // lost: paid + bet<>WON + guess in (settled, rejected) — 与 JS map 中 else→'lost' 一致
+      PAY_STATUS_PAID, BET_WON, GUESS_SETTLED, GUESS_REJECTED,
+      // pk: friend scope + (paid+settled/rejected OR refunded+abandoned)
+      GUESS_SCOPE_FRIEND,
+      PAY_STATUS_PAID, GUESS_SETTLED, GUESS_REJECTED,
+      PAY_STATUS_REFUNDED, GUESS_ABANDONED,
+      // total filter
+      userId, PAY_STATUS_PAID, PAY_STATUS_REFUNDED,
+    ],
+  );
+
+  const fetchLevel = db.execute<LevelRow[]>(
+    'SELECT level FROM user WHERE id = ? LIMIT 1',
+    [userId],
+  );
+
+  const fetchProfile = db.execute<ProfileRow[]>(
+    'SELECT avatar_url FROM user_profile WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+
+  const [[betRowsRaw], [statsRowsRaw], [levelRowsRaw], [profileRowsRaw]] = await Promise.all([
+    fetchBetDetails,
+    fetchStats,
+    fetchLevel,
+    fetchProfile,
+  ]);
+
+  const typedBetRows = betRowsRaw as GuessBetRow[];
+  const statsRow = (statsRowsRaw[0] as StatsRow | undefined) ?? null;
+  const levelRow = (levelRowsRaw[0] as LevelRow | undefined) ?? null;
+  const profileRow = (profileRowsRaw[0] as ProfileRow | undefined) ?? null;
+
   const guessIds = Array.from(new Set(typedBetRows.map((row) => String(row.guess_id))));
   let optionRows: GuessOptionRow[] = [];
   let participantRows: GuessParticipantRow[] = [];
   let voteRows: GuessVoteRow[] = [];
 
   if (guessIds.length > 0) {
-    const [rows] = await db.query<mysql.RowDataPacket[]>(
+    const optionsP = db.query<mysql.RowDataPacket[]>(
       `
         SELECT guess_id, option_index, option_text, is_result
         FROM guess_option
@@ -90,10 +153,8 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       `,
       [guessIds],
     );
-    optionRows = rows as GuessOptionRow[];
 
-    // 参与人数 + 投票分布只算 paid bet（不含未付/退款）
-    const [participantCountRows] = await db.query<mysql.RowDataPacket[]>(
+    const participantsP = db.query<mysql.RowDataPacket[]>(
       `
         SELECT guess_id, COUNT(*) AS participant_count
         FROM guess_bet
@@ -102,9 +163,8 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       `,
       [guessIds, PAY_STATUS_PAID],
     );
-    participantRows = participantCountRows as GuessParticipantRow[];
 
-    const [optionVoteRows] = await db.query<mysql.RowDataPacket[]>(
+    const votesP = db.query<mysql.RowDataPacket[]>(
       `
         SELECT guess_id, choice_idx AS option_index, COUNT(*) AS vote_count
         FROM guess_bet
@@ -113,7 +173,11 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       `,
       [guessIds, PAY_STATUS_PAID],
     );
-    voteRows = optionVoteRows as GuessVoteRow[];
+
+    const [[optsRaw], [partsRaw], [votesRaw]] = await Promise.all([optionsP, participantsP, votesP]);
+    optionRows = optsRaw as GuessOptionRow[];
+    participantRows = partsRaw as GuessParticipantRow[];
+    voteRows = votesRaw as GuessVoteRow[];
   }
 
   const optionsByGuess = new Map<string, GuessOptionRow[]>();
@@ -186,6 +250,8 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
         ? 'won'
         : 'lost';
     const amountCents = Number(row.amount ?? 0);
+    const odds = Number(row.my_choice_odds ?? 0) || 0;
+    const wonAmountCents = outcome === 'won' && odds > 0 ? Math.floor(amountCents * odds) : 0;
     let rewardText: string;
     let resultText: string;
     if (isRefunded) {
@@ -205,23 +271,13 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       outcome,
       rewardText,
       amountYuan: amountCents > 0 ? Number((amountCents / 100).toFixed(2)) : 0,
+      wonAmountYuan: wonAmountCents > 0 ? Number((wonAmountCents / 100).toFixed(2)) : 0,
       participants: participantsByGuess.get(String(row.guess_id)) ?? 0,
     };
   });
 
-  // 用户等级
-  const [levelRows] = await db.execute<LevelRow[]>(
-    'SELECT level FROM user WHERE id = ? LIMIT 1',
-    [userId],
-  );
-  const userLevel = Number(levelRows[0]?.level ?? 1);
-
-  // 自身头像（PK 卡左边用）
-  const [meProfileRows] = await db.execute<mysql.RowDataPacket[]>(
-    'SELECT avatar_url FROM user_profile WHERE user_id = ? LIMIT 1',
-    [userId],
-  );
-  const myAvatar = (meProfileRows[0]?.avatar_url as string | null) || null;
+  const userLevel = Number(levelRow?.level ?? 1);
+  const myAvatar = profileRow?.avatar_url || null;
 
   // 找出所有已结算的好友 PK 竞猜的"对手" — 同一 guess 下其他用户的最早一笔已支付 bet
   const settledFriendGuessIds = Array.from(
@@ -265,7 +321,7 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       const options = optionsByGuess.get(String(row.guess_id)) || [];
       const isRefunded = Number(row.pay_status) === PAY_STATUS_REFUNDED;
       const outcome: GuessHistoryResult['pk'][number]['outcome'] = isRefunded
-        ? 'lost'
+        ? 'refunded'
         : Number(row.status) === BET_WON
           ? 'won'
           : 'lost';
@@ -288,15 +344,20 @@ export async function getUserHistoryResult(userId: string, userName: string): Pr
       };
     });
 
-  const wonCount = history.filter((row) => row.outcome === 'won').length;
-  const lostCount = history.filter((row) => row.outcome === 'lost').length;
+  // stats 全量聚合（独立于 LIMIT 100）
+  const totalCount = Number(statsRow?.total ?? 0);
+  const activeCount = Number(statsRow?.active ?? 0);
+  const wonCount = Number(statsRow?.won ?? 0);
+  const lostCount = Number(statsRow?.lost ?? 0);
+  const pkCount = Number(statsRow?.pk ?? 0);
+
   return {
     stats: {
-      total: typedBetRows.length,
-      active: active.length,
+      total: totalCount,
+      active: activeCount,
       won: wonCount,
       lost: lostCount,
-      pk: pk.length,
+      pk: pkCount,
       winRate: wonCount + lostCount > 0 ? Number(((wonCount / (wonCount + lostCount)) * 100).toFixed(1)) : 0,
       level: userLevel,
     },

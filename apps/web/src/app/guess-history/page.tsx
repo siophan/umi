@@ -226,7 +226,9 @@ function HistoryCard({
     item.outcome === 'won' ? 'fa-gift' : item.outcome === 'refunded' ? 'fa-rotate-left' : 'fa-ticket';
   const rewardLine =
     item.outcome === 'won'
-      ? `投入 ¥${item.amountYuan.toFixed(2)}，已猜中`
+      ? item.wonAmountYuan > 0
+        ? `投入 ¥${item.amountYuan.toFixed(2)}，赢得 ¥${item.wonAmountYuan.toFixed(2)}`
+        : `投入 ¥${item.amountYuan.toFixed(2)}，已猜中`
       : item.outcome === 'refunded'
         ? `投入 ¥${item.amountYuan.toFixed(2)} 已原路退回`
         : `投入 ¥${item.amountYuan.toFixed(2)}，未中`;
@@ -303,8 +305,16 @@ function PkCard({ item, index, onOpen }: { item: PkItem; index: number; onOpen: 
     >
       <div className={styles.pkHeader}>
         <div className={styles.pkTitle}>{item.title}</div>
-        <div className={`${styles.pkResult} ${item.outcome === 'won' ? styles.pkWon : styles.pkLost}`}>
-          {item.outcome === 'won' ? '🎉 胜利' : '💪 惜败'}
+        <div
+          className={`${styles.pkResult} ${
+            item.outcome === 'won'
+              ? styles.pkWon
+              : item.outcome === 'refunded'
+                ? styles.pkRefunded
+                : styles.pkLost
+          }`}
+        >
+          {item.outcome === 'won' ? '🎉 胜利' : item.outcome === 'refunded' ? '💸 已退款' : '💪 惜败'}
         </div>
       </div>
       <div className={styles.pkVs}>

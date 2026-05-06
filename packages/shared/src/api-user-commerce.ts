@@ -370,6 +370,7 @@ export interface GuessHistoryRecordItem {
   outcome: 'won' | 'lost' | 'refunded';
   rewardText: string;
   amountYuan: number;
+  wonAmountYuan: number;
   participants: number;
 }
 
@@ -377,7 +378,7 @@ export interface GuessHistoryPkItem {
   betId: EntityId;
   guessId: GuessId;
   title: string;
-  outcome: 'won' | 'lost';
+  outcome: 'won' | 'lost' | 'refunded';
   leftName: string;
   leftAvatar: string | null;
   leftChoice: string;
