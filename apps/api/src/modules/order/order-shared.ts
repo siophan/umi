@@ -109,6 +109,7 @@ export type ProductPurchaseRow = {
   product_id: number | string;
   shop_id: number | string | null;
   brand_product_id: number | string | null;
+  brand_id: number | string | null;
   brand_product_sku_id: number | string;
   price: number | string | null;
   original_price: number | string | null;

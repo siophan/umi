@@ -50,6 +50,7 @@ async function getAvailableCoupon(
   connection: mysql.Connection | mysql.PoolConnection,
   userId: string,
   couponId: string | null | undefined,
+  itemRows: Array<{ brandId: string | null; spuId: string | null; itemAmount: number }>,
   originalAmountCents: number,
 ) {
   if (!couponId) {
@@ -58,7 +59,8 @@ async function getAvailableCoupon(
 
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
     `
-      SELECT id, coupon_no, name, amount, type, \`condition\`, expire_at, source_type, status
+      SELECT id, coupon_no, name, amount, type, \`condition\`, expire_at, source_type, status,
+             scope_type, brand_id, brand_product_ids
       FROM coupon
       WHERE id = ?
         AND user_id = ?
@@ -67,7 +69,11 @@ async function getAvailableCoupon(
     [couponId, userId],
   );
 
-  const row = (rows[0] as CouponRow | undefined) ?? null;
+  const row = (rows[0] as (CouponRow & {
+    scope_type: number | string;
+    brand_id: number | string | null;
+    brand_product_ids: unknown;
+  }) | undefined) ?? null;
   if (!row) {
     throw new HttpError(404, 'COUPON_NOT_FOUND', '优惠券不存在');
   }
@@ -78,21 +84,44 @@ async function getAvailableCoupon(
     throw new HttpError(400, 'COUPON_EXPIRED', '优惠券已过期');
   }
 
+  const scopeType = Number(row.scope_type ?? 10);
+  let eligibleSubtotal = originalAmountCents;
+  if (scopeType === 20 /* brand */) {
+    const brandId = row.brand_id == null ? null : String(row.brand_id);
+    if (!brandId) {
+      throw new HttpError(400, 'COUPON_INVALID', '优惠券范围异常');
+    }
+    const allowedSpuIds = parseJsonIdSet(row.brand_product_ids);
+    eligibleSubtotal = itemRows
+      .filter((it) => it.brandId === brandId)
+      .filter((it) => !allowedSpuIds || (it.spuId && allowedSpuIds.has(it.spuId)))
+      .reduce((sum, it) => sum + it.itemAmount, 0);
+  }
+
   const type = Number(row.type ?? 0);
   const minAmountCents = parseCouponCondition(row.condition);
-  if (minAmountCents > 0 && originalAmountCents < minAmountCents) {
+  if (minAmountCents > 0 && eligibleSubtotal < minAmountCents) {
     throw new HttpError(400, 'COUPON_CONDITION_NOT_MET', '订单金额未满足优惠券条件');
   }
 
   let discountCents = 0;
   if (type === COUPON_TYPE_CASH || type === 30) {
-    discountCents = Math.min(originalAmountCents, Number(row.amount ?? 0));
+    discountCents = Math.min(eligibleSubtotal, Number(row.amount ?? 0));
   } else if (type === COUPON_TYPE_DISCOUNT) {
     const discountRate = Math.max(0, Math.min(100, Number(row.amount ?? 0)));
-    discountCents = Math.round((originalAmountCents * (100 - discountRate)) / 100);
+    discountCents = Math.round((eligibleSubtotal * (100 - discountRate)) / 100);
   }
 
   return { couponRow: row, discountCents };
+}
+
+function parseJsonIdSet(value: unknown): Set<string> | null {
+  if (value == null) return null;
+  let arr: unknown = value;
+  if (typeof value === 'string') {
+    try { arr = JSON.parse(value); } catch { return null; }
+  }
+  return Array.isArray(arr) ? new Set(arr.map((v) => String(v))) : null;
 }
 
 async function getProductPurchaseRows(
@@ -113,6 +142,7 @@ async function getProductPurchaseRows(
         p.id AS product_id,
         p.shop_id,
         p.brand_product_id,
+        bp.brand_id,
         bps.id AS brand_product_sku_id,
         bps.guide_price AS price,
         bps.guide_price AS original_price,
@@ -123,6 +153,7 @@ async function getProductPurchaseRows(
         p.status AS product_status
       FROM product p
       INNER JOIN brand_product_sku bps ON bps.id = ? AND bps.brand_product_id = p.brand_product_id
+      INNER JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE p.id = ?
       LIMIT 1
     `,
@@ -173,6 +204,7 @@ async function getCartPurchaseRows(
         ci.specs,
         p.shop_id,
         p.brand_product_id,
+        bp.brand_id,
         bps.guide_price AS price,
         bps.guide_price AS original_price,
         bps.stock,
@@ -183,6 +215,7 @@ async function getCartPurchaseRows(
       FROM cart_item ci
       INNER JOIN product p ON p.id = ci.product_id
       INNER JOIN brand_product_sku bps ON bps.id = ci.brand_product_sku_id
+      INNER JOIN brand_product bp ON bp.id = p.brand_product_id
       WHERE ci.user_id = ?
         AND ci.id IN (${placeholders})
       ORDER BY ci.id ASC
@@ -243,7 +276,21 @@ export async function createPendingOrder(
     }
 
     const originalAmountCents = purchaseItems.reduce((sum, item) => sum + Number(item.row.price ?? 0) * item.quantity, 0);
-    const { couponRow, discountCents } = await getAvailableCoupon(connection, userId, payload.couponId, originalAmountCents);
+    const itemRowsForCoupon = purchaseItems.map((it) => {
+      const itemAmount = Number(it.row.price ?? 0) * it.quantity;
+      return {
+        brandId: it.row.brand_id == null ? null : String(it.row.brand_id),
+        spuId: it.row.brand_product_id == null ? null : String(it.row.brand_product_id),
+        itemAmount,
+      };
+    });
+    const { couponRow, discountCents } = await getAvailableCoupon(
+      connection,
+      userId,
+      payload.couponId,
+      itemRowsForCoupon,
+      originalAmountCents,
+    );
     const payableAmountCents = Math.max(0, originalAmountCents - discountCents);
     if (payableAmountCents <= 0) {
       throw new HttpError(400, 'ORDER_AMOUNT_INVALID', '订单金额异常');
