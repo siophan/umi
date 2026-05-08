@@ -16,7 +16,7 @@ const COUPON_TYPE_DISCOUNT = 20;
 const COUPON_TYPE_SHIPPING = 30;
 const COUPON_TEMPLATE_STATUS_ACTIVE = 10;
 const COUPON_SCOPE_PLATFORM = 10;
-const COUPON_SCOPE_SHOP = 20;
+const COUPON_SCOPE_BRAND = 20;  // 重用编码（drop SHOP）
 const COUPON_VALIDITY_FIXED = 10;
 const COUPON_VALIDITY_RELATIVE = 20;
 const COUPON_SOURCE_ACTIVITY = 20;
@@ -134,7 +134,8 @@ type CouponTemplateRow = mysql.RowDataPacket & {
   description: string | null;
   type: number | string | null;
   scope_type: number | string;
-  shop_id: number | string | null;
+  brand_id: number | string | null;
+  brand_product_ids: unknown;
   min_amount: number | string;
   discount_amount: number | string;
   validity_type: number | string;
@@ -147,9 +148,7 @@ type CouponTemplateRow = mysql.RowDataPacket & {
 };
 
 function mapTemplateScopeType(code: number): CouponTemplateItem['scopeType'] {
-  if (code === COUPON_SCOPE_SHOP) return 'shop';
-  if (code === COUPON_SCOPE_PLATFORM) return 'platform';
-  return 'category';
+  return code === COUPON_SCOPE_BRAND ? 'brand' : 'platform';
 }
 
 function mapTemplateType(code: number): CouponTemplateItem['type'] {
@@ -168,7 +167,7 @@ function buildTemplateConditionText(row: CouponTemplateRow): string {
 
 export async function listClaimableCouponTemplates(
   userId: string | null,
-  options: { shopId?: string | null } = {},
+  options: { brandId?: string | null; brandProductId?: string | null } = {},
 ): Promise<CouponTemplateListResult> {
   const db = getDbPool();
   const params: Array<string | number> = [];
@@ -176,11 +175,26 @@ export async function listClaimableCouponTemplates(
     `ct.status = ${COUPON_TEMPLATE_STATUS_ACTIVE}`,
     '(ct.end_at IS NULL OR ct.end_at > NOW())',
   ];
-  if (options.shopId) {
+  if (options.brandId) {
     whereParts.push(
-      `(ct.scope_type = ${COUPON_SCOPE_PLATFORM} OR (ct.scope_type = ${COUPON_SCOPE_SHOP} AND ct.shop_id = ?))`,
+      `(
+        ct.scope_type = ${COUPON_SCOPE_PLATFORM}
+        OR (
+          ct.scope_type = ${COUPON_SCOPE_BRAND}
+          AND ct.brand_id = ?
+          AND (
+            ct.brand_product_ids IS NULL
+            OR ${
+              options.brandProductId
+                ? `JSON_CONTAINS(ct.brand_product_ids, JSON_QUOTE(?), '$')`
+                : `1=0`
+            }
+          )
+        )
+      )`,
     );
-    params.push(options.shopId);
+    params.push(options.brandId);
+    if (options.brandProductId) params.push(options.brandProductId);
   } else {
     whereParts.push(`ct.scope_type = ${COUPON_SCOPE_PLATFORM}`);
   }
@@ -197,7 +211,8 @@ export async function listClaimableCouponTemplates(
         ct.description,
         ct.type,
         ct.scope_type,
-        ct.shop_id,
+        ct.brand_id,
+        ct.brand_product_ids,
         ct.min_amount,
         ct.discount_amount,
         ct.validity_type,
@@ -218,8 +233,7 @@ export async function listClaimableCouponTemplates(
     items: (rows as CouponTemplateRow[]).map((row): CouponTemplateItem => {
       const totalQuantity = Number(row.total_quantity);
       const granted = Number(row.granted_count ?? 0);
-      const remaining =
-        totalQuantity < 0 ? null : Math.max(0, totalQuantity - granted);
+      const remaining = totalQuantity < 0 ? null : Math.max(0, totalQuantity - granted);
       const userClaimed = Number(row.user_claimed ?? 0);
       const userLimit = Math.max(0, Number(row.user_limit) || 0);
       let claimable = true;
@@ -237,7 +251,6 @@ export async function listClaimableCouponTemplates(
 
       const tplType = mapTemplateType(Number(row.type ?? COUPON_TYPE_CASH));
       const rawAmount = Number(row.discount_amount);
-      // cash / shipping 在 DB 存"分"→ 转元；percent 存 0-100 折扣百分制保持不变。
       const amount = tplType === 'percent' ? rawAmount : rawAmount / 100;
       return {
         id: toEntityId(row.id),
@@ -248,7 +261,8 @@ export async function listClaimableCouponTemplates(
         minAmount: Number(row.min_amount) / 100,
         condition: buildTemplateConditionText(row),
         scopeType: mapTemplateScopeType(Number(row.scope_type)),
-        shopId: row.shop_id == null ? null : toEntityId(row.shop_id),
+        brandId: row.brand_id == null ? null : toEntityId(row.brand_id),
+        brandProductIds: parseJsonIds(row.brand_product_ids),
         expireAt: row.end_at ? new Date(row.end_at).toISOString() : null,
         validDays: Number(row.valid_days) || 0,
         remaining,
@@ -259,6 +273,15 @@ export async function listClaimableCouponTemplates(
       };
     }),
   };
+}
+
+function parseJsonIds(value: unknown): string[] | null {
+  if (value == null) return null;
+  let arr: unknown = value;
+  if (typeof value === 'string') {
+    try { arr = JSON.parse(value); } catch { return null; }
+  }
+  return Array.isArray(arr) ? arr.map((v) => String(v)) : null;
 }
 
 export async function claimCouponFromTemplate(
@@ -272,7 +295,8 @@ export async function claimCouponFromTemplate(
 
     const [tplRows] = await connection.execute<mysql.RowDataPacket[]>(
       `
-        SELECT id, code, name, type, status, min_amount, discount_amount, validity_type,
+        SELECT id, code, name, type, status, scope_type, brand_id, brand_product_ids,
+               min_amount, discount_amount, validity_type,
                start_at, end_at, valid_days, total_quantity, user_limit
         FROM coupon_template
         WHERE id = ?
@@ -287,6 +311,9 @@ export async function claimCouponFromTemplate(
           name: string;
           type: number | string | null;
           status: number | string;
+          scope_type: number | string;
+          brand_id: number | string | null;
+          brand_product_ids: unknown;
           min_amount: number | string;
           discount_amount: number | string;
           validity_type: number | string;
@@ -352,17 +379,28 @@ export async function claimCouponFromTemplate(
       .toString()
       .padStart(4, '0')}`;
 
+    const brandProductIdsJson = template.brand_product_ids
+      ? (typeof template.brand_product_ids === 'string'
+        ? template.brand_product_ids
+        : JSON.stringify(template.brand_product_ids))
+      : null;
+
     const [result] = await connection.execute<mysql.ResultSetHeader>(
       `
         INSERT INTO coupon (
-          coupon_no, user_id, template_id, name, amount, type, \`condition\`,
+          coupon_no, user_id, template_id,
+          scope_type, brand_id, brand_product_ids,
+          name, amount, type, \`condition\`,
           expire_at, source_type, status, claimed_at, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3), NOW(3))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3), NOW(3))
       `,
       [
         couponNo,
         userId,
         templateId,
+        Number(template.scope_type),
+        template.brand_id ?? null,
+        brandProductIdsJson,
         template.name,
         Number(template.discount_amount),
         Number(template.type ?? COUPON_TYPE_CASH),

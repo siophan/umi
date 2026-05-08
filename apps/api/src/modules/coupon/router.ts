@@ -26,9 +26,14 @@ couponRouter.get(
   '/templates',
   optionalUser,
   asyncHandler(async (request, response) => {
-    const shopId =
-      typeof request.query.shopId === 'string' ? request.query.shopId : undefined;
-    const result = await listClaimableCouponTemplates(request.user?.id ?? null, { shopId });
+    const brandId =
+      typeof request.query.brandId === 'string' ? request.query.brandId : undefined;
+    const brandProductId =
+      typeof request.query.brandProductId === 'string' ? request.query.brandProductId : undefined;
+    const result = await listClaimableCouponTemplates(request.user?.id ?? null, {
+      brandId,
+      brandProductId,
+    });
     ok(response, result);
   }),
 );
