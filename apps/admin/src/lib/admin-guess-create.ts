@@ -9,6 +9,7 @@ export interface GuessCreateFormValues {
   title: string;
   categoryId: CreateAdminGuessPayload['categoryId'];
   productId: CreateAdminGuessPayload['productId'];
+  brandProductSkuId: CreateAdminGuessPayload['brandProductSkuId'];
   endTime: Dayjs | null;
   description?: string;
   optionTexts: Array<{ text: string }>;
@@ -44,6 +45,7 @@ export function toCreateGuessPayload(values: GuessCreateFormValues): CreateAdmin
     title: values.title,
     categoryId: values.categoryId,
     productId: values.productId,
+    brandProductSkuId: values.brandProductSkuId,
     endTime: values.endTime?.toISOString() ?? '',
     description: values.description?.trim() || null,
     optionTexts: values.optionTexts.map((item) => item.text),

@@ -123,6 +123,7 @@ export default function BrandAuthPage() {
             brandName: currentBrand.name,
             brandLogo: currentBrand.logo,
             productCount: 0,
+            catalogProductCount: 0,
             status: created.status,
             rejectReason: null,
             createdAt: new Date().toISOString(),

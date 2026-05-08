@@ -7,6 +7,7 @@ import type {
   CreateAdminCouponTemplatePayload,
   UpdateAdminCouponTemplatePayload,
 } from '@umi/shared';
+import type { FormInstance } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
 import { useEffect, useState } from 'react';
 
@@ -34,16 +35,8 @@ import { formatNumber } from './format';
 
 interface UseAdminCouponPageStateOptions {
   messageApi: MessageInstance;
-  couponForm: {
-    resetFields: () => void;
-    setFieldsValue: (values: Partial<CouponFormValues>) => void;
-    validateFields: () => Promise<CouponFormValues>;
-  };
-  grantForm: {
-    resetFields: () => void;
-    setFieldsValue: (values: Partial<GrantFormValues>) => void;
-    validateFields: () => Promise<GrantFormValues>;
-  };
+  couponForm: FormInstance<CouponFormValues>;
+  grantForm: FormInstance<GrantFormValues>;
   refreshToken?: number;
 }
 

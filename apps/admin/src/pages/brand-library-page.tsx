@@ -1,4 +1,5 @@
 import { ProTable } from '@ant-design/pro-components';
+import { toEntityId } from '@umi/shared';
 import { Alert, Button, ConfigProvider, Form, Input, Select, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -311,7 +312,7 @@ export function BrandLibraryPage({ refreshToken = 0 }: BrandLibraryPageProps) {
           }
         }
         return {
-          id: sku.id ?? null,
+          id: sku.id ? toEntityId(sku.id) : null,
           skuCode: sku.skuCode?.trim() || null,
           spec: multiSpec ? cleanSpec : {},
           guidePrice: yuanToCents(sku.guidePriceYuan) ?? 0,
