@@ -165,10 +165,19 @@ export async function createAdminCouponGrantBatch(
     const condition = buildIssuedCouponCondition(templateRow);
     const issuedAt = new Date();
 
+    const brandProductIdsJson = templateRow.brand_product_ids
+      ? (typeof templateRow.brand_product_ids === 'string'
+        ? templateRow.brand_product_ids
+        : JSON.stringify(templateRow.brand_product_ids))
+      : null;
+
     const couponRows = eligibleUserIds.map((userId) => [
       createNo('CPN'),
       userId,
       templateId,
+      Number(templateRow.scope_type),
+      templateRow.brand_id ?? null,
+      brandProductIdsJson,
       batchId,
       templateRow.name,
       couponAmount,
@@ -189,6 +198,9 @@ export async function createAdminCouponGrantBatch(
           coupon_no,
           user_id,
           template_id,
+          scope_type,
+          brand_id,
+          brand_product_ids,
           grant_batch_id,
           name,
           amount,
