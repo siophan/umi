@@ -317,8 +317,9 @@ export interface CouponTemplateItem {
   type: 'amount' | 'percent' | 'shipping';
   minAmount: number;
   condition: string;
-  scopeType: 'platform' | 'shop' | 'category';
-  shopId: EntityId | null;
+  scopeType: 'platform' | 'brand';
+  brandId: string | null;
+  brandProductIds: string[] | null;
   expireAt: string | null;
   validDays: number;
   remaining: number | null;

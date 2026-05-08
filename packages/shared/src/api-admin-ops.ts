@@ -233,7 +233,7 @@ export interface UpdateAdminInviteRewardConfigResult {
 }
 
 export type AdminCouponTemplateType = 'cash' | 'discount' | 'shipping';
-export type AdminCouponTemplateScopeType = 'platform' | 'shop';
+export type AdminCouponTemplateScopeType = 'platform' | 'brand';
 export type AdminCouponTemplateValidityType = 'fixed' | 'relative';
 export type AdminCouponTemplateRawStatus = 'active' | 'paused' | 'disabled';
 export type AdminCouponTemplateDisplayStatus =
@@ -268,9 +268,11 @@ export interface AdminCouponTemplateItem {
   status: AdminCouponTemplateDisplayStatus;
   statusLabel: '启用' | '待开始' | '已暂停' | '已停用' | '已结束';
   scopeType: AdminCouponTemplateScopeType;
-  scopeTypeLabel: '平台通用' | '指定店铺';
-  shopId: EntityId | null;
-  shopName: string | null;
+  scopeTypeLabel: '平台通用' | '指定品牌';
+  brandId: EntityId | null;
+  brandName: string | null;
+  brandProductIds: EntityId[] | null;
+  brandProductCount: number;
   description: string | null;
   sourceType: AdminCouponSourceType;
   sourceTypeLabel: '后台人工' | '活动发放' | '补偿发放' | '系统发放';
@@ -330,7 +332,8 @@ export interface CreateAdminCouponTemplatePayload {
   name: string;
   type: AdminCouponTemplateType;
   scopeType: AdminCouponTemplateScopeType;
-  shopId?: EntityId | null;
+  brandId?: EntityId | null;
+  brandProductIds?: EntityId[] | null;
   description?: string | null;
   minAmount: number;
   discountAmount?: number;
@@ -353,7 +356,8 @@ export interface UpdateAdminCouponTemplatePayload {
   name: string;
   type: AdminCouponTemplateType;
   scopeType: AdminCouponTemplateScopeType;
-  shopId?: EntityId | null;
+  brandId?: EntityId | null;
+  brandProductIds?: EntityId[] | null;
   description?: string | null;
   minAmount: number;
   discountAmount?: number;
