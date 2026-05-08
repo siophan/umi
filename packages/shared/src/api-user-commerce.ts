@@ -594,6 +594,8 @@ export interface ProductDetailResult {
     favorited: boolean;
     specDefinitions: SpecDefinition[] | null;
     skus: ProductSku[];
+    brandId: BrandId | null;
+    brandProductId: ProductId | null;
   };
   activeGuess: GuessSummary | null;
   warehouseItems: WarehouseItem[];

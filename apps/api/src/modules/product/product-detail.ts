@@ -409,6 +409,8 @@ export async function getProductDetail(productId: string, userId?: string | null
       favorited: favoritedProductIds.has(productId),
       specDefinitions,
       skus,
+      brandId: product.brand_id == null ? null : toEntityId(product.brand_id),
+      brandProductId: product.brand_product_id == null ? null : toEntityId(product.brand_product_id),
     },
     activeGuess,
     warehouseItems,

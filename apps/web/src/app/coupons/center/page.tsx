@@ -10,7 +10,8 @@ import styles from './page.module.css';
 function CouponCenterInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const shopId = searchParams?.get('shopId') ?? undefined;
+  const brandId = searchParams?.get('brandId') ?? undefined;
+  const brandProductId = searchParams?.get('brandProductId') ?? undefined;
   const [items, setItems] = useState<CouponTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -19,7 +20,7 @@ function CouponCenterInner() {
   useEffect(() => {
     let ignore = false;
     setLoading(true);
-    fetchCouponTemplates({ shopId })
+    fetchCouponTemplates({ brandId, brandProductId })
       .then((result) => {
         if (!ignore) setItems(result.items);
       })
@@ -32,7 +33,7 @@ function CouponCenterInner() {
     return () => {
       ignore = true;
     };
-  }, [shopId]);
+  }, [brandId, brandProductId]);
 
   useEffect(() => {
     if (!toast) return;

@@ -316,8 +316,12 @@ function ProductDetailPageInner() {
         displayStock={displayStock}
         onOpenCoupons={() =>
           router.push(
-            product.shopId
-              ? `/coupons/center?shopId=${encodeURIComponent(product.shopId)}`
+            product.brandId
+              ? `/coupons/center?brandId=${encodeURIComponent(product.brandId)}${
+                  product.brandProductId
+                    ? `&brandProductId=${encodeURIComponent(product.brandProductId)}`
+                    : ''
+                }`
               : '/coupons/center',
           )
         }

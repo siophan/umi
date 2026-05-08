@@ -7,9 +7,12 @@ export function fetchCoupons() {
   return getJson<CouponListItem[]>('/api/coupons');
 }
 
-export function fetchCouponTemplates(options: { shopId?: string } = {}) {
+export function fetchCouponTemplates(
+  options: { brandId?: string; brandProductId?: string } = {},
+) {
   const search = new URLSearchParams();
-  if (options.shopId) search.set('shopId', options.shopId);
+  if (options.brandId) search.set('brandId', options.brandId);
+  if (options.brandProductId) search.set('brandProductId', options.brandProductId);
   const suffix = search.toString();
   return getJson<CouponTemplateListResult>(
     `/api/coupons/templates${suffix ? `?${suffix}` : ''}`,
