@@ -1,5 +1,6 @@
 import type { AdminCouponTemplateItem } from '@umi/shared';
 import { ConfigProvider, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   type CouponFormValues,
@@ -8,6 +9,8 @@ import {
   TYPE_OPTIONS,
   VALIDITY_OPTIONS,
 } from '../lib/admin-coupon';
+import { fetchAdminBrandLibrary } from '../lib/api/catalog-products';
+import { fetchAdminBrands } from '../lib/api/merchant-brands';
 import { SEARCH_THEME } from './admin-list-controls';
 
 interface AdminCouponFormModalProps {
@@ -35,6 +38,46 @@ export function AdminCouponFormModal({
   onCancel,
   onSubmit,
 }: AdminCouponFormModalProps) {
+  const [brandOptions, setBrandOptions] = useState<{ label: string; value: string }[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(false);
+  const [brandProductOptions, setBrandProductOptions] = useState<{ label: string; value: string }[]>([]);
+  const [brandProductsLoading, setBrandProductsLoading] = useState(false);
+
+  const watchedBrandId = Form.useWatch('brandId', form);
+
+  const loadBrandProducts = useCallback(async (brandId: string) => {
+    setBrandProductsLoading(true);
+    try {
+      const result = await fetchAdminBrandLibrary({ brandId, status: 'active', pageSize: 500 });
+      setBrandProductOptions(
+        result.items.map((it) => ({ label: it.productName, value: it.id })),
+      );
+    } finally {
+      setBrandProductsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setBrandsLoading(true);
+    fetchAdminBrands()
+      .then((result) => {
+        setBrandOptions(
+          result.items
+            .filter((b) => b.status === 'active')
+            .map((b) => ({ label: b.name, value: b.id })),
+        );
+      })
+      .finally(() => setBrandsLoading(false));
+  }, [open]);
+
+  useEffect(() => {
+    // 编辑场景：弹层打开时若已有 brandId，预拉对应 SPU 列表
+    if (open && editingCoupon?.brandId) {
+      loadBrandProducts(String(editingCoupon.brandId));
+    }
+  }, [open, editingCoupon?.brandId, loadBrandProducts]);
+
   return (
     <Modal
       open={open}
@@ -69,14 +112,42 @@ export function AdminCouponFormModal({
           >
             <Select options={SCOPE_OPTIONS as never} placeholder="适用范围" />
           </Form.Item>
-          {scopeType === 'shop' ? (
-            <Form.Item
-              label="指定店铺 ID"
-              name="shopId"
-              rules={[{ required: true, message: '请输入指定店铺 ID' }]}
-            >
-              <Input allowClear placeholder="指定店铺 ID" />
-            </Form.Item>
+          {scopeType === 'brand' ? (
+            <>
+              <Form.Item
+                label="品牌"
+                name="brandId"
+                rules={[{ required: true, message: '请选择品牌' }]}
+              >
+                <Select
+                  showSearch
+                  placeholder="搜索品牌"
+                  loading={brandsLoading}
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={brandOptions}
+                  onChange={(value) => {
+                    form.setFieldValue('brandProductIds', undefined);
+                    if (typeof value === 'string' && value) loadBrandProducts(value);
+                    else setBrandProductOptions([]);
+                  }}
+                />
+              </Form.Item>
+              <Form.Item
+                label="限定商品（不选 = 该品牌全量）"
+                name="brandProductIds"
+                tooltip="不勾选任何商品时，模板对该品牌下所有商品生效"
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="按需限定到部分商品"
+                  loading={brandProductsLoading}
+                  options={brandProductOptions}
+                  disabled={!watchedBrandId}
+                />
+              </Form.Item>
+            </>
           ) : null}
           <Form.Item
             label="使用门槛（元）"

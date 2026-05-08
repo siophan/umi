@@ -28,14 +28,18 @@ export function AdminCouponDetailDrawer({
             <Descriptions.Item label="优惠券编码">{coupon.code}</Descriptions.Item>
             <Descriptions.Item label="券类型">{coupon.typeLabel}</Descriptions.Item>
             <Descriptions.Item label="适用范围">
-              {coupon.scopeType === 'shop'
-                ? coupon.shopName
-                  ? `${coupon.scopeTypeLabel} · ${coupon.shopName}`
-                  : `${coupon.scopeTypeLabel} · 店铺ID ${coupon.shopId ?? '-'}`
+              {coupon.scopeType === 'brand'
+                ? coupon.brandName
+                  ? `${coupon.scopeTypeLabel} · ${coupon.brandName}${
+                      coupon.brandProductCount > 0 ? ` · ${coupon.brandProductCount} 个 SPU` : ''
+                    }`
+                  : `${coupon.scopeTypeLabel} · 品牌ID ${coupon.brandId ?? '-'}${
+                      coupon.brandProductCount > 0 ? ` · ${coupon.brandProductCount} 个 SPU` : ''
+                    }`
                 : coupon.scopeTypeLabel}
             </Descriptions.Item>
-            {coupon.scopeType === 'shop' ? (
-              <Descriptions.Item label="指定店铺 ID">{coupon.shopId ?? '-'}</Descriptions.Item>
+            {coupon.scopeType === 'brand' ? (
+              <Descriptions.Item label="指定品牌 ID">{coupon.brandId ?? '-'}</Descriptions.Item>
             ) : null}
             <Descriptions.Item label="来源">{coupon.sourceTypeLabel}</Descriptions.Item>
             <Descriptions.Item label="状态">
