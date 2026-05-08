@@ -121,6 +121,7 @@ export function MarketingCouponsPage({ refreshToken = 0 }: MarketingCouponsPageP
         submitting={submitting}
         form={couponForm}
         initialValues={couponInitialValues}
+        messageApi={messageApi}
         onCancel={() => {
           setFormOpen(false);
           setEditingCoupon(null);

@@ -1,3 +1,4 @@
+import type { MessageInstance } from 'antd/es/message/interface';
 import type { AdminCouponTemplateItem } from '@umi/shared';
 import { ConfigProvider, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
@@ -22,6 +23,7 @@ interface AdminCouponFormModalProps {
   submitting: boolean;
   form: ReturnType<typeof Form.useForm<CouponFormValues>>[0];
   initialValues: Partial<CouponFormValues>;
+  messageApi?: MessageInstance;
   onCancel: () => void;
   onSubmit: () => void | Promise<void>;
 }
@@ -35,6 +37,7 @@ export function AdminCouponFormModal({
   submitting,
   form,
   initialValues,
+  messageApi,
   onCancel,
   onSubmit,
 }: AdminCouponFormModalProps) {
@@ -52,10 +55,12 @@ export function AdminCouponFormModal({
       setBrandProductOptions(
         result.items.map((it) => ({ label: it.productName, value: it.id })),
       );
+    } catch {
+      messageApi?.error('商品列表加载失败，请重试');
     } finally {
       setBrandProductsLoading(false);
     }
-  }, []);
+  }, [messageApi]);
 
   useEffect(() => {
     if (!open) return;
@@ -68,8 +73,11 @@ export function AdminCouponFormModal({
             .map((b) => ({ label: b.name, value: b.id })),
         );
       })
+      .catch(() => {
+        messageApi?.error('品牌列表加载失败，请重试');
+      })
       .finally(() => setBrandsLoading(false));
-  }, [open]);
+  }, [open, messageApi]);
 
   useEffect(() => {
     // 编辑场景：弹层打开时若已有 brandId，预拉对应 SPU 列表
