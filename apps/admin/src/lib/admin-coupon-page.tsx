@@ -72,12 +72,17 @@ export function buildCouponColumns(args: {
     },
     {
       title: '适用范围',
-      width: 180,
-      render: (_, record) => {
-        if (record.scopeType === 'shop') {
-          return record.shopName
-            ? `${record.scopeTypeLabel} · ${record.shopName}`
-            : `${record.scopeTypeLabel} · 店铺ID ${record.shopId ?? '-'}`;
+      dataIndex: 'scopeType',
+      width: 220,
+      render: (_: unknown, record: AdminCouponTemplateItem) => {
+        if (record.scopeType === 'brand') {
+          const productSuffix =
+            record.brandProductCount > 0
+              ? ` · ${record.brandProductCount} 个 SPU`
+              : '';
+          return record.brandName
+            ? `${record.scopeTypeLabel} · ${record.brandName}${productSuffix}`
+            : `${record.scopeTypeLabel} · 品牌ID ${record.brandId ?? '-'}${productSuffix}`;
         }
         return record.scopeTypeLabel;
       },
@@ -223,8 +228,12 @@ export function buildCouponSubmitPayload(
     name: values.name.trim(),
     type: values.type,
     scopeType: values.scopeType,
-    shopId:
-      values.scopeType === 'shop' ? ((values.shopId?.trim() || null) as EntityId | null) : null,
+    brandId:
+      values.scopeType === 'brand' ? ((values.brandId?.trim() || null) as EntityId | null) : null,
+    brandProductIds:
+      values.scopeType === 'brand' && values.brandProductIds && values.brandProductIds.length > 0
+        ? (values.brandProductIds as EntityId[])
+        : null,
     description: values.description?.trim() || null,
     minAmount: yuanToCents(values.minAmountYuan) ?? 0,
     discountAmount:
