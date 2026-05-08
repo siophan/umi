@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type mysql from 'mysql2/promise';
 import {
   toEntityId,
+  type EntityId,
   type AdminCouponGrantBatchDisplayStatus,
   type AdminCouponGrantBatchItem,
   type AdminCouponGrantBatchListResult,
@@ -25,7 +26,7 @@ export const COUPON_TEMPLATE_STATUS_PAUSED = 20;
 export const COUPON_TEMPLATE_STATUS_DISABLED = 90;
 
 export const COUPON_SCOPE_PLATFORM = 10;
-export const COUPON_SCOPE_SHOP = 20;
+export const COUPON_SCOPE_BRAND = 20;  // 重用编码（drop SHOP）
 
 export const COUPON_VALIDITY_FIXED = 10;
 export const COUPON_VALIDITY_RELATIVE = 20;
@@ -49,7 +50,9 @@ export type CouponTemplateRow = {
   type: number | string | null;
   status: number | string | null;
   scope_type: number | string | null;
-  shop_id: number | string | null;
+  brand_id: number | string | null;
+  brand_name: string | null;
+  brand_product_ids: unknown;  // JSON
   description: string | null;
   source_type: number | string | null;
   min_amount: number | string | null;
@@ -64,7 +67,6 @@ export type CouponTemplateRow = {
   user_limit: number | string | null;
   created_at: Date | string;
   updated_at: Date | string;
-  shop_name: string | null;
   batch_count: number | string | null;
   granted_count: number | string | null;
   last_batch_at: Date | string | null;
@@ -97,7 +99,8 @@ type NormalizedCouponTemplatePayload = {
   name: string;
   typeCode: number;
   scopeTypeCode: number;
-  shopId: string | null;
+  brandId: string | null;
+  brandProductIds: string[] | null;
   description: string | null;
   minAmount: number;
   discountAmount: number;
@@ -158,7 +161,7 @@ function normalizeCouponScopeType(
     | CreateAdminCouponTemplatePayload['scopeType']
     | UpdateAdminCouponTemplatePayload['scopeType'],
 ) {
-  if (value === 'platform' || value === 'shop') {
+  if (value === 'platform' || value === 'brand') {
     return value;
   }
   throw new Error('适用范围不合法');
@@ -218,11 +221,11 @@ function mapCouponTypeLabel(type: AdminCouponTemplateItem['type']) {
 function mapCouponScopeType(
   scopeType: number | string | null | undefined,
 ): AdminCouponTemplateItem['scopeType'] {
-  return toNumber(scopeType) === COUPON_SCOPE_SHOP ? 'shop' : 'platform';
+  return toNumber(scopeType) === COUPON_SCOPE_BRAND ? 'brand' : 'platform';
 }
 
 function mapCouponScopeTypeLabel(scopeType: AdminCouponTemplateItem['scopeType']) {
-  return scopeType === 'shop' ? '指定店铺' : '平台通用';
+  return scopeType === 'brand' ? '指定品牌' : '平台通用';
 }
 
 export function mapCouponValidityType(
@@ -385,6 +388,7 @@ export function sanitizeCouponTemplate(row: CouponTemplateRow): AdminCouponTempl
   const displayStatus = getCouponDisplayStatus(rawStatus, validityType, startAt, endAt);
   const totalQuantity = toNumber(row.total_quantity);
   const grantedCount = toNumber(row.granted_count);
+  const brandProductIds = parseJsonIdArray(row.brand_product_ids);
 
   return {
     id: toEntityId(row.id),
@@ -397,8 +401,10 @@ export function sanitizeCouponTemplate(row: CouponTemplateRow): AdminCouponTempl
     statusLabel: displayStatus.label,
     scopeType,
     scopeTypeLabel: mapCouponScopeTypeLabel(scopeType),
-    shopId: row.shop_id == null ? null : toEntityId(row.shop_id),
-    shopName: row.shop_name,
+    brandId: row.brand_id == null ? null : toEntityId(row.brand_id),
+    brandName: row.brand_name,
+    brandProductIds,
+    brandProductCount: brandProductIds?.length ?? 0,
     description: row.description,
     sourceType: mapCouponSourceType(row.source_type),
     sourceTypeLabel: mapCouponSourceTypeLabel(mapCouponSourceType(row.source_type)),
@@ -420,6 +426,16 @@ export function sanitizeCouponTemplate(row: CouponTemplateRow): AdminCouponTempl
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
   };
+}
+
+function parseJsonIdArray(value: unknown): EntityId[] | null {
+  if (value == null) return null;
+  let arr: unknown = value;
+  if (typeof value === 'string') {
+    try { arr = JSON.parse(value); } catch { return null; }
+  }
+  if (!Array.isArray(arr)) return null;
+  return arr.filter((v) => v != null).map((v) => toEntityId(v as number | string));
 }
 
 export function sanitizeCouponGrantBatch(row: CouponGrantBatchRow): AdminCouponGrantBatchItem {
@@ -455,7 +471,7 @@ export function mapCouponTypeCode(type: CreateAdminCouponTemplatePayload['type']
 }
 
 function mapCouponScopeTypeCode(scopeType: CreateAdminCouponTemplatePayload['scopeType']) {
-  return scopeType === 'shop' ? COUPON_SCOPE_SHOP : COUPON_SCOPE_PLATFORM;
+  return scopeType === 'brand' ? COUPON_SCOPE_BRAND : COUPON_SCOPE_PLATFORM;
 }
 
 function mapCouponValidityTypeCode(
@@ -482,14 +498,26 @@ export function normalizeCouponTemplatePayload(
     throw new Error('每人限领数量不合法');
   }
 
+  let brandId: string | null = null;
+  let brandProductIds: string[] | null = null;
+  if (scopeType === 'brand') {
+    if (!payload.brandId) {
+      throw new Error('指定品牌时品牌不能为空');
+    }
+    brandId = String(payload.brandId).trim();
+    if (!brandId) throw new Error('指定品牌时品牌不能为空');
+    if (Array.isArray(payload.brandProductIds) && payload.brandProductIds.length > 0) {
+      const ids = payload.brandProductIds.map((v) => String(v).trim()).filter(Boolean);
+      brandProductIds = ids.length > 0 ? Array.from(new Set(ids)) : null;
+    }
+  }
+
   const normalized: NormalizedCouponTemplatePayload = {
     name,
     typeCode: mapCouponTypeCode(type),
     scopeTypeCode: mapCouponScopeTypeCode(scopeType),
-    shopId:
-      scopeType === 'shop'
-        ? requireText(payload.shopId ? String(payload.shopId) : '', '指定店铺 ID', 20)
-        : null,
+    brandId,
+    brandProductIds,
     description: trimOptionalText(payload.description),
     minAmount,
     discountAmount: 0,
@@ -546,14 +574,41 @@ export function normalizeCouponTemplatePayload(
   return normalized;
 }
 
-export async function assertShopExists(connection: mysql.PoolConnection, shopId: string) {
+export async function assertBrandExists(connection: mysql.PoolConnection, brandId: string) {
   const [rows] = await connection.execute<mysql.RowDataPacket[]>(
-    'SELECT id FROM shop WHERE id = ? LIMIT 1',
-    [shopId],
+    'SELECT id, status FROM brand WHERE id = ? LIMIT 1',
+    [brandId],
   );
+  const row = (rows as Array<{ id?: number | string; status?: number | string }>)[0];
+  if (!row) {
+    throw new HttpError(404, 'ADMIN_COUPON_BRAND_NOT_FOUND', '指定品牌不存在');
+  }
+  if (Number(row.status ?? 0) !== 10) {
+    throw new HttpError(400, 'ADMIN_COUPON_BRAND_INACTIVE', '品牌已停用');
+  }
+}
 
-  if ((rows as Array<{ id?: number | string }>).length === 0) {
-    throw new HttpError(404, 'ADMIN_COUPON_SHOP_NOT_FOUND', '指定店铺不存在');
+export async function assertBrandProductsBelongToBrand(
+  connection: mysql.PoolConnection,
+  brandId: string,
+  brandProductIds: string[],
+) {
+  if (brandProductIds.length === 0) return;
+  const placeholders = brandProductIds.map(() => '?').join(',');
+  const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    `SELECT id, brand_id, status FROM brand_product WHERE id IN (${placeholders})`,
+    brandProductIds,
+  );
+  if ((rows as Array<unknown>).length !== brandProductIds.length) {
+    throw new HttpError(400, 'ADMIN_COUPON_BRAND_PRODUCT_NOT_FOUND', '部分商品不存在');
+  }
+  for (const row of rows as Array<{ brand_id: number | string; status: number | string }>) {
+    if (String(row.brand_id) !== String(brandId)) {
+      throw new HttpError(400, 'ADMIN_COUPON_BRAND_PRODUCT_MISMATCH', '商品与所选品牌不一致');
+    }
+    if (Number(row.status) !== 10) {
+      throw new HttpError(400, 'ADMIN_COUPON_BRAND_PRODUCT_INACTIVE', '所选商品已下架');
+    }
   }
 }
 
@@ -600,7 +655,8 @@ export async function fetchCouponTemplateById(
         ct.type,
         ct.status,
         ct.scope_type,
-        ct.shop_id,
+        ct.brand_id,
+        ct.brand_product_ids,
         ct.description,
         ct.source_type,
         ct.min_amount,
@@ -615,12 +671,12 @@ export async function fetchCouponTemplateById(
         ct.user_limit,
         ct.created_at,
         ct.updated_at,
-        s.name AS shop_name,
+        b.name AS brand_name,
         COALESCE(gs.batch_count, 0) AS batch_count,
         COALESCE(gs.granted_count, 0) AS granted_count,
         gs.last_batch_at
       FROM coupon_template ct
-      LEFT JOIN shop s ON s.id = ct.shop_id
+      LEFT JOIN brand b ON b.id = ct.brand_id
       LEFT JOIN (
         SELECT
           template_id,
