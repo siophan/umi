@@ -15,7 +15,8 @@ import {
   COUPON_SOURCE_ADMIN,
   CouponListParams,
   CouponTemplateRow,
-  assertShopExists,
+  assertBrandExists,
+  assertBrandProductsBelongToBrand,
   buildCouponListWhere,
   createNo,
   fetchCouponTemplateById,
@@ -36,7 +37,8 @@ export async function getAdminCoupons(params: CouponListParams = {}): Promise<Ad
         ct.type,
         ct.status,
         ct.scope_type,
-        ct.shop_id,
+        ct.brand_id,
+        ct.brand_product_ids,
         ct.description,
         ct.source_type,
         ct.min_amount,
@@ -51,12 +53,12 @@ export async function getAdminCoupons(params: CouponListParams = {}): Promise<Ad
         ct.user_limit,
         ct.created_at,
         ct.updated_at,
-        s.name AS shop_name,
+        b.name AS brand_name,
         COALESCE(gs.batch_count, 0) AS batch_count,
         COALESCE(gs.granted_count, 0) AS granted_count,
         gs.last_batch_at
       FROM coupon_template ct
-      LEFT JOIN shop s ON s.id = ct.shop_id
+      LEFT JOIN brand b ON b.id = ct.brand_id
       LEFT JOIN (
         SELECT
           template_id,
@@ -99,8 +101,15 @@ export async function createAdminCouponTemplate(
   const connection = await db.getConnection();
 
   try {
-    if (normalized.shopId) {
-      await assertShopExists(connection, normalized.shopId);
+    if (normalized.brandId) {
+      await assertBrandExists(connection, normalized.brandId);
+      if (normalized.brandProductIds && normalized.brandProductIds.length > 0) {
+        await assertBrandProductsBelongToBrand(
+          connection,
+          normalized.brandId,
+          normalized.brandProductIds,
+        );
+      }
     }
 
     const [result] = await connection.execute<mysql.ResultSetHeader>(
@@ -111,7 +120,8 @@ export async function createAdminCouponTemplate(
           type,
           status,
           scope_type,
-          shop_id,
+          brand_id,
+          brand_product_ids,
           description,
           source_type,
           min_amount,
@@ -126,7 +136,7 @@ export async function createAdminCouponTemplate(
           user_limit,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
       `,
       [
         createNo('TPL'),
@@ -134,7 +144,8 @@ export async function createAdminCouponTemplate(
         normalized.typeCode,
         normalized.statusCode,
         normalized.scopeTypeCode,
-        normalized.shopId,
+        normalized.brandId,
+        normalized.brandProductIds ? JSON.stringify(normalized.brandProductIds) : null,
         normalized.description,
         COUPON_SOURCE_ADMIN,
         normalized.minAmount,
@@ -166,8 +177,15 @@ export async function updateAdminCouponTemplate(
 
   try {
     await fetchCouponTemplateById(connection, templateId);
-    if (normalized.shopId) {
-      await assertShopExists(connection, normalized.shopId);
+    if (normalized.brandId) {
+      await assertBrandExists(connection, normalized.brandId);
+      if (normalized.brandProductIds && normalized.brandProductIds.length > 0) {
+        await assertBrandProductsBelongToBrand(
+          connection,
+          normalized.brandId,
+          normalized.brandProductIds,
+        );
+      }
     }
 
     await connection.execute(
@@ -178,7 +196,8 @@ export async function updateAdminCouponTemplate(
           type = ?,
           status = ?,
           scope_type = ?,
-          shop_id = ?,
+          brand_id = ?,
+          brand_product_ids = ?,
           description = ?,
           min_amount = ?,
           discount_amount = ?,
@@ -198,7 +217,8 @@ export async function updateAdminCouponTemplate(
         normalized.typeCode,
         normalized.statusCode,
         normalized.scopeTypeCode,
-        normalized.shopId,
+        normalized.brandId,
+        normalized.brandProductIds ? JSON.stringify(normalized.brandProductIds) : null,
         normalized.description,
         normalized.minAmount,
         normalized.discountAmount,
