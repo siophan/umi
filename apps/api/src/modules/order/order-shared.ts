@@ -149,6 +149,9 @@ export type CouponRow = {
   expire_at: Date | string | null;
   source_type: number | string | null;
   status: number | string | null;
+  scope_type?: number | string | null;
+  brand_id?: number | string | null;
+  brand_product_ids?: string | null;
 };
 
 export function toIso(value: Date | string | null | undefined) {
@@ -201,6 +204,19 @@ export function sanitizeCoupon(row: CouponRow): CouponListItem {
   const type = mapCouponType(Number(row.type ?? 0));
   // cash / shipping 在 DB 存"分"→ 转元；percent 存 0-100 折扣百分制保持不变。
   const amount = type === 'percent' ? Number(row.amount ?? 0) : toMoney(row.amount);
+  let brandProductIds: string[] | null = null;
+  if (row.brand_product_ids != null) {
+    try {
+      const parsed = typeof row.brand_product_ids === 'string'
+        ? JSON.parse(row.brand_product_ids)
+        : row.brand_product_ids;
+      if (Array.isArray(parsed)) {
+        brandProductIds = parsed.map((id) => String(id));
+      }
+    } catch {
+      brandProductIds = null;
+    }
+  }
   return {
     id: toEntityId(row.id),
     couponNo: row.coupon_no || '',
@@ -212,6 +228,9 @@ export function sanitizeCoupon(row: CouponRow): CouponListItem {
     status: mapCouponStatus(Number(row.status ?? 0), row.expire_at),
     sourceType,
     source: mapCouponSource(sourceType),
+    scopeType: Number(row.scope_type ?? 10) === 20 ? 'brand' : 'platform',
+    brandId: row.brand_id == null ? null : toEntityId(row.brand_id),
+    brandProductIds,
   };
 }
 

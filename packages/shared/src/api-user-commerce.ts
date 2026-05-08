@@ -305,6 +305,9 @@ export interface CouponListItem {
   status: 'unused' | 'locked' | 'used' | 'expired';
   sourceType: number;
   source: string;
+  scopeType: 'platform' | 'brand';
+  brandId: EntityId | null;
+  brandProductIds: string[] | null;
 }
 
 export interface CouponListResult {

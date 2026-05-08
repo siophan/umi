@@ -56,6 +56,7 @@ export type AdminOrderQueryRow = {
   detail: string | null;
   item_id: number | string | null;
   product_id: number | string | null;
+  brand_product_sku_id: number | string | null;
   product_name: string | null;
   product_img: string | null;
   specs: string | null;
@@ -522,6 +523,7 @@ export function sanitizeOrderItem(row: AdminOrderQueryRow): AdminOrderItem | nul
   return {
     id: toEntityId(row.item_id),
     productId: toEntityId(row.product_id),
+    brandProductSkuId: toEntityId(row.brand_product_sku_id ?? 0),
     productName: row.product_name,
     productImg: row.product_img || '',
     skuText: formatSpecs(row.specs),
@@ -560,6 +562,7 @@ export const adminOrdersSql = `
     a.detail,
     oi.id AS item_id,
     oi.product_id,
+    oi.brand_product_sku_id,
     bp.name AS product_name,
     bp.default_img AS product_img,
     oi.specs,

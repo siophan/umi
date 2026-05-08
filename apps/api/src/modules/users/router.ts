@@ -64,7 +64,7 @@ userRouter.get(
     const user = getRequestUser(request);
     const cursor = String(request.query['cursor'] ?? '');
     if (!cursor) {
-      throw new HttpError(400, 'cursor required');
+      throw new HttpError(400, 'CURSOR_REQUIRED', 'cursor required');
     }
     ok(response, await getMeWorksPaged(user.id, cursor));
   }),
@@ -77,7 +77,7 @@ userRouter.get(
     const user = getRequestUser(request);
     const cursor = String(request.query['cursor'] ?? '');
     if (!cursor) {
-      throw new HttpError(400, 'cursor required');
+      throw new HttpError(400, 'CURSOR_REQUIRED', 'cursor required');
     }
     ok(response, await getMeBookmarksPaged(user.id, cursor));
   }),
@@ -90,7 +90,7 @@ userRouter.get(
     const user = getRequestUser(request);
     const cursor = String(request.query['cursor'] ?? '');
     if (!cursor) {
-      throw new HttpError(400, 'cursor required');
+      throw new HttpError(400, 'CURSOR_REQUIRED', 'cursor required');
     }
     ok(response, await getMeLikesPaged(user.id, cursor));
   }),

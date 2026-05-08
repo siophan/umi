@@ -362,7 +362,7 @@ export async function getProductDetail(productId: string, userId?: string | null
   );
   const skus: ProductSku[] = parseBrandLibrarySkus(product.bp_skus_json).map(
     (sku) => ({
-      id: sku.id,
+      id: toEntityId(sku.id),
       skuCode: sku.skuCode,
       spec: sku.spec,
       specSummary: sku.specSummary,

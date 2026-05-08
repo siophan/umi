@@ -74,6 +74,7 @@ type OrderRow = {
   created_at: Date | string;
   item_id: number | string | null;
   product_id: number | string | null;
+  brand_product_sku_id: number | string | null;
   product_name: string | null;
   product_img: string | null;
   quantity: number | string | null;
@@ -197,6 +198,7 @@ function sanitizeOrderItem(row: OrderRow): OrderItem | null {
   return {
     id: toEntityId(row.item_id),
     productId: toEntityId(row.product_id),
+    brandProductSkuId: toEntityId(row.brand_product_sku_id ?? 0),
     productName: row.product_name,
     productImg: row.product_img || '',
     skuText: null,
@@ -428,6 +430,7 @@ const adminUserOrderSql = `
     o.created_at,
     oi.id AS item_id,
     oi.product_id,
+    oi.brand_product_sku_id,
     bp.name AS product_name,
     bp.default_img AS product_img,
     oi.quantity,
