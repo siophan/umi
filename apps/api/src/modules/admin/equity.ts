@@ -200,7 +200,7 @@ export async function getAdminEquityAccounts(
   const { whereSql, values } = buildListWhere(params);
   const db = getDbPool();
 
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+  const [rows] = await db.query<mysql.RowDataPacket[]>(
     `
       SELECT
         ea.id,
