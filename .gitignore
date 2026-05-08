@@ -19,4 +19,5 @@ tests
 apps/api/src/**/*.js
 release
 .pnpm-store/
-scripts/
+.idea
+.run
