@@ -493,9 +493,9 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
-## 29. 每日签到（页面 + 后端 + DB 已完成 2026-05-06，奖励发券待二期）
+## 29. 每日签到（页面 + 后端 + DB 已完成 2026-05-06，签到发券已完成 2026-05-08）
 
-**进度**：`/checkin` 页面 + `POST /api/checkin` + `GET /api/checkin/status` + `user_checkin` 表已落地，签到本身可走通；奖励部分（发券）暂未接入，签到成功不发任何东西，仅记录 streak / total。
+**进度**：`/checkin` 页面 + `POST /api/checkin` + `GET /api/checkin/status` + `user_checkin` 表已落地，签到本身可走通；奖励发券链路已于 2026-05-08 打通。
 
 **已完成：**
 - DB：`packages/db/sql/user_checkin.sql`（`(user_id, checkin_date)` UNIQUE，DB 层去重；`reward INT` 字段预留但本期写 0）
@@ -506,13 +506,7 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 - 前端：`apps/web/src/app/checkin/page.tsx` 替换原 stub；7 天时间线展示已签/今日/未来三态；hero 显示真实 streak/total
 - 入口：`apps/web/src/app/features/page.tsx` "每日签到" 入口去掉「建设中」禁用态，正常 push `/checkin`
 
-**遗留 P1 — 奖励发券**：
-
-签到本期不发任何奖励，时间线"奖励待开通"是占位。要补"连续 N 天发 X 券"必须先做完 #品牌发券改造（memory `project_coupon_brand_issued.md`）：
-- `coupon_template` 加 `brand_id` 字段（目前只有 `shop_id`，已被废弃但没替换）
-- admin 后台新增"按品牌维度配置 coupon_template"入口
-- 然后回到 checkin 模块加"streak → templateId" 映射表（运营后台维护，代码不写死），`performCheckin` 命中映射时调内部 `claimCouponFromTemplate(userId, templateId)` 把券塞进 `coupon` 表
-- `user_checkin.reward` 列保留 INT 不动，可改成存"本次发的券模板 id"也可以加 `reward_coupon_template_id` 字段，二期决定
+**已完成（2026-05-08）**：performCheckin commit 后调 `maybeGrantCheckinReward(userId, streak)` → 查 `checkin_reward_config WHERE day_no=streak AND status=10`，命中 reward_type=coupon 且 reward_ref_id 非 null 则调 `claimCouponFromTemplate`。失败仅 console.error，签到主流程不回滚。配套 `coupon_template.brand_id` + `coupon` 表快照三列由 #品牌发券改造 批次 1 落地（详见 `docs/superpowers/specs/2026-05-08-coupon-brand-issuance-design.md`）。
 
 **遗留 P2 — 老系统的"今日任务"段不做**：
 
@@ -574,5 +568,5 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 0    | （仓库提货闭环已于 2026-05-06 完成，见 #27）|
-| P1     | 2    | 签到奖励发券待 #品牌发券改造（#29）/ 邀请奖励发券 + 老账号 invite_code 生成（#30） |
+| P1     | 1    | 邀请奖励发券 + 闭环（#30，等批次 2 / 品牌发券改造） |
 | P2     | 17   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请记录后端 + 注册带邀请码闭环（#30） |

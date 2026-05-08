@@ -126,7 +126,7 @@
 | 原语义 | 编码 | 说明 |
 | --- | --- | --- |
 | `platform` | `10` | 平台通用 |
-| `shop` | `20` | 指定店铺 |
+| `brand` | `20` | 指定品牌 |
 
 ### `coupon_template.validity_type`
 

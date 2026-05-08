@@ -467,18 +467,21 @@
 | 2 | `coupon_no` | `varchar(32)` | `NO` | `NULL` | `UNI` | `-` | 优惠券编号 |
 | 3 | `user_id` | `bigint` | `NO` | `NULL` | `MUL` | `-` | 用户 ID |
 | 4 | `template_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 优惠券模板 ID |
-| 5 | `grant_batch_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 发券批次 ID |
-| 6 | `name` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 优惠券名称 |
-| 7 | `amount` | `bigint` | `YES` | `NULL` | `-` | `-` | 面额，单位分 |
-| 8 | `type` | `tinyint unsigned` | `YES` | `NULL` | `-` | `-` | 类型编码 |
-| 9 | `condition` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 使用门槛 |
-| 10 | `expire_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 过期时间 |
-| 11 | `source_type` | `smallint unsigned` | `YES` | `NULL` | `-` | `-` | 来源类型编码 |
-| 12 | `status` | `tinyint unsigned` | `NO` | `10` | `MUL` | `-` | 状态编码 |
-| 13 | `claimed_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 领取时间 |
-| 14 | `used_at` | `datetime(3)` | `YES` | `NULL` | `MUL` | `-` | 使用时间 |
-| 15 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 16 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+| 5 | `scope_type` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 范围类型快照 |
+| 6 | `brand_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 品牌 ID 快照 |
+| 7 | `brand_product_ids` | `json` | `YES` | `NULL` | `-` | `-` | 范围限定 SPU 快照 |
+| 8 | `grant_batch_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 发券批次 ID |
+| 9 | `name` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 优惠券名称 |
+| 10 | `amount` | `bigint` | `YES` | `NULL` | `-` | `-` | 面额，单位分 |
+| 11 | `type` | `tinyint unsigned` | `YES` | `NULL` | `-` | `-` | 类型编码 |
+| 12 | `condition` | `varchar(191)` | `YES` | `NULL` | `-` | `-` | 使用门槛 |
+| 13 | `expire_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 过期时间 |
+| 14 | `source_type` | `smallint unsigned` | `YES` | `NULL` | `-` | `-` | 来源类型编码 |
+| 15 | `status` | `tinyint unsigned` | `NO` | `10` | `MUL` | `-` | 状态编码 |
+| 16 | `claimed_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 领取时间 |
+| 17 | `used_at` | `datetime(3)` | `YES` | `NULL` | `MUL` | `-` | 使用时间 |
+| 18 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 19 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
 
 ## coupon_grant_batch
 
@@ -510,21 +513,22 @@
 | 4 | `type` | `tinyint unsigned` | `YES` | `NULL` | `-` | `-` | 类型编码 |
 | 5 | `status` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 状态编码 |
 | 6 | `scope_type` | `tinyint unsigned` | `NO` | `10` | `MUL` | `-` | 范围类型编码 |
-| 7 | `shop_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 指定店铺 ID |
-| 8 | `description` | `varchar(255)` | `YES` | `NULL` | `-` | `-` | 模板描述 |
-| 9 | `source_type` | `smallint unsigned` | `YES` | `NULL` | `MUL` | `-` | 来源类型编码 |
-| 10 | `min_amount` | `bigint` | `NO` | `0` | `-` | `-` | 最低使用金额，单位分 |
-| 11 | `discount_amount` | `bigint` | `NO` | `0` | `-` | `-` | 优惠金额，单位分 |
-| 12 | `discount_rate` | `decimal(5,2)` | `YES` | `NULL` | `-` | `-` | 折扣率 |
-| 13 | `max_discount_amount` | `bigint` | `NO` | `0` | `-` | `-` | 最大优惠金额，单位分 |
-| 14 | `validity_type` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 有效期类型编码 |
-| 15 | `start_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 有效期开始时间 |
-| 16 | `end_at` | `datetime(3)` | `YES` | `NULL` | `MUL` | `-` | 有效期结束时间 |
-| 17 | `valid_days` | `int` | `NO` | `0` | `-` | `-` | 领取后有效天数 |
-| 18 | `total_quantity` | `int` | `NO` | `-1` | `-` | `-` | 总发放数量，-1 不限 |
-| 19 | `user_limit` | `int` | `NO` | `1` | `-` | `-` | 每人限领数量 |
-| 20 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 21 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+| 7 | `brand_id` | `bigint` | `YES` | `NULL` | `MUL` | `-` | 品牌 ID（scope_type=20 时必填） |
+| 8 | `brand_product_ids` | `json` | `YES` | `NULL` | `-` | `-` | 范围限定 SPU；NULL=该品牌全量 |
+| 9 | `description` | `varchar(255)` | `YES` | `NULL` | `-` | `-` | 模板描述 |
+| 10 | `source_type` | `smallint unsigned` | `YES` | `NULL` | `MUL` | `-` | 来源类型编码 |
+| 11 | `min_amount` | `bigint` | `NO` | `0` | `-` | `-` | 最低使用金额，单位分 |
+| 12 | `discount_amount` | `bigint` | `NO` | `0` | `-` | `-` | 优惠金额，单位分 |
+| 13 | `discount_rate` | `decimal(5,2)` | `YES` | `NULL` | `-` | `-` | 折扣率 |
+| 14 | `max_discount_amount` | `bigint` | `NO` | `0` | `-` | `-` | 最大优惠金额，单位分 |
+| 15 | `validity_type` | `tinyint unsigned` | `NO` | `10` | `-` | `-` | 有效期类型编码 |
+| 16 | `start_at` | `datetime(3)` | `YES` | `NULL` | `-` | `-` | 有效期开始时间 |
+| 17 | `end_at` | `datetime(3)` | `YES` | `NULL` | `MUL` | `-` | 有效期结束时间 |
+| 18 | `valid_days` | `int` | `NO` | `0` | `-` | `-` | 领取后有效天数 |
+| 19 | `total_quantity` | `int` | `NO` | `-1` | `-` | `-` | 总发放数量，-1 不限 |
+| 20 | `user_limit` | `int` | `NO` | `1` | `-` | `-` | 每人限领数量 |
+| 21 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 22 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
 
 ## equity_account
 
