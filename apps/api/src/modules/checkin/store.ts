@@ -3,6 +3,10 @@ import type mysql from 'mysql2/promise';
 import type { CheckinResult, CheckinStatus } from '@umi/shared';
 
 import { getDbPool } from '../../lib/db';
+import { claimCouponFromTemplate } from '../coupon/store';
+
+const CHECKIN_REWARD_TYPE_COUPON = 20;
+const CHECKIN_CONFIG_STATUS_ACTIVE = 10;
 
 type CheckinRow = mysql.RowDataPacket & {
   checkin_date: Date | string;
@@ -133,11 +137,17 @@ export async function performCheckin(userId: string): Promise<CheckinResult> {
 
     await conn.commit();
 
+    // 事务外触发发券；任何异常静默 log，不影响签到主流程返回
+    const couponGranted = await maybeGrantCheckinReward(userId, streak).catch((e) => {
+      console.error('checkin reward grant failed', { userId, streak, e });
+      return false;
+    });
+
     return {
       alreadyChecked: false,
       streak,
       total,
-      reward,
+      reward: couponGranted ? 1 : 0,
     };
   } catch (error) {
     await conn.rollback();
@@ -145,4 +155,25 @@ export async function performCheckin(userId: string): Promise<CheckinResult> {
   } finally {
     conn.release();
   }
+}
+
+async function maybeGrantCheckinReward(userId: string, streak: number): Promise<boolean> {
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `
+      SELECT reward_type, reward_ref_id
+      FROM checkin_reward_config
+      WHERE day_no = ? AND status = ?
+      LIMIT 1
+    `,
+    [streak, CHECKIN_CONFIG_STATUS_ACTIVE],
+  );
+  const row = (rows as Array<{ reward_type: number | string; reward_ref_id: number | string | null }>)[0];
+  if (!row) return false;
+  if (Number(row.reward_type) !== CHECKIN_REWARD_TYPE_COUPON) return false;
+  const templateId = row.reward_ref_id;
+  if (templateId == null) return false;
+
+  await claimCouponFromTemplate(userId, String(templateId));
+  return true;
 }
