@@ -53,6 +53,11 @@ const userSelectSql = `
       WHERE gb.user_id = u.id
         AND gb.status = 30
     ), 0) AS wins,
+    COALESCE((
+      SELECT COUNT(*)
+      FROM user u2
+      WHERE u2.invited_by = u.id
+    ), 0) AS invite_count,
     (
       SELECT s.name
       FROM shop s

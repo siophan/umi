@@ -22,6 +22,7 @@ import { searchRouter } from './modules/search/router';
 import { userRouter } from './modules/users/router';
 import { socialRouter } from './modules/social/router';
 import { guessRouter } from './modules/guess/router';
+import { inviteRouter } from './modules/invite/router';
 import { orderRouter } from './modules/order/router';
 import { productRouter } from './modules/product/router';
 import { shopRouter } from './modules/shop/router';
@@ -83,6 +84,7 @@ export function createApp(): Express {
   app.use('/api/coupons', couponRouter);
   app.use('/api/checkin', checkinRouter);
   app.use('/api/guesses', guessRouter);
+  app.use('/api/invite', inviteRouter);
   app.use('/api/orders', orderRouter);
   app.use('/api/products', productRouter);
   app.use('/api/search', searchRouter);

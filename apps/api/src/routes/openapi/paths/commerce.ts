@@ -1202,4 +1202,35 @@ export const commercePaths = {
       },
     },
   },
+  '/api/invite/records': {
+    get: {
+      tags: ['Invite'],
+      summary: '我的邀请记录',
+      description: '走 user.invited_by JOIN 查询当前用户邀请进来的所有账号；最多返回 100 条，按注册时间倒序。',
+      security: bearerSecurity,
+      responses: {
+        200: successResponse({
+          type: 'object',
+          properties: {
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  avatar: { type: 'string', nullable: true },
+                  registeredAt: { type: 'string', format: 'date-time' },
+                },
+                required: ['id', 'name', 'avatar', 'registeredAt'],
+              },
+            },
+            total: { type: 'integer' },
+          },
+          required: ['items', 'total'],
+        }),
+        401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
 } as const;

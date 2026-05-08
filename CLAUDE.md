@@ -514,38 +514,34 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
-## 30. 邀请有礼（页面已实现，奖励发券 + 邀请记录后端待二期）
+## 30. 邀请有礼（已完成 2026-05-08，老账号 invite_code backfill 由运维手工补）
 
-**进度**：`/invite` 页面从原"邀请功能建设中"占位换成完整 UI——hero / 邀请码卡（复制+分享）/ 4 档奖励梯度 / 邀请记录空状态。`UserSummary.inviteCode` 字段在 `/api/users/me` 已暴露，页面读真码；后端**邀请记录、奖励发券、注册带邀请码闭环、注册时 invite_code 生成**四段未做，奖励配置与 #29 共依赖「品牌发券改造」。
+**进度**：注册带邀请码闭环 + 邀请记录后端 + 奖励发券（单档）三段全部打通；新注册用户都有 `invite_code` 落库，老账号留待运维手工 SQL backfill。
 
-**已完成：**
-- shared：`UserSummary` 加 `inviteCode?: string | null`，OpenAPI `common.ts` 同步
-- 后端：`apps/api/src/modules/users/query-store.ts` userSelectSql 加 `u.invite_code`；`model.ts` UserRow + sanitizeUser 透传
-- 前端：`apps/web/src/app/invite/page.tsx` 完整重写——4 档梯度（新人券 / 券礼包 / 成就 / VIP，纯文案）、复制邀请链接（`navigator.clipboard` + textarea fallback）、Web Share API + 复制 fallback；`inviteCode` 为 null 时显示「敬请期待」、按钮 toast「邀请码暂未开放」
+**设计稿**：`docs/superpowers/specs/2026-05-08-invite-reward-design.md`
 
-**遗留 P1 — 奖励发券（与 #29 共依赖品牌发券改造）：**
+**已完成（2026-05-08）：**
+- 注册路径生成 invite_code：`apps/api/src/modules/auth/store.ts` 加 `generateUniqueInviteCode`（base62 8 位 + 碰撞预查 20 次）；`register()` INSERT user 时同步写 `invite_code` + 反查 `invited_by`
+- 注册消费 URL invite：`apps/web/src/app/register/page.tsx` 读 `searchParams.get('invite')`，透传 `register({ inviteCode })`；`RegisterPayload` 加 `inviteCode?: string`
+- 无效 invite 静默忽略：`findInviterIdByInviteCode` 命中 + `banned=0` 才返回 inviterId，否则 NULL
+- 奖励发券：commit 后调 `maybeGrantInviteRewards(inviterId, inviteeId)`（`apps/api/src/modules/invite/store.ts`），读 `invite_reward_config` 单条 active，按 `reward_type` 分发——仅 `coupon (20)` 调 `claimCouponFromTemplate(userId, templateId)`；coin/physical 跳过 + console.warn；整段 try/catch 失败仅 log，不影响注册返回（与 #29 签到同模式）
+- 邀请记录：`GET /api/invite/records`（`apps/api/src/modules/invite/router.ts`）走 `user.invited_by` JOIN（与 admin/invites.ts 同源），返回 100 条 `{ id, name, avatar, registeredAt }`；`/invite` 页 `Promise.allSettled` 并发拉 `fetchMe + fetchMyInviteRecords`，记录列表替换原空状态文案
+- inviteCount 修复：`query-store.ts` userSelectSql 加 `(SELECT COUNT(*) FROM user u2 WHERE u2.invited_by = u.id) AS invite_count` 子查询，`model.ts` 已有字段终于读得到真值
+- OpenAPI：`schemas/auth.ts` RegisterPayload 加 `inviteCode`；`paths/commerce.ts` 新增 `/api/invite/records`；`tags.ts` 加 `Invite` tag
 
-4 档奖励目前只是文案展示，命中阶梯不会真实发券。要补必须先做：
-- `coupon_template` 加 `brand_id` 字段（同 #29；memory `project_coupon_brand_issued.md`）
-- admin 后台新增"按品牌维度配置 coupon_template"入口
-- DB `invite_reward_config` 表已存在（`inviter_reward_type / value / ref_id` + `invitee_reward_type / value / ref_id`），admin 后台补"档位 → coupon_template_id" 映射 UI
-- 邀请人触达阶梯 / 被邀请人首次注册命中条件 → 调内部 `claimCouponFromTemplate(userId, templateId)` 写入 `coupon` 表
+**单档语义**：`invite_reward_config` 是单条配置，每邀请 1 人触发一次双向奖励（不是 4 档梯度）。`/invite` 页 4 档（1/3/10/30）只是静态文案展示，schema 不动。`coupon_template.user_limit` 兜底防超额（`claimCouponFromTemplate` 抛"已达领取上限"，外层静默 log）。
 
-**遗留 P1 — 老账号 invite_code 全为 NULL：**
+**遗留 — 老账号 invite_code 全为 NULL：**
 
-`user.invite_code` 列虽已存在（UNIQUE varchar(191)），但注册流程从未写过，所有现有用户该字段全 null，页面显示「敬请期待」、按钮全部 toast「邀请码暂未开放」。修法（参考 `query-store.ts` 已有的 `ensureUserUidCode` lazy-gen pattern）：
-- 加 `ensureUserInviteCode(userId, currentCode)`：碰撞重试 + 仅 `WHERE invite_code IS NULL` 时 UPDATE
-- `attachUserUidCode` → `attachUserCodes`，把 invite_code 一起 lazy backfill
-- 注册路径同步 INSERT 时直接生成
-- 与"奖励发券"一起做，先做生成再做发券
+注册路径已生成 invite_code，新账号都有；老账号需运维手工 backfill SQL（仅 `WHERE invite_code IS NULL` UPDATE）。本期不做 lazy gen helper。
 
-**遗留 P2 — 邀请记录后端：**
+**遗留 P2 — 多档梯度奖励**：
 
-老系统 `umi-origin/frontend/invite.html` 调 `GET /invite/records`，新版没实现。`invite_record` 表已存在，admin 已能查（`apps/api/src/modules/admin/invites.ts`），用户端补 `GET /api/invite/records` 返回 `{ items: [{ name, avatar, time, rewardLabel }] }` 即可。本期页面以空状态占位。
+要让 `/invite` 页 4 档（1/3/10/30 人）真发券，得改 `invite_reward_config` schema 加 `threshold` 列 + admin UI 多行配置 + 触发逻辑按累计邀请数找命中档位。本期单档够用，二期再说。
 
-**遗留 P2 — 注册带邀请码闭环：**
+**遗留 P2 — 注册"已绑定邀请人"反馈态**：
 
-`apps/web/src/app/register` 流程未消费 URL 上的 `?invite=<code>`，`RegisterPayload` 也没有 inviteCode 字段。"复制链接"按钮分享出去的链接对方点开后，注册需要把 invite code 携带到 `register` API → 写 `invite_record(inviter_id, invitee_id)` → 触发奖励发放。本期复制链接可点但落地后无效。
+无效 invite 码当前是静默忽略，被邀请人不会被告知"邀请码无效"。如要更明确 UX，后端可在 register 返回 `{ invitedBy: inviterId | null }`，前端注册成功后 toast 区分"已绑定邀请人"vs"邀请码无效"。本期为简化体验直接静默。
 
 ---
 
@@ -568,5 +564,5 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 | 优先级 | 数量 | 描述 |
 |--------|------|------|
 | P0     | 0    | （仓库提货闭环已于 2026-05-06 完成，见 #27）|
-| P1     | 1    | 邀请奖励发券 + 闭环（#30，等批次 2 / 品牌发券改造） |
-| P2     | 17   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请记录后端 + 注册带邀请码闭环（#30） |
+| P1     | 0    | （邀请奖励发券 + 闭环已于 2026-05-08 完成，见 #30）|
+| P2     | 16   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请多档梯度 + 注册"已绑定邀请人"反馈态（#30） |

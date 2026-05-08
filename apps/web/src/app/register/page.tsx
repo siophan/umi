@@ -38,6 +38,7 @@ function RegisterPageInner() {
   const [codeVerified, setCodeVerified] = useState(false);
 
   const redirect = searchParams.get("redirect") || "/";
+  const inviteCode = searchParams.get("invite")?.trim() || undefined;
   const phoneValid = /^1\d{10}$/.test(phone);
   const step1Ready = phoneValid && code.trim().length >= 4 && !verifyingCode;
   const step2Ready = password.length >= 6 && password === confirmPassword;
@@ -146,6 +147,7 @@ function RegisterPageInner() {
         password,
         name: name.trim(),
         avatar: avatars[selectedAvatar]?.src,
+        inviteCode,
       });
       setAuthToken(result.token);
       showToast("注册成功 🎉");

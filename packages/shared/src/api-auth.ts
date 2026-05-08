@@ -69,6 +69,7 @@ export interface RegisterPayload {
   password: string;
   name: string;
   avatar?: string;
+  inviteCode?: string;
 }
 
 export interface LogoutResult {

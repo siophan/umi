@@ -840,3 +840,15 @@ export interface RemoveShopProductResult {
   status: 'off_shelf';
 }
 
+export interface InviteRecordItem {
+  id: UserId;
+  name: string;
+  avatar: string | null;
+  registeredAt: string;
+}
+
+export interface InviteRecordListResult {
+  items: InviteRecordItem[];
+  total: number;
+}
+

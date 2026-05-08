@@ -18,6 +18,45 @@ import { env } from '../../env';
 import { getDbPool } from '../../lib/db';
 import { sanitizeUser, type UserRow } from '../users/model';
 import { findUserById, findUserByPhone } from '../users/query-store';
+import { maybeGrantInviteRewards } from '../invite/store';
+
+const INVITE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+function createRandomInviteCode(length = 8) {
+  const bytes = randomBytes(length);
+  let result = '';
+  for (let index = 0; index < length; index += 1) {
+    result += INVITE_ALPHABET[bytes[index] % INVITE_ALPHABET.length];
+  }
+  return result;
+}
+
+async function generateUniqueInviteCode() {
+  const db = getDbPool();
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const code = createRandomInviteCode(8);
+    const [rows] = await db.execute<mysql.RowDataPacket[]>(
+      `SELECT id FROM user WHERE invite_code = ? LIMIT 1`,
+      [code],
+    );
+    if (rows.length === 0) {
+      return code;
+    }
+  }
+  throw new Error('生成邀请码失败，请稍后重试');
+}
+
+async function findInviterIdByInviteCode(rawCode: string | undefined): Promise<string | null> {
+  const code = rawCode?.trim();
+  if (!code) return null;
+  const db = getDbPool();
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `SELECT id FROM user WHERE invite_code = ? AND banned = 0 LIMIT 1`,
+    [code],
+  );
+  const row = rows[0] as { id?: number | string } | undefined;
+  return row?.id != null ? String(row.id) : null;
+}
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -347,18 +386,27 @@ export async function register(payload: RegisterPayload): Promise<LoginResult> {
   const hashedPassword = await bcrypt.hash(payload.password, 10);
   const db = getDbPool();
   const uidCode = await generateUniqueUidCode();
+  const inviteCode = await generateUniqueInviteCode();
+  const inviterId = await findInviterIdByInviteCode(payload.inviteCode);
   const [result] = await db.execute<mysql.ResultSetHeader>(
     `
       INSERT INTO user (
         uid_code,
+        invite_code,
+        invited_by,
         phone_number,
         password,
         achievements
-      ) VALUES (?, ?, ?, JSON_ARRAY())
+      ) VALUES (?, ?, ?, ?, ?, JSON_ARRAY())
     `,
-    [uidCode, payload.phone, hashedPassword],
+    [uidCode, inviteCode, inviterId, payload.phone, hashedPassword],
   );
   await createUserProfile(result.insertId, payload.name.trim(), payload.avatar);
+
+  const inviteeId = String(result.insertId);
+  await maybeGrantInviteRewards(inviterId, inviteeId).catch((e) => {
+    console.error('invite reward grant failed', { inviterId, inviteeId, e });
+  });
 
   const user = await findUserById(result.insertId);
   if (!user) {

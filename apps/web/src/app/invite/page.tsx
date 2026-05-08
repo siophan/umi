@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import type { InviteRecordItem } from '@umi/shared';
+
 import { fetchMe } from '../../lib/api/auth';
+import { fetchMyInviteRecords } from '../../lib/api/invite';
 
 import styles from './page.module.css';
 
@@ -19,23 +22,35 @@ export default function InvitePage() {
   const [toast, setToast] = useState('');
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [inviteCount, setInviteCount] = useState<number>(0);
+  const [records, setRecords] = useState<InviteRecordItem[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    fetchMe()
-      .then((user) => {
-        if (cancelled) return;
-        setInviteCode(user.inviteCode ?? null);
-        setInviteCount(user.inviteCount ?? 0);
-      })
-      .catch(() => {
-        if (cancelled) return;
+    Promise.allSettled([fetchMe(), fetchMyInviteRecords()]).then(([meResult, recordsResult]) => {
+      if (cancelled) return;
+      if (meResult.status === 'fulfilled') {
+        setInviteCode(meResult.value.inviteCode ?? null);
+        setInviteCount(meResult.value.inviteCount ?? 0);
+      } else {
         setInviteCode(null);
-      });
+      }
+      if (recordsResult.status === 'fulfilled') {
+        setRecords(recordsResult.value.items);
+      }
+    });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const formatRegisteredAt = (iso: string) => {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -160,7 +175,38 @@ export default function InvitePage() {
         <div className={styles.sectionTitle}>邀请记录</div>
       </div>
       <section className={styles.recordList}>
-        <div className={styles.recordEmpty}>暂无邀请记录，快去邀请好友吧！</div>
+        {records.length === 0 ? (
+          <div className={styles.recordEmpty}>暂无邀请记录，快去邀请好友吧！</div>
+        ) : (
+          records.map((record) => (
+            <div className={styles.recordItem} key={record.id}>
+              {record.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className={styles.avatar} src={record.avatar} alt={record.name} />
+              ) : (
+                <div
+                  className={styles.avatar}
+                  aria-hidden
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#f5f5f8',
+                    color: '#999',
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  {record.name.slice(0, 1)}
+                </div>
+              )}
+              <div className={styles.recordInfo}>
+                <div className={styles.recordName}>{record.name}</div>
+                <div className={styles.recordTime}>{formatRegisteredAt(record.registeredAt)}</div>
+              </div>
+            </div>
+          ))
+        )}
       </section>
 
       <div className={`${styles.toast} ${toast ? styles.toastShow : ''}`}>{toast}</div>

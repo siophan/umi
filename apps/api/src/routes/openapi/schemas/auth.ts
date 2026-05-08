@@ -52,6 +52,12 @@ export const authSchemas = {
         description: '注册时选中的头像 URL；写入 user_profile.avatar_url',
         example: '/legacy/images/mascot/mouse-main.png',
       },
+      inviteCode: {
+        type: 'string',
+        nullable: true,
+        description: '邀请人邀请码；命中且邀请人未封禁时写 user.invited_by 并触发奖励发券',
+        example: 'aB3xK9mZ',
+      },
     },
   },
   ChangePasswordPayload: {
