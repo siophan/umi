@@ -22,7 +22,8 @@ export type CouponFormValues = {
   name: string;
   type: AdminCouponTemplateType;
   scopeType: AdminCouponTemplateScopeType;
-  shopId?: string;
+  brandId?: string;
+  brandProductIds?: string[];
   description?: string;
   minAmountYuan: number;
   discountAmountYuan?: number;
@@ -49,7 +50,7 @@ export const TYPE_OPTIONS = [
 
 export const SCOPE_OPTIONS = [
   { label: '平台通用', value: 'platform' },
-  { label: '指定店铺', value: 'shop' },
+  { label: '指定品牌', value: 'brand' },
 ] as const;
 
 export const VALIDITY_OPTIONS = [
@@ -117,7 +118,8 @@ export function buildCouponFormValues(record: AdminCouponTemplateItem): CouponFo
     name: record.name,
     type: record.type,
     scopeType: record.scopeType,
-    shopId: record.shopId ?? undefined,
+    brandId: record.brandId ?? undefined,
+    brandProductIds: record.brandProductIds ?? undefined,
     description: record.description || undefined,
     minAmountYuan: centsToYuan(record.minAmount),
     discountAmountYuan: centsToYuan(record.discountAmount),
