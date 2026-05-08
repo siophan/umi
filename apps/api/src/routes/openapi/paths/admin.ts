@@ -1303,7 +1303,7 @@ export const adminPaths = {
           in: 'query',
           schema: {
             type: 'string',
-            enum: ['platform', 'shop'],
+            enum: ['platform', 'brand'],
             example: 'platform',
           },
         },
