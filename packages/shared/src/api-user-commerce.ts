@@ -227,6 +227,8 @@ export interface CartItem {
   id: EntityId;
   productId: ProductId;
   brandProductSkuId: EntityId;
+  brandProductId: ProductId | null;
+  brandId: BrandId | null;
   shopId: ShopId | null;
   brand: string;
   shop: string;

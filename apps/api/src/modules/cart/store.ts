@@ -16,6 +16,8 @@ type CartRow = {
   id: number | string;
   product_id: number | string;
   brand_product_sku_id: number | string;
+  brand_product_id: number | string | null;
+  brand_id: number | string | null;
   quantity: number | string;
   specs: string | null;
   checked: number | string | boolean | null;
@@ -69,6 +71,8 @@ function sanitizeCartItem(row: CartRow): CartItem {
     id: toEntityId(row.id),
     productId: toEntityId(row.product_id),
     brandProductSkuId: toEntityId(row.brand_product_sku_id),
+    brandProductId: row.brand_product_id != null ? toEntityId(row.brand_product_id) : null,
+    brandId: row.brand_id != null ? toEntityId(row.brand_id) : null,
     shopId: toOptionalEntityId(row.shop_id),
     brand: row.brand_name || '未知品牌',
     shop: row.shop_name || '未知店铺',
@@ -176,6 +180,8 @@ export async function getCart(userId: string): Promise<CartListResult> {
         ci.id,
         ci.product_id,
         ci.brand_product_sku_id,
+        bp.id AS brand_product_id,
+        bp.brand_id,
         ci.quantity,
         ci.specs,
         ci.checked,

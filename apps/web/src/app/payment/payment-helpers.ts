@@ -5,6 +5,8 @@ import type { CouponListItem } from '@umi/shared';
 export type PaymentProduct = {
   productId: string;
   brandProductSkuId?: string;
+  brandProductId?: string | null;
+  brandId?: string | null;
   cartItemId?: string;
   name: string;
   price: number;
@@ -31,27 +33,51 @@ export function parseCouponCondition(condition: string) {
   return match ? Number(match[1]) : 0;
 }
 
+export type CouponCartItem = {
+  brandId: string | null;
+  brandProductId: string | null;
+  itemAmount: number;
+};
+
 /**
  * 计算当前订单可抵扣的优惠金额。
+ * 品牌券（scopeType === 'brand'）按该品牌下的子小计抵扣，平台券按全单 subtotal 算。
  * 这里只处理前端展示和下单前校验，真实优惠口径仍以后端创建订单为准。
  */
-export function getCouponDiscount(coupon: CouponListItem | null, subtotal: number) {
+export function getCouponDiscount(
+  coupon: CouponListItem | null,
+  subtotal: number,
+  cartItems?: CouponCartItem[],
+) {
   if (!coupon || coupon.status !== 'unused') {
     return 0;
   }
 
+  // 品牌券：按品牌子小计抵扣
+  let effectiveSubtotal = subtotal;
+  if (coupon.scopeType === 'brand' && coupon.brandId != null && cartItems && cartItems.length > 0) {
+    const brandProductIds = coupon.brandProductIds;
+    effectiveSubtotal = cartItems.reduce((sum, item) => {
+      if (item.brandId !== coupon.brandId) return sum;
+      if (brandProductIds != null && brandProductIds.length > 0 && item.brandProductId != null) {
+        if (!brandProductIds.includes(item.brandProductId)) return sum;
+      }
+      return sum + item.itemAmount;
+    }, 0);
+  }
+
   const threshold = parseCouponCondition(coupon.condition);
-  if (threshold > 0 && subtotal < threshold) {
+  if (threshold > 0 && effectiveSubtotal < threshold) {
     return 0;
   }
 
   if (coupon.type === 'amount' || coupon.type === 'shipping') {
-    return Math.min(subtotal, coupon.amount);
+    return Math.min(effectiveSubtotal, coupon.amount);
   }
 
   if (coupon.type === 'percent') {
     const rate = Math.max(0, Math.min(100, coupon.amount));
-    return Number(((subtotal * (100 - rate)) / 100).toFixed(2));
+    return Number(((effectiveSubtotal * (100 - rate)) / 100).toFixed(2));
   }
 
   return 0;

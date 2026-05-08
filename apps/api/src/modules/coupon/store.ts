@@ -32,6 +32,9 @@ type CouponRow = {
   expire_at: Date | string | null;
   source_type: number | string | null;
   status: number | string | null;
+  scope_type: number | string;
+  brand_id: number | string | null;
+  brand_product_ids: unknown;
 };
 
 /**
@@ -101,6 +104,9 @@ function sanitizeCoupon(row: CouponRow): CouponListItem {
     status: mapCouponStatus(Number(row.status ?? 0), row.expire_at),
     sourceType,
     source: mapCouponSource(sourceType),
+    scopeType: Number(row.scope_type ?? 10) === COUPON_SCOPE_BRAND ? 'brand' : 'platform',
+    brandId: row.brand_id == null ? null : toEntityId(row.brand_id),
+    brandProductIds: parseJsonIds(row.brand_product_ids),
   };
 }
 
@@ -111,7 +117,8 @@ export async function listCoupons(userId: string): Promise<CouponListResult> {
   const db = getDbPool();
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
     `
-      SELECT id, coupon_no, name, amount, type, \`condition\`, expire_at, source_type, status
+      SELECT id, coupon_no, name, amount, type, \`condition\`, expire_at, source_type, status,
+             scope_type, brand_id, brand_product_ids
       FROM coupon
       WHERE user_id = ?
       ORDER BY

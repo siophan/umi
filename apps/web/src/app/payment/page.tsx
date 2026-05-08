@@ -13,7 +13,7 @@ import { hasAuthToken } from '../../lib/api/shared';
 import styles from './page.module.css';
 import { PaymentOrderSections } from './payment-order-sections';
 import { PaymentOverlays } from './payment-overlays';
-import { getCouponDiscount, getErrorMessage, type PaymentProduct } from './payment-helpers';
+import { getCouponDiscount, getErrorMessage, type CouponCartItem, type PaymentProduct } from './payment-helpers';
 
 /**
  * 支付页主体。
@@ -107,6 +107,8 @@ function PaymentPageInner() {
               .map((item) => ({
                 productId: item.productId,
                 brandProductSkuId: item.brandProductSkuId,
+                brandProductId: item.brandProductId ?? null,
+                brandId: item.brandId ?? null,
                 cartItemId: item.id,
                 name: item.name,
                 price: item.price,
@@ -183,14 +185,23 @@ function PaymentPageInner() {
     () => products.reduce((sum, item) => sum + item.price * item.qty, 0),
     [products],
   );
+  const couponCartItems = useMemo<CouponCartItem[]>(
+    () =>
+      products.map((item) => ({
+        brandId: item.brandId ?? null,
+        brandProductId: item.brandProductId ?? null,
+        itemAmount: item.price * item.qty,
+      })),
+    [products],
+  );
   const couponValue = useMemo(
-    () => getCouponDiscount(selectedCoupon, subtotal),
-    [selectedCoupon, subtotal],
+    () => getCouponDiscount(selectedCoupon, subtotal, couponCartItems),
+    [selectedCoupon, subtotal, couponCartItems],
   );
   const total = useMemo(() => Math.max(0, subtotal - couponValue), [couponValue, subtotal]);
   const availableCoupons = useMemo(
-    () => coupons.filter((item) => getCouponDiscount(item, subtotal) > 0),
-    [coupons, subtotal],
+    () => coupons.filter((item) => getCouponDiscount(item, subtotal, couponCartItems) > 0),
+    [coupons, subtotal, couponCartItems],
   );
 
   /**
