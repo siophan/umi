@@ -25,20 +25,30 @@ type InviteRecordRow = mysql.RowDataPacket & {
   invitee_avatar: string | null;
 };
 
-async function readActiveInviteRewardConfig(): Promise<InviteRewardConfigRow | null> {
+async function readActiveInviteRewardConfig(
+  threshold: number,
+): Promise<InviteRewardConfigRow | null> {
   const db = getDbPool();
   const [rows] = await db.execute<InviteRewardConfigRow[]>(
     `
       SELECT inviter_reward_type, inviter_reward_ref_id,
              invitee_reward_type, invitee_reward_ref_id
       FROM invite_reward_config
-      WHERE status = ?
-      ORDER BY updated_at DESC, id DESC
+      WHERE status = ? AND threshold = ?
       LIMIT 1
     `,
-    [CONFIG_STATUS_ACTIVE],
+    [CONFIG_STATUS_ACTIVE, threshold],
   );
   return rows[0] ?? null;
+}
+
+async function countInviterInvitees(inviterId: string): Promise<number> {
+  const db = getDbPool();
+  const [rows] = await db.execute<(mysql.RowDataPacket & { total: number | string })[]>(
+    `SELECT COUNT(*) AS total FROM user WHERE invited_by = ?`,
+    [inviterId],
+  );
+  return Number(rows[0]?.total ?? 0);
 }
 
 async function grantOneSide(
@@ -68,7 +78,7 @@ async function grantOneSide(
 }
 
 /**
- * 注册主流程返回前调用：给邀请人 + 被邀请人各发一张券。
+ * 注册主流程返回前调用：按 inviter 当前累计邀请数找命中档位发奖。
  * 失败仅 log，不抛——主流程不能被发券失败拖死。
  */
 export async function maybeGrantInviteRewards(
@@ -78,7 +88,10 @@ export async function maybeGrantInviteRewards(
   if (!inviterId) return;
   if (inviterId === inviteeId) return;
 
-  const config = await readActiveInviteRewardConfig();
+  const inviteeCount = await countInviterInvitees(inviterId);
+  if (inviteeCount <= 0) return;
+
+  const config = await readActiveInviteRewardConfig(inviteeCount);
   if (!config) return;
 
   await grantOneSide(inviterId, config.inviter_reward_type, config.inviter_reward_ref_id, 'inviter')

@@ -1133,34 +1133,69 @@ export const adminPaths = {
       },
     },
   },
-  '/api/admin/invites/config': {
+  '/api/admin/invites/rewards': {
     get: {
       tags: ['Admin'],
-      summary: '获取邀请奖励配置',
+      summary: '邀请奖励档位列表（按 threshold 升序）',
       security: bearerSecurity,
       responses: {
         200: successResponse({
-          anyOf: [
-            { $ref: '#/components/schemas/AdminInviteRewardConfigItem' },
-            { type: 'null' },
-          ],
+          $ref: '#/components/schemas/AdminInviteRewardConfigListResult',
         }),
         401: errorResponse(401, '请先登录'),
       },
     },
-    put: {
+    post: {
       tags: ['Admin'],
-      summary: '保存邀请奖励配置',
+      summary: '新增邀请奖励档位',
       security: bearerSecurity,
       requestBody: jsonRequestBody({
-        $ref: '#/components/schemas/UpdateAdminInviteRewardConfigPayload',
+        $ref: '#/components/schemas/CreateAdminInviteRewardConfigPayload',
       }),
       responses: {
         200: successResponse({
-          $ref: '#/components/schemas/UpdateAdminInviteRewardConfigResult',
+          $ref: '#/components/schemas/AdminInviteRewardConfigItemResult',
         }),
-        400: errorResponse(400, '邀请奖励配置保存失败'),
+        400: errorResponse(400, '邀请奖励档位保存失败'),
         401: errorResponse(401, '请先登录'),
+      },
+    },
+  },
+  '/api/admin/invites/rewards/{id}': {
+    put: {
+      tags: ['Admin'],
+      summary: '更新邀请奖励档位',
+      security: bearerSecurity,
+      parameters: [
+        { name: 'id', in: 'path', required: true, schema: { type: 'string', example: '1601' } },
+      ],
+      requestBody: jsonRequestBody({
+        $ref: '#/components/schemas/CreateAdminInviteRewardConfigPayload',
+      }),
+      responses: {
+        200: successResponse({
+          $ref: '#/components/schemas/AdminInviteRewardConfigItemResult',
+        }),
+        400: errorResponse(400, '邀请奖励档位保存失败'),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '邀请奖励档位不存在'),
+      },
+    },
+    delete: {
+      tags: ['Admin'],
+      summary: '删除邀请奖励档位',
+      security: bearerSecurity,
+      parameters: [
+        { name: 'id', in: 'path', required: true, schema: { type: 'string', example: '1601' } },
+      ],
+      responses: {
+        200: successResponse({
+          type: 'object',
+          required: ['success'],
+          properties: { success: { type: 'boolean', example: true } },
+        }),
+        401: errorResponse(401, '请先登录'),
+        404: errorResponse(404, '邀请奖励档位不存在'),
       },
     },
   },

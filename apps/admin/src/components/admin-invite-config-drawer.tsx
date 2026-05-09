@@ -19,9 +19,10 @@ export function AdminInviteConfigDrawer({
   onClose,
 }: AdminInviteConfigDrawerProps) {
   return (
-    <Drawer open={open} title="邀请奖励配置" width={460} onClose={onClose}>
+    <Drawer open={open} title="邀请奖励档位详情" width={460} onClose={onClose}>
       {config ? (
         <Descriptions column={1} size="small">
+          <Descriptions.Item label="触发阈值">第 {config.threshold} 人</Descriptions.Item>
           <Descriptions.Item label="邀请人奖励">
             {formatInviteRewardContent(
               config.inviterRewardTypeLabel,
@@ -43,7 +44,7 @@ export function AdminInviteConfigDrawer({
           <Descriptions.Item label="更新时间">{formatDateTime(config.updatedAt)}</Descriptions.Item>
         </Descriptions>
       ) : (
-        <Alert type="info" showIcon message="当前还没有邀请奖励配置，请先新增。" />
+        <Alert type="info" showIcon message="选中档位后查看详情。" />
       )}
     </Drawer>
   );

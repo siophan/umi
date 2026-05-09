@@ -1,11 +1,13 @@
 import type {
   AdminInviteRecordListResult,
   AdminInviteRewardConfigItem,
+  AdminInviteRewardConfigItemResult,
+  AdminInviteRewardConfigListResult,
+  CreateAdminInviteRewardConfigPayload,
   UpdateAdminInviteRewardConfigPayload,
-  UpdateAdminInviteRewardConfigResult,
 } from '@umi/shared';
 
-import { getJson, putJson } from './shared';
+import { deleteJson, getJson, postJson, putJson } from './shared';
 
 type FetchAdminInviteRecordsParams = {
   inviter?: string;
@@ -27,15 +29,29 @@ function buildQuery(params: FetchAdminInviteRecordsParams) {
   return searchParams.toString();
 }
 
-export function fetchAdminInviteConfig() {
-  return getJson<AdminInviteRewardConfigItem | null>('/api/admin/invites/config');
+export function fetchAdminInviteRewardConfigs() {
+  return getJson<AdminInviteRewardConfigListResult>('/api/admin/invites/rewards');
 }
 
-export function updateAdminInviteConfig(payload: UpdateAdminInviteRewardConfigPayload) {
-  return putJson<UpdateAdminInviteRewardConfigResult, UpdateAdminInviteRewardConfigPayload>(
-    '/api/admin/invites/config',
+export function createAdminInviteRewardConfig(payload: CreateAdminInviteRewardConfigPayload) {
+  return postJson<AdminInviteRewardConfigItemResult, CreateAdminInviteRewardConfigPayload>(
+    '/api/admin/invites/rewards',
     payload,
   );
+}
+
+export function updateAdminInviteRewardConfig(
+  id: string,
+  payload: UpdateAdminInviteRewardConfigPayload,
+) {
+  return putJson<AdminInviteRewardConfigItemResult, UpdateAdminInviteRewardConfigPayload>(
+    `/api/admin/invites/rewards/${id}`,
+    payload,
+  );
+}
+
+export function deleteAdminInviteRewardConfig(id: string) {
+  return deleteJson<{ success: boolean }>(`/api/admin/invites/rewards/${id}`);
 }
 
 export function fetchAdminInviteRecords(params: FetchAdminInviteRecordsParams) {

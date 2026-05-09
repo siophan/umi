@@ -43,6 +43,14 @@ export function AdminInviteConfigModal({
       >
         <Form form={form} layout="vertical" preserve={false}>
           <Form.Item
+            label="触发阈值（累计邀请人数）"
+            name="threshold"
+            extra="例如 1=邀请第 1 人触发；3=邀请第 3 人触发；不同档位填不同阈值，每个阈值唯一。"
+            rules={[{ required: true, message: '请输入触发阈值' }]}
+          >
+            <InputNumber min={1} precision={0} style={{ width: '100%' }} placeholder="触发阈值" />
+          </Form.Item>
+          <Form.Item
             label="邀请人奖励类型"
             name="inviterRewardType"
             rules={[{ required: true, message: '请选择邀请人奖励类型' }]}

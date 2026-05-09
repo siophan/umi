@@ -11,6 +11,7 @@ import type {
   UpdateAdminCheckinRewardConfigStatusPayload,
   UpdateAdminCouponTemplatePayload,
   UpdateAdminCouponTemplateStatusPayload,
+  CreateAdminInviteRewardConfigPayload,
   UpdateAdminInviteRewardConfigPayload,
 } from '@umi/shared';
 
@@ -38,8 +39,10 @@ import {
   updateAdminCouponTemplateStatus,
 } from '../coupons';
 import {
+  createAdminInviteRewardConfig,
+  deleteAdminInviteRewardConfig,
   getAdminInviteRecords,
-  getAdminInviteRewardConfig,
+  listAdminInviteRewardConfigs,
   updateAdminInviteRewardConfig,
 } from '../invites';
 import { getRouteParam } from '../route-helpers';
@@ -171,20 +174,43 @@ export function registerAdminMarketingRoutes(adminRouter: ExpressRouter) {
   );
 
   adminRouter.get(
-    '/invites/config',
+    '/invites/rewards',
     asyncHandler(async (_request, response) => {
-      ok(response, await getAdminInviteRewardConfig());
+      ok(response, await listAdminInviteRewardConfigs());
+    }),
+  );
+
+  adminRouter.post(
+    '/invites/rewards',
+    asyncHandler(async (request, response) => {
+      ok(
+        response,
+        await createAdminInviteRewardConfig(
+          request.body as CreateAdminInviteRewardConfigPayload,
+        ),
+      );
     }),
   );
 
   adminRouter.put(
-    '/invites/config',
+    '/invites/rewards/:id',
     asyncHandler(async (request, response) => {
       ok(
         response,
         await updateAdminInviteRewardConfig(
+          getRouteParam(request.params.id),
           request.body as UpdateAdminInviteRewardConfigPayload,
         ),
+      );
+    }),
+  );
+
+  adminRouter.delete(
+    '/invites/rewards/:id',
+    asyncHandler(async (request, response) => {
+      ok(
+        response,
+        await deleteAdminInviteRewardConfig(getRouteParam(request.params.id)),
       );
     }),
   );

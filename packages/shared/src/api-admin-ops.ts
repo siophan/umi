@@ -175,6 +175,7 @@ export type AdminInviteRewardConfigStatus = 'active' | 'disabled';
 
 export interface AdminInviteRewardConfigItem {
   id: EntityId;
+  threshold: number;
   inviterRewardType: AdminInviteRewardType;
   inviterRewardTypeLabel: '零食币' | '优惠券' | '实物';
   inviterRewardValue: number;
@@ -187,6 +188,10 @@ export interface AdminInviteRewardConfigItem {
   statusLabel: '启用' | '停用';
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AdminInviteRewardConfigListResult {
+  items: AdminInviteRewardConfigItem[];
 }
 
 export interface AdminInviteRecordItem {
@@ -218,7 +223,8 @@ export interface AdminUserInviteListResult {
   pageSize: number;
 }
 
-export interface UpdateAdminInviteRewardConfigPayload {
+export interface CreateAdminInviteRewardConfigPayload {
+  threshold: number;
   inviterRewardType: AdminInviteRewardType;
   inviterRewardValue: number;
   inviterRewardRefId?: EntityId | null;
@@ -228,7 +234,9 @@ export interface UpdateAdminInviteRewardConfigPayload {
   status: AdminInviteRewardConfigStatus;
 }
 
-export interface UpdateAdminInviteRewardConfigResult {
+export type UpdateAdminInviteRewardConfigPayload = CreateAdminInviteRewardConfigPayload;
+
+export interface AdminInviteRewardConfigItemResult {
   item: AdminInviteRewardConfigItem;
 }
 

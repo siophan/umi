@@ -422,9 +422,17 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 注册路径已生成 invite_code，新账号都有；老账号需运维手工 backfill SQL（仅 `WHERE invite_code IS NULL` UPDATE）。本期不做 lazy gen helper。
 
-**遗留 P2 — 多档梯度奖励**：
+**已完成（2026-05-09 多档梯度）：**
 
-要让 `/invite` 页 4 档（1/3/10/30 人）真发券，得改 `invite_reward_config` schema 加 `threshold` 列 + admin UI 多行配置 + 触发逻辑按累计邀请数找命中档位。本期单档够用，二期再说。
+- DB：`invite_reward_config` 加 `threshold INT UNSIGNED NOT NULL DEFAULT 1` + `UNIQUE KEY uk_invite_reward_threshold` —— 一档一行（运维 SQL `packages/db/sql/invite_reward_threshold.sql`）。
+- 触发：`maybeGrantInviteRewards` 改为 register 提交后 `SELECT COUNT(*) FROM user WHERE invited_by=?` 算 inviter 累计邀请数 N，去 `invite_reward_config WHERE threshold=N AND status=10` 命中即按现逻辑双向发奖；未命中静默跳过（`apps/api/src/modules/invite/store.ts`）。
+- Admin API：`/api/admin/invites/config` 单行 GET/PUT 替换为 `/api/admin/invites/rewards` 4 端点（GET list / POST create / PUT/:id update / DELETE/:id）；`createAdminInviteRewardConfig` / `updateAdminInviteRewardConfig` 捕获 `ER_DUP_ENTRY` 翻成 `ADMIN_INVITE_CONFIG_DUP_THRESHOLD` 友好提示。
+- Admin 前端：`marketing-invite-page.tsx` 顶部新增「邀请奖励档位」表格（threshold 升序）+ 新增/编辑/删除按钮 + 行点击预览抽屉；`admin-invite-config-modal.tsx` 加 threshold InputNumber；`system-settings-page.tsx` InviteRewardPanel 改为指向「营销 → 邀请管理」的 Alert 提示，整个 Form 删除（避免双源 SOT）。
+- OpenAPI：schema `AdminInviteRewardConfigItem` 加 threshold；新增 `AdminInviteRewardConfigListResult` / `CreateAdminInviteRewardConfigPayload` / `AdminInviteRewardConfigItemResult`；paths 替换 `/invites/config` → `/invites/rewards`（list/create）+ `/invites/rewards/{id}` (update/delete)。
+
+**遗留 P2 — `/invite` 页 4 档静态文案**：
+
+`/invite` 页面的 4 档梯度（1/3/10/30 人）当前还是静态展示，没读后端 `fetchAdminInviteRewardConfigs`。如要做到"页面展示档位 = admin 实际配置"动态一致，需要：① 提供一个用户侧 GET `/api/invite/rewards`（仅 active）；② `/invite` 页 fetch 后渲染。本期 admin 已自由配置任意阈值，但 /invite 页仍按设计稿静态展示——可在 admin 配置 1/3/10/30 四档对齐文案。
 
 **遗留 P2 — 注册"已绑定邀请人"反馈态**：
 
@@ -438,4 +446,4 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 |--------|------|------|
 | P0     | 0    | （仓库提货闭环已于 2026-05-06 完成，见 #27）|
 | P1     | 0    | （邀请奖励发券 + 闭环已于 2026-05-08 完成，见 #30）|
-| P2     | 6    | 商城联名穿插卡二期（#17）/ mall_hero banner 倒计时二期（#18）/ 支付页发票二期（#19）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请多档梯度 + 注册"已绑定邀请人"反馈态（#30） |
+| P2     | 6    | 商城联名穿插卡二期（#17）/ mall_hero banner 倒计时二期（#18）/ 支付页发票二期（#19）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ /invite 页档位动态化 + 注册"已绑定邀请人"反馈态（#30） |

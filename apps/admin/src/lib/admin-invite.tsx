@@ -3,7 +3,7 @@ import type {
   AdminInviteRewardConfigItem,
   AdminInviteRewardConfigStatus,
   AdminInviteRewardType,
-  UpdateAdminInviteRewardConfigPayload,
+  CreateAdminInviteRewardConfigPayload,
 } from '@umi/shared';
 import type { ProColumns } from '@ant-design/pro-components';
 import { Button, Tag } from 'antd';
@@ -17,6 +17,7 @@ export type InviteFilters = {
 };
 
 export type InviteFormValues = {
+  threshold: number;
   inviterRewardType: Exclude<AdminInviteRewardType, 'coin'>;
   inviterRewardValue: number;
   inviterRewardRefId?: string;
@@ -67,6 +68,7 @@ export function buildInviteConfigFormValues(
   config: AdminInviteRewardConfigItem | null,
 ): InviteFormValues {
   return {
+    threshold: config?.threshold ?? 1,
     inviterRewardType: resolveRewardType(config?.inviterRewardType),
     inviterRewardValue: config?.inviterRewardValue ?? 50,
     inviterRewardRefId: config?.inviterRewardRefId ?? undefined,
@@ -79,8 +81,9 @@ export function buildInviteConfigFormValues(
 
 export function buildInviteConfigPayload(
   values: InviteFormValues,
-): UpdateAdminInviteRewardConfigPayload {
+): CreateAdminInviteRewardConfigPayload {
   return {
+    threshold: values.threshold,
     inviterRewardType: values.inviterRewardType,
     inviterRewardValue: values.inviterRewardValue,
     inviterRewardRefId:
@@ -95,6 +98,73 @@ export function buildInviteConfigPayload(
         : null,
     status: values.status,
   };
+}
+
+export function buildInviteRewardConfigColumns(args: {
+  onEdit: (record: AdminInviteRewardConfigItem) => void;
+  onDelete: (record: AdminInviteRewardConfigItem) => void;
+}): ProColumns<AdminInviteRewardConfigItem>[] {
+  return [
+    {
+      title: '触发阈值',
+      dataIndex: 'threshold',
+      width: 110,
+      render: (_, record) => `第 ${record.threshold} 人`,
+    },
+    {
+      title: '邀请人奖励',
+      key: 'inviterReward',
+      width: 220,
+      render: (_, record) =>
+        formatInviteRewardContent(
+          record.inviterRewardTypeLabel,
+          record.inviterRewardValue,
+          record.inviterRewardRefId,
+        ),
+    },
+    {
+      title: '被邀请人奖励',
+      key: 'inviteeReward',
+      width: 220,
+      render: (_, record) =>
+        formatInviteRewardContent(
+          record.inviteeRewardTypeLabel,
+          record.inviteeRewardValue,
+          record.inviteeRewardRefId,
+        ),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 90,
+      render: (_, record) => (
+        <Tag color={getInviteRewardStatusColor(record.status)}>{record.statusLabel}</Tag>
+      ),
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedAt',
+      width: 180,
+      render: (_, record) => formatDateTime(record.updatedAt),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 140,
+      fixed: 'right',
+      valueType: 'option',
+      render: (_, record) => (
+        <>
+          <Button size="small" type="link" onClick={() => args.onEdit(record)}>
+            编辑
+          </Button>
+          <Button size="small" type="link" danger onClick={() => args.onDelete(record)}>
+            删除
+          </Button>
+        </>
+      ),
+    },
+  ];
 }
 
 export function buildInviteColumns(args: {

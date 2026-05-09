@@ -784,15 +784,18 @@
 | 字段顺序 | 字段名 | 列类型 | 是否可空 | 默认值 | 键标记 | Extra | 字段注释 |
 | ---: | --- | --- | --- | --- | --- | --- | --- |
 | 1 | `id` | `bigint` | `NO` | `NULL` | `PRI` | `auto_increment` | 邀请奖励配置 ID |
-| 2 | `inviter_reward_type` | `tinyint unsigned` | `NO` | `NULL` | `-` | `-` | 邀请人奖励类型编码 |
-| 3 | `inviter_reward_value` | `bigint` | `NO` | `0` | `-` | `-` | 邀请人奖励数值 |
-| 4 | `inviter_reward_ref_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 邀请人奖励关联 ID |
-| 5 | `invitee_reward_type` | `tinyint unsigned` | `NO` | `NULL` | `-` | `-` | 被邀请人奖励类型编码 |
-| 6 | `invitee_reward_value` | `bigint` | `NO` | `0` | `-` | `-` | 被邀请人奖励数值 |
-| 7 | `invitee_reward_ref_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 被邀请人奖励关联 ID |
-| 8 | `status` | `tinyint unsigned` | `NO` | `10` | `MUL` | `-` | 状态编码 |
-| 9 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
-| 10 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+| 2 | `threshold` | `int unsigned` | `NO` | `1` | `UNI` | `-` | 触发阈值（累计邀请人数） |
+| 3 | `inviter_reward_type` | `tinyint unsigned` | `NO` | `NULL` | `-` | `-` | 邀请人奖励类型编码 |
+| 4 | `inviter_reward_value` | `bigint` | `NO` | `0` | `-` | `-` | 邀请人奖励数值 |
+| 5 | `inviter_reward_ref_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 邀请人奖励关联 ID |
+| 6 | `invitee_reward_type` | `tinyint unsigned` | `NO` | `NULL` | `-` | `-` | 被邀请人奖励类型编码 |
+| 7 | `invitee_reward_value` | `bigint` | `NO` | `0` | `-` | `-` | 被邀请人奖励数值 |
+| 8 | `invitee_reward_ref_id` | `bigint` | `YES` | `NULL` | `-` | `-` | 被邀请人奖励关联 ID |
+| 9 | `status` | `tinyint unsigned` | `NO` | `10` | `MUL` | `-` | 状态编码 |
+| 10 | `created_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 创建时间 |
+| 11 | `updated_at` | `datetime(3)` | `NO` | `CURRENT_TIMESTAMP(3)` | `-` | `DEFAULT_GENERATED` | 更新时间 |
+
+> 2026-05-09 多档梯度：`threshold` 列 + UNIQUE 约束。触发逻辑：register 提交后 `SELECT COUNT(*) FROM user WHERE invited_by=?` 算 inviter 累计邀请数 N，去本表 `WHERE threshold=N AND status=10` 命中即发奖；多档配置一档一行。详见 `packages/db/sql/invite_reward_threshold.sql`。
 
 ## leaderboard_entry
 

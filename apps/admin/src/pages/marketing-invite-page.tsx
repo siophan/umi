@@ -1,15 +1,17 @@
 import type { AdminInviteRewardConfigItem } from '@umi/shared';
 import { ProTable } from '@ant-design/pro-components';
-import { Alert, Button, ConfigProvider, Form, Input, message } from 'antd';
+import { Alert, Button, ConfigProvider, Form, Input, Modal, message } from 'antd';
 import { useEffect, useState } from 'react';
 
 import { AdminInviteConfigDrawer } from '../components/admin-invite-config-drawer';
 import { AdminInviteConfigModal } from '../components/admin-invite-config-modal';
 import { AdminInviteDetailDrawer } from '../components/admin-invite-detail-drawer';
 import {
-  fetchAdminInviteConfig,
+  createAdminInviteRewardConfig,
+  deleteAdminInviteRewardConfig,
   fetchAdminInviteRecords,
-  updateAdminInviteConfig,
+  fetchAdminInviteRewardConfigs,
+  updateAdminInviteRewardConfig,
 } from '../lib/api/invite';
 import { ADMIN_LIST_TABLE_THEME } from '../lib/admin-table-theme';
 import { AdminSearchPanel } from '../components/admin-list-controls';
@@ -17,6 +19,7 @@ import {
   buildInviteColumns,
   buildInviteConfigFormValues,
   buildInviteConfigPayload,
+  buildInviteRewardConfigColumns,
   type InviteFilters,
   type InviteFormValues,
   type InviteRecord,
@@ -28,15 +31,17 @@ interface MarketingInvitePageProps {
 
 export function MarketingInvitePage({ refreshToken = 0 }: MarketingInvitePageProps) {
   const [messageApi, contextHolder] = message.useMessage();
+  const [modalApi, modalContextHolder] = Modal.useModal();
   const [searchForm] = Form.useForm<InviteFilters>();
   const [configForm] = Form.useForm<InviteFormValues>();
   const [rows, setRows] = useState<InviteRecord[]>([]);
-  const [config, setConfig] = useState<AdminInviteRewardConfigItem | null>(null);
+  const [configs, setConfigs] = useState<AdminInviteRewardConfigItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [filters, setFilters] = useState<InviteFilters>({});
   const [selected, setSelected] = useState<InviteRecord | null>(null);
-  const [configDrawerOpen, setConfigDrawerOpen] = useState(false);
+  const [previewConfig, setPreviewConfig] = useState<AdminInviteRewardConfigItem | null>(null);
+  const [editingConfig, setEditingConfig] = useState<AdminInviteRewardConfigItem | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionSeed, setActionSeed] = useState(0);
@@ -51,8 +56,8 @@ export function MarketingInvitePage({ refreshToken = 0 }: MarketingInvitePagePro
       setLoading(true);
       setIssue(null);
       try {
-        const [configResult, recordsResult] = await Promise.all([
-          fetchAdminInviteConfig(),
+        const [configsResult, recordsResult] = await Promise.all([
+          fetchAdminInviteRewardConfigs(),
           fetchAdminInviteRecords({
             inviter: filters.inviter,
             invitee: filters.invitee,
@@ -64,13 +69,13 @@ export function MarketingInvitePage({ refreshToken = 0 }: MarketingInvitePagePro
           return;
         }
 
-        setConfig(configResult);
+        setConfigs(configsResult.items);
         setRows(recordsResult.items);
       } catch (error) {
         if (!alive) {
           return;
         }
-        setConfig(null);
+        setConfigs([]);
         setRows([]);
         setIssue(error instanceof Error ? error.message : '邀请管理数据加载失败');
       } finally {
@@ -87,14 +92,78 @@ export function MarketingInvitePage({ refreshToken = 0 }: MarketingInvitePagePro
     };
   }, [actionSeed, filters.invitee, filters.inviteCode, filters.inviter, refreshToken]);
 
-  const columns = buildInviteColumns({
+  const recordColumns = buildInviteColumns({
     onView: (record) => setSelected(record),
+  });
+
+  const configColumns = buildInviteRewardConfigColumns({
+    onEdit: (record) => {
+      setEditingConfig(record);
+      configForm.resetFields();
+      configForm.setFieldsValue(buildInviteConfigFormValues(record));
+      setConfigModalOpen(true);
+    },
+    onDelete: (record) => {
+      void modalApi.confirm({
+        title: '删除邀请奖励档位？',
+        content: `第 ${record.threshold} 人触发档位将被永久删除。`,
+        okType: 'danger',
+        okText: '删除',
+        cancelText: '取消',
+        async onOk() {
+          try {
+            await deleteAdminInviteRewardConfig(record.id);
+            messageApi.success('档位已删除');
+            setActionSeed((value) => value + 1);
+          } catch (error) {
+            messageApi.error(error instanceof Error ? error.message : '档位删除失败');
+          }
+        },
+      });
+    },
   });
 
   return (
     <div className="page-stack">
       {contextHolder}
+      {modalContextHolder}
       {issue ? <Alert showIcon type="error" message={issue} /> : null}
+
+      <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
+        <ProTable<AdminInviteRewardConfigItem>
+          cardBordered={false}
+          headerTitle="邀请奖励档位"
+          rowKey="id"
+          columns={configColumns}
+          dataSource={configs}
+          loading={loading}
+          options={{
+            reload: () => setActionSeed((value) => value + 1),
+            density: false,
+            fullScreen: false,
+            setting: false,
+          }}
+          pagination={false}
+          search={false}
+          toolBarRender={() => [
+            <Button
+              key="add-tier"
+              type="primary"
+              onClick={() => {
+                setEditingConfig(null);
+                configForm.resetFields();
+                configForm.setFieldsValue(buildInviteConfigFormValues(null));
+                setConfigModalOpen(true);
+              }}
+            >
+              新增奖励档位
+            </Button>,
+          ]}
+          onRow={(record) => ({
+            onClick: () => setPreviewConfig(record),
+          })}
+        />
+      </ConfigProvider>
 
       <AdminSearchPanel
         form={searchForm}
@@ -118,8 +187,9 @@ export function MarketingInvitePage({ refreshToken = 0 }: MarketingInvitePagePro
       <ConfigProvider theme={ADMIN_LIST_TABLE_THEME}>
         <ProTable<InviteRecord>
           cardBordered={false}
+          headerTitle="邀请记录"
           rowKey="id"
-          columns={columns}
+          columns={recordColumns}
           columnsState={{
             persistenceKey: 'admin-marketing-invite-table',
             persistenceType: 'localStorage',
@@ -134,29 +204,13 @@ export function MarketingInvitePage({ refreshToken = 0 }: MarketingInvitePagePro
           }}
           pagination={{ defaultPageSize: 10, showSizeChanger: true }}
           search={false}
-          toolBarRender={() => [
-            <Button key="view-config" onClick={() => setConfigDrawerOpen(true)}>
-              查看奖励配置
-            </Button>,
-            <Button
-              key="edit-config"
-              type="primary"
-              onClick={() => {
-                configForm.resetFields();
-                configForm.setFieldsValue(buildInviteConfigFormValues(config));
-                setConfigModalOpen(true);
-              }}
-            >
-              {config ? '编辑奖励配置' : '新增奖励配置'}
-            </Button>,
-          ]}
         />
       </ConfigProvider>
 
       <AdminInviteConfigDrawer
-        open={configDrawerOpen}
-        config={config}
-        onClose={() => setConfigDrawerOpen(false)}
+        open={previewConfig != null}
+        config={previewConfig}
+        onClose={() => setPreviewConfig(null)}
       />
 
       <AdminInviteDetailDrawer
@@ -167,12 +221,15 @@ export function MarketingInvitePage({ refreshToken = 0 }: MarketingInvitePagePro
 
       <AdminInviteConfigModal
         open={configModalOpen}
-        config={config}
+        config={editingConfig}
         submitting={submitting}
         inviterRewardType={inviterRewardType}
         inviteeRewardType={inviteeRewardType}
         form={configForm}
-        onCancel={() => setConfigModalOpen(false)}
+        onCancel={() => {
+          setConfigModalOpen(false);
+          setEditingConfig(null);
+        }}
         onSubmit={() => void handleSubmit()}
       />
     </div>
@@ -184,16 +241,22 @@ export function MarketingInvitePage({ refreshToken = 0 }: MarketingInvitePagePro
       const payload = buildInviteConfigPayload(values);
 
       setSubmitting(true);
-      const result = await updateAdminInviteConfig(payload);
-      setConfig(result.item);
+      if (editingConfig) {
+        await updateAdminInviteRewardConfig(editingConfig.id, payload);
+        messageApi.success('档位已保存');
+      } else {
+        await createAdminInviteRewardConfig(payload);
+        messageApi.success('档位已新增');
+      }
       setConfigModalOpen(false);
+      setEditingConfig(null);
       configForm.resetFields();
-      messageApi.success('邀请奖励配置已保存');
+      setActionSeed((value) => value + 1);
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
-      messageApi.error(error instanceof Error ? error.message : '邀请奖励配置保存失败');
+      messageApi.error(error instanceof Error ? error.message : '档位保存失败');
     } finally {
       setSubmitting(false);
     }

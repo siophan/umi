@@ -1816,6 +1816,7 @@ export const adminSchemas = {
     type: 'object',
     required: [
       'id',
+      'threshold',
       'inviterRewardType',
       'inviterRewardTypeLabel',
       'inviterRewardValue',
@@ -1829,6 +1830,7 @@ export const adminSchemas = {
     ],
     properties: {
       id: { type: 'string', example: '1601' },
+      threshold: { type: 'integer', minimum: 1, example: 1 },
       inviterRewardType: {
         type: 'string',
         enum: ['coin', 'coupon', 'physical'],
@@ -1897,9 +1899,20 @@ export const adminSchemas = {
       },
     },
   },
-  UpdateAdminInviteRewardConfigPayload: {
+  AdminInviteRewardConfigListResult: {
+    type: 'object',
+    required: ['items'],
+    properties: {
+      items: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/AdminInviteRewardConfigItem' },
+      },
+    },
+  },
+  CreateAdminInviteRewardConfigPayload: {
     type: 'object',
     required: [
+      'threshold',
       'inviterRewardType',
       'inviterRewardValue',
       'inviteeRewardType',
@@ -1907,6 +1920,7 @@ export const adminSchemas = {
       'status',
     ],
     properties: {
+      threshold: { type: 'integer', minimum: 1, example: 1 },
       inviterRewardType: {
         type: 'string',
         enum: ['coin', 'coupon', 'physical'],
@@ -1928,7 +1942,7 @@ export const adminSchemas = {
       },
     },
   },
-  UpdateAdminInviteRewardConfigResult: {
+  AdminInviteRewardConfigItemResult: {
     type: 'object',
     required: ['item'],
     properties: {

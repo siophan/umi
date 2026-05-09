@@ -4,9 +4,11 @@ import {
   type AdminInviteRecordItem,
   type AdminInviteRecordListResult,
   type AdminInviteRewardConfigItem,
+  type AdminInviteRewardConfigItemResult,
+  type AdminInviteRewardConfigListResult,
   type AdminUserInviteListResult,
+  type CreateAdminInviteRewardConfigPayload,
   type UpdateAdminInviteRewardConfigPayload,
-  type UpdateAdminInviteRewardConfigResult,
 } from '@umi/shared';
 
 import { HttpError } from '../../lib/errors';
@@ -21,6 +23,7 @@ const CONFIG_STATUS_DISABLED = 90;
 
 type InviteRewardConfigRow = {
   id: number | string;
+  threshold: number | string;
   inviter_reward_type: number | string;
   inviter_reward_value: number | string;
   inviter_reward_ref_id: number | string | null;
@@ -117,7 +120,16 @@ function normalizeOptionalRefId(
   return text;
 }
 
-function normalizePayload(payload: UpdateAdminInviteRewardConfigPayload) {
+function normalizeThreshold(value: number | string | null | undefined) {
+  const result = Number(value ?? 0);
+  if (!Number.isInteger(result) || result < 1) {
+    throw new Error('触发阈值必须是 ≥ 1 的正整数');
+  }
+  return result;
+}
+
+function normalizePayload(payload: CreateAdminInviteRewardConfigPayload) {
+  const threshold = normalizeThreshold(payload.threshold);
   const inviterRewardValue = normalizeRewardValue(payload.inviterRewardValue, '邀请人奖励数值');
   const inviteeRewardValue = normalizeRewardValue(payload.inviteeRewardValue, '被邀请人奖励数值');
   const inviterRewardRefId = normalizeOptionalRefId(payload.inviterRewardRefId, '邀请人奖励关联 ID');
@@ -138,6 +150,7 @@ function normalizePayload(payload: UpdateAdminInviteRewardConfigPayload) {
   }
 
   return {
+    threshold,
     inviterRewardTypeCode: mapRewardTypeCode(payload.inviterRewardType),
     inviterRewardValue,
     inviterRewardRefId,
@@ -154,6 +167,7 @@ function sanitizeInviteRewardConfig(row: InviteRewardConfigRow): AdminInviteRewa
 
   return {
     id: toEntityId(row.id),
+    threshold: toNumber(row.threshold),
     inviterRewardType: inviterReward.type,
     inviterRewardTypeLabel: inviterReward.label,
     inviterRewardValue: toNumber(row.inviter_reward_value),
@@ -170,6 +184,22 @@ function sanitizeInviteRewardConfig(row: InviteRewardConfigRow): AdminInviteRewa
   };
 }
 
+const INVITE_REWARD_CONFIG_SELECT = `
+  SELECT
+    id,
+    threshold,
+    inviter_reward_type,
+    inviter_reward_value,
+    inviter_reward_ref_id,
+    invitee_reward_type,
+    invitee_reward_value,
+    invitee_reward_ref_id,
+    status,
+    created_at,
+    updated_at
+  FROM invite_reward_config
+`;
+
 function fallbackUserName(name: string | null, phone: string | null, id: number | string) {
   const trimmed = name?.trim();
   if (trimmed) {
@@ -181,29 +211,14 @@ function fallbackUserName(name: string | null, phone: string | null, id: number 
   return `用户 ${id}`;
 }
 
-async function fetchCurrentInviteRewardConfigRow(
+async function fetchInviteRewardConfigRowById(
   db: mysql.Pool | mysql.PoolConnection,
+  id: string,
 ) {
   const [rows] = await db.execute<mysql.RowDataPacket[]>(
-    `
-      SELECT
-        id,
-        inviter_reward_type,
-        inviter_reward_value,
-        inviter_reward_ref_id,
-        invitee_reward_type,
-        invitee_reward_value,
-        invitee_reward_ref_id,
-        status,
-        created_at,
-        updated_at
-      FROM invite_reward_config
-      ORDER BY (status = ?) DESC, updated_at DESC, id DESC
-      LIMIT 1
-    `,
-    [CONFIG_STATUS_ACTIVE],
+    `${INVITE_REWARD_CONFIG_SELECT} WHERE id = ? LIMIT 1`,
+    [id],
   );
-
   return ((rows as InviteRewardConfigRow[])[0] ?? null);
 }
 
@@ -304,97 +319,160 @@ export async function getAdminUserInvites(
   return { items, total, page: safePage, pageSize: safePageSize };
 }
 
-export async function getAdminInviteRewardConfig() {
+export async function listAdminInviteRewardConfigs(): Promise<AdminInviteRewardConfigListResult> {
   const db = getDbPool();
-  const row = await fetchCurrentInviteRewardConfigRow(db);
-  return row ? sanitizeInviteRewardConfig(row) : null;
+  const [rows] = await db.execute<mysql.RowDataPacket[]>(
+    `${INVITE_REWARD_CONFIG_SELECT} ORDER BY threshold ASC, id ASC`,
+  );
+  return {
+    items: (rows as InviteRewardConfigRow[]).map(sanitizeInviteRewardConfig),
+  };
 }
 
-export async function updateAdminInviteRewardConfig(
-  payload: UpdateAdminInviteRewardConfigPayload,
-): Promise<UpdateAdminInviteRewardConfigResult> {
+export async function createAdminInviteRewardConfig(
+  payload: CreateAdminInviteRewardConfigPayload,
+): Promise<AdminInviteRewardConfigItemResult> {
   const db = getDbPool();
-  const normalized = normalizePayload(payload);
-  const connection = await db.getConnection();
+  let normalized: ReturnType<typeof normalizePayload>;
+  try {
+    normalized = normalizePayload(payload);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new HttpError(400, 'ADMIN_INVITE_CONFIG_INVALID', error.message);
+    }
+    throw new HttpError(400, 'ADMIN_INVITE_CONFIG_INVALID', '邀请奖励配置保存失败');
+  }
 
   try {
-    await connection.beginTransaction();
-    const current = await fetchCurrentInviteRewardConfigRow(connection);
+    const [result] = await db.execute<mysql.ResultSetHeader>(
+      `
+        INSERT INTO invite_reward_config (
+          threshold,
+          inviter_reward_type,
+          inviter_reward_value,
+          inviter_reward_ref_id,
+          invitee_reward_type,
+          invitee_reward_value,
+          invitee_reward_ref_id,
+          status,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+      `,
+      [
+        normalized.threshold,
+        normalized.inviterRewardTypeCode,
+        normalized.inviterRewardValue,
+        normalized.inviterRewardRefId,
+        normalized.inviteeRewardTypeCode,
+        normalized.inviteeRewardValue,
+        normalized.inviteeRewardRefId,
+        normalized.statusCode,
+      ],
+    );
 
-    if (current) {
-      await connection.execute(
-        `
-          UPDATE invite_reward_config
-          SET
-            inviter_reward_type = ?,
-            inviter_reward_value = ?,
-            inviter_reward_ref_id = ?,
-            invitee_reward_type = ?,
-            invitee_reward_value = ?,
-            invitee_reward_ref_id = ?,
-            status = ?,
-            updated_at = NOW(3)
-          WHERE id = ?
-        `,
-        [
-          normalized.inviterRewardTypeCode,
-          normalized.inviterRewardValue,
-          normalized.inviterRewardRefId,
-          normalized.inviteeRewardTypeCode,
-          normalized.inviteeRewardValue,
-          normalized.inviteeRewardRefId,
-          normalized.statusCode,
-          current.id,
-        ],
-      );
-    } else {
-      await connection.execute(
-        `
-          INSERT INTO invite_reward_config (
-            inviter_reward_type,
-            inviter_reward_value,
-            inviter_reward_ref_id,
-            invitee_reward_type,
-            invitee_reward_value,
-            invitee_reward_ref_id,
-            status,
-            created_at,
-            updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
-        `,
-        [
-          normalized.inviterRewardTypeCode,
-          normalized.inviterRewardValue,
-          normalized.inviterRewardRefId,
-          normalized.inviteeRewardTypeCode,
-          normalized.inviteeRewardValue,
-          normalized.inviteeRewardRefId,
-          normalized.statusCode,
-        ],
-      );
-    }
-
-    const latest = await fetchCurrentInviteRewardConfigRow(connection);
+    const latest = await fetchInviteRewardConfigRowById(db, String(result.insertId));
     if (!latest) {
       throw new HttpError(500, 'ADMIN_INVITE_CONFIG_SAVE_FAILED', '邀请奖励配置保存失败');
     }
-
-    await connection.commit();
-    return {
-      item: sanitizeInviteRewardConfig(latest),
-    };
+    return { item: sanitizeInviteRewardConfig(latest) };
   } catch (error) {
-    await connection.rollback();
-    if (error instanceof HttpError) {
-      throw error;
+    if (error instanceof HttpError) throw error;
+    if ((error as { code?: string })?.code === 'ER_DUP_ENTRY') {
+      throw new HttpError(
+        400,
+        'ADMIN_INVITE_CONFIG_DUP_THRESHOLD',
+        `已存在 threshold=${normalized.threshold} 的奖励档位，请编辑现有档位或换一个阈值`,
+      );
     }
+    throw new HttpError(
+      400,
+      'ADMIN_INVITE_CONFIG_INVALID',
+      error instanceof Error ? error.message : '邀请奖励配置保存失败',
+    );
+  }
+}
+
+export async function updateAdminInviteRewardConfig(
+  id: string,
+  payload: UpdateAdminInviteRewardConfigPayload,
+): Promise<AdminInviteRewardConfigItemResult> {
+  const db = getDbPool();
+  let normalized: ReturnType<typeof normalizePayload>;
+  try {
+    normalized = normalizePayload(payload);
+  } catch (error) {
     if (error instanceof Error) {
-      throw new HttpError(400, 'ADMIN_INVITE_CONFIG_INVALID', error.message || '邀请奖励配置保存失败');
+      throw new HttpError(400, 'ADMIN_INVITE_CONFIG_INVALID', error.message);
     }
     throw new HttpError(400, 'ADMIN_INVITE_CONFIG_INVALID', '邀请奖励配置保存失败');
-  } finally {
-    connection.release();
   }
+
+  const existing = await fetchInviteRewardConfigRowById(db, id);
+  if (!existing) {
+    throw new HttpError(404, 'ADMIN_INVITE_CONFIG_NOT_FOUND', '邀请奖励配置不存在');
+  }
+
+  try {
+    await db.execute(
+      `
+        UPDATE invite_reward_config
+        SET
+          threshold = ?,
+          inviter_reward_type = ?,
+          inviter_reward_value = ?,
+          inviter_reward_ref_id = ?,
+          invitee_reward_type = ?,
+          invitee_reward_value = ?,
+          invitee_reward_ref_id = ?,
+          status = ?,
+          updated_at = NOW(3)
+        WHERE id = ?
+      `,
+      [
+        normalized.threshold,
+        normalized.inviterRewardTypeCode,
+        normalized.inviterRewardValue,
+        normalized.inviterRewardRefId,
+        normalized.inviteeRewardTypeCode,
+        normalized.inviteeRewardValue,
+        normalized.inviteeRewardRefId,
+        normalized.statusCode,
+        id,
+      ],
+    );
+  } catch (error) {
+    if ((error as { code?: string })?.code === 'ER_DUP_ENTRY') {
+      throw new HttpError(
+        400,
+        'ADMIN_INVITE_CONFIG_DUP_THRESHOLD',
+        `已存在 threshold=${normalized.threshold} 的奖励档位，请编辑现有档位或换一个阈值`,
+      );
+    }
+    throw new HttpError(
+      400,
+      'ADMIN_INVITE_CONFIG_INVALID',
+      error instanceof Error ? error.message : '邀请奖励配置保存失败',
+    );
+  }
+
+  const latest = await fetchInviteRewardConfigRowById(db, id);
+  if (!latest) {
+    throw new HttpError(500, 'ADMIN_INVITE_CONFIG_SAVE_FAILED', '邀请奖励配置保存失败');
+  }
+  return { item: sanitizeInviteRewardConfig(latest) };
+}
+
+export async function deleteAdminInviteRewardConfig(id: string): Promise<{ success: boolean }> {
+  const db = getDbPool();
+  const [result] = await db.execute<mysql.ResultSetHeader>(
+    `DELETE FROM invite_reward_config WHERE id = ?`,
+    [id],
+  );
+  if (result.affectedRows === 0) {
+    throw new HttpError(404, 'ADMIN_INVITE_CONFIG_NOT_FOUND', '邀请奖励配置不存在');
+  }
+  return { success: true };
 }
 
 export async function getAdminInviteRecords(
