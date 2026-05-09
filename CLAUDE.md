@@ -10,35 +10,13 @@
 >
 > **mysql2 `LIMIT ?` 必须走 `db.query`，不能用 `db.execute`**：`db.execute` 是 prepared statement 二进制协议，LIMIT 占位符会被发成错误整数类型，MySQL 抛 `ER_WRONG_ARGUMENTS` 接口直接 500。代码库统一约定：LIMIT/OFFSET 是 `?` 占位符就用 `db.query<...>(...)`；只有 LIMIT 是字面量（如 `LIMIT 1`）才能用 `db.execute`。`apps/api/src/modules/search/*`、`admin/users.ts`、`admin/products-inventory.ts` 等都是这个写法。曾因 6071a99 把 `getMeActivity` 的 `LIMIT 20` 改成 `LIMIT ?` 但仍用 `db.execute`，导致 `/api/users/me/activity` 500、登录后立刻被踢回 `/login`（4dc8e53 修复）。
 
----
-
-## 1. Server Component 硬编码 API 地址（已完成）
-
-三个 Server Component（`apps/web/src/app/page.tsx`、`apps/web/src/app/lives/page.tsx`、`apps/web/src/app/ranking/page.tsx`）原先各自写死 `const apiBaseUrl = 'http://127.0.0.1:4000'`，现已统一走 `src/lib/env.ts` 的 `serverApiBaseUrl`（NEXT_PUBLIC_API_BASE_URL 兜底为本地 dev API）。
-
-`live/[id]/page.tsx` / `test-api/page.tsx` 都是 `'use client'`，使用 `apiBaseUrl` 浏览器侧符合预期；全 web 包再无别的 `127.0.0.1:4000` 残留。
-
----
-
-## 2. 注册时选择的头像不生效（已完成）
-
-注册链路已全部接通：
-- 前端 `apps/web/src/app/register/page.tsx:148` 在 `register()` 调用里传 `avatar: avatars[selectedAvatar]?.src`
-- shared `RegisterPayload`（`packages/shared/src/api-auth.ts:71`）已含 `avatar?: string`
-- 后端 `apps/api/src/modules/auth/store.ts:361` 透传到 `createUserProfile`，`INSERT INTO user_profile (user_id, name, avatar_url, ...)` 落库
-- OpenAPI schema `apps/api/src/routes/openapi/schemas/auth.ts` 同步加 `avatar` 字段（2026-05-06 补）
-
----
-
-## 3. 忘记密码仅 toast（已完成）
-
-`/reset-password` 页面已落地（3 步：手机号 → 验证码 → 新密码），登录页"忘记密码？"现在是 `<Link href="/reset-password">`，调 `sendCode({ bizType: 'reset_password' })` 发码 + `resetPassword({ phone, code, newPassword })` 提交（已存在的后端 `POST /api/auth/reset-password`）。验证码不在第 2 步单独 verify，提交重置时一起校验。
+> **编号不连续是有意为之**：已 100% 完成且无遗留的章节已从本文件移除（#1/#2/#3/#5/#6/#7/#8/#9/#10/#13/#14/#21），但编号保留缺位以避免破坏历史 commit 消息 / memory 笔记 / 跨章节引用。
 
 ---
 
 ## 4. 第三方登录（微信/QQ/Apple）仅 toast（P2）
 
-**文件**：`apps/web/src/app/login/page.tsx:176`
+**文件**：`apps/web/src/app/login/page.tsx:174`
 
 `handleSocialLogin()` 只显示 "正在使用 X 登录..." toast，无实际 OAuth 集成。按钮渲染在登录页但完全不可用，给用户造成误导。
 
@@ -46,64 +24,18 @@
 
 ---
 
-## 5. 用户协议 / 隐私政策（已完成）
-
-`apps/web/src/app/terms/page.tsx` + `apps/web/src/app/privacy/page.tsx` 静态页已落地，登录/注册页协议链接改为 `<Link href="/terms">` / `<Link href="/privacy">`（`login/page.tsx:341,343`、`register/page.tsx:385,387`），不再 toast。
-
----
-
-## 6. 个人中心设置项（已完成）
-
-`apps/web/src/app/me/page.tsx` 已重写为 ~378 行，原"语言切换 / 帮助中心 / 意见反馈"三个 `toast('xxx 开发中')` 入口已删除/迁移到 `MeOverlays` 组件，整页 grep 无"开发中"文案。
-
----
-
-## 7. 购物车满减阈值 ¥200 硬编码前端（已完成）
-
-购物车 `apps/web/src/app/cart/page.tsx:30` 现走 `/api/cart` 返回的 `promoThreshold`，`promoGap = promoThreshold > 0 ? Math.max(0, promoThreshold - total) : 0`，运营可在后台调阈值，0 表示不展示满减提示。
-
----
-
-## 8. 购物车店铺 logo 使用外部 dicebear API（已完成）
-
-`apps/web/src/app/cart/page.tsx` 已不再依赖 `api.dicebear.com`，店铺头像走本地降级方案。
-
----
-
-## 9. 购物车 `SHOP_NAME_MAP` 硬编码（已完成）
-
-`apps/web/src/app/cart/page.tsx` 中 `SHOP_NAME_MAP` 已删除，店铺名直接走 `CartItem.shop` 字段。
-
----
-
-## 10. 仓库寄售提交只更新本地 state，不调写接口（已完成）
-
-`submitSell()` 现走 `consignWarehouseItem` → `POST /api/warehouse/physical/:id/consign`（warehouse-consign.ts），事务内切 `physical_warehouse.status=20(consigning)` + `consign_price` + `estimate_days` + `consign_date`。前端 optimistic update 在请求成功后再切 UI，失败 toast。
-
 ## 11. 仓库批量操作未实现（已隐藏）
 
 右上角"批量操作"按钮已删除，header 仅留一个 `<div class={styles.action} />` 占位保布局（见 page.tsx）。批量提货/取消寄售语义未定，等仓库重构批次再做。
 
 ---
 
-## 12. 订单"联系卖家"/"催发货"（已完成）
+## 12. 订单"联系卖家"/"催发货"（已完成 + 遗留 P2）
 
 - 联系卖家：`apps/web/src/app/orders/page.tsx:175-176` 改为 `router.push('/chat')`（落到聊天列表页，未带 shopUserId 参数）
 - 催发货：`orders/page.tsx:179-182` 调 `urgeOrder(order.id)` 真实接口，失败 toast 兜底
 
 **遗留 P2**：联系卖家当前 push 到 `/chat` 列表，没有按 shopUserId 直达 `/chat/:shopUserId`，用户还需要在聊天列表里再找一次店铺会话。
-
----
-
-## 13. 订单"评价"（已完成）
-
-`apps/web/src/app/orders/page.tsx:188` 跳转改为 `/review?orderId=&productId=`，`apps/web/src/app/review/page.tsx` 评价页已落地。
-
----
-
-## 14. 购物车→支付数据通过 sessionStorage 传递（已修 2026-04-29）
-
-购物车现已走 `/payment?from=cart&cartItemIds=<id1,id2,...>` URL 传参，支付页用 `searchParams.get('cartItemIds')` + `fetchCart()` 重新拉真实快照。`sessionStorage('payCartItems')` 已下线。
 
 ---
 
@@ -517,12 +449,6 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 **遗留 P2 — 注册"已绑定邀请人"反馈态**：
 
 无效 invite 码当前是静默忽略，被邀请人不会被告知"邀请码无效"。如要更明确 UX，后端可在 register 返回 `{ invitedBy: inviterId | null }`，前端注册成功后 toast 区分"已绑定邀请人"vs"邀请码无效"。本期为简化体验直接静默。
-
----
-
-## 21. 用户端商品详情消费 brand_product 的图（已完成）
-
-随 #22 / #25 改造，product 表的 `image_url` / `images` 列已 DROP，`getProductById` SELECT 直接 `bp.default_img AS image_url, bp.images AS images`（`apps/api/src/modules/product/product-shared.ts:321-322`）——所有读 `product.image_url` / `product.images` 的下游（`product-detail.ts` images 拼装、列表卡片）天然就是品牌图，不再需要 fallback 逻辑。
 
 ---
 
