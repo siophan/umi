@@ -87,18 +87,17 @@
 
 ---
 
-## 18. 商城首页 mall_hero 运营 banner 未接（二期）
+## 18. 商城首页 mall_hero 运营 banner（已完成 2026-05-09）
 
-**文件**：`apps/web/src/components/mall-home.tsx`（无对应代码）
+**进度**：`MallHome` recommend tab 第一屏已接 `fetchBanners('mall_hero', 1)`，banner 存在替代商品 hero，否则继续渲染原商品 hero。
 
-后端 banner 表早已支持 `position='mall_hero'` 槽位，admin "商城推荐"配置入口 `apps/admin/src/lib/admin-banners.tsx:35` 也齐全；老系统 `frontend/index.html:2498-2505 / 3155-3170` 优先用 `Api.banners.list('mall_hero')` 拉首张 banner 替代商品 hero，没有 banner 才落回商品 hero。新版 `MallHome` 完全没读这个接口，导致后台投放在商城首页失效。
+**已完成**：
+- 前端：`apps/web/src/components/mall-home.tsx` 加 `mallHeroBanner` state + `Promise.allSettled` 并发拉 `fetchBanners('mall_hero', 1)`，与商品/分类/购物车一起 settle，banner 失败不影响其他链路；recommend tab 渲染分支：`mallHeroBanner` 存在 → `<m-hero-banner>`（image + title + subtitle + CTA），否则落回原 `<m-hero>`
+- 跳转：复用后端 `targetPath`，`targetType='external'` 或 `targetPath` 是 `https?://` 开头 → `window.open(_blank, noopener)`，否则 `router.push(targetPath)`，覆盖 guess/post/product/shop/page/external 6 种类型
+- 样式：`apps/web/src/app/globals.css` 加 `.m-hero-banner*`（16:9 image cover + 标题 16/700 + 副标题 13/#999 + 右侧金色 CTA chip），与 `.m-hero` 同 margin/border-radius/shadow 维持视觉一致；`imageUrl` 为空时 placeholder 渐变兜底
+- 仅取 `banners[0]`：照搬老系统简单语义，避免轮播组件
 
-**二期方案**：
-- 在 `MallHome` 加 `fetchBanners('mall_hero')`，并发于商品/分类/购物车一起 settle。
-- recommend tab 第一屏：banner 存在则渲染 banner-hero（图 + title + subtitle + CTA），不存在落回当前商品 hero。
-- click 跳转支持 banner 的 4 种 `linkType`：`product`→`/product/:id`、`guess`→`/guess/:id`、`url`→新窗口外链、`page`→站内 push。
-- banner 自带 `endTime` 字段，hero 右下角可附倒计时（老系统没做，但接口字段在；如果运营要做限时活动 hero 就有位置）。
-- 老系统只取 `banners[0]`，本期建议照搬"只用第一张"的简单语义，避免轮播组件再写一套。
+**遗留 P2**：banner `endAt` 字段未利用——如运营要做限时活动 hero，可在 CTA 旁加倒计时（接口字段已有，组件未实现）。本期不做。
 
 ---
 
@@ -449,4 +448,4 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 |--------|------|------|
 | P0     | 0    | （仓库提货闭环已于 2026-05-06 完成，见 #27）|
 | P1     | 0    | （邀请奖励发券 + 闭环已于 2026-05-08 完成，见 #30）|
-| P2     | 8    | 第三方登录假按钮（#4）/ 商城联名穿插卡二期（#17）/ 商城 mall_hero banner 二期（#18）/ 支付页发票二期（#19）/ 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请多档梯度 + 注册"已绑定邀请人"反馈态（#30） |
+| P2     | 8    | 第三方登录假按钮（#4）/ 商城联名穿插卡二期（#17）/ mall_hero banner 倒计时二期（#18）/ 支付页发票二期（#19）/ 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请多档梯度 + 注册"已绑定邀请人"反馈态（#30） |

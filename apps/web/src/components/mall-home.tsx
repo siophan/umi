@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ProductCategoryItem, ProductFeedItem } from '@umi/shared';
+import type { BannerItem, ProductCategoryItem, ProductFeedItem } from '@umi/shared';
 
+import { fetchBanners } from '../lib/api/banners';
 import { fetchCart } from '../lib/api/cart';
 import { favoriteProduct, fetchProductCategories, fetchProductList, unfavoriteProduct } from '../lib/api/products';
 import { hasAuthToken } from '../lib/api/shared';
@@ -208,6 +209,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 export function MallHome() {
   const router = useRouter();
   const [mallItems, setMallItems] = useState<ProductFeedItem[]>([]);
+  const [mallHeroBanner, setMallHeroBanner] = useState<BannerItem | null>(null);
   const [productCategories, setProductCategories] = useState<ProductCategoryItem[]>([]);
   const [categoryItems, setCategoryItems] = useState<Record<string, ProductFeedItem[]>>({});
   const [cartCount, setCartCount] = useState(0);
@@ -242,10 +244,11 @@ export function MallHome() {
       }
 
       try {
-        const [result, categoriesResult, cartResult] = await Promise.allSettled([
+        const [result, categoriesResult, cartResult, bannerResult] = await Promise.allSettled([
           fetchProductList(50),
           fetchProductCategories(),
           hasAuthToken() ? fetchCart() : Promise.resolve({ items: [] }),
+          fetchBanners('mall_hero', 1),
         ]);
         if (!ignore) {
           if (result.status === 'fulfilled') {
@@ -260,6 +263,11 @@ export function MallHome() {
             setCartCount(cartResult.value.items.length);
           } else {
             setCartError(getErrorMessage(cartResult.reason, '购物车读取失败'));
+          }
+          if (bannerResult.status === 'fulfilled') {
+            setMallHeroBanner(bannerResult.value.items[0] ?? null);
+          } else {
+            setMallHeroBanner(null);
           }
         }
       } catch (error) {
@@ -483,6 +491,18 @@ export function MallHome() {
     setActiveCategory('all');
     setActiveSort('default');
     setShowAll(false);
+  }
+
+  function handleBannerClick(banner: BannerItem) {
+    const path = banner.targetPath?.trim();
+    if (!path) {
+      return;
+    }
+    if (banner.targetType === 'external' || /^https?:\/\//i.test(path)) {
+      window.open(path, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    router.push(path);
   }
 
   async function toggleFavorite(productId: string, nextFavorited: boolean) {
@@ -735,7 +755,34 @@ export function MallHome() {
           </div>
         ) : null}
 
-        {contentTab === 'recommend' && featuredItem && heroNames ? (
+        {contentTab === 'recommend' && mallHeroBanner ? (
+          <section
+            className="m-hero-banner mfc-enter"
+            onClick={() => handleBannerClick(mallHeroBanner)}
+            role="button"
+            tabIndex={0}
+            style={{ animationDelay: '0s' }}
+          >
+            {mallHeroBanner.imageUrl ? (
+              <img
+                className="m-hero-banner-img"
+                alt={mallHeroBanner.title}
+                src={mallHeroBanner.imageUrl}
+              />
+            ) : (
+              <div className="m-hero-banner-img m-hero-banner-img-placeholder" aria-hidden />
+            )}
+            <div className="m-hero-banner-body">
+              <div className="m-hero-banner-text">
+                <div className="m-hero-banner-title">{mallHeroBanner.title}</div>
+                {mallHeroBanner.subtitle ? (
+                  <div className="m-hero-banner-sub">{mallHeroBanner.subtitle}</div>
+                ) : null}
+              </div>
+              {mallHeroBanner.targetPath ? <div className="m-hero-banner-cta">立即查看 →</div> : null}
+            </div>
+          </section>
+        ) : contentTab === 'recommend' && featuredItem && heroNames ? (
           <section className="m-hero mfc-enter" style={{ animationDelay: '0s' }}>
             <div className="m-hero-header" onClick={() => router.push(`/product/${featuredItem.id}`)}>
               <div className="m-hero-collab">
