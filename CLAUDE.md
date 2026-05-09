@@ -46,23 +46,15 @@
 
 ---
 
-## 5. 用户协议 / 隐私政策仅 toast（P2）
+## 5. 用户协议 / 隐私政策（已完成）
 
-**文件**：`apps/web/src/app/login/page.tsx:357-364`、`apps/web/src/app/register/page.tsx:729-736`
-
-点击《用户协议》《隐私政策》只显示对应名字的 toast，无实际内容页面。
-
-**修法**：补 `/terms` 和 `/privacy` 静态页，或打开外链。
+`apps/web/src/app/terms/page.tsx` + `apps/web/src/app/privacy/page.tsx` 静态页已落地，登录/注册页协议链接改为 `<Link href="/terms">` / `<Link href="/privacy">`（`login/page.tsx:341,343`、`register/page.tsx:385,387`），不再 toast。
 
 ---
 
-## 6. 个人中心设置项均为"开发中"（P2）
+## 6. 个人中心设置项（已完成）
 
-**文件**：`apps/web/src/app/me/page.tsx:634 / 644 / 649`
-
-语言切换、帮助中心、意见反馈三个入口点击后只 toast "xxx 开发中"。
-
-**修法**：短期可隐藏这三项，避免用户重复点到空入口；或补最小 landing 页。
+`apps/web/src/app/me/page.tsx` 已重写为 ~378 行，原"语言切换 / 帮助中心 / 意见反馈"三个 `toast('xxx 开发中')` 入口已删除/迁移到 `MeOverlays` 组件，整页 grep 无"开发中"文案。
 
 ---
 
@@ -72,27 +64,15 @@
 
 ---
 
-## 8. 购物车店铺 logo 使用外部 dicebear API（P2）
+## 8. 购物车店铺 logo 使用外部 dicebear API（已完成）
 
-**文件**：`apps/web/src/app/cart/page.tsx:1527`
-
-```ts
-src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
-```
-
-依赖第三方公共 API 生成店铺头像，生产/离线环境可能加载失败，且图片内容不可控。
-
-**修法**：改用本地 SVG 占位图，或从 `shop.logo` 字段取真实图片，缺省时降级到纯文字首字母方案。
+`apps/web/src/app/cart/page.tsx` 已不再依赖 `api.dicebear.com`，店铺头像走本地降级方案。
 
 ---
 
-## 9. 购物车 `SHOP_NAME_MAP` 硬编码（P2）
+## 9. 购物车 `SHOP_NAME_MAP` 硬编码（已完成）
 
-**文件**：`apps/web/src/app/cart/page.tsx:1216`
-
-8 个品牌→店铺名映射写死在前端。后台新增或修改店铺名，前端必须同步改代码。
-
-**修法**：`CartItem` 返回结构中已有 `shop` 字段，直接使用 `item.shop` 而不走本地映射；`SHOP_NAME_MAP` 可删除。
+`apps/web/src/app/cart/page.tsx` 中 `SHOP_NAME_MAP` 已删除，店铺名直接走 `CartItem.shop` 字段。
 
 ---
 
@@ -106,23 +86,18 @@ src={`https://api.dicebear.com/7.x/initials/svg?seed=...`}
 
 ---
 
-## 12. 订单"联系卖家"/"催发货"仅 toast（P2）
+## 12. 订单"联系卖家"/"催发货"（已完成）
 
-**文件**：`apps/web/src/app/orders/page.tsx:1023 / 1027`
+- 联系卖家：`apps/web/src/app/orders/page.tsx:175-176` 改为 `router.push('/chat')`（落到聊天列表页，未带 shopUserId 参数）
+- 催发货：`orders/page.tsx:179-182` 调 `urgeOrder(order.id)` 真实接口，失败 toast 兜底
 
-两个行为只触发提示文案，没有接入客服系统或后端写接口。
-
-**修法**：联系卖家可跳转到与该店铺的聊天页（`/chat/:shopUserId`）；催发货可调 `POST /api/orders/:id/urge`。
+**遗留 P2**：联系卖家当前 push 到 `/chat` 列表，没有按 shopUserId 直达 `/chat/:shopUserId`，用户还需要在聊天列表里再找一次店铺会话。
 
 ---
 
-## 13. 订单"评价"跳商品页，无评价流程（P2）
+## 13. 订单"评价"（已完成）
 
-**文件**：`apps/web/src/app/orders/page.tsx:1031`
-
-点击"评价"只 push 到 `/product/:id`，没有评价表单或评价结果展示。
-
-**修法**：补 `/review?orderId=&productId=` 页面或弹层，支持星级 + 文字评价。
+`apps/web/src/app/orders/page.tsx:188` 跳转改为 `/review?orderId=&productId=`，`apps/web/src/app/review/page.tsx` 评价页已落地。
 
 ---
 
@@ -545,17 +520,9 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 ---
 
-## 21. 用户端商品详情未消费 brand_product 的图（P2）
+## 21. 用户端商品详情消费 brand_product 的图（已完成）
 
-**文件**：`apps/api/src/modules/product/product-shared.ts:294`（getProductById SELECT）+ `apps/api/src/modules/product/product-detail.ts:337`（images 数组拼装）
-
-admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`images` 多图，2026-04-29 接通），但用户端 `getProductDetail` 拼接商品图区时只用 `p.image_url` + `p.images`，店铺铺货没自定义图就直接空相册，**不会回退到品牌商品的图**。
-
-**修法**：
-- `getProductById` SELECT 增加 `bp.default_img AS bp_default_img, bp.images AS bp_images`
-- `ProductRow` 类型加 `bp_default_img?: string | null; bp_images?: unknown`
-- `getProductDetail` 拼 images 数组时：`p.image_url` / `safeJsonArray(p.images)` 都空 → 落回 `bp_default_img` + `safeJsonArray(bp_images)`
-- 商品列表/搜索/推荐场景同理（`product-shared.ts:232`、`product-feed.ts` 已部分回退到 `bp.default_img`，但相册没回退；按需补）
+随 #22 / #25 改造，product 表的 `image_url` / `images` 列已 DROP，`getProductById` SELECT 直接 `bp.default_img AS image_url, bp.images AS images`（`apps/api/src/modules/product/product-shared.ts:321-322`）——所有读 `product.image_url` / `product.images` 的下游（`product-detail.ts` images 拼装、列表卡片）天然就是品牌图，不再需要 fallback 逻辑。
 
 ---
 
@@ -565,4 +532,4 @@ admin 端 `brand_product` 已能维护封面（`default_img`）+ 相册（`image
 |--------|------|------|
 | P0     | 0    | （仓库提货闭环已于 2026-05-06 完成，见 #27）|
 | P1     | 0    | （邀请奖励发券 + 闭环已于 2026-05-08 完成，见 #30）|
-| P2     | 16   | 第三方登录/协议/设置入口假按钮 / dicebear 外部依赖 / SHOP_NAME_MAP / 订单联系-催单-评价 stub / 商城联名穿插卡二期 / 商城 mall_hero banner 二期 / 支付页发票二期 / 用户端商品详情未消费品牌图 / 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请多档梯度 + 注册"已绑定邀请人"反馈态（#30） |
+| P2     | 9    | 第三方登录假按钮（#4）/ 商城联名穿插卡二期（#17）/ 商城 mall_hero banner 二期（#18）/ 支付页发票二期（#19）/ 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请多档梯度 + 注册"已绑定邀请人"反馈态（#30）/ 订单"联系卖家"未带 shopUserId 直达（#12 遗留） |
