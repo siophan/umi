@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 import { fetchChatDetail, sendChatMessage } from '../../../lib/api/chat';
@@ -196,7 +196,7 @@ export default function ChatDetailPage() {
         ) : null}
         {ready && peerId && !error && messages.length === 0 ? <div className={styles.emptyHint}>暂无消息，说点什么吧~</div> : null}
         {!error ? messages.map((message, index) => (
-          <div key={message.key}>
+          <Fragment key={message.key}>
             {shouldRenderTime(messages[index - 1]?.createdAt, message.createdAt) ? (
               <div className={styles.timeDivider}>{formatMessageTime(message.createdAt)}</div>
             ) : null}
@@ -208,7 +208,7 @@ export default function ChatDetailPage() {
               />
               <div className={styles.bubble}>{message.content}</div>
             </div>
-          </div>
+          </Fragment>
         )) : null}
       </div>
 
