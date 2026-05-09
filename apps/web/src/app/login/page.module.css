@@ -124,8 +124,7 @@
 .methodIcon svg,
 .fieldIcon svg,
 .pwdToggle svg,
-.submitBtn svg,
-.socialBtn svg {
+.submitBtn svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
@@ -388,56 +387,6 @@
   font-weight: 500;
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 22px 24px 16px;
-  color: #ccc;
-  font-size: 11px;
-}
-
-.divider::before,
-.divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: #ececee;
-}
-
-.socialRow {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  padding: 0 24px;
-}
-
-.socialBtn {
-  width: 48px;
-  height: 48px;
-  border: 0;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  cursor: pointer;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.socialBtn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.socialBtn:active {
-  transform: scale(0.92);
-}
-
-.socialBtn i {
-  font-size: 22px;
-}
-
 .agree {
   padding: 18px 24px 24px;
   text-align: center;
@@ -525,8 +474,6 @@
 
   .methodBar,
   .formArea,
-  .divider,
-  .socialRow,
   .agree,
   .switchRow {
     margin-left: 20px;

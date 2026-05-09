@@ -171,15 +171,6 @@ function LoginPageInner() {
     }
   };
 
-  const handleSocialLogin = (platform: string) => {
-    if (!agree) {
-      openToast("请先同意用户协议");
-      return;
-    }
-
-    openToast(`正在使用${platform}登录...`);
-  };
-
   return (
     <main className={styles.page}>
       <div className={styles.card}>
