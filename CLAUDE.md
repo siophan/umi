@@ -363,7 +363,7 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 
 **遗留**：
 - 老 vw.status=20 (locked) 仍然 mapWarehouseTab → 'pending' tab，含 提货按钮可点。提货后端会拒绝（要求 status=10）→ 弹错误 toast 而不会破坏数据。要更干净的 UX 应该在 list 层禁用 locked 行的按钮。本期不做。
-- **物资总值口径**：`page.tsx:97` 的 `counts.totalValue` 把所有 status（含 consigning）的 `price * quantity` 都加进"物资总值"。寄售中=已挂出去要卖的，是否算"我手里的物资"语义可商榷。老系统 `umi-origin/frontend/inventory.html` 算法待 diff 后跟产品确认（P2，本期保留现状）。
+- **物资总值口径**：2026-05-09 diff 老系统 `umi-origin/frontend/warehouse.html:206`（`totalVal += (w.price || 0) * w.quantity`，对全部 status 含 consigning），与新版 `page.tsx:105` 写法完全一致——两边口径已对齐，无需改动。寄售中"是否算手里的物资"语义争议保留：老系统沿用至今，本期不动；如产品后期改口径，再独立条目。
 - **历史 fulfillment_order 行无 _item**：2026-04-29 ~ 2026-05-06 之间走 markOrderPaid 创建的履约单没写 _item，新查询拿不到。pre-launch 接受不补回填，新订单从此正常显示。
 
 ---
@@ -448,4 +448,4 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 |--------|------|------|
 | P0     | 0    | （仓库提货闭环已于 2026-05-06 完成，见 #27）|
 | P1     | 0    | （邀请奖励发券 + 闭环已于 2026-05-08 完成，见 #30）|
-| P2     | 8    | 第三方登录假按钮（#4）/ 商城联名穿插卡二期（#17）/ mall_hero banner 倒计时二期（#18）/ 支付页发票二期（#19）/ 仓库物资总值口径含寄售中（#27）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请多档梯度 + 注册"已绑定邀请人"反馈态（#30） |
+| P2     | 7    | 第三方登录假按钮（#4）/ 商城联名穿插卡二期（#17）/ mall_hero banner 倒计时二期（#18）/ 支付页发票二期（#19）/ #26 SKU 二期（购物车换规格 / 店铺 SKU 调价 / SKU 维度促销 / 评价按规格筛选）/ 好友 PK 邀请伪闭环 + PK 记录混合页 + 删除拉黑缺失（#28）/ 邀请多档梯度 + 注册"已绑定邀请人"反馈态（#30） |
