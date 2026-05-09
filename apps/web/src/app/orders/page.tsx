@@ -173,7 +173,8 @@ export default function OrdersPage() {
       return;
     }
     if (action.text === '联系卖家') {
-      router.push('/chat');
+      const shopUserId = order.items[0]?.shopUserId;
+      router.push(shopUserId ? `/chat/${shopUserId}` : '/chat');
       return;
     }
     if (action.text === '催发货') {
