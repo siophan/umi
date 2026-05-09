@@ -155,10 +155,25 @@ export function buildInviteRewardConfigColumns(args: {
       valueType: 'option',
       render: (_, record) => (
         <>
-          <Button size="small" type="link" onClick={() => args.onEdit(record)}>
+          <Button
+            size="small"
+            type="link"
+            onClick={(event) => {
+              event.stopPropagation();
+              args.onEdit(record);
+            }}
+          >
             编辑
           </Button>
-          <Button size="small" type="link" danger onClick={() => args.onDelete(record)}>
+          <Button
+            size="small"
+            type="link"
+            danger
+            onClick={(event) => {
+              event.stopPropagation();
+              args.onDelete(record);
+            }}
+          >
             删除
           </Button>
         </>

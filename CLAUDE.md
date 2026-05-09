@@ -430,6 +430,8 @@ DROP 列（已离场，不再可读/可写）：`name / price / stock / frozen_s
 - Admin 前端：`marketing-invite-page.tsx` 顶部新增「邀请奖励档位」表格（threshold 升序）+ 新增/编辑/删除按钮 + 行点击预览抽屉；`admin-invite-config-modal.tsx` 加 threshold InputNumber；`system-settings-page.tsx` InviteRewardPanel 改为指向「营销 → 邀请管理」的 Alert 提示，整个 Form 删除（避免双源 SOT）。
 - OpenAPI：schema `AdminInviteRewardConfigItem` 加 threshold；新增 `AdminInviteRewardConfigListResult` / `CreateAdminInviteRewardConfigPayload` / `AdminInviteRewardConfigItemResult`；paths 替换 `/invites/config` → `/invites/rewards`（list/create）+ `/invites/rewards/{id}` (update/delete)。
 
+**已知 race（极低概率）**：`maybeGrantInviteRewards` 在 register commit 后基于 `SELECT COUNT(*) FROM user WHERE invited_by=?` 算 N，非原子。同 inviter 几乎同时注册两个被邀请人时，两个 trigger 都可能看到 N=K，**双发 threshold=K 档位**。彻底修需要在 register 事务内 SELECT FOR UPDATE 锁 inviter 行 + 用 LAST_INSERT_ID 序号定 N，或者 reward grant 写入唯一 (inviter_id, threshold) 防重表。本期不动，运营观察异常发奖再处理。
+
 **遗留 P2 — `/invite` 页 4 档静态文案**：
 
 `/invite` 页面的 4 档梯度（1/3/10/30 人）当前还是静态展示，没读后端 `fetchAdminInviteRewardConfigs`。如要做到"页面展示档位 = admin 实际配置"动态一致，需要：① 提供一个用户侧 GET `/api/invite/rewards`（仅 active）；② `/invite` 页 fetch 后渲染。本期 admin 已自由配置任意阈值，但 /invite 页仍按设计稿静态展示——可在 admin 配置 1/3/10/30 四档对齐文案。
